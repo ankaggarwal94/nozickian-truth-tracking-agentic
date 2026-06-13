@@ -1,0 +1,623 @@
+{
+  "cases": [
+    {
+      "expected_any": [
+        "PASS-TRACKED"
+      ],
+      "name": "valid_substantive_certificate",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-TRACKED"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "PASS-TRACKED"
+      ],
+      "name": "valid_structured_evidence_hashes",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-TRACKED"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "wrong_structured_evidence_hash_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: sensitivity pass rate 0.500 < threshold 0.950"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "artifact_path_escape_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: sensitivity pass rate 0.500 < threshold 0.950"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "artifact_path_absolute_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: sensitivity pass rate 0.500 < threshold 0.950"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "artifact_path_lowercase_https_uri_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: sensitivity pass rate 0.500 < threshold 0.950"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "artifact_path_uppercase_https_uri_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: sensitivity pass rate 0.500 < threshold 0.950"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "artifact_path_mixed_case_uri_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: sensitivity pass rate 0.500 < threshold 0.950"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "artifact_path_arbitrary_scheme_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: sensitivity pass rate 0.500 < threshold 0.950"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "one_of_two_claim_evidence_hashes_wrong_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: self_validation/evidence/ntt-gate-source.json: hash_or_version does not match artifact_path SHA-256: claimed=0000000000000000000000000000000000000000000000000000000000000000 actual=2cddfa924e69976b01b98f043bb822f0fb9525819f1cf53d85dba20d8cb81917"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "one_of_two_test_evidence_hashes_wrong_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: sensitivity pass rate 0.500 < threshold 0.950"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "duplicate_claim_evidence_ref_does_not_satisfy_minimum",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: unique evidence refs 1 < required 2",
+        "C-001: duplicate or aliased evidence refs present: 1"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "aliased_same_claim_evidence_ref_does_not_satisfy_minimum",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: self_validation/evidence/run-gate-contract-tests.json::A: evidence ref is not an existing local file; self_validation/evidence/run-gate-contract-tests.json::B: evidence ref is not an existing local file",
+        "C-001: unique evidence refs 0 < required 2",
+        "C-001: unique structured evidence refs 0 < required 1"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "duplicate_structured_evidence_file_counted_once",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: unique evidence refs 1 < required 2",
+        "C-001: duplicate or aliased evidence refs present: 1"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "same_artifact_path_for_all_claim_refs_fails_for_critical_claims",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: unique structured evidence artifacts 1 < unique structured evidence refs 2"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "PASS-TRACKED"
+      ],
+      "name": "unique_evidence_refs_with_valid_hashes_still_pass",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-TRACKED"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "duplicate_false_world_test_id_does_not_satisfy_minimum",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: duplicate false-world test IDs present: FW-001"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "duplicated_false_world_test_object_does_not_satisfy_minimum",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: duplicate false-world test IDs present: FW-001",
+        "C-001: unique false-world tests 1 < required 2",
+        "C-001: unique false-world test evidence sets 1 < required 2"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "aliased_same_false_world_test_evidence_counted_once",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: unique false-world test evidence sets 1 < required 2",
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: sensitivity pass rate 0.500 < threshold 0.950"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "PASS-TRACKED"
+      ],
+      "name": "unique_false_world_tests_with_distinct_ids_still_pass",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-TRACKED"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "duplicate_true_world_test_id_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: duplicate true-world test IDs present: TW-001"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "wrong_false_world_target_claim_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: 2 test(s) failed deterministic checks",
+        "C-001: sensitivity pass rate 0.000 < threshold 0.950"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "wrong_true_world_target_claim_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: adherence pass rate 0.000 < threshold 0.900"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "missing_false_world_test_id_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: missing false-world test IDs present: 2",
+        "C-001: 2 test(s) failed deterministic checks",
+        "C-001: sensitivity pass rate 0.000 < threshold 0.950"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "missing_true_world_test_id_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: missing true-world test IDs present: 1",
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: adherence pass rate 0.000 < threshold 0.900"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "wildcard_applies_to_tests_does_not_replace_test_id",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: missing false-world test IDs present: 1",
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: sensitivity pass rate 0.500 < threshold 0.950"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "PASS-TRACKED"
+      ],
+      "name": "valid_target_claim_ids_list_still_passes",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-TRACKED"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "evidence_ref_path_escape_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: ../ntt_gate_external_valid_ref/evidence.json: evidence ref escapes evidence_root"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "evidence_ref_absolute_path_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: <tmp-ntt-path>: evidence ref must be relative to evidence_root"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "external_ref_with_valid_artifact_hash_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: ../ntt_gate_external_valid_ref/evidence.json: evidence ref escapes evidence_root",
+        "C-001: unique evidence refs 1 < required 2"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "remote_ref_rejected_in_strict_local_mode",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: https://example.invalid/nozickian/evidence.json: remote evidence refs are not allowed in strict local evidence mode"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "uppercase_https_evidence_ref_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: HTTPS://example.invalid/nozickian/evidence.json: remote evidence refs are not allowed in strict local evidence mode"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "mixed_case_https_evidence_ref_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: hTtPs://example.invalid/nozickian/evidence.json: remote evidence refs are not allowed in strict local evidence mode"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "uppercase_doi_urn_refs_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: DOI:10.5555/nozickian-test: remote evidence refs are not allowed in strict local evidence mode"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "scheme_like_evidence_ref_rejected_in_strict_mode",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: nozickian-scheme:evidence.json: remote evidence refs are not allowed in strict local evidence mode"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "downstream_claim_auto_pass_rejected",
+      "passed": true,
+      "reasons": [
+        "downstream claim D-001 attempts automatic closure/status inheritance without an independent claim record"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "PASS-TRACKED"
+      ],
+      "name": "downstream_unverified_record_retains_pass",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-TRACKED"
+    },
+    {
+      "expected_any": [
+        "PASS-SCOPED"
+      ],
+      "name": "valid_scoped_unknown_downgrades",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-SCOPED"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "zero_threshold_no_tests_bypass",
+      "passed": true,
+      "reasons": [
+        "threshold relaxation attempt ignored: critical.method_completeness 0.000 < default 0.875",
+        "threshold relaxation attempt ignored: critical.sensitivity 0.000 < default 0.950",
+        "threshold relaxation attempt ignored: critical.adherence 0.000 < default 0.900",
+        "C-001: method completeness 0.000 < threshold 0.875",
+        "C-001: evidence refs 0 < required 2",
+        "C-001: false-world tests 0 < required 2",
+        "C-001: true-world tests 0 < required 1"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "no_claim_evidence",
+      "passed": true,
+      "reasons": [
+        "C-001: evidence refs 0 < required 2"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "empty_test_evidence",
+      "passed": true,
+      "reasons": [
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: sensitivity pass rate 0.500 < threshold 0.950"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "unresolved_contradiction",
+      "passed": true,
+      "reasons": [
+        "C-001: unresolved contradictions present: 1"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "unknown_truth_status",
+      "passed": true,
+      "reasons": [
+        "C-001: critical truth_status is 'unknown'; required confirmed"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "method_component_overclaim",
+      "passed": true,
+      "reasons": [
+        "certificate-level method_manifest incomplete: missing ['checker', 'artifacts', 'environment', 'tools', 'evidence_process', 'graders_or_tests', 'trace_or_logs']",
+        "C-001: missing method components: ['checker', 'artifacts', 'environment', 'tools', 'evidence_process', 'graders_or_tests', 'trace_or_logs']",
+        "C-001: method completeness 0.125 < threshold 0.875"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "bad_test_status",
+      "passed": true,
+      "reasons": [
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: sensitivity pass rate 0.500 < threshold 0.950"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "observed_accepts_false",
+      "passed": true,
+      "reasons": [
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: sensitivity pass rate 0.500 < threshold 0.950"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "observed_rejects_true",
+      "passed": true,
+      "reasons": [
+        "C-001: 1 test(s) failed deterministic checks",
+        "C-001: adherence pass rate 0.000 < threshold 0.900"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "PASS-TRACKED"
+      ],
+      "name": "minor_claim_without_modal_tests",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-TRACKED"
+    }
+  ],
+  "passed": 48,
+  "total": 48
+}

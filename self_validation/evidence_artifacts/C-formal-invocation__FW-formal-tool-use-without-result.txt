@@ -1,0 +1,5 @@
+v1.0.1 structured evidence artifact
+claim_id=C-formal-invocation
+test_id=FW-formal-tool-use-without-result
+evidence_ref=self_validation/evidence/C-formal-invocation__FW-formal-tool-use-without-result.json
+patches=result-content semantics; unique evidence refs; unique artifact identities

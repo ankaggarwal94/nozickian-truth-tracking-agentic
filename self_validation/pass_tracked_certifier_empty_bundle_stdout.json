@@ -1,0 +1,167 @@
+{
+  "checks": [
+    {
+      "details": "<package-root>",
+      "name": "package root exists",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "<tmp-v101-final-outputs>",
+      "name": "audit bundle exists",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "deterministic/package_validation.json",
+      "name": "deterministic artifact present: package_validation",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "deterministic/gate_result.json",
+      "name": "deterministic artifact present: gate_result",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "deterministic/regression_eval_result.json",
+      "name": "deterministic artifact present: regression",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "deterministic/gate_contract_results.json",
+      "name": "deterministic artifact present: gate_contract",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "deterministic/formal_runner_contract_results.json",
+      "name": "deterministic artifact present: formal_contract",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "deterministic/manifest_check.txt",
+      "name": "deterministic artifact present: manifest_check",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "missing official validator output; retaining scope limitation if allowed",
+      "name": "official validator present: claude_plugin_validate",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "missing official validator output; retaining scope limitation if allowed",
+      "name": "official validator present: skills_ref_validate",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "<tmp-v101-final-outputs>",
+      "name": "live runtime eval result present",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": [],
+      "name": "at least one formal artifact result present",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "<tmp-v101-final-outputs>",
+      "name": "promotion certificate present",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": [],
+      "name": "no stale local path or prior-version tokens in package/bundle evidence",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "1.0.1",
+      "name": "current plugin version is semver",
+      "passed": true,
+      "severity": "critical"
+    }
+  ],
+  "checks_passed": 4,
+  "checks_total": 15,
+  "critical_failed": 11,
+  "failed_checks": [
+    {
+      "details": "deterministic/package_validation.json",
+      "name": "deterministic artifact present: package_validation",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "deterministic/gate_result.json",
+      "name": "deterministic artifact present: gate_result",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "deterministic/regression_eval_result.json",
+      "name": "deterministic artifact present: regression",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "deterministic/gate_contract_results.json",
+      "name": "deterministic artifact present: gate_contract",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "deterministic/formal_runner_contract_results.json",
+      "name": "deterministic artifact present: formal_contract",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "deterministic/manifest_check.txt",
+      "name": "deterministic artifact present: manifest_check",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "missing official validator output; retaining scope limitation if allowed",
+      "name": "official validator present: claude_plugin_validate",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "missing official validator output; retaining scope limitation if allowed",
+      "name": "official validator present: skills_ref_validate",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "<tmp-v101-final-outputs>",
+      "name": "live runtime eval result present",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": [],
+      "name": "at least one formal artifact result present",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": "<tmp-v101-final-outputs>",
+      "name": "promotion certificate present",
+      "passed": false,
+      "severity": "critical"
+    }
+  ],
+  "major_failed": 0,
+  "status": "FAIL"
+}

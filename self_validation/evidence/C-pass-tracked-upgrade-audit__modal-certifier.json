@@ -1,0 +1,16 @@
+{
+  "applies_to_tests": [
+    "FW-pass-tracked-dry-run-promotion",
+    "FW-pass-tracked-auto-closure",
+    "FW-pass-tracked-missing-trace-auth",
+    "TW-pass-tracked-valid-bundle-retained"
+  ],
+  "artifact_path": "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
+  "claim_id": "C-pass-tracked-upgrade-audit",
+  "command_or_source": "v1.0.1 package-local PASS-TRACKED upgrade audit files and deterministic validator checks",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:8455f591a1773c83ef5f7423fc3088857a41d89743a2faa4c39c56bf8b07360f",
+  "observed_result": "Observed certifier code that returns PASS-TRACKED only when critical promotion evidence is present and otherwise returns FAIL or PASS-SCOPED depending on the missing evidence.",
+  "support_summary": "The certifier implements the modal checks described by the reference: deterministic artifacts, official validators, live fixture evidence, formal results, generated certificate strict gate, trace authentication, promotion certificate, stale tokens, and downstream non-closure.",
+  "timestamp_utc": "2026-06-06T00:00:00Z"
+}

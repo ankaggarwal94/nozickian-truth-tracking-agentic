@@ -1,0 +1,16 @@
+{
+  "applies_to_tests": [
+    "FW-pass-tracked-dry-run-promotion",
+    "FW-pass-tracked-auto-closure",
+    "FW-pass-tracked-missing-trace-auth",
+    "TW-pass-tracked-valid-bundle-retained"
+  ],
+  "artifact_path": "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
+  "claim_id": "C-pass-tracked-upgrade-audit",
+  "command_or_source": "v1.0.1 package-local PASS-TRACKED upgrade audit files and deterministic validator checks",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:4a280a90bd3d55fa90cbae526455b87c4632d8f0fd16f6de89edb3bbdc5f304d",
+  "observed_result": "Observed reference text that blocks dry-run promotion, auto-closure promotion, and missing trace-auth promotion while allowing a valid external audit bundle to be certified.",
+  "support_summary": "The upgrade audit reference supplies modal coverage for nearby false-world rejection and true-world retention: it names dry-run, missing official validators, missing trace authentication, and downstream automatic closure as downgrade blockers while retaining properly evidenced PASS-TRACKED bundles.",
+  "timestamp_utc": "2026-06-06T00:00:00Z"
+}

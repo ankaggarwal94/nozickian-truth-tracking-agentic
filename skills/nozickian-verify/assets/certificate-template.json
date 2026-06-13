@@ -1,0 +1,55 @@
+{
+  "artifact": {
+    "hash": "sha256:OPTIONAL",
+    "locator": "PATH_OR_URI",
+    "name": "ARTIFACT_NAME",
+    "type": "prose|code|manual|rag|trace|package"
+  },
+  "certificate_version": "2.0",
+  "claims": [],
+  "derived_or_downstream_claims": [
+    {
+      "derived_claim": "A downstream deployment, safety, compliance, or action-authorizing conclusion inferred from C-001.",
+      "from_claim_ids": [
+        "C-001"
+      ],
+      "id": "D-001",
+      "reason": "No independent method M, evidence, false-world tests, true-world tests, contradiction review, and residual-risk assessment supplied for this downstream claim.",
+      "status": "UNVERIFIED"
+    }
+  ],
+  "method": {
+    "components": {
+      "model": "...",
+      "prompt_or_instructions": "...",
+      "release_gate": "...",
+      "retrieval_or_sources": "...",
+      "tools_or_environment": "...",
+      "trace_or_artifacts": "...",
+      "verifier_or_grader": "..."
+    },
+    "description": "Describe the actual prompt/model/retriever/toolchain/grader/human-review method.",
+    "id": "M1"
+  },
+  "method_unknowns": [],
+  "pass_tracked_upgrade_audit": {
+    "audit_bundle": "pass_tracked_audit_bundle/",
+    "certifier_command": "python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json",
+    "downgrade_if_missing": [
+      "UNVERIFIED_RUNTIME",
+      "PASS-SCOPED",
+      "LIMITED",
+      "FAIL"
+    ],
+    "requested_status": "PASS-TRACKED",
+    "required_evidence": [
+      "deterministic checks",
+      "official Claude Code validators",
+      "live fixture runtime evals",
+      "formal artifact run with trace auth",
+      "strict gate PASS-TRACKED on generated certificate",
+      "downstream non-closure review"
+    ],
+    "upgrade_from_status": "PASS-SCOPED"
+  }
+}

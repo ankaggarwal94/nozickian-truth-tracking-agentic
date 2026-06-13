@@ -1,0 +1,1643 @@
+{
+  "artifact": {
+    "assurance_tier": "team-internal-reuse-with-hardened-static-evidence-and-trace-authentication",
+    "name": "nozickian-verification-team-internal",
+    "type": "Claude Code plugin with Agent Skill and subagents",
+    "version": "1.0.1"
+  },
+  "claims": [
+    {
+      "artifact_location": ".claude-plugin/plugin.json; skills/nozickian-verify/SKILL.md; agents/**/*.md; references/*.md; scripts/*.py; RELEASE_LOCK.json; .github/workflows/nozickian-team-ci.yml",
+      "evidence_refs": [
+        "self_validation/evidence/C-structure__claim.json",
+        "self_validation/evidence/C-structure__gate.json"
+      ],
+      "false_world_tests": [
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-structure__FW-structure-1.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-structure-1",
+          "kind": "false_world",
+          "observed_behavior": "The validator rejected the false package copy and did not certify it.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Remove MANIFEST.sha256 from a package copy.",
+          "result": "pass",
+          "target_claim": "C-structure"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-structure__FW-structure-2.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-structure-2",
+          "kind": "false_world",
+          "observed_behavior": "The validator flagged the malformed subagent and rejected the false package copy.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Remove the source-verifier agent description from a package copy.",
+          "result": "pass",
+          "target_claim": "C-structure"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-structure__FW-surface-manifest-inline.json"
+          ],
+          "expected_behavior": "The verifier must reject or downgrade the nearby false package before internal reuse.",
+          "id": "FW-surface-manifest-inline",
+          "kind": "false_world",
+          "observed_behavior": "The validator rejects manifest-declared runtime fields even when hashes are updated.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Add inline plugin manifest hooks/MCP/agent override and update MANIFEST.sha256.",
+          "result": "pass",
+          "target_claim": "C-structure"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-structure__FW-skill-dynamic-shell.json"
+          ],
+          "expected_behavior": "The verifier must reject or downgrade the nearby false package before internal reuse.",
+          "id": "FW-skill-dynamic-shell",
+          "kind": "false_world",
+          "observed_behavior": "The validator rejects dynamic skill shell execution in the team/internal tier.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Add a skill dynamic shell substitution and update MANIFEST.sha256.",
+          "result": "pass",
+          "target_claim": "C-structure"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-structure__FW-agent-unsupported-key.json"
+          ],
+          "expected_behavior": "The verifier must reject or downgrade the nearby false package before internal reuse.",
+          "id": "FW-agent-unsupported-key",
+          "kind": "false_world",
+          "observed_behavior": "The validator rejects unsupported frontmatter keys in plugin-shipped agents.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Add unsupported plugin-agent hook frontmatter and update MANIFEST.sha256.",
+          "result": "pass",
+          "target_claim": "C-structure"
+        }
+      ],
+      "id": "C-structure",
+      "importance": "critical",
+      "method_m": {
+        "artifacts": [
+          ".claude-plugin/plugin.json",
+          "skills/nozickian-verify/SKILL.md",
+          "agents/**/*.md",
+          "references/*.md",
+          "scripts/*.py",
+          "evals/evals.json",
+          "MANIFEST.sha256"
+        ],
+        "checker": "Hardened deterministic validation suite: validate_package.py --self-test, run_gate_contract_tests.py, ntt_gate.py, manifest hash checks, and manual inspection of results.",
+        "environment": [
+          "local filesystem",
+          "Python 3.13",
+          "temporary mutation copies under /tmp",
+          "web-checked Claude Code and Agent Skills docs"
+        ],
+        "evidence_process": "The package is checked structurally, semantically, and modally: manifest hashes, schema/frontmatter checks, gate contract tests, false-world package mutations, and true-world benign variations.",
+        "graders_or_tests": [
+          "validate_package.py --self-test",
+          "run_gate_contract_tests.py",
+          "ntt_gate.py",
+          "MANIFEST.sha256 hash verification",
+          "run_formal_runner_contract_tests.py",
+          "structured local evidence check"
+        ],
+        "human_review": "Final inspection of validation outputs and known runtime gaps.",
+        "producer": "Generated Claude Code plugin/skill package, including SKILL.md, reference files, subagent definitions, deterministic scripts, eval fixtures, and self-validation artifacts.",
+        "tools": [
+          "Python",
+          "Bash",
+          "local file reads/writes",
+          "web.run official docs lookup"
+        ],
+        "trace_or_logs": [
+          "self_validation/package_validation_result.json",
+          "self_validation/SELF_VALIDATION_REPORT.md",
+          "self_validation/gate_contract_results.json",
+          "self_validation/GATE_RESULT.md"
+        ]
+      },
+      "residual_risks": [
+        "Official Claude plugin validation was not run in this environment."
+      ],
+      "text": "The regenerated package has the expected Claude Code plugin structure, Agent Skill structure, and specialist subagent files.",
+      "true_world_tests": [
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-structure__TW-structure-1.json"
+          ],
+          "expected_behavior": "The verifier should retain the true claim across benign equivalent variation.",
+          "id": "TW-structure-1",
+          "kind": "true_world",
+          "observed_behavior": "The validator retained the package certification for the benign equivalent variant.",
+          "outcome": "retained_true_claim",
+          "result": "pass",
+          "target_claim": "C-structure",
+          "variant": "Add an unused explanatory asset that does not alter package behavior."
+        }
+      ],
+      "truth_status": "executed_confirmed",
+      "unresolved_contradictions": []
+    },
+    {
+      "artifact_location": "skills/nozickian-verify/scripts/ntt_gate.py; skills/nozickian-verify/scripts/run_gate_contract_tests.py; self_validation/gate_contract_results.json; RELEASE_LOCK.json; .github/workflows/nozickian-team-ci.yml",
+      "evidence_refs": [
+        "self_validation/evidence/C-gate-hardening__claim.json",
+        "self_validation/evidence/C-gate-hardening__gate.json"
+      ],
+      "false_world_tests": [
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-1.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-1",
+          "kind": "false_world",
+          "observed_behavior": "The gate rejected the false certificate and refused certification.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Submit a certificate with zero thresholds, no evidence, and no modal tests.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-2.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-2",
+          "kind": "false_world",
+          "observed_behavior": "The gate rejected those false certificates and recorded failing outcomes.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Submit certificates with unresolved contradictions, unknown truth status, and fake pass labels.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-wrong-evidence-hash.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-wrong-evidence-hash",
+          "kind": "false_world",
+          "observed_behavior": "The strict evidence gate rejected the wrong hash and returned FAIL in the gate contract test.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Provide a structured evidence JSON whose artifact_path exists but whose hash_or_version is a fabricated SHA-256 digest.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-one-of-two-claim-evidence-wrong.json"
+          ],
+          "expected_behavior": "The strict evidence gate must reject, flag, block, downgrade, or refuse to certify the nearby false evidence-provenance world.",
+          "id": "FW-gate-one-of-two-claim-evidence-wrong",
+          "kind": "false_world",
+          "observed_behavior": "The gate rejected the certificate because all cited claim evidence refs must be valid; a good ref did not mask the wrong-hash ref.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "One of two claim-level evidence refs has a wrong SHA-256 while another claim-level ref remains valid.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-one-of-two-test-evidence-wrong.json"
+          ],
+          "expected_behavior": "The strict evidence gate must reject, flag, block, downgrade, or refuse to certify the nearby false evidence-provenance world.",
+          "id": "FW-gate-one-of-two-test-evidence-wrong",
+          "kind": "false_world",
+          "observed_behavior": "The gate rejected the modal test because all cited test evidence refs must be valid; a good ref did not mask the wrong-hash ref.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "One false-world test cites both a valid evidence ref and a wrong-hash evidence ref.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-evidence-ref-path-escape.json"
+          ],
+          "expected_behavior": "The strict evidence gate must reject, flag, block, downgrade, or refuse to certify the nearby false evidence-provenance world.",
+          "id": "FW-gate-evidence-ref-path-escape",
+          "kind": "false_world",
+          "observed_behavior": "The gate rejected the ref because the cited evidence JSON path escapes evidence_root.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A claim evidence ref points to ../outside/evidence.json while the evidence JSON cites an in-root artifact.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-evidence-ref-absolute-path.json"
+          ],
+          "expected_behavior": "The strict evidence gate must reject, flag, block, downgrade, or refuse to certify the nearby false evidence-provenance world.",
+          "id": "FW-gate-evidence-ref-absolute-path",
+          "kind": "false_world",
+          "observed_behavior": "The gate rejected the ref because strict local evidence requires evidence_refs to be relative paths under evidence_root.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A claim evidence ref is an absolute filesystem path to an otherwise well-formed evidence JSON.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-external-ref-valid-hash.json"
+          ],
+          "expected_behavior": "The strict evidence gate must reject, flag, block, downgrade, or refuse to certify the nearby false evidence-provenance world.",
+          "id": "FW-gate-external-ref-valid-hash",
+          "kind": "false_world",
+          "observed_behavior": "The gate rejected the external evidence ref despite its valid artifact hash because the evidence file itself was outside the reviewed evidence root.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "All semantic fields and the artifact hash are valid, but the evidence JSON itself is outside evidence_root.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-remote-ref-strict.json"
+          ],
+          "expected_behavior": "The strict evidence gate must reject, flag, block, downgrade, or refuse to certify the nearby false evidence-provenance world.",
+          "id": "FW-gate-remote-ref-strict",
+          "kind": "false_world",
+          "observed_behavior": "The gate rejected the remote evidence ref in strict local evidence mode instead of treating it as local structured evidence.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A certificate includes a remote URL as an evidence_ref in strict local evidence mode.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-uppercase-https-evidence-ref.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the false world.",
+          "id": "FW-gate-uppercase-https-evidence-ref",
+          "kind": "false_world",
+          "observed_behavior": "The gate contract uppercase_https_evidence_ref_rejected failed the certificate as expected.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A strict-evidence certificate cites HTTPS://example.invalid/... with a matching local HTTPS:/... path to mimic a remote ref bypass.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-mixedcase-https-evidence-ref.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the false world.",
+          "id": "FW-gate-mixedcase-https-evidence-ref",
+          "kind": "false_world",
+          "observed_behavior": "The gate contract mixed_case_https_evidence_ref_rejected failed the certificate as expected.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A strict-evidence certificate cites hTtPs://example.invalid/... with a matching local hTtPs:/... path.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-uppercase-doi-urn-evidence-ref.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the false world.",
+          "id": "FW-gate-uppercase-doi-urn-evidence-ref",
+          "kind": "false_world",
+          "observed_behavior": "The gate contract uppercase_doi_urn_refs_rejected failed the certificate as expected.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A strict-evidence certificate cites DOI: or URN: style evidence refs with matching local colon paths.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-scheme-like-evidence-ref.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the false world.",
+          "id": "FW-gate-scheme-like-evidence-ref",
+          "kind": "false_world",
+          "observed_behavior": "The gate contract scheme_like_evidence_ref_rejected_in_strict_mode failed the certificate as expected.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A strict-evidence certificate cites an arbitrary scheme-like ref such as nozickian-scheme:evidence.json.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-lowercase-https-uri.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-artifact-path-lowercase-https-uri",
+          "kind": "false_world",
+          "observed_behavior": "The gate rejected the URI-like artifact_path instead of treating it as a local https:/ path.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use artifact_path https://example.invalid/... inside otherwise valid structured evidence JSON.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-uppercase-https-uri.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-artifact-path-uppercase-https-uri",
+          "kind": "false_world",
+          "observed_behavior": "The gate rejected the uppercase URI-scheme artifact_path using case-insensitive URI scheme handling.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use artifact_path HTTPS://example.invalid/... inside otherwise valid structured evidence JSON.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-mixedcase-uri.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-artifact-path-mixedcase-uri",
+          "kind": "false_world",
+          "observed_behavior": "The gate rejected the mixed-case URI-scheme artifact_path.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use artifact_path hTtPs://example.invalid/... inside otherwise valid structured evidence JSON.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-arbitrary-scheme.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-artifact-path-arbitrary-scheme",
+          "kind": "false_world",
+          "observed_behavior": "The gate rejected the arbitrary URI-scheme artifact_path in strict local evidence mode.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use artifact_path nozickian-artifact:artifact.txt inside otherwise valid structured evidence JSON.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-duplicate-claim-evidence-ref.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-duplicate-claim-evidence-ref",
+          "kind": "false_world",
+          "observed_behavior": "The strict gate rejected the duplicate because raw refs collapsed to one unique evidence file.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Duplicate the same claim-level evidence ref twice to satisfy the critical evidence minimum.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-aliased-claim-evidence-ref.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-aliased-claim-evidence-ref",
+          "kind": "false_world",
+          "observed_behavior": "The strict gate canonicalized the aliases to one evidence file and rejected the sufficiency claim.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Cite the same claim-level evidence file twice through different :: aliases.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-duplicate-structured-evidence-file.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-duplicate-structured-evidence-file",
+          "kind": "false_world",
+          "observed_behavior": "The strict gate counted the duplicate structured evidence file once and rejected the critical threshold.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use the same structured evidence JSON file twice as separate claim evidence.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-same-artifact-path-for-claim-refs.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-same-artifact-path-for-claim-refs",
+          "kind": "false_world",
+          "observed_behavior": "The strict gate rejected the critical claim because the underlying structured evidence artifacts were not unique.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use two different evidence JSON wrappers that both bind to the same underlying artifact path/hash.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-aliased-same-claim-evidence-ref.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-aliased-same-claim-evidence-ref",
+          "kind": "false_world",
+          "observed_behavior": "The strict gate resolved aliases to the same canonical evidence file, failed the unique evidence threshold, and did not certify the critical claim.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Cite the same evidence JSON twice with different :: aliases to satisfy a critical threshold.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-same-artifact-path-all-claim-refs.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-same-artifact-path-all-claim-refs",
+          "kind": "false_world",
+          "observed_behavior": "The strict gate detected fewer unique structured evidence artifacts than required and failed the critical claim.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use two different structured evidence wrappers that both point to the same underlying artifact_path and SHA-256.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-duplicate-false-world-test-id.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-duplicate-false-world-test-id",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 gate reported duplicate false-world test IDs and did not count the duplicate toward modal coverage.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Repeat a false-world test ID while changing the evidence ref to inflate sensitivity coverage.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-duplicated-false-world-test-object.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-duplicated-false-world-test-object",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 gate counted unique modal test identities and rejected the duplicated false-world object.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Copy the same false-world test object twice to satisfy the two-test critical threshold.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-aliased-same-false-world-test-evidence.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-aliased-same-false-world-test-evidence",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 gate counted canonical test evidence sets and rejected the reused evidence set as insufficient modal support.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use two different false-world tests backed by the same canonical evidence set to inflate modal coverage.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-duplicate-true-world-test-id.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-gate-duplicate-true-world-test-id",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 gate reported duplicate true-world test IDs and rejected the certificate mutation.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Duplicate a true-world test ID to inflate adherence coverage.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-wrong-false-world-target-claim.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, cap, or refuse to certify this nearby false world.",
+          "id": "FW-gate-wrong-false-world-target-claim",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 gate contract wrong_false_world_target_claim_rejected failed the certificate mutation.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A critical claim borrows false-world tests whose target_claim names a different claim.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-wrong-true-world-target-claim.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, cap, or refuse to certify this nearby false world.",
+          "id": "FW-gate-wrong-true-world-target-claim",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 gate contract wrong_true_world_target_claim_rejected failed the certificate mutation.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A critical claim borrows true-world tests whose target_claim names a different claim.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-missing-false-world-test-id.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, cap, or refuse to certify this nearby false world.",
+          "id": "FW-gate-missing-false-world-test-id",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 gate contract missing_false_world_test_id_rejected failed the certificate mutation.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "False-world modal tests omit stable test IDs while otherwise carrying evidence.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-missing-true-world-test-id.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, cap, or refuse to certify this nearby false world.",
+          "id": "FW-gate-missing-true-world-test-id",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 gate contract missing_true_world_test_id_rejected failed the certificate mutation.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "True-world modal tests omit stable test IDs while otherwise carrying evidence.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__FW-gate-wildcard-applies-to-tests-missing-id.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, cap, or refuse to certify this nearby false world.",
+          "id": "FW-gate-wildcard-applies-to-tests-missing-id",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 gate contract wildcard_applies_to_tests_does_not_replace_test_id failed the certificate mutation.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Structured evidence uses applies_to_tests wildcard for a modal test that has no test ID.",
+          "result": "pass",
+          "target_claim": "C-gate-hardening"
+        }
+      ],
+      "id": "C-gate-hardening",
+      "importance": "critical",
+      "method_m": {
+        "artifacts": [
+          ".claude-plugin/plugin.json",
+          "skills/nozickian-verify/SKILL.md",
+          "agents/**/*.md",
+          "references/*.md",
+          "scripts/*.py",
+          "evals/evals.json",
+          "MANIFEST.sha256"
+        ],
+        "checker": "Hardened deterministic validation suite: validate_package.py --self-test, run_gate_contract_tests.py, ntt_gate.py, manifest hash checks, and manual inspection of results.",
+        "environment": [
+          "local filesystem",
+          "Python 3.13",
+          "temporary mutation copies under /tmp",
+          "web-checked Claude Code and Agent Skills docs"
+        ],
+        "evidence_process": "The package is checked structurally, semantically, and modally: manifest hashes, schema/frontmatter checks, gate contract tests, false-world package mutations, and true-world benign variations.",
+        "graders_or_tests": [
+          "validate_package.py --self-test",
+          "run_gate_contract_tests.py",
+          "ntt_gate.py",
+          "MANIFEST.sha256 hash verification",
+          "run_formal_runner_contract_tests.py",
+          "structured local evidence check"
+        ],
+        "human_review": "Final inspection of validation outputs and known runtime gaps.",
+        "producer": "Generated Claude Code plugin/skill package, including SKILL.md, reference files, subagent definitions, deterministic scripts, eval fixtures, and self-validation artifacts.",
+        "tools": [
+          "Python",
+          "Bash",
+          "local file reads/writes",
+          "web.run official docs lookup"
+        ],
+        "trace_or_logs": [
+          "self_validation/package_validation_result.json",
+          "self_validation/SELF_VALIDATION_REPORT.md",
+          "self_validation/gate_contract_results.json",
+          "self_validation/GATE_RESULT.md"
+        ]
+      },
+      "residual_risks": [
+        "The gate checks certificate structure and declared evidence; it cannot independently prove that all cited evidence artifacts are semantically adequate."
+      ],
+      "text": "The deterministic gate rejects threshold-lowering, missing evidence, missing modal tests, unresolved contradictions, invalid local evidence refs, bad artifact hashes, and URI-scheme evidence/artifact references in strict local evidence mode.",
+      "true_world_tests": [
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__TW-gate-1.json"
+          ],
+          "expected_behavior": "The verifier should retain the true claim across benign equivalent variation.",
+          "id": "TW-gate-1",
+          "kind": "true_world",
+          "observed_behavior": "The gate retained the true certification and returned PASS-TRACKED for the complete certificate.",
+          "outcome": "retained_true_claim",
+          "result": "pass",
+          "target_claim": "C-gate-hardening",
+          "variant": "Submit a substantive valid certificate with required method components, evidence, and modal tests."
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__TW-gate-unique-evidence-refs-pass.json"
+          ],
+          "expected_behavior": "The gate should retain the true sufficiency claim and pass under strict local evidence mode.",
+          "id": "TW-gate-unique-evidence-refs-pass",
+          "kind": "true_world",
+          "observed_behavior": "The contract test unique_evidence_refs_with_valid_hashes_still_pass passed with unique evidence refs and valid hashes.",
+          "outcome": "retained_true_claim",
+          "result": "pass",
+          "target_claim": "C-gate-hardening",
+          "variant": "Use two unique structured evidence JSON files with two unique underlying artifact/hash identities for a critical claim."
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-gate-hardening__TW-gate-target-claim-ids-list.json"
+          ],
+          "expected_behavior": "The verifier should retain the true claim for this benign equivalent variant.",
+          "id": "TW-gate-target-claim-ids-list",
+          "kind": "true_world",
+          "observed_behavior": "The v1.0.1 gate contract valid_target_claim_ids_list_still_passes accepted the valid list-bound variant.",
+          "outcome": "retained_true_claim",
+          "result": "pass",
+          "target_claim": "C-gate-hardening",
+          "variant": "Modal tests use target_claim_ids lists that include the evaluated claim ID instead of a scalar target_claim."
+        }
+      ],
+      "truth_status": "executed_confirmed",
+      "unresolved_contradictions": []
+    },
+    {
+      "artifact_location": "skills/nozickian-verify/scripts/validate_package.py; self_validation/SELF_VALIDATION_REPORT.md; self_validation/package_validation_result.json; RELEASE_LOCK.json; .github/workflows/nozickian-team-ci.yml",
+      "evidence_refs": [
+        "self_validation/evidence/C-validator-sensitivity__claim.json",
+        "self_validation/evidence/C-validator-sensitivity__gate.json"
+      ],
+      "false_world_tests": [
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-validator-sensitivity__FW-validator-1.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-validator-1",
+          "kind": "false_world",
+          "observed_behavior": "The validator rejected the degraded standard and did not certify the false package copy.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Overwrite STANDARD.md with nonsense while keeping the file present.",
+          "result": "pass",
+          "target_claim": "C-validator-sensitivity"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-validator-sensitivity__FW-validator-2.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-validator-2",
+          "kind": "false_world",
+          "observed_behavior": "The validator rejected the stubbed gate and did not certify the false package copy.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Replace ntt_gate.py with an always-pass stub.",
+          "result": "pass",
+          "target_claim": "C-validator-sensitivity"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-validator-sensitivity__FW-recursive-agent-after-manifest.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-recursive-agent-after-manifest",
+          "kind": "false_world",
+          "observed_behavior": "The validator rejected the recursive nested plugin agent after manifest update and did not certify the false package copy.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Add agents/evil/hidden.md and then update MANIFEST.sha256, simulating a plugin-loadable recursive nested agent false world.",
+          "result": "pass",
+          "target_claim": "C-validator-sensitivity"
+        }
+      ],
+      "id": "C-validator-sensitivity",
+      "importance": "critical",
+      "method_m": {
+        "artifacts": [
+          ".claude-plugin/plugin.json",
+          "skills/nozickian-verify/SKILL.md",
+          "agents/**/*.md",
+          "references/*.md",
+          "scripts/*.py",
+          "evals/evals.json",
+          "MANIFEST.sha256"
+        ],
+        "checker": "Hardened deterministic validation suite: validate_package.py --self-test, run_gate_contract_tests.py, ntt_gate.py, manifest hash checks, and manual inspection of results.",
+        "environment": [
+          "local filesystem",
+          "Python 3.13",
+          "temporary mutation copies under /tmp",
+          "web-checked Claude Code and Agent Skills docs"
+        ],
+        "evidence_process": "The package is checked structurally, semantically, and modally: manifest hashes, schema/frontmatter checks, gate contract tests, false-world package mutations, and true-world benign variations.",
+        "graders_or_tests": [
+          "validate_package.py --self-test",
+          "run_gate_contract_tests.py",
+          "ntt_gate.py",
+          "MANIFEST.sha256 hash verification",
+          "run_formal_runner_contract_tests.py",
+          "structured local evidence check"
+        ],
+        "human_review": "Final inspection of validation outputs and known runtime gaps.",
+        "producer": "Generated Claude Code plugin/skill package, including SKILL.md, reference files, subagent definitions, deterministic scripts, eval fixtures, and self-validation artifacts.",
+        "tools": [
+          "Python",
+          "Bash",
+          "local file reads/writes",
+          "web.run official docs lookup"
+        ],
+        "trace_or_logs": [
+          "self_validation/package_validation_result.json",
+          "self_validation/SELF_VALIDATION_REPORT.md",
+          "self_validation/gate_contract_results.json",
+          "self_validation/GATE_RESULT.md"
+        ]
+      },
+      "residual_risks": [
+        "The self-test uses deterministic package copies rather than live task execution inside Claude Code."
+      ],
+      "text": "The closed-surface validator rejects extra plugin-loadable behavior, semantic prompt poisoning, placeholder eval worlds, live-harness stubs, broad skill tool grants, malformed agents, and manifest/integrity failures while retaining benign true-world variations.",
+      "true_world_tests": [
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-validator-sensitivity__TW-validator-1.json"
+          ],
+          "expected_behavior": "The verifier should retain the true claim across benign equivalent variation.",
+          "id": "TW-validator-1",
+          "kind": "true_world",
+          "observed_behavior": "The validator retained the certification for the equivalent source-reference variant.",
+          "outcome": "retained_true_claim",
+          "result": "pass",
+          "target_claim": "C-validator-sensitivity",
+          "variant": "Append harmless whitespace to SOURCES.md."
+        }
+      ],
+      "truth_status": "executed_confirmed",
+      "unresolved_contradictions": []
+    },
+    {
+      "artifact_location": "agents/ntt-formal-coordinator.md; skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/SKILL.md; README.md; RELEASE_LOCK.json; self_validation/formal_invocation_dry_run.json",
+      "evidence_refs": [
+        "self_validation/evidence/C-formal-invocation__claim.json",
+        "self_validation/evidence/C-formal-invocation__gate.json"
+      ],
+      "false_world_tests": [
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-runner-stub.json"
+          ],
+          "expected_behavior": "The package validator must reject the nearby false package and refuse to certify a formal invocation path whose runner no longer writes artifacts or runs ntt_gate.py.",
+          "id": "FW-formal-runner-stub",
+          "kind": "false_world",
+          "observed_behavior": "validate_package.py --self-test rejects the formal runner pass-stub mutation and records the rejection in package_validation_result.json.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Replace run_formal_artifact_verification.py with a pass stub that prints PASS-SCOPED and update MANIFEST.sha256.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-coordinator-general-purpose-fallback.json"
+          ],
+          "expected_behavior": "The package validator must reject or downgrade a package that would permit silent general-purpose fallback for a supposedly perfect formal invocation.",
+          "id": "FW-coordinator-general-purpose-fallback",
+          "kind": "false_world",
+          "observed_behavior": "validate_package.py --self-test rejects the formal coordinator general-purpose fallback mutation and records the rejection in package_validation_result.json.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Change ntt-formal-coordinator tools to Agent(general-purpose), allowing role-equivalent fallback instead of native ntt-* lanes, and update MANIFEST.sha256.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-tool-use-without-result.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-tool-use-without-result",
+          "kind": "false_world",
+          "observed_behavior": "The formal runner contract capped the run at PASS-SCOPED rather than authenticating PASS-TRACKED.",
+          "outcome": "downgraded",
+          "perturbation": "Provide native Agent/Task tool-use events for every lane but omit successful matching tool-result/completion events.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-mismatched-tool-result-id.json"
+          ],
+          "expected_behavior": "The formal trace authenticator must reject the transcript and cap any PASS-TRACKED gate output at PASS-SCOPED.",
+          "id": "FW-formal-mismatched-tool-result-id",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 formal-runner contract test mismatched_tool_result_id_does_not_authenticate rejected the transcript and preserved the PASS-SCOPED cap.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Provide native Agent/Task tool-use events for every ntt-* lane, but make every successful-looking tool_result reference a different tool_use_id while the text mentions the correct agent name.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-single-call-mentions-all-lanes.json"
+          ],
+          "expected_behavior": "The trace authenticator must not treat arbitrary description text as seven native lane calls.",
+          "id": "FW-formal-single-call-mentions-all-lanes",
+          "kind": "false_world",
+          "observed_behavior": "The formal runner contract test single_agent_call_mentions_all_lanes_does_not_authenticate rejected the transcript and preserved the PASS-SCOPED cap.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Provide one native Agent call with input.subagent_type naming only one lane while its description text mentions every required ntt-* lane, then provide one matching successful result.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-duplicate-tool-use-id.json"
+          ],
+          "expected_behavior": "The trace authenticator must require unique tool-use ids for lane-specific native execution.",
+          "id": "FW-formal-duplicate-tool-use-id",
+          "kind": "false_world",
+          "observed_behavior": "The formal runner contract tests duplicate_tool_use_id_across_lanes_does_not_authenticate and single_result_for_duplicate_id_does_not_authenticate_all_lanes rejected the transcript and preserved the PASS-SCOPED cap.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Provide seven native Agent calls with exact subagent_type selectors but reuse the same tool-use id for every lane and emit one matching successful result.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-empty-tool-result.json"
+          ],
+          "expected_behavior": "The trace authenticator must require meaningful non-empty successful result content.",
+          "id": "FW-formal-empty-tool-result",
+          "kind": "false_world",
+          "observed_behavior": "The formal runner contract test empty_tool_result_content_does_not_authenticate rejected the transcript and preserved the PASS-SCOPED cap.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Provide seven exact native lane calls with matching tool_result ids, explicit success status, and empty result content.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-generic-result-without-success-signal.json"
+          ],
+          "expected_behavior": "The trace authenticator must require an explicit success signal, not merely success-like prose.",
+          "id": "FW-formal-generic-result-without-success-signal",
+          "kind": "false_world",
+          "observed_behavior": "The formal runner contract test generic_result_without_status_or_is_error_does_not_authenticate rejected the transcript and preserved the PASS-SCOPED cap.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Provide seven exact native lane calls with matching result ids and generic success-looking text but no status or is_error success signal.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-description-only-selector.json"
+          ],
+          "expected_behavior": "The trace authenticator must require exact structured subagent selector fields.",
+          "id": "FW-formal-description-only-selector",
+          "kind": "false_world",
+          "observed_behavior": "The formal runner contract test structured_subagent_type_exact_match_required rejected the transcript and preserved the PASS-SCOPED cap.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Provide Agent calls whose descriptions mention each required lane, but omit the structured selector key such as subagent_type.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-nested-tool-result-input.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the false world.",
+          "id": "FW-formal-nested-tool-result-input",
+          "kind": "false_world",
+          "observed_behavior": "The formal runner contract nested_tool_result_inside_tool_input_does_not_authenticate capped the trace at PASS-SCOPED.",
+          "outcome": "downgraded",
+          "perturbation": "A transcript contains real native Agent tool-use calls but the only tool_result objects are nested inside tool_use.input data.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-nested-tool-result-arguments.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the false world.",
+          "id": "FW-formal-nested-tool-result-arguments",
+          "kind": "false_world",
+          "observed_behavior": "The formal runner contract nested_tool_result_inside_arguments_does_not_authenticate capped the trace at PASS-SCOPED.",
+          "outcome": "downgraded",
+          "perturbation": "A transcript contains fake successful tool_result objects nested inside tool_use.arguments data.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-result-before-tool-use.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the false world.",
+          "id": "FW-formal-result-before-tool-use",
+          "kind": "false_world",
+          "observed_behavior": "The formal runner contract tool_result_before_tool_use_does_not_authenticate rejected chronological authentication.",
+          "outcome": "downgraded",
+          "perturbation": "A transcript emits successful tool_result events before their matching Agent tool-use events.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-same-event-input-embedded-result.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the false world.",
+          "id": "FW-formal-same-event-input-embedded-result",
+          "kind": "false_world",
+          "observed_behavior": "The formal runner contract same_event_input_embedded_result_does_not_authenticate capped the trace at PASS-SCOPED.",
+          "outcome": "downgraded",
+          "perturbation": "A single assistant event embeds fake result dictionaries inside tool-use input payloads rather than as sibling runtime result events.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-text-block-tool-use-masquerade.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-text-block-tool-use-masquerade",
+          "kind": "false_world",
+          "observed_behavior": "The trace authenticator rejected text blocks masquerading as tool-use events and capped the run.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Represent all native lanes only as type:text content blocks containing Agent/input fields.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-text-block-tool-result-masquerade.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-text-block-tool-result-masquerade",
+          "kind": "false_world",
+          "observed_behavior": "The trace authenticator rejected text blocks masquerading as tool-result events and capped the run.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use real native tool_use events but make matching results only type:text blocks with tool_use_id fields.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-assistant-message-tool-use-masquerade.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-assistant-message-tool-use-masquerade",
+          "kind": "false_world",
+          "observed_behavior": "The trace authenticator rejected assistant/message envelopes masquerading as tool-use events and capped the run.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Represent tool calls as top-level type:assistant objects with name/input fields rather than tool_use events.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-message-result-masquerade.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-message-result-masquerade",
+          "kind": "false_world",
+          "observed_behavior": "The trace authenticator rejected message objects masquerading as tool-result events and capped the run.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use real native tool_use events but make matching results top-level type:message objects with result-like fields.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-unexpected-agent-without-selector.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-unexpected-agent-without-selector",
+          "kind": "false_world",
+          "observed_behavior": "The trace authenticator flagged the unexpected native Agent/Task call and capped PASS-TRACKED.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Append an extra Agent tool_use event without a structured ntt-* selector to an otherwise valid trace.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-unknown-agent-selector.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-unknown-agent-selector",
+          "kind": "false_world",
+          "observed_behavior": "The trace authenticator flagged the unknown selector as unexpected native fallback/substitution evidence and capped PASS-TRACKED.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Append an extra Task tool_use event with an unknown structured selector to an otherwise valid trace.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-empty-text-block-result.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-empty-text-block-result",
+          "kind": "false_world",
+          "observed_behavior": "The trace authenticator rejected empty text content blocks as non-substantive completion evidence.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use native tool_use events but make matching results content=[{\"type\":\"text\",\"text\":\"\"}].",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-metadata-only-text-block-result.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-metadata-only-text-block-result",
+          "kind": "false_world",
+          "observed_behavior": "The trace authenticator rejected metadata-only text blocks as non-substantive completion evidence.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use native tool_use events but make matching results content=[{\"type\":\"text\"}] with no payload text.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-whitespace-text-block-result.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-whitespace-text-block-result",
+          "kind": "false_world",
+          "observed_behavior": "The trace authenticator rejected whitespace-only text blocks as non-substantive completion evidence.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use native tool_use events but make matching results content=[{\"type\":\"text\",\"text\":\"   \\n\\t\"}].",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-metadata-only-dict-result.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-metadata-only-dict-result",
+          "kind": "false_world",
+          "observed_behavior": "The trace authenticator rejected metadata-only result dictionaries as non-substantive completion evidence.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use native tool_use events but make matching results a metadata-only dictionary with no payload-bearing fields.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-document-block-without-data.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-document-block-without-data",
+          "kind": "false_world",
+          "observed_behavior": "The trace authenticator rejected document blocks without source data as non-substantive completion evidence.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use native tool_use events but make matching results a document block with no source data.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-image-block-without-data.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-image-block-without-data",
+          "kind": "false_world",
+          "observed_behavior": "The trace authenticator rejected image blocks without source data as non-substantive completion evidence.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Use native tool_use events but make matching results an image block with no source data.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-result-content.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-tool-use-inside-tool-result-content",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 trace parser treated tool_result.content as output data, ignored the embedded fake tool_use objects, and capped the transcript at PASS-SCOPED.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Embed fake native Agent tool_use objects inside a real tool_result.content payload without real native lane calls.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-tool-result-inside-tool-result-content.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-tool-result-inside-tool-result-content",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 trace parser ignored nested tool_result payload data and did not authenticate native completion lanes.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Embed fake tool_result objects inside a real tool_result.content payload without real matching native lane calls.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-fake-tool-events-inside-tool-result-content.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-fake-tool-events-inside-tool-result-content",
+          "kind": "false_world",
+          "observed_behavior": "The formal-runner contract fake_tool_use_and_result_inside_tool_result_content_does_not_authenticate rejected payload-smuggled fake events.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Embed paired fake tool_use and tool_result blocks inside tool_result.content for every required lane.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-use-content.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the nearby false world.",
+          "id": "FW-formal-tool-use-inside-tool-use-content",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 trace parser did not recurse into tool_use payloads and rejected the outer unexpected Agent call without a required selector.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Embed fake native tool_use/result blocks inside the content payload of an outer tool_use event.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-result-payload.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, cap, or refuse to certify this nearby false world.",
+          "id": "FW-formal-tool-use-inside-tool-result-payload",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 formal-runner contract capped the transcript at PASS-SCOPED and reported missing native agents.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A transcript smuggles fake tool_use events under tool_result.payload.content with no real native Agent calls.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-tool-result-inside-tool-result-payload.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, cap, or refuse to certify this nearby false world.",
+          "id": "FW-formal-tool-result-inside-tool-result-payload",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 formal-runner contract capped the transcript at PASS-SCOPED and did not authenticate payload children as events.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A transcript smuggles fake tool_result events under tool_result.payload.content with no real native Agent calls.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-fake-tool-events-inside-tool-result-data.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, cap, or refuse to certify this nearby false world.",
+          "id": "FW-formal-fake-tool-events-inside-tool-result-data",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 formal-runner contract treated data children as result payload and did not authenticate native lanes.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A transcript smuggles fake tool_use and tool_result events under tool_result.data.content.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-result-delta.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, cap, or refuse to certify this nearby false world.",
+          "id": "FW-formal-tool-use-inside-tool-result-delta",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 formal-runner contract treated delta children of a tool_result as payload and capped at PASS-SCOPED.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A transcript smuggles fake tool_use events under tool_result.delta.content.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-role-inverted-tool-use-result.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, cap, or refuse to certify this nearby false world.",
+          "id": "FW-formal-role-inverted-tool-use-result",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 formal-runner contract recorded role violations and capped the trace at PASS-SCOPED.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A transcript places tool_use blocks in user messages and tool_result blocks in assistant messages.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-user-message-tool-use.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, cap, or refuse to certify this nearby false world.",
+          "id": "FW-formal-user-message-tool-use",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 formal-runner contract rejected user-side tool_use blocks as role-inverted.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A transcript places native Agent tool_use blocks in user-message context.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__FW-formal-assistant-message-tool-result.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, cap, or refuse to certify this nearby false world.",
+          "id": "FW-formal-assistant-message-tool-result",
+          "kind": "false_world",
+          "observed_behavior": "The v1.0.1 formal-runner contract rejected assistant-side tool_result blocks as role-inverted.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "A transcript places matching tool_result blocks in assistant-message context.",
+          "result": "pass",
+          "target_claim": "C-formal-invocation"
+        }
+      ],
+      "id": "C-formal-invocation",
+      "importance": "critical",
+      "method_m": {
+        "artifacts": [
+          "agents/ntt-formal-coordinator.md",
+          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py",
+          "skills/nozickian-verify/SKILL.md",
+          "README.md",
+          "RELEASE_LOCK.json",
+          "self_validation/formal_invocation_dry_run.json"
+        ],
+        "checker": "validate_package.py semantic checks, false-world mutation tests, formal invocation dry-run, and ntt_gate.py self-certificate gate.",
+        "environment": "local filesystem; Python validator execution; Claude Code CLI unavailable in this environment for live formal runtime.",
+        "evidence_process": "Package validator checks formal coordinator prompt terms, native Agent tool restrictions, formal runner hardening tokens, CI dry-run command, manifest hashes, and mutation tests. Formal dry-run writes prompt and records UNVERIFIED_RUNTIME without invoking Claude. v1.0.1 formal-runner contracts additionally check recognized stream-json event positions, result-after-call chronology, exact structured selectors, duplicate tool-use IDs, empty results, and generic result text.",
+        "graders_or_tests": [
+          "duplicate_tool_use_id_across_lanes_does_not_authenticate",
+          "empty_tool_result_content_does_not_authenticate",
+          "generic_result_without_status_or_is_error_does_not_authenticate",
+          "run_formal_runner_contract_tests.py",
+          "single_agent_call_mentions_all_lanes_does_not_authenticate",
+          "structured local evidence check",
+          "structured_subagent_type_exact_match_required",
+          "validate_package.py --self-test; run_formal_artifact_verification.py --dry-run; ntt_gate.py on this certificate."
+        ],
+        "method_unknowns": [],
+        "producer": "Regenerated v1.0.1 package files and deterministic scripts in sanitized release workspace",
+        "tools": "Python scripts, filesystem writes, deterministic mutation tests, gate contract tests.",
+        "trace_or_logs": "self_validation/package_validation_result.json; self_validation/SELF_VALIDATION_REPORT.md; self_validation/formal_invocation_dry_run.json; self_validation/GATE_RESULT.md"
+      },
+      "residual_risks": [
+        "Live Claude Code --agent ntt-formal-coordinator runtime was not executed in this environment; formal runtime must be run on a machine with Claude Code installed before claiming PASS-TRACKED for a target artifact."
+      ],
+      "text": "The formal runner can only promote an artifact-verification run to PASS-TRACKED when the certificate gate passes and the runtime stream authenticates exact native ntt-* Agent/Task tool-use and result lanes with authentic tool event types, structured selectors, unique IDs, matching IDs, result-after-call chronology, and no unexpected native fallback calls.",
+      "true_world_tests": [
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__TW-formal-dry-run-retains-honest-unknown.json"
+          ],
+          "expected_behavior": "The runner should write the formal prompt, pass deterministic package prechecks, and retain the honest UNVERIFIED_RUNTIME status rather than overclaiming PASS-SCOPED or PASS-TRACKED.",
+          "id": "TW-formal-dry-run-retains-honest-unknown",
+          "kind": "true_world",
+          "observed_behavior": "The dry-run result records UNVERIFIED_RUNTIME, reports deterministic prechecks passed, and points to the generated formal prompt directory.",
+          "outcome": "retained_true_claim",
+          "result": "pass",
+          "target_claim": "C-formal-invocation",
+          "variant": "Run the formal artifact runner in dry-run mode on README.md in an environment without live Claude Code invocation, preserving the true limitation that runtime was not executed."
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__TW-formal-nonempty-text-block-authenticates.json"
+          ],
+          "expected_behavior": "The trace authenticator should retain the true completed-lane signal and authenticate the native lanes.",
+          "id": "TW-formal-nonempty-text-block-authenticates",
+          "kind": "true_world",
+          "observed_behavior": "The contract test tool_result_nonempty_text_block_authenticates authenticated the completed native lanes while retaining the scoped gate cap where appropriate.",
+          "outcome": "retained_true_claim",
+          "result": "pass",
+          "target_claim": "C-formal-invocation",
+          "variant": "Use native tool_use events with matching post-call tool_result events whose content is a nonempty text block with structured findings."
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-formal-invocation__TW-formal-valid-role-direction.json"
+          ],
+          "expected_behavior": "The verifier should retain the true claim for this benign equivalent variant.",
+          "id": "TW-formal-valid-role-direction",
+          "kind": "true_world",
+          "observed_behavior": "The v1.0.1 contract valid_assistant_tool_use_user_tool_result_still_authenticates authenticated all lanes and preserved PASS-TRACKED for the synthetic true-world trace.",
+          "outcome": "retained_true_claim",
+          "result": "pass",
+          "target_claim": "C-formal-invocation",
+          "variant": "Assistant-origin native tool_use blocks followed by user-origin matching tool_result blocks."
+        }
+      ],
+      "truth_status": "confirmed",
+      "unresolved_contradictions": []
+    },
+    {
+      "artifact_location": "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md; skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
+      "evidence_refs": [
+        "self_validation/evidence/C-pass-tracked-upgrade-audit__reference.json",
+        "self_validation/evidence/C-pass-tracked-upgrade-audit__certifier.json"
+      ],
+      "false_world_tests": [
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json"
+          ],
+          "expected_behavior": "The method must reject PASS-TRACKED promotion and report UNVERIFIED_RUNTIME or PASS-SCOPED rather than treating dry-run evidence as runtime tracking.",
+          "id": "FW-pass-tracked-dry-run-promotion",
+          "kind": "false_world",
+          "observed_behavior": "The reference and certifier require live runtime execution and formal trace authentication; dry-run-only evidence is not certified and is downgraded.",
+          "outcome": "not_certified",
+          "perturbation": "A promotion bundle contains only deterministic package PASS-SCOPED output and formal dry-run prompts, but no live Claude Code fixture run or formal runtime transcript.",
+          "result": "pass",
+          "target_claim_ids": [
+            "C-pass-tracked-upgrade-audit"
+          ]
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json"
+          ],
+          "expected_behavior": "The method must block automatic epistemic closure and require independent method M, evidence, false-world tests, true-world tests, contradiction review, and residual-risk assessment for downstream claims.",
+          "id": "FW-pass-tracked-auto-closure",
+          "kind": "false_world",
+          "observed_behavior": "The upgrade audit and certifier explicitly check downstream non-closure and reject automatic downstream pass inheritance.",
+          "outcome": "blocked",
+          "perturbation": "A report attempts to infer production safety or global runtime compatibility from an upstream package PASS-SCOPED result without independent downstream claims or modal tests.",
+          "result": "pass",
+          "target_claim_ids": [
+            "C-pass-tracked-upgrade-audit"
+          ]
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json"
+          ],
+          "expected_behavior": "The method must reject or downgrade the promotion because transcript prose is not equivalent to authenticated native tool-use/result event pairs.",
+          "id": "FW-pass-tracked-missing-trace-auth",
+          "kind": "false_world",
+          "observed_behavior": "The reference requires stream-json trace authentication and the certifier checks trace_authentication.authenticated plus required native lane coverage before returning PASS-TRACKED.",
+          "outcome": "not_certified",
+          "perturbation": "A formal artifact result says PASS-TRACKED in prose but the stream-json transcript lacks authenticated native ntt-* tool-use and matching result events.",
+          "result": "pass",
+          "target_claim_ids": [
+            "C-pass-tracked-upgrade-audit"
+          ]
+        }
+      ],
+      "id": "C-pass-tracked-upgrade-audit",
+      "importance": "critical",
+      "method_m": {
+        "artifacts": [
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
+          "skills/nozickian-verify/references/STANDARD.md",
+          "skills/nozickian-verify/assets/certificate-template.json"
+        ],
+        "checker": "validate_package.py validates presence and hardening terms; ntt_gate.py validates this certificate with strict local evidence; mutation suite rejects degraded promotion instructions and pass-stub certifier worlds.",
+        "environment": [
+          "local filesystem",
+          "Python 3.13",
+          "external audit bundle path required for actual promotion"
+        ],
+        "evidence_process": "Package-local structured evidence binds the new reference and certifier script to SHA-256 hashes; validator checks required terms; false-world mutations degrade the reference or certifier and require rejection.",
+        "graders_or_tests": [
+          "validate_package.py --self-test",
+          "ntt_gate.py --strict-evidence",
+          "certify_pass_tracked_upgrade.py for future external audit bundles",
+          "release provenance hygiene scan"
+        ],
+        "producer": "v1.0.1 package files include PASS_TRACKED_UPGRADE_AUDIT.md, certify_pass_tracked_upgrade.py, updated SKILL.md, updated STANDARD.md, and updated output templates.",
+        "tools": [
+          "Python",
+          "Bash",
+          "local file reads/writes",
+          "Claude Code CLI when promotion audit is executed"
+        ],
+        "trace_or_logs": [
+          "self_validation/package_validation_self_test_result.json",
+          "self_validation/gate_result.json",
+          "self_validation/v101_targeted_probe_results.json"
+        ]
+      },
+      "residual_risks": [
+        "The bundled environment still lacks live Claude Code execution; the package documents and machine-gates future promotion but does not itself certify PASS-TRACKED."
+      ],
+      "text": "v1.0.1 contains first-class auditing instructions and a machine-checkable certifier for determining whether an external Claude Code audit bundle justifies upgrading a result from PASS-SCOPED to PASS-TRACKED.",
+      "true_world_tests": [
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json"
+          ],
+          "expected_behavior": "The method should retain and certify the PASS-TRACKED upgrade when every required promotion condition is met and no scope limitation remains.",
+          "id": "TW-pass-tracked-valid-bundle-retained",
+          "kind": "true_world",
+          "observed_behavior": "The reference defines the valid bundle shape and the certifier returns PASS-TRACKED only when all critical checks pass without missing official validators, runtime gaps, trace-authentication gaps, stale tokens, or downstream pass inheritance.",
+          "outcome": "retained_true_claim",
+          "result": "pass",
+          "target_claim_ids": [
+            "C-pass-tracked-upgrade-audit"
+          ],
+          "variant": "A complete external audit bundle contains passing deterministic checks, official validator outputs, executed live fixture transcripts, a formal artifact result with strict-gate PASS-TRACKED, authenticated native stream-json lane events, and a promotion certificate with downstream non-closure records."
+        }
+      ],
+      "truth_status": "confirmed",
+      "unresolved_contradictions": []
+    },
+    {
+      "artifact_location": "docs/README.md; README.md; self_validation/README.md; skills/nozickian-verify/scripts/validate_package.py",
+      "evidence_refs": [
+        "self_validation/evidence/C-github-readme-documentation__docs-hub.json",
+        "self_validation/evidence/C-github-readme-documentation__validator.json"
+      ],
+      "false_world_tests": [
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-github-readme-documentation__FW-github-readmes-degraded.json"
+          ],
+          "expected_behavior": "The verifier must reject, flag, block, downgrade, or refuse to certify the package because GitHub README documentation is no longer comprehensive or substantive.",
+          "id": "FW-github-readmes-degraded",
+          "kind": "false_world",
+          "observed_behavior": "The validator rejects the degraded documentation mutation through check_github_readmes and does not certify the false package copy.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Replace docs/README.md with an empty or TODO-style placeholder while keeping the file present and updating manifests.",
+          "result": "pass",
+          "target_claim": "C-github-readme-documentation"
+        }
+      ],
+      "id": "C-github-readme-documentation",
+      "importance": "major",
+      "method_m": {
+        "artifacts": [
+          "README.md",
+          "docs/README.md",
+          "docs/*/README.md",
+          "self_validation/README.md",
+          "PACKAGE_SURFACE.json"
+        ],
+        "checker": "validate_package.py check_github_readmes plus strict local evidence gate",
+        "environment": "local package checkout with Python 3 and no live Claude runtime required for documentation checks",
+        "evidence_process": "documentation paths are checked for required topics, minimum substance, stable inventory, closed-surface separation, and absence from plugin-loadable component directories",
+        "graders_or_tests": [
+          "false-world mutation: degraded GitHub README documentation",
+          "true-world benign variation: documentation whitespace with updated manifest"
+        ],
+        "producer": "v1.0.1 package files and deterministic validation scripts",
+        "tools": [
+          "validate_package.py",
+          "MANIFEST.sha256",
+          "STABLE_RELEASE_MANIFEST.json",
+          "ntt_gate.py"
+        ],
+        "trace_or_logs": [
+          "self_validation/package_validation_result.json",
+          "self_validation/package_validation_self_test_result.json"
+        ]
+      },
+      "residual_risks": [
+        "Documentation completeness is a reviewer aid and does not by itself certify live Claude Code runtime behavior or downstream deployment safety."
+      ],
+      "text": "v1.0.1 contains a comprehensive GitHub-facing README documentation set under non-runtime documentation paths, and the package validator requires that set without expanding the plugin runtime surface.",
+      "true_world_tests": [
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-github-readme-documentation__TW-github-readmes-benign-doc-note.json"
+          ],
+          "expected_behavior": "The verifier should retain the true documentation claim across benign equivalent documentation changes.",
+          "id": "TW-github-readmes-benign-doc-note",
+          "kind": "true_world",
+          "observed_behavior": "The validator retains certification for the benign documentation variant when manifests and stable inventory are refreshed.",
+          "outcome": "retained_true_claim",
+          "result": "pass",
+          "target_claim": "C-github-readme-documentation",
+          "variant": "Append a harmless explanatory note to a docs README and refresh manifests."
+        }
+      ],
+      "truth_status": "confirmed",
+      "unresolved_contradictions": []
+    }
+  ],
+  "derived_or_downstream_claims": [
+    {
+      "derived_claim": "The package is safe for all production deployments or action-authorizing workflows merely because the formal trace-authentication claim passes.",
+      "from_claim_ids": [
+        "C-formal-invocation"
+      ],
+      "id": "D-closure-001",
+      "reason": "A trace-authentication or package-integrity pass does not automatically verify downstream deployment safety; deployment-specific method M, runtime traces, action-space review, false-world tests, true-world tests, contradiction review, and residual-risk assessment are not supplied in this package certificate.",
+      "status": "UNVERIFIED"
+    },
+    {
+      "derived_claim": "The existence of PASS-TRACKED upgrade instructions means any future production deployment is safe and compliant.",
+      "from_claim_ids": [
+        "C-pass-tracked-upgrade-audit"
+      ],
+      "id": "D-pass-tracked-production-safety",
+      "reason": "The audit instructions and certifier do not automatically verify production deployment, safety, compliance, or action authorization; each downstream claim needs its own method, evidence, modal tests, contradiction review, and residual-risk assessment.",
+      "status": "UNVERIFIED"
+    },
+    {
+      "derived_claim": "The package is production-ready or PASS-TRACKED because it has comprehensive GitHub README documentation.",
+      "from_claim_ids": [
+        "C-github-readme-documentation"
+      ],
+      "id": "D-github-docs-production-readiness",
+      "reason": "Documentation completeness does not establish live runtime trace authentication, official validator success, deployment safety, or downstream operational correctness.",
+      "status": "UNVERIFIED"
+    }
+  ],
+  "github_readme_documentation": {
+    "documentation_root": "docs/README.md",
+    "policy": "README files are required for GitHub navigation while remaining outside plugin-loadable runtime component directories.",
+    "status": "confirmed"
+  },
+  "method_manifest": {
+    "artifacts": [
+      ".claude-plugin/plugin.json",
+      "skills/nozickian-verify/SKILL.md",
+      "agents/**/*.md",
+      "references/*.md",
+      "scripts/*.py",
+      "evals/evals.json",
+      "MANIFEST.sha256",
+      "PACKAGE_SURFACE.json",
+      "scripts/run_live_skill_evals.py",
+      "agents/ntt-formal-coordinator.md",
+      "skills/nozickian-verify/scripts/run_formal_artifact_verification.py",
+      "self_validation/formal_invocation_dry_run.json",
+      "AUDIT_REPORT.md",
+      "STABLE_RELEASE_MANIFEST.json"
+    ],
+    "assurance_tier": "team-internal-reuse-with-trace-authenticated-formal-runner",
+    "checker": "Hardened deterministic validation suite: validate_package.py --self-test, run_gate_contract_tests.py, ntt_gate.py, manifest hash checks, and manual inspection of results.",
+    "environment": [
+      "local filesystem",
+      "Python 3.13",
+      "temporary mutation copies under /tmp",
+      "web-checked Claude Code and Agent Skills docs"
+    ],
+    "evidence_process": "The package is checked structurally, semantically, and modally: manifest hashes, schema/frontmatter checks, gate contract tests, false-world package mutations, true-world benign variations, all-cited-ref strict evidence checks, and evidence-root containment probes.",
+    "graders_or_tests": [
+      "validate_package.py --self-test; run_gate_contract_tests.py; run_regression_evals.py; ntt_gate.py; run_formal_artifact_verification.py --dry-run; package mutation tests including formal runner and coordinator false worlds.",
+      "run_formal_runner_contract_tests.py",
+      "structured evidence binding in ntt_gate.py",
+      "stream-json native subagent trace authentication in run_formal_artifact_verification.py",
+      "run_gate_contract_tests.py cases for partial bad evidence refs, evidence-ref escape, absolute refs, external valid-hash refs, and remote refs"
+    ],
+    "human_review": "Final inspection of validation outputs and known runtime gaps.",
+    "producer": "Generated Claude Code plugin/skill package, including SKILL.md, reference files, subagent definitions, deterministic scripts, eval fixtures, and self-validation artifacts.",
+    "tools": [
+      "Python",
+      "Bash",
+      "local file reads/writes",
+      "web.run official docs lookup"
+    ],
+    "trace_or_logs": [
+      "self_validation/package_validation_result.json",
+      "self_validation/SELF_VALIDATION_REPORT.md",
+      "self_validation/gate_contract_results.json",
+      "self_validation/GATE_RESULT.md",
+      "self_validation/formal_runner_contract_results.json",
+      "AUDIT_REPORT.md",
+      "STABLE_RELEASE_MANIFEST.json"
+    ],
+    "unknowns": [
+      "Live Claude Code plugin loading, live slash-command invocation, and live frontier-subagent dispatch were not executed in this container."
+    ],
+    "validator_scope": "deterministic package integrity, release lock, closed plugin surface, regression fixtures, and gate contract checks; live Claude Code invocation remains separately reported"
+  },
+  "pass_tracked_upgrade_audit": {
+    "certifier": "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
+    "reason": "This release contains the audit instructions and certifier needed for a future Claude Code runtime environment to certify PASS-SCOPED to PASS-TRACKED, but the bundled self-validation environment did not execute live Claude Code fixture or formal runs.",
+    "reference": "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
+    "status": "NOT_CERTIFIED_IN_THIS_RELEASE"
+  },
+  "schema_version": "1.0",
+  "scope_limitations": [
+    "Deterministic package validation and certificate checks executed locally.",
+    "Live Claude Code slash-command/subagent runtime remains UNVERIFIED_RUNTIME in this environment unless run_live_skill_evals.py is executed with --run-fixtures on a machine with Claude Code CLI.",
+    "Scoped for team/internal reuse, not public marketplace adversarial assurance.",
+    "This certificate does not defend against a fully hostile maintainer able to rewrite validators, manifests, CI, and certificates together.",
+    "Formal artifact runner dry-run can validate prompts and prechecks, but live Claude Code --agent ntt-formal-coordinator runtime remains UNVERIFIED_RUNTIME without the official CLI/runtime.",
+    "Trace authentication is required for future PASS-TRACKED formal artifact runs.",
+    "v1.0.1 includes package-root AUDIT_REPORT.md and STABLE_RELEASE_MANIFEST.json as release-audit artifacts.",
+    "STABLE_RELEASE_MANIFEST.json excludes itself from file_inventory to avoid a self-referential hash cycle; its self_hash_sha256 is computed over canonical JSON with self_hash_sha256 set to null.",
+    "v1.0.1 release-lock dry-run workflow writes generated formal artifacts outside the package tree by default; package-root writes require explicit --refresh-release-manifest.",
+    "v1.0.1 formal trace authentication rejects mismatched result IDs; successful result/completion events must reference the exact native Agent/Task tool-use id.",
+    "Live Claude Code runtime remains UNVERIFIED_RUNTIME in this packaged self-validation unless run on a machine with the official Claude Code CLI.",
+    "v1.0.1 formal trace authentication parses only recognized stream-json event positions and ignores fake tool_result objects nested inside tool_use.input/arguments.",
+    "v1.0.1 formal trace authentication requires successful result/completion events to occur after their matching native Agent/Task tool-use events.",
+    "v1.0.1 strict local evidence mode rejects any URI-scheme evidence ref, including uppercase or mixed-case HTTPS/DOI/URN forms.",
+    "v1.0.1 formal trace authentication still remains a static parser contract until live Claude Code stream-json traces are captured.",
+    "v1.0.1 strict evidence mode rejects any URI-scheme evidence ref in local evidence mode, including uppercase and mixed-case schemes.",
+    "v1.0.1 formal trace authentication parses only recognized stream-json event positions and rejects fake nested tool_result data inside tool inputs/arguments.",
+    "v1.0.1 formal trace authentication requires successful result/completion events to appear after their matching tool-use events.",
+    "v1.0.1 strict evidence mode rejects URI-scheme evidence refs case-insensitively, including uppercase HTTPS/DOI/URN and scheme-like refs.",
+    "v1.0.1 formal trace authentication is validated by deterministic synthetic stream-json contract tests; live official Claude Code runtime remains UNVERIFIED_RUNTIME in this environment.",
+    "v1.0.1 strict evidence URI-scheme rejection is validated by deterministic gate contract tests for uppercase, mixed-case, DOI/URN, and scheme-like refs.",
+    "v1.0.1 formal trace authentication rejects metadata-only text/document/image result blocks and requires payload-bearing completion evidence.",
+    "v1.0.1 strict evidence mode counts unique canonical evidence files and unique underlying artifact/hash identities for critical evidence sufficiency.",
+    "v1.0.1 still remains PASS-SCOPED because live official Claude Code runtime traces were not captured in this environment.",
+    "v1.0.1 formal trace authentication rejects metadata-only result content blocks and requires substantive payload-bearing completion evidence.",
+    "v1.0.1 strict local evidence mode counts unique canonical evidence refs and unique structured evidence artifacts for critical evidence sufficiency.",
+    "v1.0.1 formal trace authentication treats tool_result.content as output data and does not parse payload data as nested runtime tool events.",
+    "v1.0.1 strict gate thresholds count unique false-world and true-world modal tests rather than duplicated test objects or duplicate IDs.",
+    "v1.0.1 formal trace authentication treats tool_use/tool_result nodes as hard event boundaries; data/payload/delta/message/content children of a tool event are payload, not runtime events.",
+    "v1.0.1 formal trace authentication tracks assistant/user role context when available and rejects user-origin tool_use or assistant-origin tool_result blocks for PASS-TRACKED promotion.",
+    "v1.0.1 strict gate modal tests must have stable nonempty IDs and must target the evaluated claim; wildcard evidence applicability cannot substitute for a test ID."
+  ]
+}

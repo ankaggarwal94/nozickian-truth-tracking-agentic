@@ -1,0 +1,35 @@
+name: nozickian-team-ci
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  deterministic-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate package surface and modal fixtures
+        run: |
+          mkdir -p /tmp/ntt_ci_outputs
+          python3 skills/nozickian-verify/scripts/validate_package.py . --self-test --markdown /tmp/ntt_ci_outputs/SELF_VALIDATION_REPORT.md
+      - name: Run Nozickian gate on self-certificate
+        run: |
+          python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --markdown /tmp/ntt_ci_outputs/GATE_RESULT.md
+      - name: Run deterministic regression evals
+        run: |
+          python3 skills/nozickian-verify/scripts/run_regression_evals.py . --json /tmp/ntt_ci_outputs/regression_eval_result.json
+      - name: Run formal runner contract tests
+        run: |
+          python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json /tmp/nozickian-formal-runner-contract-results.json
+      - name: Dry-run formal artifact invocation prompt
+        run: |
+          python3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . README.md --dry-run --json /tmp/nozickian-formal-dry-run-result.json
+      - name: Check official validators when installed
+        run: |
+          if command -v claude >/dev/null 2>&1; then claude plugin validate . --strict; else echo "claude CLI unavailable; skipping"; fi
+          if command -v skills-ref >/dev/null 2>&1; then skills-ref validate skills/nozickian-verify; else echo "skills-ref unavailable; skipping"; fi

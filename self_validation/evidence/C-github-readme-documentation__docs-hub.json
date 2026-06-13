@@ -1,0 +1,10 @@
+{
+  "artifact_path": "docs/README.md",
+  "claim_id": "C-github-readme-documentation",
+  "command_or_source": "v1.0.1 package-local GitHub README documentation and deterministic validator checks",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:e4727381fc728f1eed336ad25f0ecb7516f33bb82e043297d4c6ab24b6c18172",
+  "observed_result": "Observed the GitHub documentation hub with links to all required README topics.",
+  "support_summary": "The docs hub binds the GitHub README documentation claim to a package-local artifact that indexes quickstart, audit model, evidence, PASS-TRACKED upgrade, trace authentication, security, development, release, FAQ, repository presentation, and self-validation docs.",
+  "timestamp_utc": "2026-06-07T00:00:00Z"
+}

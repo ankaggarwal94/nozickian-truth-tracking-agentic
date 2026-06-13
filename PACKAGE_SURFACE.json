@@ -1,0 +1,153 @@
+{
+  "allowed_agents": [
+    "agents/ntt-formal-coordinator.md",
+    "agents/ntt-method-cartographer.md",
+    "agents/ntt-claim-extractor.md",
+    "agents/ntt-source-verifier.md",
+    "agents/ntt-code-verifier.md",
+    "agents/ntt-false-world-adversary.md",
+    "agents/ntt-true-world-adherence.md",
+    "agents/ntt-gate-auditor.md",
+    "agents/ntt-skill-self-auditor.md"
+  ],
+  "allowed_ci_files": [
+    ".github/workflows/nozickian-team-ci.yml"
+  ],
+  "allowed_plugin_manifest_files": [
+    ".claude-plugin/plugin.json"
+  ],
+  "allowed_plugin_manifest_top_level_fields": [
+    "name",
+    "displayName",
+    "version",
+    "description",
+    "author",
+    "homepage",
+    "repository",
+    "license",
+    "keywords"
+  ],
+  "allowed_skill_runtime_dirs": [
+    "assets",
+    "evals",
+    "references",
+    "scripts"
+  ],
+  "allowed_skills": [
+    "skills/nozickian-verify"
+  ],
+  "allowed_top_level_dirs": [
+    ".claude-plugin",
+    ".github",
+    "agents",
+    "docs",
+    "self_validation",
+    "skills"
+  ],
+  "allowed_top_level_files": [
+    "AUDIT_REPORT.md",
+    "LICENSE",
+    "MANIFEST.sha256",
+    "PACKAGE_SURFACE.json",
+    "README.md",
+    "RELEASE_LOCK.json",
+    "SECURITY.md",
+    "STABLE_RELEASE_MANIFEST.json",
+    "TEAM_INTERNAL_USE.md"
+  ],
+  "assurance_tier": "team-internal-reuse",
+  "closed_surface": true,
+  "closed_surface_invariants": [
+    "v1.0.1 formal trace authentication treats tool_result.content and tool_use.content as payload data; fake tool_use/tool_result blocks embedded there cannot authenticate runtime lanes.",
+    "v1.0.1 strict gate thresholds count unique false-world and true-world modal tests; duplicate IDs, copied test objects, and reused canonical test evidence sets do not inflate coverage.",
+    "v1.0.1 formal trace authentication treats every tool_use/tool_result node as a hard event boundary; nested tool-like objects under data/payload/delta/message/content are payload data, not runtime events.",
+    "v1.0.1 formal trace authentication enforces assistant-origin tool_use and user-origin tool_result direction when role context is available.",
+    "v1.0.1 strict gate modal tests must have stable nonempty IDs and target the evaluated claim; duplicated, anonymous, or wrong-claim modal coverage cannot satisfy thresholds.",
+    "v1.0.1 release provenance hygiene rejects stale generated self-validation artifacts, previous package-root names, and machine-local build paths before team/internal reuse."
+  ],
+  "forbidden_plugin_manifest_runtime_fields": [
+    "skills",
+    "commands",
+    "agents",
+    "hooks",
+    "mcpServers",
+    "outputStyles",
+    "lspServers",
+    "experimental.monitors",
+    "experimental.themes",
+    "userConfig",
+    "channels",
+    "dependencies"
+  ],
+  "forbidden_plugin_surfaces": [
+    "commands",
+    "hooks",
+    "monitors",
+    "bin",
+    "settings.json",
+    ".mcp.json",
+    ".lsp.json"
+  ],
+  "full_tabulated_audit_report": "AUDIT_REPORT.md",
+  "github_readme_documentation": {
+    "policy": "GitHub-facing README files are allowed under docs/ and self_validation/ but not inside plugin-loadable runtime component directories.",
+    "required_readmes": [
+      "docs/README.md",
+      "docs/audit-model/README.md",
+      "docs/development/README.md",
+      "docs/evidence/README.md",
+      "docs/faq/README.md",
+      "docs/github/README.md",
+      "docs/pass-tracked-upgrade/README.md",
+      "docs/quickstart/README.md",
+      "docs/release/README.md",
+      "docs/runtime-trace-auth/README.md",
+      "docs/security/README.md",
+      "self_validation/README.md"
+    ],
+    "runtime_surface_effect": "documentation-only; does not add skills, agents, hooks, commands, MCP servers, monitors, bins, or tool grants"
+  },
+  "non_runtime_documentation_dirs": [
+    "docs"
+  ],
+  "notes": [
+    "This package is team/internal scoped. It catches accidental and ordinary team-reuse drift rather than proving against a fully hostile maintainer who can rewrite all validators and manifests.",
+    "This is a deliberately closed-surface package validator, not a general Claude Code plugin-surface validator; hooks, MCP/LSP servers, commands, monitors, bins, manifest component-path fields, and dynamic skill shell remain forbidden even where the broader platform may support them.",
+    "Runtime-surface expansion through plugin.json component fields, hooks, MCP/LSP configs, monitors, settings, commands, bins, dynamic skill shell, or broad allowed-tools must fail unless the team explicitly changes this policy and adds corresponding tests.",
+    "PASS-SCOPED is the expected status until live Claude Code fixture transcripts are actually run and reviewed.",
+    "Formal artifact invocation requires ntt-formal-coordinator, native ntt-* lanes, certificate JSON, ntt_gate.py output, invocation ledger, and transcript evidence.",
+    "PASS-TRACKED requires trace-authenticated native Agent/Task tool-use events for every required ntt-* lane; a ledger assertion alone is insufficient.",
+    "Strict local evidence requires every cited evidence_ref itself to resolve to an in-root JSON file and every structured artifact_path hash_or_version binding to match exactly; one valid ref cannot mask a bad cited ref.",
+    "STABLE_RELEASE_MANIFEST.json is a release-integrity artifact: it inventories package files except itself and carries a canonical self-hash over its JSON content with self_hash_sha256 set to null.",
+    "AUDIT_REPORT.md is a non-runtime audit artifact. It is allowed at top level but must remain covered by STABLE_RELEASE_MANIFEST.json.",
+    "Release-lock commands are required to be idempotent: after they run on a fresh copy with README.md as target, validate_package.py . must still pass against STABLE_RELEASE_MANIFEST.json.",
+    "Formal trace authentication rejects text-only, implicit-name, mismatched-result-id, duplicate-id, nested-fake-result, result-before-call, empty-result, and generic-result transcripts; PASS-TRACKED requires separate successful result/completion events bound to exact native tool-use ids.",
+    "Strict local evidence treats URI schemes case-insensitively and rejects any non-empty scheme in evidence_refs; uppercase HTTPS, DOI, URN, and scheme-like refs are not local provenance.",
+    "Formal trace authentication parses only recognized stream-json event positions; fake tool_result dictionaries nested inside tool inputs or arguments cannot authenticate PASS-TRACKED.",
+    "Formal trace authentication requires result/completion events to occur after their matching tool-use events.",
+    "Strict local evidence mode rejects every URI-scheme evidence ref case-insensitively, including HTTPS://, DOI:, URN:, and arbitrary scheme-like refs.",
+    "v1.0.1 formal trace authentication treats recognized stream-json positions as necessary but not sufficient: event type must be an authentic tool_use/tool_result style type, so text/message/assistant blocks cannot masquerade as native Agent/Task calls or results.",
+    "Unexpected native Agent/Task tool-use events without exact required ntt-* structured selectors are flagged and prevent PASS-TRACKED promotion.",
+    "Strict local evidence rejects URI-scheme values in both evidence_refs and artifact_path, regardless of URI scheme case.",
+    "v1.0.1 formal trace authentication rejects data/payload/delta event smuggling under tool_result events and rejects role-inverted tool_use/tool_result message directions.",
+    "v1.0.1 strict evidence gating requires modal tests to target their evaluated claim and carry stable nonempty IDs; wildcard evidence applicability cannot substitute for a missing test ID.",
+    "v1.0.1 adds a release-time provenance hygiene guard over bundled audit/self-validation artifacts so stale old-version ledgers and absolute build paths cannot masquerade as current release evidence.",
+    "v1.0.1 adds a no-automatic-epistemic-closure certificate rule: downstream/deployment/safety/action claims do not inherit pass status from source claims and must be separately represented and tested.",
+    "v1.0.1 adds a PASS-TRACKED promotion audit path; promotion requires an external audit bundle, live runtime fixture evidence, official validator evidence, formal artifact trace authentication, strict-gate PASS-TRACKED on the generated certificate, and downstream non-closure review.",
+    "v1.0.1 adds a GitHub-ready README documentation tree under docs/ while preserving the closed runtime surface and forbidding README files inside plugin-loadable component directories."
+  ],
+  "package": "nozickian-verification-team-internal",
+  "schema_version": "1.2",
+  "stable_release_manifest": "STABLE_RELEASE_MANIFEST.json",
+  "v1.0.1_evidence_hardening": "Strict local evidence mode counts unique canonical evidence and modal tests, rejects URI-scheme refs/artifact paths, requires modal tests to have stable IDs and target the evaluated claim, and release validation now rejects stale generated artifact provenance.",
+  "v1.0.1_patch_notes": [
+    "Regenerate bundled self-validation ledgers for the current package version rather than carrying stale prior-version outputs.",
+    "Add validate_package.py release-provenance hygiene checks for stale generated artifact tokens, old package-root names, and machine-local build paths in release/audit/self-validation artifacts.",
+    "Add a nearby-false-world mutation that injects stale self-validation provenance and requires the package validator to reject it.",
+    "Document the closed-surface design more explicitly: this validator intentionally rejects plugin runtime surfaces outside the team/internal threat model even when the platform may support them.",
+    "Preserve PASS-SCOPED release label until live official Claude Code runtime stream-json traces and optional official validators are available.",
+    "Add first-class PASS-TRACKED upgrade audit instructions and a promotion certifier script while preserving PASS-SCOPED as this release artifact status."
+  ],
+  "v1.0.1_trace_authentication_hardening": "Strict formal trace authentication uses hard event boundaries for tool events, exact structured ntt-* selectors, post-call matching result IDs, role-aware message direction when available, no unexpected Agent/Task calls, and substantive nonempty result content.",
+  "version": "1.0.1"
+}

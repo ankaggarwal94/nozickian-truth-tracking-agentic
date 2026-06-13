@@ -1,0 +1,1319 @@
+# Team/internal package validation report
+
+**Status:** PASS
+**Checks:** 1312 / 1312 passed
+**Critical failures:** 0
+
+## All checks
+- PASS: plugin manifest exists
+- PASS: plugin manifest parses
+- PASS: plugin name is expected
+- PASS: plugin description substantive
+- PASS: plugin version present
+- PASS: plugin manifest has no unknown top-level fields
+- PASS: plugin manifest has no component-path/runtime fields
+- PASS: plugin manifest has no experimental runtime fields
+- PASS: required path exists: skills/nozickian-verify/SKILL.md
+- PASS: required path exists: agents
+- PASS: required path exists: README.md
+- PASS: required path exists: LICENSE
+- PASS: required path exists: PACKAGE_SURFACE.json
+- PASS: required path exists: RELEASE_LOCK.json
+- PASS: required path exists: TEAM_INTERNAL_USE.md
+- PASS: required path exists: AUDIT_REPORT.md
+- PASS: required path exists: STABLE_RELEASE_MANIFEST.json
+- PASS: required path exists: .github/workflows/nozickian-team-ci.yml
+- PASS: release lock exists
+- PASS: release lock parses
+- PASS: release lock tier is team-internal
+- PASS: release lock plugin name matches
+- PASS: release lock version matches plugin
+- PASS: release lock commands listed
+- PASS: release lock command includes validate_package.py
+- PASS: release lock command includes ntt_gate.py
+- PASS: release lock command includes run_regression_evals.py
+- PASS: release lock command includes claude plugin validate
+- PASS: release lock command includes skills-ref validate
+- PASS: release lock formal dry-run avoids package-tree output
+- PASS: release lock records external generated-output path
+- PASS: full tabulated audit report exists
+- PASS: audit report is substantive
+- PASS: audit report contains section: Validation command ledger
+- PASS: audit report contains section: Evidence-gated CoVe table
+- PASS: audit report contains section: Nozickian truth-tracking matrix
+- PASS: audit report contains section: Release-workflow idempotence
+- PASS: audit report contains section: Residual risks
+- PASS: audit report contains section: Stable release manifest
+- PASS: audit report is tabulated
+- PASS: audit report records PASS-SCOPED and UNVERIFIED_RUNTIME
+- PASS: stable release manifest exists
+- PASS: stable release manifest parses
+- PASS: stable release manifest schema recognized
+- PASS: stable release manifest version matches plugin
+- PASS: stable release manifest status is scoped
+- PASS: stable release manifest documents volatile generated exclusions
+- PASS: stable release manifest self-hash matches canonical content
+- PASS: stable release manifest inventory is list
+- PASS: stable release manifest has no duplicate paths
+- PASS: stable release manifest covers all non-self package files
+- PASS: stable release manifest has no non-package files
+- PASS: stable release manifest hash matches: .claude-plugin/plugin.json
+- PASS: stable release manifest bytes match: .claude-plugin/plugin.json
+- PASS: stable release manifest hash matches: .github/workflows/nozickian-team-ci.yml
+- PASS: stable release manifest bytes match: .github/workflows/nozickian-team-ci.yml
+- PASS: stable release manifest hash matches: AUDIT_REPORT.md
+- PASS: stable release manifest bytes match: AUDIT_REPORT.md
+- PASS: stable release manifest hash matches: LICENSE
+- PASS: stable release manifest bytes match: LICENSE
+- PASS: stable release manifest hash matches: MANIFEST.sha256
+- PASS: stable release manifest bytes match: MANIFEST.sha256
+- PASS: stable release manifest hash matches: PACKAGE_SURFACE.json
+- PASS: stable release manifest bytes match: PACKAGE_SURFACE.json
+- PASS: stable release manifest hash matches: README.md
+- PASS: stable release manifest bytes match: README.md
+- PASS: stable release manifest hash matches: RELEASE_LOCK.json
+- PASS: stable release manifest bytes match: RELEASE_LOCK.json
+- PASS: stable release manifest hash matches: SECURITY.md
+- PASS: stable release manifest bytes match: SECURITY.md
+- PASS: stable release manifest hash matches: TEAM_INTERNAL_USE.md
+- PASS: stable release manifest bytes match: TEAM_INTERNAL_USE.md
+- PASS: stable release manifest hash matches: agents/ntt-claim-extractor.md
+- PASS: stable release manifest bytes match: agents/ntt-claim-extractor.md
+- PASS: stable release manifest hash matches: agents/ntt-code-verifier.md
+- PASS: stable release manifest bytes match: agents/ntt-code-verifier.md
+- PASS: stable release manifest hash matches: agents/ntt-false-world-adversary.md
+- PASS: stable release manifest bytes match: agents/ntt-false-world-adversary.md
+- PASS: stable release manifest hash matches: agents/ntt-formal-coordinator.md
+- PASS: stable release manifest bytes match: agents/ntt-formal-coordinator.md
+- PASS: stable release manifest hash matches: agents/ntt-gate-auditor.md
+- PASS: stable release manifest bytes match: agents/ntt-gate-auditor.md
+- PASS: stable release manifest hash matches: agents/ntt-method-cartographer.md
+- PASS: stable release manifest bytes match: agents/ntt-method-cartographer.md
+- PASS: stable release manifest hash matches: agents/ntt-skill-self-auditor.md
+- PASS: stable release manifest bytes match: agents/ntt-skill-self-auditor.md
+- PASS: stable release manifest hash matches: agents/ntt-source-verifier.md
+- PASS: stable release manifest bytes match: agents/ntt-source-verifier.md
+- PASS: stable release manifest hash matches: agents/ntt-true-world-adherence.md
+- PASS: stable release manifest bytes match: agents/ntt-true-world-adherence.md
+- PASS: stable release manifest hash matches: docs/README.md
+- PASS: stable release manifest bytes match: docs/README.md
+- PASS: stable release manifest hash matches: docs/audit-model/README.md
+- PASS: stable release manifest bytes match: docs/audit-model/README.md
+- PASS: stable release manifest hash matches: docs/development/README.md
+- PASS: stable release manifest bytes match: docs/development/README.md
+- PASS: stable release manifest hash matches: docs/evidence/README.md
+- PASS: stable release manifest bytes match: docs/evidence/README.md
+- PASS: stable release manifest hash matches: docs/faq/README.md
+- PASS: stable release manifest bytes match: docs/faq/README.md
+- PASS: stable release manifest hash matches: docs/github/README.md
+- PASS: stable release manifest bytes match: docs/github/README.md
+- PASS: stable release manifest hash matches: docs/pass-tracked-upgrade/README.md
+- PASS: stable release manifest bytes match: docs/pass-tracked-upgrade/README.md
+- PASS: stable release manifest hash matches: docs/quickstart/README.md
+- PASS: stable release manifest bytes match: docs/quickstart/README.md
+- PASS: stable release manifest hash matches: docs/release/README.md
+- PASS: stable release manifest bytes match: docs/release/README.md
+- PASS: stable release manifest hash matches: docs/runtime-trace-auth/README.md
+- PASS: stable release manifest bytes match: docs/runtime-trace-auth/README.md
+- PASS: stable release manifest hash matches: docs/security/README.md
+- PASS: stable release manifest bytes match: docs/security/README.md
+- PASS: stable release manifest hash matches: self_validation/README.md
+- PASS: stable release manifest bytes match: self_validation/README.md
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-coordinator-general-purpose-fallback.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-coordinator-general-purpose-fallback.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-assistant-message-tool-result.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-assistant-message-tool-result.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-assistant-message-tool-use-masquerade.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-assistant-message-tool-use-masquerade.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-description-only-selector.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-description-only-selector.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-document-block-without-data.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-document-block-without-data.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-duplicate-tool-use-id.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-duplicate-tool-use-id.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-empty-text-block-result.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-empty-text-block-result.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-empty-tool-result.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-empty-tool-result.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-fake-tool-events-inside-tool-result-content.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-fake-tool-events-inside-tool-result-content.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-fake-tool-events-inside-tool-result-data.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-fake-tool-events-inside-tool-result-data.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-generic-result-without-success-signal.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-generic-result-without-success-signal.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-image-block-without-data.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-image-block-without-data.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-message-result-masquerade.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-message-result-masquerade.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-metadata-only-dict-result.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-metadata-only-dict-result.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-metadata-only-text-block-result.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-metadata-only-text-block-result.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-mismatched-tool-result-id.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-mismatched-tool-result-id.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-nested-tool-result-arguments.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-nested-tool-result-arguments.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-nested-tool-result-input.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-nested-tool-result-input.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-result-before-tool-use.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-result-before-tool-use.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-role-inverted-tool-use-result.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-role-inverted-tool-use-result.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-runner-stub.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-runner-stub.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-same-event-input-embedded-result.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-same-event-input-embedded-result.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-single-call-mentions-all-lanes.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-single-call-mentions-all-lanes.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-text-block-tool-result-masquerade.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-text-block-tool-result-masquerade.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-text-block-tool-use-masquerade.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-text-block-tool-use-masquerade.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-tool-result-inside-tool-result-content.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-tool-result-inside-tool-result-content.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-tool-result-inside-tool-result-payload.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-tool-result-inside-tool-result-payload.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-result-content.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-result-content.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-result-delta.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-result-delta.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-result-payload.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-result-payload.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-use-content.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-use-content.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-tool-use-without-result.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-tool-use-without-result.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-unexpected-agent-without-selector.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-unexpected-agent-without-selector.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-unknown-agent-selector.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-unknown-agent-selector.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-user-message-tool-use.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-user-message-tool-use.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-whitespace-text-block-result.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-formal-whitespace-text-block-result.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__TW-formal-dry-run-retains-honest-unknown.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__TW-formal-dry-run-retains-honest-unknown.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__TW-formal-nonempty-text-block-authenticates.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__TW-formal-nonempty-text-block-authenticates.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__TW-formal-valid-role-direction.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__TW-formal-valid-role-direction.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__claim.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__claim.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__gate.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__gate.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-1.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-1.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-2.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-2.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-aliased-claim-evidence-ref.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-aliased-claim-evidence-ref.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-aliased-same-claim-evidence-ref.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-aliased-same-claim-evidence-ref.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-aliased-same-false-world-test-evidence.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-aliased-same-false-world-test-evidence.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-arbitrary-scheme.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-arbitrary-scheme.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-lowercase-https-uri.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-lowercase-https-uri.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-mixedcase-uri.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-mixedcase-uri.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-uppercase-https-uri.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-uppercase-https-uri.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-duplicate-claim-evidence-ref.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-duplicate-claim-evidence-ref.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-duplicate-false-world-test-id.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-duplicate-false-world-test-id.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-duplicate-structured-evidence-file.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-duplicate-structured-evidence-file.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-duplicate-true-world-test-id.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-duplicate-true-world-test-id.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-duplicated-false-world-test-object.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-duplicated-false-world-test-object.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-evidence-ref-absolute-path.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-evidence-ref-absolute-path.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-evidence-ref-path-escape.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-evidence-ref-path-escape.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-external-ref-valid-hash.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-external-ref-valid-hash.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-missing-false-world-test-id.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-missing-false-world-test-id.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-missing-true-world-test-id.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-missing-true-world-test-id.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-mixedcase-https-evidence-ref.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-mixedcase-https-evidence-ref.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-one-of-two-claim-evidence-wrong.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-one-of-two-claim-evidence-wrong.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-one-of-two-test-evidence-wrong.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-one-of-two-test-evidence-wrong.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-remote-ref-strict.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-remote-ref-strict.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-same-artifact-path-all-claim-refs.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-same-artifact-path-all-claim-refs.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-same-artifact-path-for-claim-refs.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-same-artifact-path-for-claim-refs.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-scheme-like-evidence-ref.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-scheme-like-evidence-ref.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-uppercase-doi-urn-evidence-ref.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-uppercase-doi-urn-evidence-ref.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-uppercase-https-evidence-ref.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-uppercase-https-evidence-ref.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-wildcard-applies-to-tests-missing-id.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-wildcard-applies-to-tests-missing-id.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-wrong-evidence-hash.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-wrong-evidence-hash.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-wrong-false-world-target-claim.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-wrong-false-world-target-claim.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-wrong-true-world-target-claim.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__FW-gate-wrong-true-world-target-claim.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__TW-gate-1.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__TW-gate-1.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__TW-gate-target-claim-ids-list.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__TW-gate-target-claim-ids-list.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__TW-gate-unique-evidence-refs-pass.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__TW-gate-unique-evidence-refs-pass.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__claim.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__claim.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-gate-hardening__gate.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-gate-hardening__gate.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__FW-github-readmes-degraded.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-github-readme-documentation__FW-github-readmes-degraded.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__TW-github-readmes-benign-doc-note.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-github-readme-documentation__TW-github-readmes-benign-doc-note.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__docs-hub.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-github-readme-documentation__docs-hub.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__validator.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-github-readme-documentation__validator.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__certifier.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__certifier.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__reference.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__reference.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-structure__FW-agent-unsupported-key.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-structure__FW-agent-unsupported-key.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-structure__FW-skill-dynamic-shell.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-structure__FW-skill-dynamic-shell.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-structure__FW-structure-1.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-structure__FW-structure-1.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-structure__FW-structure-2.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-structure__FW-structure-2.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-structure__FW-surface-manifest-inline.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-structure__FW-surface-manifest-inline.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-structure__TW-structure-1.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-structure__TW-structure-1.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-structure__claim.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-structure__claim.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-structure__gate.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-structure__gate.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__FW-recursive-agent-after-manifest.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-validator-sensitivity__FW-recursive-agent-after-manifest.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__FW-validator-1.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-validator-sensitivity__FW-validator-1.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__FW-validator-2.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-validator-sensitivity__FW-validator-2.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__TW-validator-1.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-validator-sensitivity__TW-validator-1.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__claim.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-validator-sensitivity__claim.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__gate.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-validator-sensitivity__gate.json
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-coordinator-general-purpose-fallback.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-coordinator-general-purpose-fallback.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-assistant-message-tool-result.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-assistant-message-tool-result.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-assistant-message-tool-use-masquerade.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-assistant-message-tool-use-masquerade.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-description-only-selector.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-description-only-selector.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-document-block-without-data.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-document-block-without-data.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-duplicate-tool-use-id.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-duplicate-tool-use-id.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-empty-text-block-result.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-empty-text-block-result.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-empty-tool-result.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-empty-tool-result.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-fake-tool-events-inside-tool-result-data.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-fake-tool-events-inside-tool-result-data.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-generic-result-without-success-signal.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-generic-result-without-success-signal.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-image-block-without-data.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-image-block-without-data.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-message-result-masquerade.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-message-result-masquerade.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-metadata-only-dict-result.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-metadata-only-dict-result.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-metadata-only-text-block-result.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-metadata-only-text-block-result.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-mismatched-tool-result-id.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-mismatched-tool-result-id.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-nested-tool-result-arguments.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-nested-tool-result-arguments.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-nested-tool-result-input.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-nested-tool-result-input.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-result-before-tool-use.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-result-before-tool-use.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-role-inverted-tool-use-result.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-role-inverted-tool-use-result.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-runner-stub.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-runner-stub.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-same-event-input-embedded-result.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-same-event-input-embedded-result.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-single-call-mentions-all-lanes.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-single-call-mentions-all-lanes.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-text-block-tool-result-masquerade.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-text-block-tool-result-masquerade.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-text-block-tool-use-masquerade.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-text-block-tool-use-masquerade.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-tool-result-inside-tool-result-payload.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-tool-result-inside-tool-result-payload.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-tool-use-inside-tool-result-delta.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-tool-use-inside-tool-result-delta.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-tool-use-inside-tool-result-payload.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-tool-use-inside-tool-result-payload.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-tool-use-without-result.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-tool-use-without-result.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-unexpected-agent-without-selector.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-unexpected-agent-without-selector.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-unknown-agent-selector.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-unknown-agent-selector.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-user-message-tool-use.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-user-message-tool-use.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-whitespace-text-block-result.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__FW-formal-whitespace-text-block-result.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__TW-formal-dry-run-retains-honest-unknown.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__TW-formal-dry-run-retains-honest-unknown.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__TW-formal-nonempty-text-block-authenticates.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__TW-formal-nonempty-text-block-authenticates.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__TW-formal-valid-role-direction.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__TW-formal-valid-role-direction.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__claim.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__claim.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-formal-invocation__gate.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-formal-invocation__gate.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-1.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-1.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-2.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-2.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-aliased-claim-evidence-ref.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-aliased-claim-evidence-ref.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-aliased-same-claim-evidence-ref.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-aliased-same-claim-evidence-ref.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-artifact-path-arbitrary-scheme.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-artifact-path-arbitrary-scheme.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-artifact-path-lowercase-https-uri.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-artifact-path-lowercase-https-uri.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-artifact-path-mixedcase-uri.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-artifact-path-mixedcase-uri.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-artifact-path-uppercase-https-uri.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-artifact-path-uppercase-https-uri.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-duplicate-claim-evidence-ref.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-duplicate-claim-evidence-ref.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-duplicate-structured-evidence-file.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-duplicate-structured-evidence-file.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-evidence-ref-absolute-path.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-evidence-ref-absolute-path.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-evidence-ref-path-escape.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-evidence-ref-path-escape.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-external-ref-valid-hash.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-external-ref-valid-hash.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-missing-false-world-test-id.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-missing-false-world-test-id.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-missing-true-world-test-id.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-missing-true-world-test-id.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-mixedcase-https-evidence-ref.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-mixedcase-https-evidence-ref.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-one-of-two-claim-evidence-wrong.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-one-of-two-claim-evidence-wrong.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-one-of-two-test-evidence-wrong.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-one-of-two-test-evidence-wrong.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-remote-ref-strict.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-remote-ref-strict.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-same-artifact-path-all-claim-refs.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-same-artifact-path-all-claim-refs.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-same-artifact-path-for-claim-refs.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-same-artifact-path-for-claim-refs.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-scheme-like-evidence-ref.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-scheme-like-evidence-ref.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-uppercase-doi-urn-evidence-ref.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-uppercase-doi-urn-evidence-ref.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-uppercase-https-evidence-ref.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-uppercase-https-evidence-ref.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-wildcard-applies-to-tests-missing-id.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-wildcard-applies-to-tests-missing-id.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-wrong-evidence-hash.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-wrong-evidence-hash.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-wrong-false-world-target-claim.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-wrong-false-world-target-claim.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-wrong-true-world-target-claim.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__FW-gate-wrong-true-world-target-claim.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__TW-gate-1.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__TW-gate-1.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__TW-gate-target-claim-ids-list.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__TW-gate-target-claim-ids-list.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__TW-gate-unique-evidence-refs-pass.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__TW-gate-unique-evidence-refs-pass.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__claim.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__claim.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-gate-hardening__gate.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-gate-hardening__gate.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-structure__FW-agent-unsupported-key.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-structure__FW-agent-unsupported-key.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-structure__FW-skill-dynamic-shell.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-structure__FW-skill-dynamic-shell.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-structure__FW-structure-1.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-structure__FW-structure-1.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-structure__FW-structure-2.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-structure__FW-structure-2.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-structure__FW-surface-manifest-inline.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-structure__FW-surface-manifest-inline.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-structure__TW-structure-1.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-structure__TW-structure-1.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-structure__claim.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-structure__claim.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-structure__gate.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-structure__gate.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-validator-sensitivity__FW-recursive-agent-after-manifest.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-validator-sensitivity__FW-recursive-agent-after-manifest.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-validator-sensitivity__FW-validator-1.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-validator-sensitivity__FW-validator-1.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-validator-sensitivity__FW-validator-2.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-validator-sensitivity__FW-validator-2.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-validator-sensitivity__TW-validator-1.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-validator-sensitivity__TW-validator-1.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-validator-sensitivity__claim.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-validator-sensitivity__claim.txt
+- PASS: stable release manifest hash matches: self_validation/evidence_artifacts/C-validator-sensitivity__gate.txt
+- PASS: stable release manifest bytes match: self_validation/evidence_artifacts/C-validator-sensitivity__gate.txt
+- PASS: stable release manifest hash matches: self_validation/pass_tracked_certifier_empty_bundle_rc.txt
+- PASS: stable release manifest bytes match: self_validation/pass_tracked_certifier_empty_bundle_rc.txt
+- PASS: stable release manifest hash matches: self_validation/pass_tracked_certifier_empty_bundle_result.json
+- PASS: stable release manifest bytes match: self_validation/pass_tracked_certifier_empty_bundle_result.json
+- PASS: stable release manifest hash matches: self_validation/pass_tracked_certifier_empty_bundle_result.md
+- PASS: stable release manifest bytes match: self_validation/pass_tracked_certifier_empty_bundle_result.md
+- PASS: stable release manifest hash matches: self_validation/pass_tracked_certifier_empty_bundle_stdout.json
+- PASS: stable release manifest bytes match: self_validation/pass_tracked_certifier_empty_bundle_stdout.json
+- PASS: stable release manifest hash matches: self_validation/self_certificate.json
+- PASS: stable release manifest bytes match: self_validation/self_certificate.json
+- PASS: stable release manifest hash matches: self_validation/v101_targeted_probe_results.json
+- PASS: stable release manifest bytes match: self_validation/v101_targeted_probe_results.json
+- PASS: stable release manifest hash matches: skills/nozickian-verify/SKILL.md
+- PASS: stable release manifest bytes match: skills/nozickian-verify/SKILL.md
+- PASS: stable release manifest hash matches: skills/nozickian-verify/assets/certificate-template.json
+- PASS: stable release manifest bytes match: skills/nozickian-verify/assets/certificate-template.json
+- PASS: stable release manifest hash matches: skills/nozickian-verify/assets/subagent-task-card.md
+- PASS: stable release manifest bytes match: skills/nozickian-verify/assets/subagent-task-card.md
+- PASS: stable release manifest hash matches: skills/nozickian-verify/evals/evals.json
+- PASS: stable release manifest bytes match: skills/nozickian-verify/evals/evals.json
+- PASS: stable release manifest hash matches: skills/nozickian-verify/evals/fixtures/fake_trace.json
+- PASS: stable release manifest bytes match: skills/nozickian-verify/evals/fixtures/fake_trace.json
+- PASS: stable release manifest hash matches: skills/nozickian-verify/evals/fixtures/mini_code.py
+- PASS: stable release manifest bytes match: skills/nozickian-verify/evals/fixtures/mini_code.py
+- PASS: stable release manifest hash matches: skills/nozickian-verify/evals/fixtures/mini_manual.md
+- PASS: stable release manifest bytes match: skills/nozickian-verify/evals/fixtures/mini_manual.md
+- PASS: stable release manifest hash matches: skills/nozickian-verify/references/ARTIFACT_GUIDE.md
+- PASS: stable release manifest bytes match: skills/nozickian-verify/references/ARTIFACT_GUIDE.md
+- PASS: stable release manifest hash matches: skills/nozickian-verify/references/EVAL_BEST_PRACTICES.md
+- PASS: stable release manifest bytes match: skills/nozickian-verify/references/EVAL_BEST_PRACTICES.md
+- PASS: stable release manifest hash matches: skills/nozickian-verify/references/EVIDENCE_SCHEMA.md
+- PASS: stable release manifest bytes match: skills/nozickian-verify/references/EVIDENCE_SCHEMA.md
+- PASS: stable release manifest hash matches: skills/nozickian-verify/references/OUTPUT_TEMPLATES.md
+- PASS: stable release manifest bytes match: skills/nozickian-verify/references/OUTPUT_TEMPLATES.md
+- PASS: stable release manifest hash matches: skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md
+- PASS: stable release manifest bytes match: skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md
+- PASS: stable release manifest hash matches: skills/nozickian-verify/references/SOURCES.md
+- PASS: stable release manifest bytes match: skills/nozickian-verify/references/SOURCES.md
+- PASS: stable release manifest hash matches: skills/nozickian-verify/references/STANDARD.md
+- PASS: stable release manifest bytes match: skills/nozickian-verify/references/STANDARD.md
+- PASS: stable release manifest hash matches: skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md
+- PASS: stable release manifest bytes match: skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md
+- PASS: stable release manifest hash matches: skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py
+- PASS: stable release manifest bytes match: skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py
+- PASS: stable release manifest hash matches: skills/nozickian-verify/scripts/ntt_gate.py
+- PASS: stable release manifest bytes match: skills/nozickian-verify/scripts/ntt_gate.py
+- PASS: stable release manifest hash matches: skills/nozickian-verify/scripts/run_formal_artifact_verification.py
+- PASS: stable release manifest bytes match: skills/nozickian-verify/scripts/run_formal_artifact_verification.py
+- PASS: stable release manifest hash matches: skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py
+- PASS: stable release manifest bytes match: skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py
+- PASS: stable release manifest hash matches: skills/nozickian-verify/scripts/run_gate_contract_tests.py
+- PASS: stable release manifest bytes match: skills/nozickian-verify/scripts/run_gate_contract_tests.py
+- PASS: stable release manifest hash matches: skills/nozickian-verify/scripts/run_live_skill_evals.py
+- PASS: stable release manifest bytes match: skills/nozickian-verify/scripts/run_live_skill_evals.py
+- PASS: stable release manifest hash matches: skills/nozickian-verify/scripts/run_regression_evals.py
+- PASS: stable release manifest bytes match: skills/nozickian-verify/scripts/run_regression_evals.py
+- PASS: stable release manifest hash matches: skills/nozickian-verify/scripts/validate_package.py
+- PASS: stable release manifest bytes match: skills/nozickian-verify/scripts/validate_package.py
+- PASS: release provenance hygiene has no stale generated artifact or absolute build path tokens
+- PASS: self certificate exists for downstream non-closure check
+- PASS: self certificate parses for downstream non-closure check
+- PASS: self certificate has no stale active package-version provenance
+- PASS: self certificate declares downstream non-closure records
+- PASS: package surface policy exists
+- PASS: package surface policy parses
+- PASS: package surface tier is team-internal
+- PASS: package surface closed
+- PASS: package surface allowed skills match
+- PASS: package surface agents match expected
+- PASS: package surface forbids runtime plugin fields
+- PASS: package surface forbids plugin surfaces
+- PASS: package surface documents formal invocation
+- PASS: package surface declares non-runtime GitHub docs
+- PASS: root GitHub README exists
+- PASS: root GitHub README is substantive
+- PASS: root GitHub README contains term: Documentation map
+- PASS: root GitHub README contains term: docs/README.md
+- PASS: root GitHub README contains term: PASS-SCOPED
+- PASS: root GitHub README contains term: PASS-TRACKED
+- PASS: root GitHub README contains term: GitHub README policy
+- PASS: root GitHub README contains term: nozickian-verify
+- PASS: GitHub docs directory exists
+- PASS: GitHub README set matches expected docs tree
+- PASS: GitHub docs tree uses README.md-only Markdown files
+- PASS: GitHub docs tree has no non-Markdown files
+- PASS: GitHub README exists: docs/README.md
+- PASS: GitHub README substantive: docs/README.md
+- PASS: GitHub README has heading: docs/README.md
+- PASS: GitHub README avoids placeholder text: docs/README.md
+- PASS: GitHub README docs/README.md contains term: Documentation hub
+- PASS: GitHub README docs/README.md contains term: PASS-SCOPED
+- PASS: GitHub README docs/README.md contains term: PASS-TRACKED
+- PASS: GitHub README docs/README.md contains term: closed-surface
+- PASS: GitHub README exists: docs/quickstart/README.md
+- PASS: GitHub README substantive: docs/quickstart/README.md
+- PASS: GitHub README has heading: docs/quickstart/README.md
+- PASS: GitHub README avoids placeholder text: docs/quickstart/README.md
+- PASS: GitHub README docs/quickstart/README.md contains term: Quickstart
+- PASS: GitHub README docs/quickstart/README.md contains term: validate_package.py
+- PASS: GitHub README docs/quickstart/README.md contains term: run_live_skill_evals.py
+- PASS: GitHub README docs/quickstart/README.md contains term: UNVERIFIED_RUNTIME
+- PASS: GitHub README exists: docs/audit-model/README.md
+- PASS: GitHub README substantive: docs/audit-model/README.md
+- PASS: GitHub README has heading: docs/audit-model/README.md
+- PASS: GitHub README avoids placeholder text: docs/audit-model/README.md
+- PASS: GitHub README docs/audit-model/README.md contains term: Nozickian
+- PASS: GitHub README docs/audit-model/README.md contains term: CoVe
+- PASS: GitHub README docs/audit-model/README.md contains term: no automatic epistemic closure
+- PASS: GitHub README docs/audit-model/README.md contains term: derived_or_downstream_claims
+- PASS: GitHub README exists: docs/evidence/README.md
+- PASS: GitHub README substantive: docs/evidence/README.md
+- PASS: GitHub README has heading: docs/evidence/README.md
+- PASS: GitHub README avoids placeholder text: docs/evidence/README.md
+- PASS: GitHub README docs/evidence/README.md contains term: self_certificate.json
+- PASS: GitHub README docs/evidence/README.md contains term: strict
+- PASS: GitHub README docs/evidence/README.md contains term: SHA-256
+- PASS: GitHub README docs/evidence/README.md contains term: structured evidence
+- PASS: GitHub README exists: docs/pass-tracked-upgrade/README.md
+- PASS: GitHub README substantive: docs/pass-tracked-upgrade/README.md
+- PASS: GitHub README has heading: docs/pass-tracked-upgrade/README.md
+- PASS: GitHub README avoids placeholder text: docs/pass-tracked-upgrade/README.md
+- PASS: GitHub README docs/pass-tracked-upgrade/README.md contains term: PASS-SCOPED
+- PASS: GitHub README docs/pass-tracked-upgrade/README.md contains term: PASS-TRACKED
+- PASS: GitHub README docs/pass-tracked-upgrade/README.md contains term: certify_pass_tracked_upgrade.py
+- PASS: GitHub README docs/pass-tracked-upgrade/README.md contains term: promotion certificate
+- PASS: GitHub README exists: docs/runtime-trace-auth/README.md
+- PASS: GitHub README substantive: docs/runtime-trace-auth/README.md
+- PASS: GitHub README has heading: docs/runtime-trace-auth/README.md
+- PASS: GitHub README avoids placeholder text: docs/runtime-trace-auth/README.md
+- PASS: GitHub README docs/runtime-trace-auth/README.md contains term: stream
+- PASS: GitHub README docs/runtime-trace-auth/README.md contains term: tool-use
+- PASS: GitHub README docs/runtime-trace-auth/README.md contains term: tool-result
+- PASS: GitHub README docs/runtime-trace-auth/README.md contains term: trace authentication
+- PASS: GitHub README exists: docs/security/README.md
+- PASS: GitHub README substantive: docs/security/README.md
+- PASS: GitHub README has heading: docs/security/README.md
+- PASS: GitHub README avoids placeholder text: docs/security/README.md
+- PASS: GitHub README docs/security/README.md contains term: closed surface
+- PASS: GitHub README docs/security/README.md contains term: threat model
+- PASS: GitHub README docs/security/README.md contains term: runtime
+- PASS: GitHub README docs/security/README.md contains term: README
+- PASS: GitHub README exists: docs/development/README.md
+- PASS: GitHub README substantive: docs/development/README.md
+- PASS: GitHub README has heading: docs/development/README.md
+- PASS: GitHub README avoids placeholder text: docs/development/README.md
+- PASS: GitHub README docs/development/README.md contains term: Development
+- PASS: GitHub README docs/development/README.md contains term: update-manifest
+- PASS: GitHub README docs/development/README.md contains term: validator
+- PASS: GitHub README docs/development/README.md contains term: evidence
+- PASS: GitHub README exists: docs/release/README.md
+- PASS: GitHub README substantive: docs/release/README.md
+- PASS: GitHub README has heading: docs/release/README.md
+- PASS: GitHub README avoids placeholder text: docs/release/README.md
+- PASS: GitHub README docs/release/README.md contains term: Release
+- PASS: GitHub README docs/release/README.md contains term: MANIFEST.sha256
+- PASS: GitHub README docs/release/README.md contains term: STABLE_RELEASE_MANIFEST.json
+- PASS: GitHub README docs/release/README.md contains term: PASS-SCOPED
+- PASS: GitHub README exists: docs/faq/README.md
+- PASS: GitHub README substantive: docs/faq/README.md
+- PASS: GitHub README has heading: docs/faq/README.md
+- PASS: GitHub README avoids placeholder text: docs/faq/README.md
+- PASS: GitHub README docs/faq/README.md contains term: FAQ
+- PASS: GitHub README docs/faq/README.md contains term: PASS-SCOPED
+- PASS: GitHub README docs/faq/README.md contains term: PASS-TRACKED
+- PASS: GitHub README docs/faq/README.md contains term: downstream
+- PASS: GitHub README exists: docs/github/README.md
+- PASS: GitHub README substantive: docs/github/README.md
+- PASS: GitHub README has heading: docs/github/README.md
+- PASS: GitHub README avoids placeholder text: docs/github/README.md
+- PASS: GitHub README docs/github/README.md contains term: GitHub
+- PASS: GitHub README docs/github/README.md contains term: README
+- PASS: GitHub README docs/github/README.md contains term: repository
+- PASS: GitHub README docs/github/README.md contains term: runtime
+- PASS: self_validation GitHub README exists when self_validation is bundled
+- PASS: self_validation GitHub README substantive
+- PASS: self_validation GitHub README contains term: Self-validation
+- PASS: self_validation GitHub README contains term: self_certificate.json
+- PASS: self_validation GitHub README contains term: evidence
+- PASS: self_validation GitHub README contains term: UNVERIFIED_RUNTIME
+- PASS: GitHub README docs avoid plugin-loadable runtime component paths
+- PASS: no unexpected top-level files
+- PASS: no unexpected top-level directories
+- PASS: only expected team CI workflow present
+- PASS: CI workflow includes validate_package.py . --self-test
+- PASS: CI workflow includes ntt_gate.py self_validation/self_certificate.json --evidence-root .
+- PASS: CI workflow includes run_regression_evals.py .
+- PASS: CI workflow includes run_formal_runner_contract_tests.py .
+- PASS: CI workflow includes run_formal_artifact_verification.py . README.md --dry-run
+- PASS: forbidden root file absent: .lsp.json
+- PASS: forbidden root file absent: .mcp.json
+- PASS: forbidden root file absent: settings.json
+- PASS: forbidden plugin surface absent: bin/
+- PASS: forbidden plugin surface absent: commands/
+- PASS: forbidden plugin surface absent: hooks/
+- PASS: forbidden plugin surface absent: monitors/
+- PASS: .claude-plugin contains only plugin.json
+- PASS: only expected skill directory present
+- PASS: no extra plugin agents, including recursive subdirectory agents
+- PASS: all expected plugin agents present
+- PASS: plugin agents directory contains only markdown agent files
+- PASS: skill directory contains only expected children
+- PASS: scripts directory contains only expected scripts
+- PASS: references directory contains only expected files
+- PASS: behavior manifest exists
+- PASS: manifest lines parse
+- PASS: manifest covers all behavior files
+- PASS: manifest has no non-behavior files
+- PASS: manifest hash matches: .claude-plugin/plugin.json
+- PASS: manifest hash matches: .github/workflows/nozickian-team-ci.yml
+- PASS: manifest hash matches: PACKAGE_SURFACE.json
+- PASS: manifest hash matches: RELEASE_LOCK.json
+- PASS: manifest hash matches: agents/ntt-claim-extractor.md
+- PASS: manifest hash matches: agents/ntt-code-verifier.md
+- PASS: manifest hash matches: agents/ntt-false-world-adversary.md
+- PASS: manifest hash matches: agents/ntt-formal-coordinator.md
+- PASS: manifest hash matches: agents/ntt-gate-auditor.md
+- PASS: manifest hash matches: agents/ntt-method-cartographer.md
+- PASS: manifest hash matches: agents/ntt-skill-self-auditor.md
+- PASS: manifest hash matches: agents/ntt-source-verifier.md
+- PASS: manifest hash matches: agents/ntt-true-world-adherence.md
+- PASS: manifest hash matches: docs/README.md
+- PASS: manifest hash matches: docs/audit-model/README.md
+- PASS: manifest hash matches: docs/development/README.md
+- PASS: manifest hash matches: docs/evidence/README.md
+- PASS: manifest hash matches: docs/faq/README.md
+- PASS: manifest hash matches: docs/github/README.md
+- PASS: manifest hash matches: docs/pass-tracked-upgrade/README.md
+- PASS: manifest hash matches: docs/quickstart/README.md
+- PASS: manifest hash matches: docs/release/README.md
+- PASS: manifest hash matches: docs/runtime-trace-auth/README.md
+- PASS: manifest hash matches: docs/security/README.md
+- PASS: manifest hash matches: skills/nozickian-verify/SKILL.md
+- PASS: manifest hash matches: skills/nozickian-verify/evals/evals.json
+- PASS: manifest hash matches: skills/nozickian-verify/evals/fixtures/fake_trace.json
+- PASS: manifest hash matches: skills/nozickian-verify/evals/fixtures/mini_code.py
+- PASS: manifest hash matches: skills/nozickian-verify/evals/fixtures/mini_manual.md
+- PASS: manifest hash matches: skills/nozickian-verify/references/ARTIFACT_GUIDE.md
+- PASS: manifest hash matches: skills/nozickian-verify/references/EVAL_BEST_PRACTICES.md
+- PASS: manifest hash matches: skills/nozickian-verify/references/EVIDENCE_SCHEMA.md
+- PASS: manifest hash matches: skills/nozickian-verify/references/OUTPUT_TEMPLATES.md
+- PASS: manifest hash matches: skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md
+- PASS: manifest hash matches: skills/nozickian-verify/references/SOURCES.md
+- PASS: manifest hash matches: skills/nozickian-verify/references/STANDARD.md
+- PASS: manifest hash matches: skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md
+- PASS: manifest hash matches: skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py
+- PASS: manifest hash matches: skills/nozickian-verify/scripts/ntt_gate.py
+- PASS: manifest hash matches: skills/nozickian-verify/scripts/run_formal_artifact_verification.py
+- PASS: manifest hash matches: skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py
+- PASS: manifest hash matches: skills/nozickian-verify/scripts/run_gate_contract_tests.py
+- PASS: manifest hash matches: skills/nozickian-verify/scripts/run_live_skill_evals.py
+- PASS: manifest hash matches: skills/nozickian-verify/scripts/run_regression_evals.py
+- PASS: manifest hash matches: skills/nozickian-verify/scripts/validate_package.py
+- PASS: skill frontmatter parses
+- PASS: skill frontmatter has only expected keys
+- PASS: skill frontmatter lacks method-changing runtime keys
+- PASS: skill name matches directory
+- PASS: skill description substantive
+- PASS: skill compatibility length valid
+- PASS: skill avoids broad permission pattern: allowed-tools\s*:\s*.*\bBash\b
+- PASS: skill avoids broad permission pattern: allowed-tools\s*:\s*.*\bWrite\b
+- PASS: skill avoids broad permission pattern: allowed-tools\s*:\s*.*\bEdit\b
+- PASS: skill avoids broad permission pattern: allowed-tools\s*:\s*.*\bAgent\b
+- PASS: skill avoids broad permission pattern: allowed-tools\s*:\s*.*\bWebFetch\b
+- PASS: skill avoids broad permission pattern: permissionMode\s*:\s*bypassPermissions
+- PASS: skill avoids broad permission pattern: permissionMode\s*:\s*dontAsk
+- PASS: skill avoids broad permission pattern: dangerously-skip-permissions
+- PASS: skill avoids broad permission pattern: allow-dangerously-skip-permissions
+- PASS: skill avoids dynamic shell fenced blocks
+- PASS: skill avoids inline dynamic shell substitutions
+- PASS: skill uses progressive references
+- PASS: skill states closed-surface policy
+- PASS: skill line count within guidance
+- PASS: skill documents formal invocation mode
+- PASS: STANDARD.md exists
+- PASS: STANDARD.md substantive length
+- PASS: STANDARD.md contains term: claim-level decomposition
+- PASS: STANDARD.md contains term: method M
+- PASS: STANDARD.md contains term: nearby false-world
+- PASS: STANDARD.md contains term: nearby true-world
+- PASS: STANDARD.md contains term: gate condition
+- PASS: STANDARD.md contains term: sensitivity
+- PASS: STANDARD.md contains term: adherence
+- PASS: STANDARD.md contains term: thresholds can be tightened
+- PASS: STANDARD.md contains term: cannot be relaxed
+- PASS: STANDARD.md contains term: no automatic epistemic closure
+- PASS: STANDARD.md contains term: downstream transmission
+- PASS: STANDARD.md contains term: derived_or_downstream_claims
+- PASS: STANDARD.md contains term: PASS-TRACKED upgrade audit
+- PASS: STANDARD.md contains term: upgrade from PASS-SCOPED
+- PASS: STANDARD.md not obvious nonsense
+- PASS: reference exists: STANDARD.md
+- PASS: reference substantive: STANDARD.md
+- PASS: reference exists: EVAL_BEST_PRACTICES.md
+- PASS: reference substantive: EVAL_BEST_PRACTICES.md
+- PASS: reference exists: OUTPUT_TEMPLATES.md
+- PASS: reference substantive: OUTPUT_TEMPLATES.md
+- PASS: reference exists: EVIDENCE_SCHEMA.md
+- PASS: reference substantive: EVIDENCE_SCHEMA.md
+- PASS: reference exists: SUBAGENT_PROTOCOLS.md
+- PASS: reference substantive: SUBAGENT_PROTOCOLS.md
+- PASS: reference exists: ARTIFACT_GUIDE.md
+- PASS: reference substantive: ARTIFACT_GUIDE.md
+- PASS: reference exists: PASS_TRACKED_UPGRADE_AUDIT.md
+- PASS: reference substantive: PASS_TRACKED_UPGRADE_AUDIT.md
+- PASS: PASS-TRACKED upgrade audit contains term: PASS-SCOPED to PASS-TRACKED
+- PASS: PASS-TRACKED upgrade audit contains term: Required audit bundle layout
+- PASS: PASS-TRACKED upgrade audit contains term: Required command sequence
+- PASS: PASS-TRACKED upgrade audit contains term: --output-format stream-json
+- PASS: PASS-TRACKED upgrade audit contains term: --include-hook-events
+- PASS: PASS-TRACKED upgrade audit contains term: --plugin-dir
+- PASS: PASS-TRACKED upgrade audit contains term: run_live_skill_evals.py
+- PASS: PASS-TRACKED upgrade audit contains term: run_formal_artifact_verification.py
+- PASS: PASS-TRACKED upgrade audit contains term: --require-trace-auth
+- PASS: PASS-TRACKED upgrade audit contains term: certify_pass_tracked_upgrade.py
+- PASS: PASS-TRACKED upgrade audit contains term: promotion_certificate.json
+- PASS: PASS-TRACKED upgrade audit contains term: UNVERIFIED_RUNTIME
+- PASS: PASS-TRACKED upgrade audit contains term: downstream
+- PASS: PASS-TRACKED upgrade audit contains term: no automatic
+- PASS: reference exists: SOURCES.md
+- PASS: reference substantive: SOURCES.md
+- PASS: agent exists: ntt-formal-coordinator
+- PASS: agent frontmatter parses: ntt-formal-coordinator
+- PASS: agent frontmatter has only expected keys: ntt-formal-coordinator
+- PASS: agent frontmatter lacks unsupported runtime keys: ntt-formal-coordinator
+- PASS: agent name matches file: ntt-formal-coordinator
+- PASS: agent description substantive: ntt-formal-coordinator
+- PASS: agent tools explicit: ntt-formal-coordinator
+- PASS: agent Bash policy: ntt-formal-coordinator
+- PASS: agent has no permissionMode field: ntt-formal-coordinator
+- PASS: formal coordinator restricts Agent tool to native ntt lanes
+- PASS: formal coordinator can write formal artifacts
+- PASS: agent body substantive: ntt-formal-coordinator
+- PASS: agent anti-rubber-stamp term ntt-formal-coordinator: anti-rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-formal-coordinator: never return pass
+- PASS: agent anti-rubber-stamp term ntt-formal-coordinator: uncertainty
+- PASS: agent anti-rubber-stamp term ntt-formal-coordinator: evidence refs
+- PASS: agent anti-rubber-stamp term ntt-formal-coordinator: residual risk
+- PASS: agent anti-rubber-stamp term ntt-formal-coordinator: do not rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-formal-coordinator: pass only if
+- PASS: agent role term ntt-formal-coordinator: formal_subagent_failure
+- PASS: agent role term ntt-formal-coordinator: native ntt
+- PASS: agent role term ntt-formal-coordinator: certificate.json
+- PASS: agent role term ntt-formal-coordinator: ntt_gate.py
+- PASS: agent role term ntt-formal-coordinator: invocation ledger
+- PASS: agent role term ntt-formal-coordinator: no general-purpose fallback
+- PASS: agent role term ntt-formal-coordinator: authenticated trace
+- PASS: agent role term ntt-formal-coordinator: stream-json
+- PASS: agent lacks suspicious pass-through language: ntt-formal-coordinator
+- PASS: agent exists: ntt-method-cartographer
+- PASS: agent frontmatter parses: ntt-method-cartographer
+- PASS: agent frontmatter has only expected keys: ntt-method-cartographer
+- PASS: agent frontmatter lacks unsupported runtime keys: ntt-method-cartographer
+- PASS: agent name matches file: ntt-method-cartographer
+- PASS: agent description substantive: ntt-method-cartographer
+- PASS: agent tools explicit: ntt-method-cartographer
+- PASS: agent Bash policy: ntt-method-cartographer
+- PASS: read-only agent lacks write/edit/web tools: ntt-method-cartographer
+- PASS: agent has no permissionMode field: ntt-method-cartographer
+- PASS: agent body substantive: ntt-method-cartographer
+- PASS: agent anti-rubber-stamp term ntt-method-cartographer: anti-rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-method-cartographer: never return pass
+- PASS: agent anti-rubber-stamp term ntt-method-cartographer: uncertainty
+- PASS: agent anti-rubber-stamp term ntt-method-cartographer: evidence refs
+- PASS: agent anti-rubber-stamp term ntt-method-cartographer: residual risk
+- PASS: agent anti-rubber-stamp term ntt-method-cartographer: do not rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-method-cartographer: pass only if
+- PASS: agent role term ntt-method-cartographer: method m
+- PASS: agent role term ntt-method-cartographer: method_unknowns
+- PASS: agent role term ntt-method-cartographer: producer
+- PASS: agent role term ntt-method-cartographer: checker
+- PASS: agent role term ntt-method-cartographer: trace_or_logs
+- PASS: agent lacks suspicious pass-through language: ntt-method-cartographer
+- PASS: agent exists: ntt-claim-extractor
+- PASS: agent frontmatter parses: ntt-claim-extractor
+- PASS: agent frontmatter has only expected keys: ntt-claim-extractor
+- PASS: agent frontmatter lacks unsupported runtime keys: ntt-claim-extractor
+- PASS: agent name matches file: ntt-claim-extractor
+- PASS: agent description substantive: ntt-claim-extractor
+- PASS: agent tools explicit: ntt-claim-extractor
+- PASS: agent Bash policy: ntt-claim-extractor
+- PASS: read-only agent lacks write/edit/web tools: ntt-claim-extractor
+- PASS: agent has no permissionMode field: ntt-claim-extractor
+- PASS: agent body substantive: ntt-claim-extractor
+- PASS: agent anti-rubber-stamp term ntt-claim-extractor: anti-rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-claim-extractor: never return pass
+- PASS: agent anti-rubber-stamp term ntt-claim-extractor: uncertainty
+- PASS: agent anti-rubber-stamp term ntt-claim-extractor: evidence refs
+- PASS: agent anti-rubber-stamp term ntt-claim-extractor: residual risk
+- PASS: agent anti-rubber-stamp term ntt-claim-extractor: do not rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-claim-extractor: pass only if
+- PASS: agent role term ntt-claim-extractor: atomic
+- PASS: agent role term ntt-claim-extractor: claim
+- PASS: agent role term ntt-claim-extractor: criticality
+- PASS: agent role term ntt-claim-extractor: false-world
+- PASS: agent role term ntt-claim-extractor: true-world
+- PASS: agent lacks suspicious pass-through language: ntt-claim-extractor
+- PASS: agent exists: ntt-source-verifier
+- PASS: agent frontmatter parses: ntt-source-verifier
+- PASS: agent frontmatter has only expected keys: ntt-source-verifier
+- PASS: agent frontmatter lacks unsupported runtime keys: ntt-source-verifier
+- PASS: agent name matches file: ntt-source-verifier
+- PASS: agent description substantive: ntt-source-verifier
+- PASS: agent tools explicit: ntt-source-verifier
+- PASS: agent Bash policy: ntt-source-verifier
+- PASS: read-only agent lacks write/edit/web tools: ntt-source-verifier
+- PASS: agent has no permissionMode field: ntt-source-verifier
+- PASS: agent body substantive: ntt-source-verifier
+- PASS: agent anti-rubber-stamp term ntt-source-verifier: anti-rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-source-verifier: never return pass
+- PASS: agent anti-rubber-stamp term ntt-source-verifier: uncertainty
+- PASS: agent anti-rubber-stamp term ntt-source-verifier: evidence refs
+- PASS: agent anti-rubber-stamp term ntt-source-verifier: residual risk
+- PASS: agent anti-rubber-stamp term ntt-source-verifier: do not rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-source-verifier: pass only if
+- PASS: agent role term ntt-source-verifier: source support
+- PASS: agent role term ntt-source-verifier: stale
+- PASS: agent role term ntt-source-verifier: wrong-version
+- PASS: agent role term ntt-source-verifier: uncertainty
+- PASS: agent role term ntt-source-verifier: directly supports
+- PASS: agent lacks suspicious pass-through language: ntt-source-verifier
+- PASS: agent exists: ntt-code-verifier
+- PASS: agent frontmatter parses: ntt-code-verifier
+- PASS: agent frontmatter has only expected keys: ntt-code-verifier
+- PASS: agent frontmatter lacks unsupported runtime keys: ntt-code-verifier
+- PASS: agent name matches file: ntt-code-verifier
+- PASS: agent description substantive: ntt-code-verifier
+- PASS: agent tools explicit: ntt-code-verifier
+- PASS: agent Bash policy: ntt-code-verifier
+- PASS: mutating/executing agent uses worktree isolation: ntt-code-verifier
+- PASS: agent has no permissionMode field: ntt-code-verifier
+- PASS: agent body substantive: ntt-code-verifier
+- PASS: agent anti-rubber-stamp term ntt-code-verifier: anti-rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-code-verifier: never return pass
+- PASS: agent anti-rubber-stamp term ntt-code-verifier: uncertainty
+- PASS: agent anti-rubber-stamp term ntt-code-verifier: evidence refs
+- PASS: agent anti-rubber-stamp term ntt-code-verifier: residual risk
+- PASS: agent anti-rubber-stamp term ntt-code-verifier: do not rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-code-verifier: pass only if
+- PASS: agent role term ntt-code-verifier: commands
+- PASS: agent role term ntt-code-verifier: stdout
+- PASS: agent role term ntt-code-verifier: stderr
+- PASS: agent role term ntt-code-verifier: mutation
+- PASS: agent role term ntt-code-verifier: nearby false implementations
+- PASS: agent lacks suspicious pass-through language: ntt-code-verifier
+- PASS: agent exists: ntt-false-world-adversary
+- PASS: agent frontmatter parses: ntt-false-world-adversary
+- PASS: agent frontmatter has only expected keys: ntt-false-world-adversary
+- PASS: agent frontmatter lacks unsupported runtime keys: ntt-false-world-adversary
+- PASS: agent name matches file: ntt-false-world-adversary
+- PASS: agent description substantive: ntt-false-world-adversary
+- PASS: agent tools explicit: ntt-false-world-adversary
+- PASS: agent Bash policy: ntt-false-world-adversary
+- PASS: mutating/executing agent uses worktree isolation: ntt-false-world-adversary
+- PASS: agent has no permissionMode field: ntt-false-world-adversary
+- PASS: agent body substantive: ntt-false-world-adversary
+- PASS: agent anti-rubber-stamp term ntt-false-world-adversary: anti-rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-false-world-adversary: never return pass
+- PASS: agent anti-rubber-stamp term ntt-false-world-adversary: uncertainty
+- PASS: agent anti-rubber-stamp term ntt-false-world-adversary: evidence refs
+- PASS: agent anti-rubber-stamp term ntt-false-world-adversary: residual risk
+- PASS: agent anti-rubber-stamp term ntt-false-world-adversary: do not rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-false-world-adversary: pass only if
+- PASS: agent role term ntt-false-world-adversary: nearby false-world
+- PASS: agent role term ntt-false-world-adversary: stale-source
+- PASS: agent role term ntt-false-world-adversary: wrong-version
+- PASS: agent role term ntt-false-world-adversary: invalid-tool-output
+- PASS: agent role term ntt-false-world-adversary: rejects
+- PASS: agent lacks suspicious pass-through language: ntt-false-world-adversary
+- PASS: agent exists: ntt-true-world-adherence
+- PASS: agent frontmatter parses: ntt-true-world-adherence
+- PASS: agent frontmatter has only expected keys: ntt-true-world-adherence
+- PASS: agent frontmatter lacks unsupported runtime keys: ntt-true-world-adherence
+- PASS: agent name matches file: ntt-true-world-adherence
+- PASS: agent description substantive: ntt-true-world-adherence
+- PASS: agent tools explicit: ntt-true-world-adherence
+- PASS: agent Bash policy: ntt-true-world-adherence
+- PASS: mutating/executing agent uses worktree isolation: ntt-true-world-adherence
+- PASS: agent has no permissionMode field: ntt-true-world-adherence
+- PASS: agent body substantive: ntt-true-world-adherence
+- PASS: agent anti-rubber-stamp term ntt-true-world-adherence: anti-rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-true-world-adherence: never return pass
+- PASS: agent anti-rubber-stamp term ntt-true-world-adherence: uncertainty
+- PASS: agent anti-rubber-stamp term ntt-true-world-adherence: evidence refs
+- PASS: agent anti-rubber-stamp term ntt-true-world-adherence: residual risk
+- PASS: agent anti-rubber-stamp term ntt-true-world-adherence: do not rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-true-world-adherence: pass only if
+- PASS: agent role term ntt-true-world-adherence: nearby true-world
+- PASS: agent role term ntt-true-world-adherence: equivalent-source
+- PASS: agent role term ntt-true-world-adherence: alternate-correct
+- PASS: agent role term ntt-true-world-adherence: retains
+- PASS: agent role term ntt-true-world-adherence: overfitting
+- PASS: agent lacks suspicious pass-through language: ntt-true-world-adherence
+- PASS: agent exists: ntt-gate-auditor
+- PASS: agent frontmatter parses: ntt-gate-auditor
+- PASS: agent frontmatter has only expected keys: ntt-gate-auditor
+- PASS: agent frontmatter lacks unsupported runtime keys: ntt-gate-auditor
+- PASS: agent name matches file: ntt-gate-auditor
+- PASS: agent description substantive: ntt-gate-auditor
+- PASS: agent tools explicit: ntt-gate-auditor
+- PASS: agent Bash policy: ntt-gate-auditor
+- PASS: read-only agent lacks write/edit/web tools: ntt-gate-auditor
+- PASS: agent has no permissionMode field: ntt-gate-auditor
+- PASS: agent body substantive: ntt-gate-auditor
+- PASS: agent anti-rubber-stamp term ntt-gate-auditor: anti-rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-gate-auditor: never return pass
+- PASS: agent anti-rubber-stamp term ntt-gate-auditor: uncertainty
+- PASS: agent anti-rubber-stamp term ntt-gate-auditor: evidence refs
+- PASS: agent anti-rubber-stamp term ntt-gate-auditor: residual risk
+- PASS: agent anti-rubber-stamp term ntt-gate-auditor: do not rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-gate-auditor: pass only if
+- PASS: agent role term ntt-gate-auditor: threshold relaxation
+- PASS: agent role term ntt-gate-auditor: empty evidence
+- PASS: agent role term ntt-gate-auditor: unresolved contradictions
+- PASS: agent role term ntt-gate-auditor: unsupported pass labels
+- PASS: agent role term ntt-gate-auditor: fake source refs
+- PASS: agent lacks suspicious pass-through language: ntt-gate-auditor
+- PASS: agent exists: ntt-skill-self-auditor
+- PASS: agent frontmatter parses: ntt-skill-self-auditor
+- PASS: agent frontmatter has only expected keys: ntt-skill-self-auditor
+- PASS: agent frontmatter lacks unsupported runtime keys: ntt-skill-self-auditor
+- PASS: agent name matches file: ntt-skill-self-auditor
+- PASS: agent description substantive: ntt-skill-self-auditor
+- PASS: agent tools explicit: ntt-skill-self-auditor
+- PASS: agent Bash policy: ntt-skill-self-auditor
+- PASS: mutating/executing agent uses worktree isolation: ntt-skill-self-auditor
+- PASS: agent has no permissionMode field: ntt-skill-self-auditor
+- PASS: agent body substantive: ntt-skill-self-auditor
+- PASS: agent anti-rubber-stamp term ntt-skill-self-auditor: anti-rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-skill-self-auditor: never return pass
+- PASS: agent anti-rubber-stamp term ntt-skill-self-auditor: uncertainty
+- PASS: agent anti-rubber-stamp term ntt-skill-self-auditor: evidence refs
+- PASS: agent anti-rubber-stamp term ntt-skill-self-auditor: residual risk
+- PASS: agent anti-rubber-stamp term ntt-skill-self-auditor: do not rubber-stamp
+- PASS: agent anti-rubber-stamp term ntt-skill-self-auditor: pass only if
+- PASS: agent role term ntt-skill-self-auditor: close the plugin surface
+- PASS: agent role term ntt-skill-self-auditor: manifest hashes
+- PASS: agent role term ntt-skill-self-auditor: gate contract tests
+- PASS: agent role term ntt-skill-self-auditor: semantic prompt poisoning
+- PASS: agent role term ntt-skill-self-auditor: live runtime evals
+- PASS: agent lacks suspicious pass-through language: ntt-skill-self-auditor
+- PASS: evals.json exists
+- PASS: evals.json parses
+- PASS: evals have fixture list
+- PASS: eval id substantive: mini-manual-version-drift
+- PASS: eval fixture path exists: fixtures/mini_manual.md
+- PASS: eval expected_claims structured: mini-manual-version-drift
+- PASS: eval false_worlds structured list: mini-manual-version-drift
+- PASS: false_world id substantive: mini-manual-version-drift/MM-FW1
+- PASS: false_world targets known: mini-manual-version-drift/MM-FW1
+- PASS: false_world has perturbation: mini-manual-version-drift/MM-FW1
+- PASS: false_world expected behavior substantive: mini-manual-version-drift/MM-FW1
+- PASS: false_world success criteria substantive: mini-manual-version-drift/MM-FW1
+- PASS: false_world requires evidence: mini-manual-version-drift/MM-FW1
+- PASS: false_world id substantive: mini-manual-version-drift/MM-FW2
+- PASS: false_world targets known: mini-manual-version-drift/MM-FW2
+- PASS: false_world has perturbation: mini-manual-version-drift/MM-FW2
+- PASS: false_world expected behavior substantive: mini-manual-version-drift/MM-FW2
+- PASS: false_world success criteria substantive: mini-manual-version-drift/MM-FW2
+- PASS: false_world requires evidence: mini-manual-version-drift/MM-FW2
+- PASS: eval true_worlds structured list: mini-manual-version-drift
+- PASS: true_world id substantive: mini-manual-version-drift/MM-TW1
+- PASS: true_world targets known: mini-manual-version-drift/MM-TW1
+- PASS: true_world has variant: mini-manual-version-drift/MM-TW1
+- PASS: true_world expected behavior substantive: mini-manual-version-drift/MM-TW1
+- PASS: true_world success criteria substantive: mini-manual-version-drift/MM-TW1
+- PASS: true_world requires evidence: mini-manual-version-drift/MM-TW1
+- PASS: true_world id substantive: mini-manual-version-drift/MM-TW2
+- PASS: true_world targets known: mini-manual-version-drift/MM-TW2
+- PASS: true_world has variant: mini-manual-version-drift/MM-TW2
+- PASS: true_world expected behavior substantive: mini-manual-version-drift/MM-TW2
+- PASS: true_world success criteria substantive: mini-manual-version-drift/MM-TW2
+- PASS: true_world requires evidence: mini-manual-version-drift/MM-TW2
+- PASS: eval id substantive: mini-code-mutation
+- PASS: eval fixture path exists: fixtures/mini_code.py
+- PASS: eval expected_claims structured: mini-code-mutation
+- PASS: eval false_worlds structured list: mini-code-mutation
+- PASS: false_world id substantive: mini-code-mutation/MC-FW1
+- PASS: false_world targets known: mini-code-mutation/MC-FW1
+- PASS: false_world has perturbation: mini-code-mutation/MC-FW1
+- PASS: false_world expected behavior substantive: mini-code-mutation/MC-FW1
+- PASS: false_world success criteria substantive: mini-code-mutation/MC-FW1
+- PASS: false_world requires evidence: mini-code-mutation/MC-FW1
+- PASS: false_world id substantive: mini-code-mutation/MC-FW2
+- PASS: false_world targets known: mini-code-mutation/MC-FW2
+- PASS: false_world has perturbation: mini-code-mutation/MC-FW2
+- PASS: false_world expected behavior substantive: mini-code-mutation/MC-FW2
+- PASS: false_world success criteria substantive: mini-code-mutation/MC-FW2
+- PASS: false_world requires evidence: mini-code-mutation/MC-FW2
+- PASS: eval true_worlds structured list: mini-code-mutation
+- PASS: true_world id substantive: mini-code-mutation/MC-TW1
+- PASS: true_world targets known: mini-code-mutation/MC-TW1
+- PASS: true_world has variant: mini-code-mutation/MC-TW1
+- PASS: true_world expected behavior substantive: mini-code-mutation/MC-TW1
+- PASS: true_world success criteria substantive: mini-code-mutation/MC-TW1
+- PASS: true_world requires evidence: mini-code-mutation/MC-TW1
+- PASS: true_world id substantive: mini-code-mutation/MC-TW2
+- PASS: true_world targets known: mini-code-mutation/MC-TW2
+- PASS: true_world has variant: mini-code-mutation/MC-TW2
+- PASS: true_world expected behavior substantive: mini-code-mutation/MC-TW2
+- PASS: true_world success criteria substantive: mini-code-mutation/MC-TW2
+- PASS: true_world requires evidence: mini-code-mutation/MC-TW2
+- PASS: eval id substantive: fake-tool-output-trace
+- PASS: eval fixture path exists: fixtures/fake_trace.json
+- PASS: eval expected_claims structured: fake-tool-output-trace
+- PASS: eval false_worlds structured list: fake-tool-output-trace
+- PASS: false_world id substantive: fake-tool-output-trace/FT-FW1
+- PASS: false_world targets known: fake-tool-output-trace/FT-FW1
+- PASS: false_world has perturbation: fake-tool-output-trace/FT-FW1
+- PASS: false_world expected behavior substantive: fake-tool-output-trace/FT-FW1
+- PASS: false_world success criteria substantive: fake-tool-output-trace/FT-FW1
+- PASS: false_world requires evidence: fake-tool-output-trace/FT-FW1
+- PASS: eval true_worlds structured list: fake-tool-output-trace
+- PASS: true_world id substantive: fake-tool-output-trace/FT-TW1
+- PASS: true_world targets known: fake-tool-output-trace/FT-TW1
+- PASS: true_world has variant: fake-tool-output-trace/FT-TW1
+- PASS: true_world expected behavior substantive: fake-tool-output-trace/FT-TW1
+- PASS: true_world success criteria substantive: fake-tool-output-trace/FT-TW1
+- PASS: true_world requires evidence: fake-tool-output-trace/FT-TW1
+- PASS: script exists: ntt_gate.py
+- PASS: script substantive length: ntt_gate.py
+- PASS: script contains hardening token ntt_gate.py: DEFAULT_THRESHOLDS
+- PASS: script contains hardening token ntt_gate.py: derived_or_downstream_claims
+- PASS: script contains hardening token ntt_gate.py: evaluate_downstream_nonclosure
+- PASS: script contains hardening token ntt_gate.py: automatic closure
+- PASS: script contains hardening token ntt_gate.py: threshold relaxation attempt ignored
+- PASS: script contains hardening token ntt_gate.py: false_world_tests
+- PASS: script contains hardening token ntt_gate.py: true_world_tests
+- PASS: script contains hardening token ntt_gate.py: method_completeness
+- PASS: script contains hardening token ntt_gate.py: evidence_refs
+- PASS: script contains hardening token ntt_gate.py: unresolved_contradictions
+- PASS: script contains hardening token ntt_gate.py: --evidence-root
+- PASS: script contains hardening token ntt_gate.py: structured evidence
+- PASS: script contains hardening token ntt_gate.py: structured_evidence_count
+- PASS: script contains hardening token ntt_gate.py: evidence_schema_version
+- PASS: script contains hardening token ntt_gate.py: _verify_artifact_sha256
+- PASS: script contains hardening token ntt_gate.py: hash_or_version does not match artifact_path SHA-256
+- PASS: script contains hardening token ntt_gate.py: _ref_to_path_checked
+- PASS: script contains hardening token ntt_gate.py: invalid evidence refs
+- PASS: script contains hardening token ntt_gate.py: evidence ref escapes evidence_root
+- PASS: script contains hardening token ntt_gate.py: remote evidence refs are not allowed in strict local evidence mode
+- PASS: script contains hardening token ntt_gate.py: urlparse
+- PASS: script contains hardening token ntt_gate.py: URI schemes are case-insensitive
+- PASS: script contains hardening token ntt_gate.py: non-empty URI scheme
+- PASS: script contains hardening token ntt_gate.py: unique evidence refs
+- PASS: script contains hardening token ntt_gate.py: unique structured evidence artifacts
+- PASS: script contains hardening token ntt_gate.py: duplicate or aliased evidence refs
+- PASS: script contains hardening token ntt_gate.py: missing modal test id
+- PASS: script contains hardening token ntt_gate.py: test target_claim does not match evaluated claim
+- PASS: script contains hardening token ntt_gate.py: target_claim_ids
+- PASS: gate not obvious always-pass stub
+- PASS: script exists: validate_package.py
+- PASS: script substantive length: validate_package.py
+- PASS: script contains hardening token validate_package.py: check_closed_surface
+- PASS: script contains hardening token validate_package.py: check_self_certificate_nonclosure
+- PASS: script contains hardening token validate_package.py: scan_active_self_certificate_package_versions
+- PASS: script contains hardening token validate_package.py: downstream non-closure
+- PASS: script contains hardening token validate_package.py: plugin manifest has no component-path/runtime fields
+- PASS: script contains hardening token validate_package.py: dynamic skill shell disabled
+- PASS: script contains hardening token validate_package.py: semantic prompt poisoning
+- PASS: script contains hardening token validate_package.py: placeholder eval
+- PASS: script contains hardening token validate_package.py: run_live_skill_evals.py
+- PASS: script contains hardening token validate_package.py: update_manifest
+- PASS: script contains hardening token validate_package.py: agents.rglob
+- PASS: script contains hardening token validate_package.py: recursive plugin agent
+- PASS: script contains hardening token validate_package.py: check_release_audit_artifacts
+- PASS: script contains hardening token validate_package.py: check_release_provenance_hygiene
+- PASS: script contains hardening token validate_package.py: check_github_readmes
+- PASS: script contains hardening token validate_package.py: EXPECTED_GITHUB_READMES
+- PASS: script contains hardening token validate_package.py: GitHub README
+- PASS: script contains hardening token validate_package.py: stale generated artifact
+- PASS: script contains hardening token validate_package.py: absolute build path
+- PASS: script contains hardening token validate_package.py: provenance hygiene
+- PASS: script contains hardening token validate_package.py: stable release manifest self-hash
+- PASS: script contains hardening token validate_package.py: run_release_lock_idempotence_test
+- PASS: script contains hardening token validate_package.py: --skip-release-idempotence
+- PASS: script contains hardening token validate_package.py: volatile generated exclusions
+- PASS: script contains hardening token validate_package.py: TemporaryDirectory
+- PASS: script exists: run_gate_contract_tests.py
+- PASS: script substantive length: run_gate_contract_tests.py
+- PASS: script contains hardening token run_gate_contract_tests.py: downstream_claim_auto_pass_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: downstream_unverified_record_retains_pass
+- PASS: script contains hardening token run_gate_contract_tests.py: zero_threshold_no_tests_bypass
+- PASS: script contains hardening token run_gate_contract_tests.py: observed_accepts_false
+- PASS: script contains hardening token run_gate_contract_tests.py: observed_rejects_true
+- PASS: script contains hardening token run_gate_contract_tests.py: method_component_overclaim
+- PASS: script contains hardening token run_gate_contract_tests.py: valid_structured_evidence_hashes
+- PASS: script contains hardening token run_gate_contract_tests.py: wrong_structured_evidence_hash_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: artifact_path_escape_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: one_of_two_claim_evidence_hashes_wrong_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: one_of_two_test_evidence_hashes_wrong_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: evidence_ref_path_escape_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: evidence_ref_absolute_path_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: external_ref_with_valid_artifact_hash_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: remote_ref_rejected_in_strict_local_mode
+- PASS: script contains hardening token run_gate_contract_tests.py: uppercase_https_evidence_ref_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: mixed_case_https_evidence_ref_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: uppercase_doi_urn_refs_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: scheme_like_evidence_ref_rejected_in_strict_mode
+- PASS: script contains hardening token run_gate_contract_tests.py: duplicate_claim_evidence_ref_does_not_satisfy_minimum
+- PASS: script contains hardening token run_gate_contract_tests.py: aliased_same_claim_evidence_ref_does_not_satisfy_minimum
+- PASS: script contains hardening token run_gate_contract_tests.py: duplicate_structured_evidence_file_counted_once
+- PASS: script contains hardening token run_gate_contract_tests.py: same_artifact_path_for_all_claim_refs_fails_for_critical_claims
+- PASS: script contains hardening token run_gate_contract_tests.py: unique_evidence_refs_with_valid_hashes_still_pass
+- PASS: script contains hardening token run_gate_contract_tests.py: wrong_false_world_target_claim_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: wrong_true_world_target_claim_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: missing_false_world_test_id_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: missing_true_world_test_id_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: wildcard_applies_to_tests_does_not_replace_test_id
+- PASS: script contains hardening token run_gate_contract_tests.py: valid_target_claim_ids_list_still_passes
+- PASS: script exists: run_live_skill_evals.py
+- PASS: script substantive length: run_live_skill_evals.py
+- PASS: script contains hardening token run_live_skill_evals.py: --plugin-dir
+- PASS: script contains hardening token run_live_skill_evals.py: -p
+- PASS: script contains hardening token run_live_skill_evals.py: --output-format
+- PASS: script contains hardening token run_live_skill_evals.py: --max-turns
+- PASS: script contains hardening token run_live_skill_evals.py: build_fixture_prompt
+- PASS: script contains hardening token run_live_skill_evals.py: transcript_checks
+- PASS: script contains hardening token run_live_skill_evals.py: UNVERIFIED_RUNTIME
+- PASS: script contains hardening token run_live_skill_evals.py: --run-fixtures
+- PASS: script contains hardening token run_live_skill_evals.py: ACCEPTABLE_PASS_STATUSES
+- PASS: script contains hardening token run_live_skill_evals.py: dominant_status
+- PASS: live harness not obvious pass stub
+- PASS: script exists: run_regression_evals.py
+- PASS: script substantive length: run_regression_evals.py
+- PASS: script contains hardening token run_regression_evals.py: REQUIRED_FIXTURE_FIELDS
+- PASS: script contains hardening token run_regression_evals.py: false_worlds
+- PASS: script contains hardening token run_regression_evals.py: true_worlds
+- PASS: script contains hardening token run_regression_evals.py: expected_gate
+- PASS: script contains hardening token run_regression_evals.py: evidence_required
+- PASS: regression harness checks modal fixture structure
+- PASS: script exists: run_formal_artifact_verification.py
+- PASS: script substantive length: run_formal_artifact_verification.py
+- PASS: script contains hardening token run_formal_artifact_verification.py: ntt-formal-coordinator
+- PASS: script contains hardening token run_formal_artifact_verification.py: FORMAL_SUBAGENT_FAILURE
+- PASS: script contains hardening token run_formal_artifact_verification.py: certificate.json
+- PASS: script contains hardening token run_formal_artifact_verification.py: ntt_gate.py
+- PASS: script contains hardening token run_formal_artifact_verification.py: INVOCATION_LEDGER
+- PASS: script contains hardening token run_formal_artifact_verification.py: --agent
+- PASS: script contains hardening token run_formal_artifact_verification.py: --plugin-dir
+- PASS: script contains hardening token run_formal_artifact_verification.py: --dry-run
+- PASS: script contains hardening token run_formal_artifact_verification.py: Substitution used: none
+- PASS: script contains hardening token run_formal_artifact_verification.py: check_required_outputs
+- PASS: script contains hardening token run_formal_artifact_verification.py: authenticate_trace
+- PASS: script contains hardening token run_formal_artifact_verification.py: --include-hook-events
+- PASS: script contains hardening token run_formal_artifact_verification.py: trace_authentication
+- PASS: script contains hardening token run_formal_artifact_verification.py: cap_status_by_trace
+- PASS: script contains hardening token run_formal_artifact_verification.py: --require-trace-auth
+- PASS: script contains hardening token run_formal_artifact_verification.py: --skip-prechecks
+- PASS: script contains hardening token run_formal_artifact_verification.py: --refresh-release-manifest
+- PASS: script contains hardening token run_formal_artifact_verification.py: release tree output requires --refresh-release-manifest
+- PASS: script contains hardening token run_formal_artifact_verification.py: missing successful matching tool-result/completion events
+- PASS: script contains hardening token run_formal_artifact_verification.py: _tool_result_ids
+- PASS: script contains hardening token run_formal_artifact_verification.py: _structured_subagent_selector
+- PASS: script contains hardening token run_formal_artifact_verification.py: duplicate_tool_use_ids
+- PASS: script contains hardening token run_formal_artifact_verification.py: structured selector exact match
+- PASS: script contains hardening token run_formal_artifact_verification.py: empty/generic result
+- PASS: script contains hardening token run_formal_artifact_verification.py: text-only or mismatched-id
+- PASS: script contains hardening token run_formal_artifact_verification.py: _candidate_trace_nodes
+- PASS: script contains hardening token run_formal_artifact_verification.py: recognized stream-json event positions
+- PASS: script contains hardening token run_formal_artifact_verification.py: nested-fake-result
+- PASS: script contains hardening token run_formal_artifact_verification.py: result_before_call_ids
+- PASS: script contains hardening token run_formal_artifact_verification.py: CONTENT_METADATA_KEYS
+- PASS: script contains hardening token run_formal_artifact_verification.py: metadata-only
+- PASS: script contains hardening token run_formal_artifact_verification.py: payload-bearing fields
+- PASS: script contains hardening token run_formal_artifact_verification.py: role_violations
+- PASS: script contains hardening token run_formal_artifact_verification.py: role-inverted
+- PASS: script contains hardening token run_formal_artifact_verification.py: hard event boundary
+- PASS: script contains hardening token run_formal_artifact_verification.py: tool_result.data
+- PASS: script contains hardening token run_formal_artifact_verification.py: payload
+- PASS: formal runner not obvious pass stub
+- PASS: formal runner authenticates stream-json trace
+- PASS: formal runner includes hook events in stream
+- PASS: formal runner caps PASS-TRACKED by trace auth
+- PASS: formal runner PASS_STATUSES excludes LIMITED
+- PASS: script exists: certify_pass_tracked_upgrade.py
+- PASS: script substantive length: certify_pass_tracked_upgrade.py
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: PASS-SCOPED to PASS-TRACKED
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: promotion_certificate.json
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: official validators
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: live runtime eval
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: formal result
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: trace authenticated
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: PASS-TRACKED
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: UNVERIFIED_RUNTIME
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: derived_or_downstream_claims
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: no automatic downstream pass inheritance
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: run-fresh-package-validator
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: allow-official-validator-scope-exclusion
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: strict gate PASS-TRACKED
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: native stream-json trace authentication
+- PASS: PASS-TRACKED certifier rejects missing runtime evidence
+- PASS: PASS-TRACKED certifier requires trace and downstream checks
+- PASS: script exists: run_formal_runner_contract_tests.py
+- PASS: script substantive length: run_formal_runner_contract_tests.py
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: fake claude
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: no tool_use events
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: PASS-TRACKED
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: trace authentication
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: run_formal_artifact_verification.py
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: native_tool_use_without_results_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: failed_native_result_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: mismatched_tool_result_id_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: single_agent_call_mentions_all_lanes_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: duplicate_tool_use_id_across_lanes_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: empty_tool_result_content_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: generic_result_without_status_or_is_error_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: structured_subagent_type_exact_match_required
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: nested_tool_result_inside_tool_input_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: nested_tool_result_inside_arguments_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: tool_result_before_tool_use_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: same_event_input_embedded_result_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: text_block_tool_use_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: text_block_tool_result_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: assistant_message_tool_use_masquerade_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: message_result_masquerade_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: unexpected_agent_call_without_structured_selector_rejected
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: unknown_agent_selector_rejected
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: tool_result_metadata_only_text_block_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: tool_result_document_block_without_data_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: tool_result_nonempty_text_block_authenticates
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: missing_result_agents
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: tool_use_inside_tool_result_payload_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: tool_result_inside_tool_result_payload_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: fake_tool_use_and_result_inside_tool_result_data_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: tool_use_inside_tool_result_delta_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: user_message_tool_use_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: assistant_message_tool_result_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: role_inverted_tool_use_result_trace_does_not_authenticate
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: valid_assistant_tool_use_user_tool_result_still_authenticates
+- PASS: formal runner contract test is substantive

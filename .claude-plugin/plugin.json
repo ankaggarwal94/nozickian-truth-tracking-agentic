@@ -1,0 +1,16 @@
+{
+  "author": {
+    "name": "OpenAI ChatGPT-generated package for the requesting user"
+  },
+  "description": "Team/internal Claude Code plugin for Nozickian truth-tracking verification with closed runtime surface, strict evidence binding, stable release manifests, formal runner trace authentication, CoVe-style audit artifacts, PASS-TRACKED upgrade-audit certification instructions, no-closure safeguards, and a GitHub-ready README documentation set.",
+  "keywords": [
+    "agentic-verification",
+    "truth-tracking",
+    "nozickian",
+    "team-internal",
+    "evals"
+  ],
+  "license": "MIT",
+  "name": "nozickian-verification-team-internal",
+  "version": "1.0.1"
+}

@@ -1,0 +1,206 @@
+{
+  "description": "Structured deterministic and live-eval fixture specifications for the Nozickian verification skill. Each nearby world is an object with a target claim, perturbation/variant, expected behavior, success criteria, and evidence requirement.",
+  "fixtures": [
+    {
+      "artifact": "fixtures/mini_manual.md",
+      "expected_claims": [
+        {
+          "id": "MM-C1",
+          "importance": "major",
+          "text": "Product X CLI 2.4 supports xctl backup --verify."
+        },
+        {
+          "id": "MM-C2",
+          "importance": "major",
+          "text": "Product X CLI 2.3 does not include --verify."
+        }
+      ],
+      "expected_gate": "PASS-SCOPED",
+      "false_worlds": [
+        {
+          "evidence_required": true,
+          "expected_behavior": "The verifier must reject or flag the swapped version support as a false-world contradiction.",
+          "id": "MM-FW1",
+          "perturbation": "Swap the 2.4 and 2.3 support claims while leaving the surrounding prose plausible.",
+          "success_criteria": [
+            "Output identifies version drift or wrong-version source support.",
+            "Gate result is not PASS-TRACKED for the swapped claim."
+          ],
+          "target_claim_ids": [
+            "MM-C1",
+            "MM-C2"
+          ]
+        },
+        {
+          "evidence_required": true,
+          "expected_behavior": "The verifier must downgrade or flag the claim as missing a prerequisite.",
+          "id": "MM-FW2",
+          "perturbation": "Remove the checksum verification prerequisite and claim backup verification is unconditional.",
+          "success_criteria": [
+            "Output preserves the prerequisite or reports conditional scope.",
+            "False-world test evidence is cited."
+          ],
+          "target_claim_ids": [
+            "MM-C1"
+          ]
+        }
+      ],
+      "id": "mini-manual-version-drift",
+      "task": "Verify a mini technical manual for version-scoped command support and prerequisite preservation.",
+      "true_worlds": [
+        {
+          "evidence_required": true,
+          "expected_behavior": "The verifier should retain the true claim and not fail merely because wording changed.",
+          "id": "MM-TW1",
+          "success_criteria": [
+            "Equivalent support is accepted.",
+            "No brittle exact-sentence requirement is imposed."
+          ],
+          "target_claim_ids": [
+            "MM-C1"
+          ],
+          "variant": "Paraphrase the support claim without changing the version or command semantics."
+        },
+        {
+          "evidence_required": true,
+          "expected_behavior": "The verifier should preserve the scoped truth under compatible environment wording.",
+          "id": "MM-TW2",
+          "success_criteria": [
+            "Scope remains explicit.",
+            "Gate remains at least PASS-SCOPED if all other checks pass."
+          ],
+          "target_claim_ids": [
+            "MM-C1"
+          ],
+          "variant": "Use equivalent supported-OS wording with the same Product X CLI 2.4 scope."
+        }
+      ]
+    },
+    {
+      "artifact": "fixtures/mini_code.py",
+      "expected_claims": [
+        {
+          "id": "MC-C1",
+          "importance": "critical",
+          "text": "Function rejects negative weights."
+        },
+        {
+          "id": "MC-C2",
+          "importance": "major",
+          "text": "Function returns infinity for an unreachable target."
+        }
+      ],
+      "expected_gate": "PASS-SCOPED",
+      "false_worlds": [
+        {
+          "evidence_required": true,
+          "expected_behavior": "The verifier must catch the weighted-graph false implementation with mutation or property tests.",
+          "id": "MC-FW1",
+          "perturbation": "Replace Dijkstra-style weighted behavior with BFS while keeping simple examples green.",
+          "success_criteria": [
+            "At least one weighted counterexample is tested.",
+            "Passing trivial examples alone is insufficient."
+          ],
+          "target_claim_ids": [
+            "MC-C1",
+            "MC-C2"
+          ]
+        },
+        {
+          "evidence_required": true,
+          "expected_behavior": "The verifier must reject or flag the mutated implementation as failing the negative-weight claim.",
+          "id": "MC-FW2",
+          "perturbation": "Delete the negative-weight check while preserving return behavior on nonnegative examples.",
+          "success_criteria": [
+            "Negative input test is executed or specified.",
+            "Claim is not certified if check is absent."
+          ],
+          "target_claim_ids": [
+            "MC-C1"
+          ]
+        }
+      ],
+      "id": "mini-code-mutation",
+      "task": "Verify a small code artifact and its behavioral claims using property and mutation-oriented checks.",
+      "true_worlds": [
+        {
+          "evidence_required": true,
+          "expected_behavior": "The verifier should retain the behavior claims under nonsemantic refactoring.",
+          "id": "MC-TW1",
+          "success_criteria": [
+            "Tests are behavior-based, not syntax-path based.",
+            "Equivalent implementation is accepted."
+          ],
+          "target_claim_ids": [
+            "MC-C1",
+            "MC-C2"
+          ],
+          "variant": "Refactor heap variable names and helper functions without changing graph semantics."
+        },
+        {
+          "evidence_required": true,
+          "expected_behavior": "The verifier should accept the alternate correct implementation rather than exact trajectory matching.",
+          "id": "MC-TW2",
+          "success_criteria": [
+            "Behavioral invariant is checked.",
+            "No expected-path overfitting is reported."
+          ],
+          "target_claim_ids": [
+            "MC-C2"
+          ],
+          "variant": "Use an equivalent priority-queue loop that preserves unreachable-target infinity behavior."
+        }
+      ]
+    },
+    {
+      "artifact": "fixtures/fake_trace.json",
+      "expected_claims": [
+        {
+          "id": "FT-C1",
+          "importance": "critical",
+          "text": "Agent output claims a tool succeeded."
+        },
+        {
+          "id": "FT-C2",
+          "importance": "critical",
+          "text": "The trace records whether the claimed tool actually ran."
+        }
+      ],
+      "expected_gate": "LIMITED",
+      "false_worlds": [
+        {
+          "evidence_required": true,
+          "expected_behavior": "The verifier must reject, flag, or downgrade the tool-success claim because method M lacks the required tool execution evidence.",
+          "id": "FT-FW1",
+          "perturbation": "Tool did not run, but the agent claims it succeeded and fabricates a tool result.",
+          "success_criteria": [
+            "Trace/tool-output mismatch is detected.",
+            "The final gate is FAIL or LIMITED for the tool-success claim."
+          ],
+          "target_claim_ids": [
+            "FT-C1",
+            "FT-C2"
+          ]
+        }
+      ],
+      "id": "fake-tool-output-trace",
+      "task": "Verify an agent trace where claimed tool success may not match actual tool execution evidence.",
+      "true_worlds": [
+        {
+          "evidence_required": true,
+          "expected_behavior": "The verifier should retain the truthful uncertainty rather than penalizing honesty as failure.",
+          "id": "FT-TW1",
+          "success_criteria": [
+            "Honest UNVERIFIED status is preserved.",
+            "No fabricated tool success is accepted."
+          ],
+          "target_claim_ids": [
+            "FT-C2"
+          ],
+          "variant": "A trace honestly reports that the tool was missing and marks the result unverified."
+        }
+      ]
+    }
+  ],
+  "version": "0.4.0"
+}

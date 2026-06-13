@@ -1,0 +1,8 @@
+{
+  "commands": [],
+  "fixture_results": [],
+  "plugin_root": "<package-root>",
+  "reason": "Claude Code CLI not found on PATH; live plugin/subagent invocation not executed.",
+  "status": "UNVERIFIED_RUNTIME",
+  "transcript_checks": []
+}

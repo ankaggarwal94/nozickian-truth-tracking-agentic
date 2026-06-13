@@ -1,0 +1,11 @@
+{
+  "artifact_path": "self_validation/v101_targeted_probe_results.json",
+  "claim_id": "C-gate-hardening",
+  "command_or_source": "v1.0.1 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:4075b1be6db5994b1c14a3fc3e53ef88c45453936a5dd19b15057cc3cb203a1f",
+  "observed_result": "Observed v1.0.1 deterministic evidence for C-gate-hardening / FW-gate-wildcard-applies-to-tests-missing-id",
+  "support_summary": "This structured evidence binds FW-gate-wildcard-applies-to-tests-missing-id to self_validation/v101_targeted_probe_results.json, a package-local targeted probe artifact. v1.0.1 gate-contract evidence for modal-test claim binding, nonempty modal test IDs, and wildcard evidence applicability not replacing stable test IDs.",
+  "test_id": "FW-gate-wildcard-applies-to-tests-missing-id",
+  "timestamp_utc": "2026-06-04T00:00:00Z"
+}
