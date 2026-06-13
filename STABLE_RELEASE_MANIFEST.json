@@ -8,7 +8,7 @@
       "bytes": 664,
       "path": ".claude-plugin/plugin.json",
       "role": "behavior",
-      "sha256": "051e56bbc70a5231bfad6e105f65651dde8a52b76370785a139f14b8d70528f4"
+      "sha256": "18f05c9f2af7625099894cecb4784d2e7404e3eb325c654114f5cefd29acacbe"
     },
     {
       "bytes": 1760,
@@ -32,7 +32,7 @@
       "bytes": 4776,
       "path": "MANIFEST.sha256",
       "role": "release-metadata",
-      "sha256": "d4a1dc771da96203f8e16ff1d3ece4bd5dba8b4ec1fbee9554cf04fea1533015"
+      "sha256": "d5c6bb53b86bc86cd9f27e2575b42ec1a1c62bab6b5a85e70797214b0479a52e"
     },
     {
       "bytes": 10262,
@@ -50,7 +50,7 @@
       "bytes": 8470,
       "path": "RELEASE_LOCK.json",
       "role": "behavior",
-      "sha256": "1886a8dbcd651a5dccf98c5679c5a80c9975f16241690820532945ac0fa42f39"
+      "sha256": "bde5bf7238b4e36d4c9dc415fb8b663c541b45e48ba1c1d253df5fa07bb532ae"
     },
     {
       "bytes": 1060,
@@ -662,13 +662,13 @@
       "bytes": 762,
       "path": "self_validation/evidence/C-github-readme-documentation__FW-github-readmes-degraded.json",
       "role": "self_validation",
-      "sha256": "1161d0f320d7df878ba8448eb42a0ff100a67933b3722fecb1995197f9bb2356"
+      "sha256": "988fc184c3d1be1708d8375d58d5cba1572925169cec40f7973f19b60d26c54d"
     },
     {
       "bytes": 822,
       "path": "self_validation/evidence/C-github-readme-documentation__TW-github-readmes-benign-doc-note.json",
       "role": "self_validation",
-      "sha256": "5b590a8789a48f58139588b95e5315366f82aedf210968fbcc49e1542b833abd"
+      "sha256": "274b7d360e6d81b1c115c418edba1c9ddf1029afa9685e27fa1cd0c2370e9a92"
     },
     {
       "bytes": 765,
@@ -680,7 +680,7 @@
       "bytes": 767,
       "path": "self_validation/evidence/C-github-readme-documentation__validator.json",
       "role": "self_validation",
-      "sha256": "ea916a98cb8cc819d755061bbd29b87a524b2435f33f2309c36fdb8dbc0accac"
+      "sha256": "f2bd72ee564c6fb387a1c7e996c615baf3dcad6ab5a773a11ebfcb2c97e0843f"
     },
     {
       "bytes": 993,
@@ -782,7 +782,7 @@
       "bytes": 1086,
       "path": "self_validation/evidence/C-validator-sensitivity__claim.json",
       "role": "self_validation",
-      "sha256": "a9ca397551716e21000fedb93607bc0e95148e85536ff4b6dc363c512c0c0129"
+      "sha256": "49d5eaa571adf312710619648f320f68192e51bb73da3973fe9cd46e31d588f6"
     },
     {
       "bytes": 1064,
@@ -1322,7 +1322,7 @@
       "bytes": 98485,
       "path": "self_validation/self_certificate.json",
       "role": "self_validation",
-      "sha256": "3bed8929880e016314820990310339adbb188fcae59021714d4d3afd4189ae07"
+      "sha256": "2306a676b0f09d77f7379c78022bdacbbe3280c2386d266068b0cd46c9209c98"
     },
     {
       "bytes": 3186,
@@ -1463,17 +1463,17 @@
       "sha256": "6abb8d5621f8d988271fd27e55e29afc914f7914e65f7ba3d55eb93e283dc663"
     },
     {
-      "bytes": 98865,
+      "bytes": 99746,
       "path": "skills/nozickian-verify/scripts/validate_package.py",
       "role": "behavior",
-      "sha256": "e6ca47d22bda5e82480572078d87dc4b380761857add492135ef7f5a50662a37"
+      "sha256": "cf92b011a0d150b3e72bc94c0d432afc0f59587bce032d764e4e70dc354ffdce"
     }
   ],
   "generated_utc": "2026-05-26T00:00:00Z",
   "inventory_policy": "all stable package files except STABLE_RELEASE_MANIFEST.json and declared volatile/generated validation outputs; excludes __pycache__ and .pyc files",
   "package": "nozickian-truth-tracking-agentic",
-  "plugin_version": "1.0.1",
-  "release_lock_version": "1.0.1",
+  "plugin_version": "1.0.2",
+  "release_lock_version": "1.0.2",
   "release_status": "PASS-SCOPED",
   "schema_version": "1.0",
   "scope_limitations": [
@@ -1484,7 +1484,7 @@
   ],
   "self_exclusion": "file_inventory intentionally excludes STABLE_RELEASE_MANIFEST.json to avoid a self-referential hash cycle; self_hash_sha256 is computed over canonical JSON with self_hash_sha256 set to null.",
   "self_file": "STABLE_RELEASE_MANIFEST.json",
-  "self_hash_sha256": "e01a963317585aa0ac2f633bcf1c748f33a93273271b9c2968f86a077ffca32a",
+  "self_hash_sha256": "9bb5cb13c67612d85627a1f39210159f43174daaa6f29841d78975787467e94f",
   "validation_commands": [
     "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test",
     "python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence",

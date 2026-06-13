@@ -3,7 +3,7 @@
   "claim_id": "C-github-readme-documentation",
   "command_or_source": "v1.0.1 package-local GitHub README documentation and deterministic validator checks",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:e6ca47d22bda5e82480572078d87dc4b380761857add492135ef7f5a50662a37",
+  "hash_or_version": "sha256:cf92b011a0d150b3e72bc94c0d432afc0f59587bce032d764e4e70dc354ffdce",
   "observed_result": "Observed validator code that requires the GitHub README documentation set and checks closed-surface documentation placement.",
   "support_summary": "The validator implements check_github_readmes, expected README topic coverage, non-runtime documentation placement, and false-world mutation coverage for degraded GitHub documentation.",
   "timestamp_utc": "2026-06-07T00:00:00Z"
