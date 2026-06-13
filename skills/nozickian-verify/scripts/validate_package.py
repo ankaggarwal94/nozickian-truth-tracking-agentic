@@ -15,7 +15,7 @@ try:
 except Exception:  # pragma: no cover
     yaml = None
 
-PLUGIN_NAME = "nozickian-verification-team-internal"
+PLUGIN_NAME = "nozickian-truth-tracking-agentic"
 SKILL_DIR = "skills/nozickian-verify"
 EXPECTED_AGENTS: Dict[str, Dict[str, Any]] = {
     "ntt-formal-coordinator": {"bash": True, "worktree": False, "required_terms": ["formal_subagent_failure", "native ntt", "certificate.json", "ntt_gate.py", "invocation ledger", "no general-purpose fallback", "authenticated trace", "stream-json"]},
@@ -140,8 +140,8 @@ PREVIOUS_TARGETED_PROBE = "v10" + "0_targeted_probe_results"
 STALE_PROVENANCE_PATTERNS = {
     "absolute build path local data root": re.escape(LOCAL_DATA_ROOT) + r"(?:/|\b)",
     "absolute workspace path local home root": re.escape(LOCAL_HOME_ROOT) + r"(?:/|\b)",
-    "stale package root previous patch": re.escape(f"nozickian-verification-team-internal-v{PREVIOUS_PATCH_VERSION}"),
-    "stale package root older patch": re.escape(f"nozickian-verification-team-internal-v{OLDER_STALE_PATCH_VERSION}"),
+    "stale package root previous patch": re.escape(f"nozickian-truth-tracking-agentic-v{PREVIOUS_PATCH_VERSION}"),
+    "stale package root older patch": re.escape(f"nozickian-truth-tracking-agentic-v{OLDER_STALE_PATCH_VERSION}"),
     "stale generated work root previous patch": re.escape(PREVIOUS_WORK_ROOT),
     "stale generated artifact label previous patch": re.escape(PREVIOUS_TARGETED_PROBE),
     "stale generated version previous patch": re.escape("v" + PREVIOUS_PATCH_VERSION),
@@ -1098,7 +1098,7 @@ class Validator:
         def stale_generated_artifact_provenance(dest: Path):
             p = dest / "self_validation/regression_stdout.json"
             p.parent.mkdir(parents=True, exist_ok=True)
-            stale_root = LOCAL_DATA_ROOT + "/" + PREVIOUS_WORK_ROOT + "/nozickian-verification-team-internal-v" + PREVIOUS_PATCH_VERSION + "/stale-output.json"
+            stale_root = LOCAL_DATA_ROOT + "/" + PREVIOUS_WORK_ROOT + "/nozickian-truth-tracking-agentic-v" + PREVIOUS_PATCH_VERSION + "/stale-output.json"
             p.write_text(json.dumps({"details": stale_root}) + "\n", encoding="utf-8")
         mutations.append(("rejects stale generated self-validation artifact provenance", stale_generated_artifact_provenance))
 

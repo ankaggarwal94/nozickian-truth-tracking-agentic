@@ -11,7 +11,7 @@ claude --plugin-dir .
 Invoke the skill by its namespaced command:
 
 ```text
-/nozickian-verification-team-internal:nozickian-verify <artifact path or verification task>
+/nozickian-truth-tracking-agentic:nozickian-verify <artifact path or verification task>
 ```
 
 ## Run deterministic validation

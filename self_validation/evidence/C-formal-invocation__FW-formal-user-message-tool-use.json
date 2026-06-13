@@ -3,7 +3,7 @@
   "claim_id": "C-formal-invocation",
   "command_or_source": "v1.0.1 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:4075b1be6db5994b1c14a3fc3e53ef88c45453936a5dd19b15057cc3cb203a1f",
+  "hash_or_version": "sha256:7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
   "observed_result": "Observed v1.0.1 deterministic evidence for C-formal-invocation / FW-formal-user-message-tool-use",
   "support_summary": "This structured evidence binds FW-formal-user-message-tool-use to self_validation/v101_targeted_probe_results.json, a package-local targeted probe artifact. v1.0.1 formal-runner contract evidence for hard event-boundary trace parsing, data/payload/delta event-smuggling rejection, and role-aware tool-use/tool-result direction.",
   "test_id": "FW-formal-user-message-tool-use",

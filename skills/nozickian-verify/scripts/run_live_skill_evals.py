@@ -137,7 +137,7 @@ def main(argv=None) -> int:
         evals = json.loads(evals_path.read_text(encoding="utf-8"))
         fixture_results = []
         transcript_results = []
-        plugin_name = json.loads((root/'.claude-plugin/plugin.json').read_text(encoding='utf-8')).get('name', 'nozickian-verification')
+        plugin_name = json.loads((root/'.claude-plugin/plugin.json').read_text(encoding='utf-8')).get('name', 'nozickian-truth-tracking-agentic')
         for item in evals.get('fixtures', [])[: max(0, args.max_fixtures)]:
             artifact = root / "skills/nozickian-verify/evals" / item["artifact"]
             prompt = build_fixture_prompt(plugin_name, item.get('id','fixture'), artifact)

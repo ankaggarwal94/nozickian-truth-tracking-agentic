@@ -1,4 +1,4 @@
-/nozickian-verification-team-internal:nozickian-verify <package-root>/README.md
+/nozickian-truth-tracking-agentic:nozickian-verify <package-root>/README.md
 
 FORMAL_INVOCATION_REQUIRED.
 
@@ -12,7 +12,7 @@ Required output artifacts:
 - <tmp-v101-final-outputs>
 
 Formal invocation rules:
-1. Use the loaded plugin skill /nozickian-verification-team-internal:nozickian-verify, not an informal imitation.
+1. Use the loaded plugin skill /nozickian-truth-tracking-agentic:nozickian-verify, not an informal imitation.
 2. You are expected to be running as the main-thread agent `ntt-formal-coordinator`. If not, write FORMAL_COORDINATOR_MISMATCH in the ledger and downgrade.
 3. Before verification, confirm whether these native plugin subagents are available:
    - ntt-method-cartographer
@@ -31,7 +31,7 @@ Formal invocation rules:
    python3 <package-root>/skills/nozickian-verify/scripts/ntt_gate.py <tmp-v101-final-outputs> --evidence-root <package-root> --strict-evidence --markdown <tmp-v101-final-outputs>
 10. The final report must include scope, artifact identity, method M, claim table, false-world sensitivity, true-world adherence, contradictions, residual risks, commands run, subagents actually used, gate status, and explicit downgrade reasons.
 11. The invocation ledger must include:
-    Skill invoked: /nozickian-verification-team-internal:nozickian-verify
+    Skill invoked: /nozickian-truth-tracking-agentic:nozickian-verify
     Main coordinator: ntt-formal-coordinator
     Native subagents requested: ntt-method-cartographer, ntt-claim-extractor, ntt-source-verifier, ntt-code-verifier, ntt-false-world-adversary, ntt-true-world-adherence, ntt-gate-auditor
     Native subagents completed: ...

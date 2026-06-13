@@ -6,7 +6,7 @@
   "claim_id": "C-structure",
   "command_or_source": "v1.0.1 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:886952804c0e0c7c973e86b0173c67782199a6193fdbaafe143d0be034b7d3c2",
+  "hash_or_version": "sha256:7ca9440f4b702e4e11f083665839ef5a66010b0efb47c8c42517101260d0f0f7",
   "observed_result": "Observed v1.0.1 deterministic evidence for C-structure",
   "support_summary": "This structured evidence binds C-structure to PACKAGE_SURFACE.json, a package-local artifact with exact SHA-256 provenance under strict local evidence mode. v1.0.1 additionally checks unique canonical evidence refs, unique artifact/hash identities for critical evidence sufficiency, and substantive trace-result payload content. v1.0.1 additionally checks context-aware trace payload isolation and unique modal-test thresholds.",
   "timestamp": "1970-01-01T00:00:00Z",

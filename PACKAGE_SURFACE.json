@@ -136,7 +136,7 @@
     "v1.0.1 adds a PASS-TRACKED promotion audit path; promotion requires an external audit bundle, live runtime fixture evidence, official validator evidence, formal artifact trace authentication, strict-gate PASS-TRACKED on the generated certificate, and downstream non-closure review.",
     "v1.0.1 adds a GitHub-ready README documentation tree under docs/ while preserving the closed runtime surface and forbidding README files inside plugin-loadable component directories."
   ],
-  "package": "nozickian-verification-team-internal",
+  "package": "nozickian-truth-tracking-agentic",
   "schema_version": "1.2",
   "stable_release_manifest": "STABLE_RELEASE_MANIFEST.json",
   "v1.0.1_evidence_hardening": "Strict local evidence mode counts unique canonical evidence and modal tests, rejects URI-scheme refs/artifact paths, requires modal tests to have stable IDs and target the evaluated claim, and release validation now rejects stale generated artifact provenance.",

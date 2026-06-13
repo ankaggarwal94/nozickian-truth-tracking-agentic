@@ -1,7 +1,7 @@
 {
   "manifest_sha256": "sha256:261597e6c666856d873e3747bb6420ce93dd6feff9fed5f2dd12f464974c3f37",
   "note": "MANIFEST.sha256 and STABLE_RELEASE_MANIFEST.json regenerated after GitHub README documentation patch.",
-  "package": "nozickian-verification-team-internal",
+  "package": "nozickian-truth-tracking-agentic",
   "schema_version": "1.0",
   "stable_release_manifest_sha256": "sha256:f6ac4a8891406e58be77dbbe573cf0aef692d593836b82831911205200a3554a",
   "status": "PASS",

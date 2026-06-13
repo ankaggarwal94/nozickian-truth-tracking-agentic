@@ -150,7 +150,7 @@ def load_json(path: Path) -> Dict[str, Any]:
 def plugin_name(root: Path) -> str:
     data = load_json(root / ".claude-plugin/plugin.json")
     name = data.get("name")
-    return str(name) if isinstance(name, str) and name else "nozickian-verification-team-internal"
+    return str(name) if isinstance(name, str) and name else "nozickian-truth-tracking-agentic"
 
 
 def refresh_stable_release_manifest_if_available(root: Path) -> None:

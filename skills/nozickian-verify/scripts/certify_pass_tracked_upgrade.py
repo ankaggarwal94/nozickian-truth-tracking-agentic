@@ -326,7 +326,7 @@ def stale_token_checks(package_root: Path, bundle: Path) -> List[Check]:
     prior_patch = "0\\.7\\." + "13"
     prior_label = "v" + prior_patch
     prior_probe = "v07" + "13"
-    prior_root = "nozickian-verification-team-internal-v" + prior_patch
+    prior_root = "nozickian-truth-tracking-agentic-v" + prior_patch
     stale_patterns = [re.escape(local_data), re.escape(local_home), prior_label, prior_patch, prior_probe, prior_root]
     hits: List[Dict[str, Any]] = []
     for root in (package_root, bundle):
