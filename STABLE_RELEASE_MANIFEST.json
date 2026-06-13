@@ -32,7 +32,7 @@
       "bytes": 4776,
       "path": "MANIFEST.sha256",
       "role": "release-metadata",
-      "sha256": "326565bd4dfb0c5e20333a6c6ed176a95d663e40c2b1e5d60fdf698f464e24c4"
+      "sha256": "d4a1dc771da96203f8e16ff1d3ece4bd5dba8b4ec1fbee9554cf04fea1533015"
     },
     {
       "bytes": 10262,
@@ -650,13 +650,13 @@
       "bytes": 1049,
       "path": "self_validation/evidence/C-gate-hardening__claim.json",
       "role": "self_validation",
-      "sha256": "79057dfd455e760b9da626af3cb98f41e910698cdfbe1950a2a1f82b44be8c66"
+      "sha256": "31fcd605b5de23d3074a8ae37565bbdd5e2af8f859cf907317c6e373d65c7ddd"
     },
     {
       "bytes": 1079,
       "path": "self_validation/evidence/C-gate-hardening__gate.json",
       "role": "self_validation",
-      "sha256": "feb48ff05671811e8de51b0f7a21213e52c2f2e4c366f6c2592f823ac5e9d759"
+      "sha256": "8b64a900d16c1091cf8189d9ce82bc1b97515f78274c64d9c5f58118cf9a3320"
     },
     {
       "bytes": 762,
@@ -1427,10 +1427,10 @@
       "sha256": "b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a"
     },
     {
-      "bytes": 37066,
+      "bytes": 38890,
       "path": "skills/nozickian-verify/scripts/ntt_gate.py",
       "role": "behavior",
-      "sha256": "2974011ac3587d5b0d61da2d2e4f10c2204393243a69118cb97b4a352e5a2dc2"
+      "sha256": "76821143e6e911c0bd47e7ac2ecd0539901a5f2f5f8d77c67c5cd7f0925afe05"
     },
     {
       "bytes": 45341,
@@ -1445,10 +1445,10 @@
       "sha256": "5130aa17529be10f5e47ce9e747c1e8c71dd45114716b95d1e7f3a5d5dc9f2a1"
     },
     {
-      "bytes": 31095,
+      "bytes": 33442,
       "path": "skills/nozickian-verify/scripts/run_gate_contract_tests.py",
       "role": "behavior",
-      "sha256": "e401f2a436814d74ba0a0ef8d59355fa41f6bbaeb981a5a6d6773b442c85a75a"
+      "sha256": "6480239b4685f61ff56cd93524cd191f63734d84631cf7f821140874f0d1940a"
     },
     {
       "bytes": 9012,
@@ -1484,7 +1484,7 @@
   ],
   "self_exclusion": "file_inventory intentionally excludes STABLE_RELEASE_MANIFEST.json to avoid a self-referential hash cycle; self_hash_sha256 is computed over canonical JSON with self_hash_sha256 set to null.",
   "self_file": "STABLE_RELEASE_MANIFEST.json",
-  "self_hash_sha256": "d92777842574c969e1aa15d37542ced6af5515892b084b58be7d10282b050fea",
+  "self_hash_sha256": "e01a963317585aa0ac2f633bcf1c748f33a93273271b9c2968f86a077ffca32a",
   "validation_commands": [
     "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test",
     "python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence",
