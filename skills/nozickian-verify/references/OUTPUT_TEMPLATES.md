@@ -38,6 +38,21 @@ A verified source claim does not automatically verify an entailed or operational
 
 ## Contradictions and residual risks
 
+## Consistency sweep
+- Sweep ran: yes/no (mandatory after any correction or for revised artifacts; if no, state the explicit reason it did not apply)
+- Corrected claims swept:
+
+| Claim | Superseded wording | Echo location | Fragment | In true sentence | Classification | Recommended edit |
+|---|---|---|---|---|---|---|
+
+- Explicit `none found` if the sweep ran and found no echoes.
+
+## Remote escalations
+- `REMOTE_GROUND_TRUTH_REQUIRED` entries raised, or explicit `none`:
+
+| Claim | Why remote | Fetch spec | Local mirror | Mirror provenance | Resolution (fetched evidence / UNKNOWN) |
+|---|---|---|---|---|---|
+
 ## Gate result
 
 ```
@@ -45,6 +60,8 @@ A verified source claim does not automatically verify an entailed or operational
 ## Certificate skeleton
 
 Use `assets/certificate-template.json` for a machine-readable skeleton. Gate scripts require substantive tests and evidence for critical and major claims. Certificate authors should include `derived_or_downstream_claims` whenever they mention entailed, summarized, downstream, deployment, safety, compliance, or action-authorizing conclusions that are not independently verified as claims.
+
+The template's `consistency_sweep` and `remote_escalations` fields are record-keeping for the report contract above: `ntt_gate.py` ignores unknown certificate fields (verified against its parsing code and the self-certificate fixture) and does not evaluate them. The consistency-sweep and remote-escalation rules are enforced by the parent and audited by `ntt-gate-auditor`, not mechanically checked by the gate script.
 
 ## PASS-TRACKED upgrade certificate skeleton
 

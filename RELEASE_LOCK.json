@@ -61,5 +61,12 @@
     "Add PASS_TRACKED_UPGRADE_AUDIT.md and certify_pass_tracked_upgrade.py so a Claude Code runtime environment can machine-check PASS-SCOPED to PASS-TRACKED promotion bundles.",
     "Add a comprehensive GitHub README documentation tree under docs/ and a self_validation README without expanding the plugin runtime surface."
   ],
+  "v1.0.2_patch_notes": [
+    "Ported the 2026-07-08 charter fixes from the team-internal sibling package: a mandatory consistency sweep (stale-echo lane) after corrections with an affirmative-check requirement before skipping, a REMOTE_GROUND_TRUTH_REQUIRED escalation protocol for the local-only source/claim/audit subagents with parent-enforced LIMITED caps for unresolved critical escalations, and three delegation/audit loophole repairs.",
+    "SKILL.md gains checklist steps for the consistency sweep and remote ground-truth escalation, two Nozickian-minimums charter-cap bullets, and report items for sweep findings and remote escalations.",
+    "SUBAGENT_PROTOCOLS.md gains Echo-sweep mode (ntt-claim-extractor) and Remote ground-truth escalation (ntt-source-verifier) contracts; STANDARD.md gains a Charter-level caps subsection; OUTPUT_TEMPLATES.md gains Consistency sweep and Remote escalations report sections; certificate-template.json gains consistency_sweep and remote_escalations record-keeping fields.",
+    "These charter rules are parent-enforced and audited by ntt-gate-auditor; ntt_gate.py does not mechanically check them.",
+    "No scripts, README, CI workflow, or runtime surface changed in this patch."
+  ],
   "version": "1.0.2"
 }

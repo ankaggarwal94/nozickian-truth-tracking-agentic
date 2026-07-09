@@ -76,6 +76,13 @@ A factual artifact is verified only when the method meets thresholds for both fa
 - `FAIL`: at least one critical claim fails or the gate itself is bypassable.
 - `UNVERIFIED`: artifact or method cannot be sufficiently identified.
 
+### Charter-level caps (parent-enforced; not checked by ntt_gate.py)
+
+These caps are part of the verification charter, applied by the parent and audited by the gate auditor; `ntt_gate.py` does not mechanically check them:
+
+- A corrected or revised artifact whose consistency sweep (stale-echo lane) has not run caps the gate at `PASS-SCOPED`.
+- A critical claim with an unresolved `REMOTE_GROUND_TRUTH_REQUIRED` escalation caps the gate at `LIMITED`.
+
 ## Anti-patterns
 
 - Treating a citation as verification when the citation might be stale, irrelevant, or hallucinated.

@@ -141,7 +141,7 @@
       "passed": true
     },
     {
-      "details": "{'MM-C1', 'MM-C2'}",
+      "details": "{'MM-C2', 'MM-C1'}",
       "name": "mini-manual-version-drift/MM-FW1: target claims known",
       "passed": true
     },
@@ -446,7 +446,7 @@
       "passed": true
     },
     {
-      "details": "{'MC-C1', 'MC-C2'}",
+      "details": "{'MC-C2', 'MC-C1'}",
       "name": "mini-code-mutation/MC-FW1: target claims known",
       "passed": true
     },
@@ -551,7 +551,7 @@
       "passed": true
     },
     {
-      "details": "{'MC-C1', 'MC-C2'}",
+      "details": "{'MC-C2', 'MC-C1'}",
       "name": "mini-code-mutation/MC-TW1: target claims known",
       "passed": true
     },

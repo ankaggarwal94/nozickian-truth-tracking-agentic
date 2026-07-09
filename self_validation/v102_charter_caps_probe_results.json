@@ -1,0 +1,47 @@
+{
+  "false_world_probes": [
+    {
+      "command": "python3 skills/nozickian-verify/scripts/validate_package.py .",
+      "id": "FW-charter-skill-step-removed",
+      "mutation": "Deleted activation checklist step 9 (Consistency sweep (stale-echo lane) ...) from skills/nozickian-verify/SKILL.md in a package copy without updating manifests.",
+      "observed_failed_checks_verbatim": [
+        "stable release manifest hash matches: skills/nozickian-verify/SKILL.md | severity: critical | details: claimed=0c90aba64b96bd1502afdc5b5272249feb5c75987c896ac313855f5ff4264440 actual=63cfe4e11be1c91f8c56bc831bd13cc8286fd0de31a2e2a4bf3da8b1b533aa2e",
+        "stable release manifest bytes match: skills/nozickian-verify/SKILL.md | severity: critical | details: claimed=13084 actual=12187",
+        "manifest hash matches: skills/nozickian-verify/SKILL.md | severity: critical | details: expected=0c90aba64b96bd1502afdc5b5272249feb5c75987c896ac313855f5ff4264440 actual=63cfe4e11be1c91f8c56bc831bd13cc8286fd0de31a2e2a4bf3da8b1b533aa2e"
+      ],
+      "observed_returncode": 2,
+      "observed_status": "FAIL"
+    },
+    {
+      "command": "python3 skills/nozickian-verify/scripts/validate_package.py .",
+      "id": "FW-charter-standard-caps-removed",
+      "mutation": "Deleted the 'Charter-level caps (parent-enforced; not checked by ntt_gate.py)' subsection from skills/nozickian-verify/references/STANDARD.md in a package copy without updating manifests.",
+      "observed_failed_checks_verbatim": [
+        "stable release manifest hash matches: skills/nozickian-verify/references/STANDARD.md | severity: critical | details: claimed=d9d83c6fba0c0dea89150db6a21d4822c06cd82d7302ae39d3eff6d7eb1c7d31 actual=494b99f882745ab1113d87aee1eae7e8c94874027bf6e955146289a579afb8d4",
+        "stable release manifest bytes match: skills/nozickian-verify/references/STANDARD.md | severity: critical | details: claimed=7422 actual=6970",
+        "manifest hash matches: skills/nozickian-verify/references/STANDARD.md | severity: critical | details: expected=d9d83c6fba0c0dea89150db6a21d4822c06cd82d7302ae39d3eff6d7eb1c7d31 actual=494b99f882745ab1113d87aee1eae7e8c94874027bf6e955146289a579afb8d4"
+      ],
+      "observed_returncode": 2,
+      "observed_status": "FAIL"
+    }
+  ],
+  "generated_utc": "2026-07-09T00:00:00Z",
+  "limitations": [
+    "These probes demonstrate that removing the charter text from a package copy is rejected by the deterministic package validator via manifest-hash integrity, and that the intact ported package passes its full self-test.",
+    "They do not demonstrate live parent-agent enforcement of the consistency-sweep or remote-escalation rules; ntt_gate.py does not mechanically check those rules."
+  ],
+  "method": "rsync copies of the working tree (excluding .git) were given regenerated MANIFEST.sha256 and STABLE_RELEASE_MANIFEST.json via validate_package.py's update_manifest and write_stable_release_manifest; charter text was then deleted from the mutated copies and skills/nozickian-verify/scripts/validate_package.py was run on each copy; an intact copy ran the full --self-test.",
+  "package_version": "1.0.2",
+  "purpose": "Charter-caps port probes: real false-world mutations on copies of this repository package plus a true-world full self-test of an intact copy, executed 2026-07-09 during the port of the consistency-sweep and remote-ground-truth-escalation charter fixes.",
+  "schema_version": "1.0",
+  "true_world_probes": [
+    {
+      "command": "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test",
+      "id": "TW-charter-intact-selftest",
+      "observed_returncode": 0,
+      "observed_status": "PASS",
+      "observed_summary": "status PASS; checks 1353/1353 passed; critical_failed 0; mutation_tests 34/34 passed; true_world_tests 4/4 passed",
+      "variant": "Intact copy of the ported v1.0.2 package with regenerated manifests; full self-test."
+    }
+  ]
+}

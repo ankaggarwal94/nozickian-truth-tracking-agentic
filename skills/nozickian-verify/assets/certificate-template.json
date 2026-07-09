@@ -7,6 +7,12 @@
   },
   "certificate_version": "2.0",
   "claims": [],
+  "consistency_sweep": {
+    "applies": false,
+    "corrected_claims": [],
+    "echo_findings": [],
+    "not_applicable_reason": "REASON_IF_APPLIES_FALSE"
+  },
   "derived_or_downstream_claims": [
     {
       "derived_claim": "A downstream deployment, safety, compliance, or action-authorizing conclusion inferred from C-001.",
@@ -51,5 +57,6 @@
       "downstream non-closure review"
     ],
     "upgrade_from_status": "PASS-SCOPED"
-  }
+  },
+  "remote_escalations": []
 }

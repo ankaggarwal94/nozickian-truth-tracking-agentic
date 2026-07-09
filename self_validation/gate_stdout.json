@@ -17,7 +17,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-structure__FW-structure-1.json",
               "exists": true,
               "reasons": [],
@@ -35,7 +35,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-structure__FW-structure-2.json",
               "exists": true,
               "reasons": [],
@@ -53,7 +53,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-structure__FW-surface-manifest-inline.json",
               "exists": true,
               "reasons": [],
@@ -71,7 +71,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-structure__FW-skill-dynamic-shell.json",
               "exists": true,
               "reasons": [],
@@ -89,7 +89,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-structure__FW-agent-unsupported-key.json",
               "exists": true,
               "reasons": [],
@@ -107,7 +107,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-structure__TW-structure-1.json",
               "exists": true,
               "reasons": [],
@@ -143,7 +143,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-1.json",
               "exists": true,
               "reasons": [],
@@ -161,7 +161,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-2.json",
               "exists": true,
               "reasons": [],
@@ -179,7 +179,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-wrong-evidence-hash.json",
               "exists": true,
               "reasons": [],
@@ -197,7 +197,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-one-of-two-claim-evidence-wrong.json",
               "exists": true,
               "reasons": [],
@@ -215,7 +215,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-one-of-two-test-evidence-wrong.json",
               "exists": true,
               "reasons": [],
@@ -233,7 +233,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-evidence-ref-path-escape.json",
               "exists": true,
               "reasons": [],
@@ -251,7 +251,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-evidence-ref-absolute-path.json",
               "exists": true,
               "reasons": [],
@@ -269,7 +269,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-external-ref-valid-hash.json",
               "exists": true,
               "reasons": [],
@@ -287,7 +287,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-remote-ref-strict.json",
               "exists": true,
               "reasons": [],
@@ -305,7 +305,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-uppercase-https-evidence-ref.json",
               "exists": true,
               "reasons": [],
@@ -323,7 +323,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-mixedcase-https-evidence-ref.json",
               "exists": true,
               "reasons": [],
@@ -341,7 +341,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-uppercase-doi-urn-evidence-ref.json",
               "exists": true,
               "reasons": [],
@@ -359,7 +359,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-scheme-like-evidence-ref.json",
               "exists": true,
               "reasons": [],
@@ -377,7 +377,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-lowercase-https-uri.json",
               "exists": true,
               "reasons": [],
@@ -395,7 +395,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-uppercase-https-uri.json",
               "exists": true,
               "reasons": [],
@@ -413,7 +413,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-mixedcase-uri.json",
               "exists": true,
               "reasons": [],
@@ -431,7 +431,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-arbitrary-scheme.json",
               "exists": true,
               "reasons": [],
@@ -449,7 +449,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-duplicate-claim-evidence-ref.json",
               "exists": true,
               "reasons": [],
@@ -467,7 +467,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-aliased-claim-evidence-ref.json",
               "exists": true,
               "reasons": [],
@@ -485,7 +485,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-duplicate-structured-evidence-file.json",
               "exists": true,
               "reasons": [],
@@ -503,7 +503,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-same-artifact-path-for-claim-refs.json",
               "exists": true,
               "reasons": [],
@@ -521,7 +521,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-aliased-same-claim-evidence-ref.json",
               "exists": true,
               "reasons": [],
@@ -539,7 +539,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-same-artifact-path-all-claim-refs.json",
               "exists": true,
               "reasons": [],
@@ -557,7 +557,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-duplicate-false-world-test-id.json",
               "exists": true,
               "reasons": [],
@@ -575,7 +575,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-duplicated-false-world-test-object.json",
               "exists": true,
               "reasons": [],
@@ -593,7 +593,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-aliased-same-false-world-test-evidence.json",
               "exists": true,
               "reasons": [],
@@ -611,7 +611,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-duplicate-true-world-test-id.json",
               "exists": true,
               "reasons": [],
@@ -629,7 +629,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-wrong-false-world-target-claim.json",
               "exists": true,
               "reasons": [],
@@ -647,7 +647,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-wrong-true-world-target-claim.json",
               "exists": true,
               "reasons": [],
@@ -665,7 +665,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-missing-false-world-test-id.json",
               "exists": true,
               "reasons": [],
@@ -683,7 +683,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-missing-true-world-test-id.json",
               "exists": true,
               "reasons": [],
@@ -701,7 +701,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__FW-gate-wildcard-applies-to-tests-missing-id.json",
               "exists": true,
               "reasons": [],
@@ -719,7 +719,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__TW-gate-1.json",
               "exists": true,
               "reasons": [],
@@ -737,7 +737,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__TW-gate-unique-evidence-refs-pass.json",
               "exists": true,
               "reasons": [],
@@ -755,7 +755,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-gate-hardening__TW-gate-target-claim-ids-list.json",
               "exists": true,
               "reasons": [],
@@ -791,7 +791,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-validator-sensitivity__FW-validator-1.json",
               "exists": true,
               "reasons": [],
@@ -809,7 +809,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-validator-sensitivity__FW-validator-2.json",
               "exists": true,
               "reasons": [],
@@ -827,7 +827,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-validator-sensitivity__FW-recursive-agent-after-manifest.json",
               "exists": true,
               "reasons": [],
@@ -845,7 +845,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-validator-sensitivity__TW-validator-1.json",
               "exists": true,
               "reasons": [],
@@ -881,7 +881,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-runner-stub.json",
               "exists": true,
               "reasons": [],
@@ -899,7 +899,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-coordinator-general-purpose-fallback.json",
               "exists": true,
               "reasons": [],
@@ -917,7 +917,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-tool-use-without-result.json",
               "exists": true,
               "reasons": [],
@@ -935,7 +935,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-mismatched-tool-result-id.json",
               "exists": true,
               "reasons": [],
@@ -953,7 +953,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-single-call-mentions-all-lanes.json",
               "exists": true,
               "reasons": [],
@@ -971,7 +971,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-duplicate-tool-use-id.json",
               "exists": true,
               "reasons": [],
@@ -989,7 +989,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-empty-tool-result.json",
               "exists": true,
               "reasons": [],
@@ -1007,7 +1007,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-generic-result-without-success-signal.json",
               "exists": true,
               "reasons": [],
@@ -1025,7 +1025,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-description-only-selector.json",
               "exists": true,
               "reasons": [],
@@ -1043,7 +1043,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-nested-tool-result-input.json",
               "exists": true,
               "reasons": [],
@@ -1061,7 +1061,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-nested-tool-result-arguments.json",
               "exists": true,
               "reasons": [],
@@ -1079,7 +1079,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-result-before-tool-use.json",
               "exists": true,
               "reasons": [],
@@ -1097,7 +1097,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-same-event-input-embedded-result.json",
               "exists": true,
               "reasons": [],
@@ -1115,7 +1115,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-text-block-tool-use-masquerade.json",
               "exists": true,
               "reasons": [],
@@ -1133,7 +1133,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-text-block-tool-result-masquerade.json",
               "exists": true,
               "reasons": [],
@@ -1151,7 +1151,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-assistant-message-tool-use-masquerade.json",
               "exists": true,
               "reasons": [],
@@ -1169,7 +1169,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-message-result-masquerade.json",
               "exists": true,
               "reasons": [],
@@ -1187,7 +1187,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-unexpected-agent-without-selector.json",
               "exists": true,
               "reasons": [],
@@ -1205,7 +1205,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-unknown-agent-selector.json",
               "exists": true,
               "reasons": [],
@@ -1223,7 +1223,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-empty-text-block-result.json",
               "exists": true,
               "reasons": [],
@@ -1241,7 +1241,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-metadata-only-text-block-result.json",
               "exists": true,
               "reasons": [],
@@ -1259,7 +1259,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-whitespace-text-block-result.json",
               "exists": true,
               "reasons": [],
@@ -1277,7 +1277,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-metadata-only-dict-result.json",
               "exists": true,
               "reasons": [],
@@ -1295,7 +1295,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-document-block-without-data.json",
               "exists": true,
               "reasons": [],
@@ -1313,7 +1313,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-image-block-without-data.json",
               "exists": true,
               "reasons": [],
@@ -1331,7 +1331,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-result-content.json",
               "exists": true,
               "reasons": [],
@@ -1349,7 +1349,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-tool-result-inside-tool-result-content.json",
               "exists": true,
               "reasons": [],
@@ -1367,7 +1367,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-fake-tool-events-inside-tool-result-content.json",
               "exists": true,
               "reasons": [],
@@ -1385,7 +1385,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-use-content.json",
               "exists": true,
               "reasons": [],
@@ -1403,7 +1403,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-result-payload.json",
               "exists": true,
               "reasons": [],
@@ -1421,7 +1421,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-tool-result-inside-tool-result-payload.json",
               "exists": true,
               "reasons": [],
@@ -1439,7 +1439,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-fake-tool-events-inside-tool-result-data.json",
               "exists": true,
               "reasons": [],
@@ -1457,7 +1457,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-result-delta.json",
               "exists": true,
               "reasons": [],
@@ -1475,7 +1475,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-role-inverted-tool-use-result.json",
               "exists": true,
               "reasons": [],
@@ -1493,7 +1493,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-user-message-tool-use.json",
               "exists": true,
               "reasons": [],
@@ -1511,7 +1511,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__FW-formal-assistant-message-tool-result.json",
               "exists": true,
               "reasons": [],
@@ -1529,7 +1529,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__TW-formal-dry-run-retains-honest-unknown.json",
               "exists": true,
               "reasons": [],
@@ -1547,7 +1547,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__TW-formal-nonempty-text-block-authenticates.json",
               "exists": true,
               "reasons": [],
@@ -1565,7 +1565,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/self_validation/v101_targeted_probe_results.json",
-              "artifact_sha256": "0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+              "artifact_sha256": "7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
               "canonical_ref": "<package-root>/self_validation/evidence/C-formal-invocation__TW-formal-valid-role-direction.json",
               "exists": true,
               "reasons": [],
@@ -1619,7 +1619,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
-              "artifact_sha256": "8455f591a1773c83ef5f7423fc3088857a41d89743a2faa4c39c56bf8b07360f",
+              "artifact_sha256": "b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a",
               "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
               "exists": true,
               "reasons": [],
@@ -1647,7 +1647,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
-              "artifact_sha256": "8455f591a1773c83ef5f7423fc3088857a41d89743a2faa4c39c56bf8b07360f",
+              "artifact_sha256": "b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a",
               "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
               "exists": true,
               "reasons": [],
@@ -1675,7 +1675,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
-              "artifact_sha256": "8455f591a1773c83ef5f7423fc3088857a41d89743a2faa4c39c56bf8b07360f",
+              "artifact_sha256": "b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a",
               "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
               "exists": true,
               "reasons": [],
@@ -1711,7 +1711,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/validate_package.py",
-              "artifact_sha256": "ab6c40fa74c0aa62168b69920ed6969d64cf7cb6e4dee80ad77b724e15d0bbd7",
+              "artifact_sha256": "e6ca47d22bda5e82480572078d87dc4b380761857add492135ef7f5a50662a37",
               "canonical_ref": "<package-root>/self_validation/evidence/C-github-readme-documentation__FW-github-readmes-degraded.json",
               "exists": true,
               "reasons": [],
@@ -1729,7 +1729,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/validate_package.py",
-              "artifact_sha256": "ab6c40fa74c0aa62168b69920ed6969d64cf7cb6e4dee80ad77b724e15d0bbd7",
+              "artifact_sha256": "e6ca47d22bda5e82480572078d87dc4b380761857add492135ef7f5a50662a37",
               "canonical_ref": "<package-root>/self_validation/evidence/C-github-readme-documentation__TW-github-readmes-benign-doc-note.json",
               "exists": true,
               "reasons": [],
@@ -1747,20 +1747,92 @@
       "unique_artifact_count": 2,
       "unique_evidence_count": 2,
       "unique_structured_evidence_count": 2
+    },
+    {
+      "adherence_rate": 1.0,
+      "claim_id": "C-charter-caps",
+      "evidence_count": 2,
+      "false_world_tests": 2,
+      "importance": "critical",
+      "method_completeness": 1.0,
+      "reasons": [],
+      "sensitivity_rate": 1.0,
+      "status": "PASS",
+      "structured_evidence_count": 2,
+      "test_results": [
+        {
+          "evidence_checks": [
+            {
+              "artifact_identity": "",
+              "artifact_path_resolved": "<package-root>/self_validation/v102_charter_caps_probe_results.json",
+              "artifact_sha256": "20513dff697391ad605193a37f494870673e28aee7f789b781a6c09072f45b9e",
+              "canonical_ref": "<package-root>/self_validation/evidence/C-charter-caps__FW-charter-skill-step-removed.json",
+              "exists": true,
+              "reasons": [],
+              "ref": "self_validation/evidence/C-charter-caps__FW-charter-skill-step-removed.json",
+              "structured": true
+            }
+          ],
+          "kind": "false_world",
+          "reasons": [],
+          "status": "PASS",
+          "test_id": "FW-charter-skill-step-removed"
+        },
+        {
+          "evidence_checks": [
+            {
+              "artifact_identity": "",
+              "artifact_path_resolved": "<package-root>/self_validation/v102_charter_caps_probe_results.json",
+              "artifact_sha256": "20513dff697391ad605193a37f494870673e28aee7f789b781a6c09072f45b9e",
+              "canonical_ref": "<package-root>/self_validation/evidence/C-charter-caps__FW-charter-standard-caps-removed.json",
+              "exists": true,
+              "reasons": [],
+              "ref": "self_validation/evidence/C-charter-caps__FW-charter-standard-caps-removed.json",
+              "structured": true
+            }
+          ],
+          "kind": "false_world",
+          "reasons": [],
+          "status": "PASS",
+          "test_id": "FW-charter-standard-caps-removed"
+        },
+        {
+          "evidence_checks": [
+            {
+              "artifact_identity": "",
+              "artifact_path_resolved": "<package-root>/self_validation/v102_charter_caps_probe_results.json",
+              "artifact_sha256": "20513dff697391ad605193a37f494870673e28aee7f789b781a6c09072f45b9e",
+              "canonical_ref": "<package-root>/self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json",
+              "exists": true,
+              "reasons": [],
+              "ref": "self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json",
+              "structured": true
+            }
+          ],
+          "kind": "true_world",
+          "reasons": [],
+          "status": "PASS",
+          "test_id": "TW-charter-intact-selftest"
+        }
+      ],
+      "true_world_tests": 1,
+      "unique_artifact_count": 2,
+      "unique_evidence_count": 2,
+      "unique_structured_evidence_count": 2
     }
   ],
   "reasons": [],
   "status": "PASS-SCOPED",
   "summary": {
     "certificate_method_completeness": 1.0,
-    "claims": 6,
+    "claims": 7,
     "critical_failed": 0,
     "derived_or_downstream_claims": 3,
     "downstream_nonclosure_violations": 0,
     "evidence_root_checked": true,
     "failed_claims": 0,
     "major_failed": 0,
-    "scope_limitations": 31,
+    "scope_limitations": 32,
     "strict_evidence": true,
     "structured_evidence_required": true
   }

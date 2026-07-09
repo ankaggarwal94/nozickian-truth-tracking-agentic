@@ -385,7 +385,7 @@
       "outside_root": "<temporary outside-root probe>",
       "passed": true,
       "reasons": [
-        "C-001: invalid evidence refs: <tmp-ntt-path>: evidence ref must be relative to evidence_root"
+        "C-001: invalid evidence refs: /tmp/ntt_gate_absolute_ref_probe.json: evidence ref must be relative to evidence_root"
       ],
       "status": "FAIL"
     },

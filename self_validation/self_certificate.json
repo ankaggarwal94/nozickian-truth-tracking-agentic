@@ -1509,6 +1509,104 @@
       ],
       "truth_status": "confirmed",
       "unresolved_contradictions": []
+    },
+    {
+      "artifact_location": "skills/nozickian-verify/SKILL.md:46-47,55-56,60,74-75,88-89; skills/nozickian-verify/references/STANDARD.md:79-85; skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md:54,79; skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:41-64; skills/nozickian-verify/assets/certificate-template.json:10-16,61; agents/ntt-claim-extractor.md:3,20; agents/ntt-source-verifier.md:3,14; agents/ntt-gate-auditor.md:3,20-28",
+      "evidence_refs": [
+        "self_validation/evidence/C-charter-caps__claim.json",
+        "self_validation/evidence/C-charter-caps__gate.json"
+      ],
+      "false_world_tests": [
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-charter-caps__FW-charter-skill-step-removed.json"
+          ],
+          "expected_behavior": "The deterministic package validator must reject, flag, block, downgrade, or refuse to certify a package copy whose consistency-sweep charter step was removed.",
+          "id": "FW-charter-skill-step-removed",
+          "kind": "false_world",
+          "observed_behavior": "validate_package.py returned status FAIL (returncode 2) with critical failures 'manifest hash matches: skills/nozickian-verify/SKILL.md' (expected=0c90aba64b96bd1502afdc5b5272249feb5c75987c896ac313855f5ff4264440 actual=63cfe4e11be1c91f8c56bc831bd13cc8286fd0de31a2e2a4bf3da8b1b533aa2e) plus stable-release-manifest hash and byte-count failures for the same file.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Delete activation checklist step 9 (consistency sweep / stale-echo lane) from skills/nozickian-verify/SKILL.md in a package copy without updating manifests.",
+          "result": "pass",
+          "target_claim": "C-charter-caps"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-charter-caps__FW-charter-standard-caps-removed.json"
+          ],
+          "expected_behavior": "The deterministic package validator must reject, flag, block, downgrade, or refuse to certify a package copy whose Charter-level caps subsection was removed.",
+          "id": "FW-charter-standard-caps-removed",
+          "kind": "false_world",
+          "observed_behavior": "validate_package.py returned status FAIL (returncode 2) with critical failures 'manifest hash matches: skills/nozickian-verify/references/STANDARD.md' (expected=d9d83c6fba0c0dea89150db6a21d4822c06cd82d7302ae39d3eff6d7eb1c7d31 actual=494b99f882745ab1113d87aee1eae7e8c94874027bf6e955146289a579afb8d4) plus stable-release-manifest hash and byte-count failures for the same file.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "Delete the 'Charter-level caps (parent-enforced; not checked by ntt_gate.py)' subsection from skills/nozickian-verify/references/STANDARD.md in a package copy without updating manifests.",
+          "result": "pass",
+          "target_claim": "C-charter-caps"
+        }
+      ],
+      "id": "C-charter-caps",
+      "importance": "critical",
+      "method_m": {
+        "artifacts": [
+          "skills/nozickian-verify/SKILL.md",
+          "skills/nozickian-verify/references/STANDARD.md",
+          "skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md",
+          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
+          "skills/nozickian-verify/assets/certificate-template.json",
+          "agents/ntt-claim-extractor.md",
+          "agents/ntt-source-verifier.md",
+          "agents/ntt-gate-auditor.md",
+          "MANIFEST.sha256",
+          "STABLE_RELEASE_MANIFEST.json",
+          "self_validation/v102_charter_caps_probe_results.json"
+        ],
+        "checker": "Deterministic package validator runs (validate_package.py and validate_package.py --self-test) on mutated and intact rsync copies of this repository package, plus manual inspection of the recorded outputs.",
+        "environment": [
+          "local filesystem",
+          "Python 3.9 (macOS)",
+          "rsync package copies under a session scratchpad directory",
+          "no network access used for these probes"
+        ],
+        "evidence_process": "The ported charter text was located at exact file:line positions; two false-world package copies had charter text deleted and were rejected by the validator on manifest-hash integrity; one intact copy passed the full self-test; all observed statuses and failing check details are recorded verbatim in self_validation/v102_charter_caps_probe_results.json.",
+        "graders_or_tests": [
+          "validate_package.py on charter-text-deleted package copies",
+          "validate_package.py --self-test on an intact ported copy",
+          "MANIFEST.sha256 and STABLE_RELEASE_MANIFEST.json hash verification"
+        ],
+        "human_review": "Final inspection of the probe outputs and of the known gap that charter rules are parent-enforced prose.",
+        "producer": "2026-07-09 port of the charter fixes (consistency sweep / stale-echo lane, REMOTE_GROUND_TRUTH_REQUIRED escalation protocol, and three delegation/audit loophole repairs) from the team-internal sibling package onto this repository lineage, preserving the repository's formal-verification additions.",
+        "tools": [
+          "Python",
+          "Bash",
+          "rsync",
+          "local file reads/writes"
+        ],
+        "trace_or_logs": [
+          "self_validation/v102_charter_caps_probe_results.json"
+        ]
+      },
+      "residual_risks": [
+        "The consistency-sweep and remote-escalation rules are prose charter rules enforced by the parent agent and audited by ntt-gate-auditor; ntt_gate.py does not mechanically check them. These probes show only that removing the charter text breaks deterministic package integrity, not that a live parent obeys the rules.",
+        "Live Claude Code runtime enforcement of the charter caps remains UNVERIFIED_RUNTIME in this environment."
+      ],
+      "text": "The 2026-07-09 charter fixes are present and integrity-locked in this package: SKILL.md activation steps 9-10 (mandatory consistency sweep with an affirmative check before skipping; REMOTE_GROUND_TRUTH_REQUIRED escalation enforcement with UNKNOWN/LIMITED handling), two Nozickian-minimums charter-cap bullets, required-output items for sweep findings and remote escalations, three delegation clause extensions, the STANDARD.md 'Charter-level caps' subsection, SUBAGENT_PROTOCOLS.md echo-sweep and remote-escalation contracts, OUTPUT_TEMPLATES.md consistency-sweep and remote-escalations report sections with the gate-ignores note, certificate-template consistency_sweep and remote_escalations fields, and matching clauses in ntt-claim-extractor, ntt-source-verifier, and ntt-gate-auditor.",
+      "true_world_tests": [
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json"
+          ],
+          "expected_behavior": "The verifier should retain the true claim for the intact ported package.",
+          "id": "TW-charter-intact-selftest",
+          "kind": "true_world",
+          "observed_behavior": "The full self-test on an intact ported copy returned PASS with 1353/1353 checks, 0 critical failures, 34/34 false-world mutations rejected, and 4/4 true-world variants retained.",
+          "outcome": "retained_true_claim",
+          "result": "pass",
+          "target_claim": "C-charter-caps",
+          "variant": "Intact copy of the ported v1.0.2 package with regenerated MANIFEST.sha256 and STABLE_RELEASE_MANIFEST.json, run through the full package self-test."
+        }
+      ],
+      "truth_status": "executed_confirmed",
+      "unresolved_contradictions": []
     }
   ],
   "derived_or_downstream_claims": [
@@ -1579,6 +1677,24 @@
       "run_gate_contract_tests.py cases for partial bad evidence refs, evidence-ref escape, absolute refs, external valid-hash refs, and remote refs"
     ],
     "human_review": "Final inspection of validation outputs and known runtime gaps.",
+    "port_2026_07_09": {
+      "carried_with_existing_evidence": [
+        "C-formal-invocation, C-pass-tracked-upgrade-audit, C-github-readme-documentation, C-structure, C-gate-hardening, and C-validator-sensitivity keep their existing structured evidence under self_validation/evidence/ and self_validation/v101_targeted_probe_results.json; their false-world package-mutation suites are re-exercised indirectly by the rerun full self-test, but the original targeted probe ledgers were not regenerated.",
+        "self_validation/live_runtime_eval_result.json, trace_auth_smoke_result.json, and the pass_tracked_certifier_empty_bundle_* artifacts are carried as bundled evidence from the prior release."
+      ],
+      "date_utc": "2026-07-09",
+      "description": "Charter fixes (consistency sweep / stale-echo lane, REMOTE_GROUND_TRUTH_REQUIRED escalation protocol, three loophole repairs) were ported onto this repository lineage from the team-internal sibling package. Repository-side formal-verification content (PASS-TRACKED upgrade audit, formal invocation mode, derived/downstream non-closure) was preserved unchanged.",
+      "reran_2026_07_09": [
+        "validate_package.py --self-test on an intact ported copy (PASS, 1353/1353 checks, 34/34 mutations, 4/4 true-world variants)",
+        "validate_package.py on two charter-text-deleted false-world copies (both FAIL on manifest hash, recorded verbatim in self_validation/v102_charter_caps_probe_results.json)",
+        "ntt_gate.py on this certificate with --evidence-root . --strict-evidence",
+        "run_gate_contract_tests.py, run_formal_runner_contract_tests.py, run_regression_evals.py, and the formal runner dry run (regenerated bundled outputs)"
+      ],
+      "untested_2026_07_09": [
+        "Live Claude Code runtime enforcement of the new charter caps (parent-enforced prose rules) - UNVERIFIED_RUNTIME in this environment.",
+        "Official Claude Code validators (claude plugin validate, skills-ref validate) were not available in this environment."
+      ]
+    },
     "producer": "Generated Claude Code plugin/skill package, including SKILL.md, reference files, subagent definitions, deterministic scripts, eval fixtures, and self-validation artifacts.",
     "tools": [
       "Python",
@@ -1638,6 +1754,7 @@
     "v1.0.1 strict gate thresholds count unique false-world and true-world modal tests rather than duplicated test objects or duplicate IDs.",
     "v1.0.1 formal trace authentication treats tool_use/tool_result nodes as hard event boundaries; data/payload/delta/message/content children of a tool event are payload, not runtime events.",
     "v1.0.1 formal trace authentication tracks assistant/user role context when available and rejects user-origin tool_use or assistant-origin tool_result blocks for PASS-TRACKED promotion.",
-    "v1.0.1 strict gate modal tests must have stable nonempty IDs and must target the evaluated claim; wildcard evidence applicability cannot substitute for a test ID."
+    "v1.0.1 strict gate modal tests must have stable nonempty IDs and must target the evaluated claim; wildcard evidence applicability cannot substitute for a test ID.",
+    "v1.0.2 charter-cap rules (consistency sweep / stale-echo lane and REMOTE_GROUND_TRUTH_REQUIRED escalation handling) are parent-enforced prose rules audited by ntt-gate-auditor; ntt_gate.py does not mechanically check them."
   ]
 }

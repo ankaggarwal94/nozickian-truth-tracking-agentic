@@ -1,7 +1,7 @@
 # Team/internal package validation report
 
 **Status:** PASS
-**Checks:** 1353 / 1353 passed
+**Checks:** 1365 / 1365 passed
 **Critical failures:** 0
 
 ## Gate contract tests
@@ -212,6 +212,16 @@ Passed 48 / 48
 - PASS: stable release manifest bytes match: docs/security/README.md
 - PASS: stable release manifest hash matches: self_validation/README.md
 - PASS: stable release manifest bytes match: self_validation/README.md
+- PASS: stable release manifest hash matches: self_validation/evidence/C-charter-caps__FW-charter-skill-step-removed.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-charter-caps__FW-charter-skill-step-removed.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-charter-caps__FW-charter-standard-caps-removed.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-charter-caps__FW-charter-standard-caps-removed.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-charter-caps__claim.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-charter-caps__claim.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-charter-caps__gate.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-charter-caps__gate.json
 - PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-coordinator-general-purpose-fallback.json
 - PASS: stable release manifest bytes match: self_validation/evidence/C-formal-invocation__FW-coordinator-general-purpose-fallback.json
 - PASS: stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-assistant-message-tool-result.json
@@ -592,6 +602,8 @@ Passed 48 / 48
 - PASS: stable release manifest bytes match: self_validation/self_certificate.json
 - PASS: stable release manifest hash matches: self_validation/v101_targeted_probe_results.json
 - PASS: stable release manifest bytes match: self_validation/v101_targeted_probe_results.json
+- PASS: stable release manifest hash matches: self_validation/v102_charter_caps_probe_results.json
+- PASS: stable release manifest bytes match: self_validation/v102_charter_caps_probe_results.json
 - PASS: stable release manifest hash matches: skills/nozickian-verify/SKILL.md
 - PASS: stable release manifest bytes match: skills/nozickian-verify/SKILL.md
 - PASS: stable release manifest hash matches: skills/nozickian-verify/assets/certificate-template.json
@@ -870,18 +882,20 @@ Passed 48 / 48
 - PASS: STANDARD.md contains term: PASS-TRACKED upgrade audit
 - PASS: STANDARD.md contains term: upgrade from PASS-SCOPED
 - PASS: STANDARD.md not obvious nonsense
+- PASS: reference exists: EVAL_BEST_PRACTICES.md
+- PASS: reference substantive: EVAL_BEST_PRACTICES.md
+- PASS: reference exists: SOURCES.md
+- PASS: reference substantive: SOURCES.md
 - PASS: reference exists: ARTIFACT_GUIDE.md
 - PASS: reference substantive: ARTIFACT_GUIDE.md
 - PASS: reference exists: OUTPUT_TEMPLATES.md
 - PASS: reference substantive: OUTPUT_TEMPLATES.md
-- PASS: reference exists: SUBAGENT_PROTOCOLS.md
-- PASS: reference substantive: SUBAGENT_PROTOCOLS.md
-- PASS: reference exists: SOURCES.md
-- PASS: reference substantive: SOURCES.md
-- PASS: reference exists: EVAL_BEST_PRACTICES.md
-- PASS: reference substantive: EVAL_BEST_PRACTICES.md
 - PASS: reference exists: EVIDENCE_SCHEMA.md
 - PASS: reference substantive: EVIDENCE_SCHEMA.md
+- PASS: reference exists: STANDARD.md
+- PASS: reference substantive: STANDARD.md
+- PASS: reference exists: SUBAGENT_PROTOCOLS.md
+- PASS: reference substantive: SUBAGENT_PROTOCOLS.md
 - PASS: reference exists: PASS_TRACKED_UPGRADE_AUDIT.md
 - PASS: reference substantive: PASS_TRACKED_UPGRADE_AUDIT.md
 - PASS: PASS-TRACKED upgrade audit contains term: PASS-SCOPED to PASS-TRACKED
@@ -898,8 +912,6 @@ Passed 48 / 48
 - PASS: PASS-TRACKED upgrade audit contains term: UNVERIFIED_RUNTIME
 - PASS: PASS-TRACKED upgrade audit contains term: downstream
 - PASS: PASS-TRACKED upgrade audit contains term: no automatic
-- PASS: reference exists: STANDARD.md
-- PASS: reference substantive: STANDARD.md
 - PASS: agent exists: ntt-formal-coordinator
 - PASS: agent frontmatter parses: ntt-formal-coordinator
 - PASS: agent frontmatter has only expected keys: ntt-formal-coordinator

@@ -133,7 +133,7 @@
       "severity": "critical"
     },
     {
-      "details": "lock=1.0.1 plugin=1.0.1",
+      "details": "lock=1.0.2 plugin=1.0.2",
       "name": "release lock version matches plugin",
       "passed": true,
       "severity": "critical"
@@ -265,7 +265,7 @@
       "severity": "critical"
     },
     {
-      "details": "manifest=1.0.1 plugin=1.0.1",
+      "details": "manifest=1.0.2 plugin=1.0.2",
       "name": "stable release manifest version matches plugin",
       "passed": true,
       "severity": "critical"
@@ -283,13 +283,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=7c5b403cda2ce20835fb372a5b92f26086fccd4ea16ab34f07681f915b0bd6de actual=7c5b403cda2ce20835fb372a5b92f26086fccd4ea16ab34f07681f915b0bd6de",
+      "details": "claimed=eafe5a8a6e6fc8a497e59de1609dafc76e1051b36fcd00cb6beb5cd6640faaaf actual=eafe5a8a6e6fc8a497e59de1609dafc76e1051b36fcd00cb6beb5cd6640faaaf",
       "name": "stable release manifest self-hash matches canonical content",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "items=244",
+      "details": "items=250",
       "name": "stable release manifest inventory is list",
       "passed": true,
       "severity": "critical"
@@ -313,13 +313,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=d2c09ee25e9c71be53ead944dc8ca5255f9740ad45d3ec1ca640587ab5edccdf actual=d2c09ee25e9c71be53ead944dc8ca5255f9740ad45d3ec1ca640587ab5edccdf",
+      "details": "claimed=18f05c9f2af7625099894cecb4784d2e7404e3eb325c654114f5cefd29acacbe actual=18f05c9f2af7625099894cecb4784d2e7404e3eb325c654114f5cefd29acacbe",
       "name": "stable release manifest hash matches: .claude-plugin/plugin.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=668 actual=668",
+      "details": "claimed=664 actual=664",
       "name": "stable release manifest bytes match: .claude-plugin/plugin.json",
       "passed": true,
       "severity": "critical"
@@ -361,7 +361,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=261597e6c666856d873e3747bb6420ce93dd6feff9fed5f2dd12f464974c3f37 actual=261597e6c666856d873e3747bb6420ce93dd6feff9fed5f2dd12f464974c3f37",
+      "details": "claimed=0e86f662ed45a8f823a5c05addff89137b87d0493060a7bd1da072cbe09b9ce9 actual=0e86f662ed45a8f823a5c05addff89137b87d0493060a7bd1da072cbe09b9ce9",
       "name": "stable release manifest hash matches: MANIFEST.sha256",
       "passed": true,
       "severity": "critical"
@@ -373,37 +373,37 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=886952804c0e0c7c973e86b0173c67782199a6193fdbaafe143d0be034b7d3c2 actual=886952804c0e0c7c973e86b0173c67782199a6193fdbaafe143d0be034b7d3c2",
+      "details": "claimed=7ca9440f4b702e4e11f083665839ef5a66010b0efb47c8c42517101260d0f0f7 actual=7ca9440f4b702e4e11f083665839ef5a66010b0efb47c8c42517101260d0f0f7",
       "name": "stable release manifest hash matches: PACKAGE_SURFACE.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=10266 actual=10266",
+      "details": "claimed=10262 actual=10262",
       "name": "stable release manifest bytes match: PACKAGE_SURFACE.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=d803ba652a2ea33250bfe99c07960f4e0d317c65c90848a19eb455eeeff8b3e8 actual=d803ba652a2ea33250bfe99c07960f4e0d317c65c90848a19eb455eeeff8b3e8",
+      "details": "claimed=61b50a694f56aff0ac5dc6d20157c4ed632d70b29a8a69d027a0550c7e29dd62 actual=61b50a694f56aff0ac5dc6d20157c4ed632d70b29a8a69d027a0550c7e29dd62",
       "name": "stable release manifest hash matches: README.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=5769 actual=5769",
+      "details": "claimed=5765 actual=5765",
       "name": "stable release manifest bytes match: README.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1078d70420f69547f0806dc89263360b0279c787a347f6ca4479f5a929e2aa4f actual=1078d70420f69547f0806dc89263360b0279c787a347f6ca4479f5a929e2aa4f",
+      "details": "claimed=9b4f50213654f846a3b69ba177f97a3c98990b7da063eb1f377e2fe4b69ee9fb actual=9b4f50213654f846a3b69ba177f97a3c98990b7da063eb1f377e2fe4b69ee9fb",
       "name": "stable release manifest hash matches: RELEASE_LOCK.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=8482 actual=8482",
+      "details": "claimed=9703 actual=9703",
       "name": "stable release manifest bytes match: RELEASE_LOCK.json",
       "passed": true,
       "severity": "critical"
@@ -433,13 +433,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=ec1e2fdc98a645fe946b24032bdc1578261ea0d5f04c77f332c264c4d053e0df actual=ec1e2fdc98a645fe946b24032bdc1578261ea0d5f04c77f332c264c4d053e0df",
+      "details": "claimed=0ff7836ab241b148cd0aaa7c47e9252badd81ac71c3f1f173d0acaecdb056164 actual=0ff7836ab241b148cd0aaa7c47e9252badd81ac71c3f1f173d0acaecdb056164",
       "name": "stable release manifest hash matches: agents/ntt-claim-extractor.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1379 actual=1379",
+      "details": "claimed=2860 actual=2860",
       "name": "stable release manifest bytes match: agents/ntt-claim-extractor.md",
       "passed": true,
       "severity": "critical"
@@ -481,13 +481,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=03f86435ca61a8f0979a015d08727e0d1fbc2fc63c17cbd7625f11eebf1de996 actual=03f86435ca61a8f0979a015d08727e0d1fbc2fc63c17cbd7625f11eebf1de996",
+      "details": "claimed=c3919d8c6322ff20d66b0c2c7d640812a81f702e4d8806387f6bb3df0985b78e actual=c3919d8c6322ff20d66b0c2c7d640812a81f702e4d8806387f6bb3df0985b78e",
       "name": "stable release manifest hash matches: agents/ntt-gate-auditor.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=2021 actual=2021",
+      "details": "claimed=3116 actual=3116",
       "name": "stable release manifest bytes match: agents/ntt-gate-auditor.md",
       "passed": true,
       "severity": "critical"
@@ -517,13 +517,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=a097e2c78674cdf018baad3329eecc41aa9f32093ad05a1bced9fefd11790542 actual=a097e2c78674cdf018baad3329eecc41aa9f32093ad05a1bced9fefd11790542",
+      "details": "claimed=aac1402aaf2d63d631ed09fee2eb65742583bd3d180211d41d42c9dc30a91de3 actual=aac1402aaf2d63d631ed09fee2eb65742583bd3d180211d41d42c9dc30a91de3",
       "name": "stable release manifest hash matches: agents/ntt-source-verifier.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1475 actual=1475",
+      "details": "claimed=2852 actual=2852",
       "name": "stable release manifest bytes match: agents/ntt-source-verifier.md",
       "passed": true,
       "severity": "critical"
@@ -625,13 +625,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=fdd9b8f9a5e4ac3ff7ba8d351e6bcdf7adc679ec6f447131e18b61bad88bbdb6 actual=fdd9b8f9a5e4ac3ff7ba8d351e6bcdf7adc679ec6f447131e18b61bad88bbdb6",
+      "details": "claimed=d01c6ae0b1ea1cc28d7fdf56c82457d2cd02787c0273cd73c644ef7981ba07ae actual=d01c6ae0b1ea1cc28d7fdf56c82457d2cd02787c0273cd73c644ef7981ba07ae",
       "name": "stable release manifest hash matches: docs/quickstart/README.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1490 actual=1490",
+      "details": "claimed=1486 actual=1486",
       "name": "stable release manifest bytes match: docs/quickstart/README.md",
       "passed": true,
       "severity": "critical"
@@ -685,7 +685,67 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=fac9c57bab50f44e828a5947db3f52dbc4064da66e3705c09d379c05f43dce6d actual=fac9c57bab50f44e828a5947db3f52dbc4064da66e3705c09d379c05f43dce6d",
+      "details": "claimed=5b1b6125754fbe11d8c16e9a0281badd862f5e99b68ad847475b981afd8dca81 actual=5b1b6125754fbe11d8c16e9a0281badd862f5e99b68ad847475b981afd8dca81",
+      "name": "stable release manifest hash matches: self_validation/evidence/C-charter-caps__FW-charter-skill-step-removed.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=998 actual=998",
+      "name": "stable release manifest bytes match: self_validation/evidence/C-charter-caps__FW-charter-skill-step-removed.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=792823da1ca8eb681cb32237fea8e92e083bbef1f64935200af35052c6cce181 actual=792823da1ca8eb681cb32237fea8e92e083bbef1f64935200af35052c6cce181",
+      "name": "stable release manifest hash matches: self_validation/evidence/C-charter-caps__FW-charter-standard-caps-removed.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=1021 actual=1021",
+      "name": "stable release manifest bytes match: self_validation/evidence/C-charter-caps__FW-charter-standard-caps-removed.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=8c42f1974113011f508ea7c78b24b224511c5ea9b132efd224d24ac9399cfed7 actual=8c42f1974113011f508ea7c78b24b224511c5ea9b132efd224d24ac9399cfed7",
+      "name": "stable release manifest hash matches: self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=944 actual=944",
+      "name": "stable release manifest bytes match: self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=54baadd25b07ea4ed82f4a9f8f14fe1c628da161fbf8cc1123c7237eef86d7bc actual=54baadd25b07ea4ed82f4a9f8f14fe1c628da161fbf8cc1123c7237eef86d7bc",
+      "name": "stable release manifest hash matches: self_validation/evidence/C-charter-caps__claim.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=970 actual=970",
+      "name": "stable release manifest bytes match: self_validation/evidence/C-charter-caps__claim.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=eb0997feb9b59d08de2b83219c9476e0ab8742913e90caad088a1dd2ddbf20fa actual=eb0997feb9b59d08de2b83219c9476e0ab8742913e90caad088a1dd2ddbf20fa",
+      "name": "stable release manifest hash matches: self_validation/evidence/C-charter-caps__gate.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=983 actual=983",
+      "name": "stable release manifest bytes match: self_validation/evidence/C-charter-caps__gate.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=74e9005c87eb2b75d4297b5aabbaed37e652320f1654c5306b5b9f45d9848915 actual=74e9005c87eb2b75d4297b5aabbaed37e652320f1654c5306b5b9f45d9848915",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-coordinator-general-purpose-fallback.json",
       "passed": true,
       "severity": "critical"
@@ -697,7 +757,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=99dc07951485345b59b76a33b9893084f6e43b54c4a9245669859191bdfc1e3f actual=99dc07951485345b59b76a33b9893084f6e43b54c4a9245669859191bdfc1e3f",
+      "details": "claimed=ae0a2f6e86924930b95c97abb91ea55f93dd838ca759874fcd077c82ca8fa2ad actual=ae0a2f6e86924930b95c97abb91ea55f93dd838ca759874fcd077c82ca8fa2ad",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-assistant-message-tool-result.json",
       "passed": true,
       "severity": "critical"
@@ -709,7 +769,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=bae4dc52e22ecc6efaac4ed31cf9dc0ec088e686292bf50738e0631c4565272c actual=bae4dc52e22ecc6efaac4ed31cf9dc0ec088e686292bf50738e0631c4565272c",
+      "details": "claimed=00d02bc420a34cbe5be28e8fe2e09d1c261bb06f5f549e0809daa9d6951581b4 actual=00d02bc420a34cbe5be28e8fe2e09d1c261bb06f5f549e0809daa9d6951581b4",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-assistant-message-tool-use-masquerade.json",
       "passed": true,
       "severity": "critical"
@@ -721,7 +781,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=fc7dd4c0321c91388e525b4e17b5e915979c375f1e039ae81cb860652ae3a20c actual=fc7dd4c0321c91388e525b4e17b5e915979c375f1e039ae81cb860652ae3a20c",
+      "details": "claimed=5f8861ef4a3357274bdc37f24c2aca75b5cc3e024b564520dfecfb0940484eea actual=5f8861ef4a3357274bdc37f24c2aca75b5cc3e024b564520dfecfb0940484eea",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-description-only-selector.json",
       "passed": true,
       "severity": "critical"
@@ -733,7 +793,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=fc21c242a011841908158b6af7024a74c65bad39760f2e2fe7321d269604db11 actual=fc21c242a011841908158b6af7024a74c65bad39760f2e2fe7321d269604db11",
+      "details": "claimed=50588a7bcad6a50d7a361ff3aded8797d8d7e1f00a3fce82fa239acecdfcfc62 actual=50588a7bcad6a50d7a361ff3aded8797d8d7e1f00a3fce82fa239acecdfcfc62",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-document-block-without-data.json",
       "passed": true,
       "severity": "critical"
@@ -745,7 +805,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=c2a8d7f267885f769a221e768b1c6ad94cef8b9c804437eed762927b6a27249f actual=c2a8d7f267885f769a221e768b1c6ad94cef8b9c804437eed762927b6a27249f",
+      "details": "claimed=24ff8b6eaf57ea3613f31e6d446d433d36c76a96f60f44b2a16f4ba3b01c8c73 actual=24ff8b6eaf57ea3613f31e6d446d433d36c76a96f60f44b2a16f4ba3b01c8c73",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-duplicate-tool-use-id.json",
       "passed": true,
       "severity": "critical"
@@ -757,7 +817,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=6f3f8b2ad43e5548ab0a8f58e725792b645dcfe2894bde9716094615770854a4 actual=6f3f8b2ad43e5548ab0a8f58e725792b645dcfe2894bde9716094615770854a4",
+      "details": "claimed=2d81850a949890ee355aed15ea4352a826718f605efa1bcb9fb4b741a9a1317f actual=2d81850a949890ee355aed15ea4352a826718f605efa1bcb9fb4b741a9a1317f",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-empty-text-block-result.json",
       "passed": true,
       "severity": "critical"
@@ -769,7 +829,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=76e2cca3007ccc9ea2d24390e0818e8788a5b5d0632826022e5c7c3362e1c914 actual=76e2cca3007ccc9ea2d24390e0818e8788a5b5d0632826022e5c7c3362e1c914",
+      "details": "claimed=a2ae21f28685248bb5e075e8afcead1ab97dbb18f18edf1e2d9dbe6410bc4960 actual=a2ae21f28685248bb5e075e8afcead1ab97dbb18f18edf1e2d9dbe6410bc4960",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-empty-tool-result.json",
       "passed": true,
       "severity": "critical"
@@ -781,7 +841,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=0acef6ecc7034a80ef2bc4baab66b08b542ce758c4d08ea68237d854b4e26172 actual=0acef6ecc7034a80ef2bc4baab66b08b542ce758c4d08ea68237d854b4e26172",
+      "details": "claimed=83756f2044b05104aae623c58e3f7424462ca07b9ed1929a9bd6c19674e5227e actual=83756f2044b05104aae623c58e3f7424462ca07b9ed1929a9bd6c19674e5227e",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-fake-tool-events-inside-tool-result-content.json",
       "passed": true,
       "severity": "critical"
@@ -793,7 +853,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=044f333a4ce9bd60ddd5137eb6013b31153dd9372dbfdfef377997b034d8065d actual=044f333a4ce9bd60ddd5137eb6013b31153dd9372dbfdfef377997b034d8065d",
+      "details": "claimed=27ba5889a7f74fcfbea32d9c894fb95b5d59d55bdedd094f2b0a9e0b978e2ea1 actual=27ba5889a7f74fcfbea32d9c894fb95b5d59d55bdedd094f2b0a9e0b978e2ea1",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-fake-tool-events-inside-tool-result-data.json",
       "passed": true,
       "severity": "critical"
@@ -805,7 +865,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=3fd985371c0bc4f90462ebfd8d54c4f130e81cc27585bac87f44f2daca13b8a7 actual=3fd985371c0bc4f90462ebfd8d54c4f130e81cc27585bac87f44f2daca13b8a7",
+      "details": "claimed=caac9e3242dd59825000df60663c7c9f547f0e6585a48ee0965e6b73c7d4952b actual=caac9e3242dd59825000df60663c7c9f547f0e6585a48ee0965e6b73c7d4952b",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-generic-result-without-success-signal.json",
       "passed": true,
       "severity": "critical"
@@ -817,7 +877,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=17f74a1dc581a43ce14422f967e6a170d8f312f37188470c8c20833e8c7b3ac8 actual=17f74a1dc581a43ce14422f967e6a170d8f312f37188470c8c20833e8c7b3ac8",
+      "details": "claimed=740fbd96c517634295f8ea05b2241f0ab29ff3dbc8e19f7832e22d24d3602dbd actual=740fbd96c517634295f8ea05b2241f0ab29ff3dbc8e19f7832e22d24d3602dbd",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-image-block-without-data.json",
       "passed": true,
       "severity": "critical"
@@ -829,7 +889,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=b6bc77ae45d25bccee3e2a7405addf6af5fab4ed948a485a6e2bf0d37358ed29 actual=b6bc77ae45d25bccee3e2a7405addf6af5fab4ed948a485a6e2bf0d37358ed29",
+      "details": "claimed=a76a8524c1ccbb82b15508b1f537571ddf362f004a57b22b83801943f64cc810 actual=a76a8524c1ccbb82b15508b1f537571ddf362f004a57b22b83801943f64cc810",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-message-result-masquerade.json",
       "passed": true,
       "severity": "critical"
@@ -841,7 +901,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=3040a89ae03b7672113d1d08629525a3b206c4c81f110be51921143c3729f6f8 actual=3040a89ae03b7672113d1d08629525a3b206c4c81f110be51921143c3729f6f8",
+      "details": "claimed=5390d6f61d42b96da65aca0910fa1cf4d71b9cf56cc881bb001af3d403d3b18e actual=5390d6f61d42b96da65aca0910fa1cf4d71b9cf56cc881bb001af3d403d3b18e",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-metadata-only-dict-result.json",
       "passed": true,
       "severity": "critical"
@@ -853,7 +913,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=5db672fea88d37ca16492ad32b960f35890643576dbd4ebd78362ad4b22347c7 actual=5db672fea88d37ca16492ad32b960f35890643576dbd4ebd78362ad4b22347c7",
+      "details": "claimed=d215cd534cd81eb194b83e1096ad334f19c76e03b3a91d9e6edbca989facd50c actual=d215cd534cd81eb194b83e1096ad334f19c76e03b3a91d9e6edbca989facd50c",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-metadata-only-text-block-result.json",
       "passed": true,
       "severity": "critical"
@@ -865,7 +925,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=e7a80c8629c9aabb6e7f1462c76a45a00bbd35c776def3a8d57a0ab705a70d45 actual=e7a80c8629c9aabb6e7f1462c76a45a00bbd35c776def3a8d57a0ab705a70d45",
+      "details": "claimed=8153429198d65e29c6aea2121ae57e728401b1949875205c7f536d16b5b21101 actual=8153429198d65e29c6aea2121ae57e728401b1949875205c7f536d16b5b21101",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-mismatched-tool-result-id.json",
       "passed": true,
       "severity": "critical"
@@ -877,7 +937,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=906252f52e2cb4ee301956a6163efbaa6006b98e9aedbafdde14421f36eab48e actual=906252f52e2cb4ee301956a6163efbaa6006b98e9aedbafdde14421f36eab48e",
+      "details": "claimed=f8dff0c07589faf6640fe5fee4bb27351b1846693aa442ac18a0c8068b7eae67 actual=f8dff0c07589faf6640fe5fee4bb27351b1846693aa442ac18a0c8068b7eae67",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-nested-tool-result-arguments.json",
       "passed": true,
       "severity": "critical"
@@ -889,7 +949,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=56f5a406f2bf48972d82ff84723a95e3352e6eeab7a28104482b4f8eaef87714 actual=56f5a406f2bf48972d82ff84723a95e3352e6eeab7a28104482b4f8eaef87714",
+      "details": "claimed=a8ed674fb414e5b012b40e9dc582c2456d8c5f9ebf012a62b522fd58f81c2f1a actual=a8ed674fb414e5b012b40e9dc582c2456d8c5f9ebf012a62b522fd58f81c2f1a",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-nested-tool-result-input.json",
       "passed": true,
       "severity": "critical"
@@ -901,7 +961,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=d5458b4c5d22557b3e493d62f18343fbf853a76a2a9d8bb98e60da22b5ade1a0 actual=d5458b4c5d22557b3e493d62f18343fbf853a76a2a9d8bb98e60da22b5ade1a0",
+      "details": "claimed=566e125192e417514617040a6b2e044545123c67023a2e6377f043c50b9c8f40 actual=566e125192e417514617040a6b2e044545123c67023a2e6377f043c50b9c8f40",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-result-before-tool-use.json",
       "passed": true,
       "severity": "critical"
@@ -913,7 +973,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=b4399ec333637a230ea816e387f8b560e62c1dc484ca3d4345388b04666c284a actual=b4399ec333637a230ea816e387f8b560e62c1dc484ca3d4345388b04666c284a",
+      "details": "claimed=b8c4465bc9742bcc57ce3a3e5f2fa7941f176f818d30a788f7129b38f1412934 actual=b8c4465bc9742bcc57ce3a3e5f2fa7941f176f818d30a788f7129b38f1412934",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-role-inverted-tool-use-result.json",
       "passed": true,
       "severity": "critical"
@@ -925,7 +985,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=859611b18193ded1e8c02a4e4fcfebf821aa5a13f0bfe5c46e582eb3482a35ce actual=859611b18193ded1e8c02a4e4fcfebf821aa5a13f0bfe5c46e582eb3482a35ce",
+      "details": "claimed=25e17ce497e755fd85ac4f45826ff2a33b1d8da64e591f639c6befdf7ae67f9c actual=25e17ce497e755fd85ac4f45826ff2a33b1d8da64e591f639c6befdf7ae67f9c",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-runner-stub.json",
       "passed": true,
       "severity": "critical"
@@ -937,7 +997,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=3c235a867ff77350d7f4eafe04adfb9bd29ee248569d4f3ab93b0b317dce7650 actual=3c235a867ff77350d7f4eafe04adfb9bd29ee248569d4f3ab93b0b317dce7650",
+      "details": "claimed=a682e332f324cc93325e638c765597edb4e67a21c6b283bcc066b18b22808ab1 actual=a682e332f324cc93325e638c765597edb4e67a21c6b283bcc066b18b22808ab1",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-same-event-input-embedded-result.json",
       "passed": true,
       "severity": "critical"
@@ -949,7 +1009,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=4728035308988c8056407b0ed86d6ae81836b4e199879b2ca4ef03e2a2edbc5f actual=4728035308988c8056407b0ed86d6ae81836b4e199879b2ca4ef03e2a2edbc5f",
+      "details": "claimed=538128afc4b8f47cb85b8bb2b820fe9b548db08e3c3946779b625153df598051 actual=538128afc4b8f47cb85b8bb2b820fe9b548db08e3c3946779b625153df598051",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-single-call-mentions-all-lanes.json",
       "passed": true,
       "severity": "critical"
@@ -961,7 +1021,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=24be4d390562f75c366e4fd2da7e1eac278237793293b8d35f34faabd0c67457 actual=24be4d390562f75c366e4fd2da7e1eac278237793293b8d35f34faabd0c67457",
+      "details": "claimed=8c5cb6924999348e2bb6704c5673e65236a386f1821bb78b562d6742d68f1eb7 actual=8c5cb6924999348e2bb6704c5673e65236a386f1821bb78b562d6742d68f1eb7",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-text-block-tool-result-masquerade.json",
       "passed": true,
       "severity": "critical"
@@ -973,7 +1033,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=9932a7e6cb0ca08fac0b82075af0a07d525159b31489b68a1b68702c017dbf7d actual=9932a7e6cb0ca08fac0b82075af0a07d525159b31489b68a1b68702c017dbf7d",
+      "details": "claimed=6b2de76297bf0c74440cff41e1ba0326bfd92f2193fb9c66fa9ee95a0c7f7c8b actual=6b2de76297bf0c74440cff41e1ba0326bfd92f2193fb9c66fa9ee95a0c7f7c8b",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-text-block-tool-use-masquerade.json",
       "passed": true,
       "severity": "critical"
@@ -985,7 +1045,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=7faeeff19bf3fc715c9c1d1739ecbbb29ef9d3d0ab720623b6ca6139508cb013 actual=7faeeff19bf3fc715c9c1d1739ecbbb29ef9d3d0ab720623b6ca6139508cb013",
+      "details": "claimed=bbc3b13db1bd0874243268fa8a181846141ed40fe4133584925e0ad53c3c45c3 actual=bbc3b13db1bd0874243268fa8a181846141ed40fe4133584925e0ad53c3c45c3",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-tool-result-inside-tool-result-content.json",
       "passed": true,
       "severity": "critical"
@@ -997,7 +1057,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=c1192e189aac4c0e923807da2a9c54d56e2dd7746463ca0e966d3c8dde67e528 actual=c1192e189aac4c0e923807da2a9c54d56e2dd7746463ca0e966d3c8dde67e528",
+      "details": "claimed=bdf2cfc1751b3bf81c13f338535cf6f2c04ab25adaaff7d26f6d2b51f7e7497e actual=bdf2cfc1751b3bf81c13f338535cf6f2c04ab25adaaff7d26f6d2b51f7e7497e",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-tool-result-inside-tool-result-payload.json",
       "passed": true,
       "severity": "critical"
@@ -1009,7 +1069,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=c34ffdf2c74ca5e1d92dc43cb65848f0c7fef859a16f10ad1799d601de52200a actual=c34ffdf2c74ca5e1d92dc43cb65848f0c7fef859a16f10ad1799d601de52200a",
+      "details": "claimed=bf9199df542bf255d5e52f5177d31ac3815fc9439eedd07957362586889f3a74 actual=bf9199df542bf255d5e52f5177d31ac3815fc9439eedd07957362586889f3a74",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-result-content.json",
       "passed": true,
       "severity": "critical"
@@ -1021,7 +1081,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=93eb19e13443b244420f657f89f50ec655b6fa6030f410a7bc7fdec3327c8482 actual=93eb19e13443b244420f657f89f50ec655b6fa6030f410a7bc7fdec3327c8482",
+      "details": "claimed=4c5a7440b4c52def0aca0c429373d70336a59a2ebb41213d9502a54b4c371817 actual=4c5a7440b4c52def0aca0c429373d70336a59a2ebb41213d9502a54b4c371817",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-result-delta.json",
       "passed": true,
       "severity": "critical"
@@ -1033,7 +1093,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=c17985312f237f50aceee9c8df6c00b7dcf9bce97dc0d29d55e0456ced8aefc5 actual=c17985312f237f50aceee9c8df6c00b7dcf9bce97dc0d29d55e0456ced8aefc5",
+      "details": "claimed=1051cf81bc05b9209f5a8bf4f4b971cdefbb894627572ec475bde5cd5002072d actual=1051cf81bc05b9209f5a8bf4f4b971cdefbb894627572ec475bde5cd5002072d",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-result-payload.json",
       "passed": true,
       "severity": "critical"
@@ -1045,7 +1105,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=a9c501ca3048f1990779044e514759fc3584ea1fbc5911ece92eb36207b47090 actual=a9c501ca3048f1990779044e514759fc3584ea1fbc5911ece92eb36207b47090",
+      "details": "claimed=fe5705ccd5f939f27f78076798d4afa5aefbffdee030c981a4a5b4158eedaef2 actual=fe5705ccd5f939f27f78076798d4afa5aefbffdee030c981a4a5b4158eedaef2",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-tool-use-inside-tool-use-content.json",
       "passed": true,
       "severity": "critical"
@@ -1057,7 +1117,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=7b8fd2907dff72e33b726f6585f8fc8c3be636712b3f258b29c07820b38bd365 actual=7b8fd2907dff72e33b726f6585f8fc8c3be636712b3f258b29c07820b38bd365",
+      "details": "claimed=40ec99391fbdcba5956248a30435a8a9d87d8311553095957f58263ff38271d9 actual=40ec99391fbdcba5956248a30435a8a9d87d8311553095957f58263ff38271d9",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-tool-use-without-result.json",
       "passed": true,
       "severity": "critical"
@@ -1069,7 +1129,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=2f8a1fb8a67dc548cc87b873e9b1fe6c6f28c0015fa314e2dd608bdf7ce75025 actual=2f8a1fb8a67dc548cc87b873e9b1fe6c6f28c0015fa314e2dd608bdf7ce75025",
+      "details": "claimed=e87464b8f87d20d68edfbba790841fb1176433ac1cc8381fee431a8bb47379b3 actual=e87464b8f87d20d68edfbba790841fb1176433ac1cc8381fee431a8bb47379b3",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-unexpected-agent-without-selector.json",
       "passed": true,
       "severity": "critical"
@@ -1081,7 +1141,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=86a533f65e3acab1a5f67050c8d995427b3059e05feec600cabf89c7034305cc actual=86a533f65e3acab1a5f67050c8d995427b3059e05feec600cabf89c7034305cc",
+      "details": "claimed=37474e846f6f1979709550abd36e5a5ebfde8f46c69cafbf69c4ee22147529e4 actual=37474e846f6f1979709550abd36e5a5ebfde8f46c69cafbf69c4ee22147529e4",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-unknown-agent-selector.json",
       "passed": true,
       "severity": "critical"
@@ -1093,7 +1153,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=91e438ddc21b551a300bfb513cc81d231f5c7a372b3f68e1f3395490d613aef7 actual=91e438ddc21b551a300bfb513cc81d231f5c7a372b3f68e1f3395490d613aef7",
+      "details": "claimed=0818d2952f62a9c89e070a5ce1520e4cb9c1c4dc51acf711bde789e3b15275d1 actual=0818d2952f62a9c89e070a5ce1520e4cb9c1c4dc51acf711bde789e3b15275d1",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-user-message-tool-use.json",
       "passed": true,
       "severity": "critical"
@@ -1105,7 +1165,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=fb9db2931d017fbcf17be5e1d35f168e41bcd5d2911311b0073e3518b598dbf9 actual=fb9db2931d017fbcf17be5e1d35f168e41bcd5d2911311b0073e3518b598dbf9",
+      "details": "claimed=a0b237ce4a9e87b718ad5ca5459af0b80c88239d559291575fa489841beb4795 actual=a0b237ce4a9e87b718ad5ca5459af0b80c88239d559291575fa489841beb4795",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__FW-formal-whitespace-text-block-result.json",
       "passed": true,
       "severity": "critical"
@@ -1117,7 +1177,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=985a75d9024308fe15a7b9edb75257cb8c9b4353454c473177e891bf7ad66e75 actual=985a75d9024308fe15a7b9edb75257cb8c9b4353454c473177e891bf7ad66e75",
+      "details": "claimed=f3180b34c5eefb65e48f999bf221c8694ce24b11d07a6a6573080f5317186236 actual=f3180b34c5eefb65e48f999bf221c8694ce24b11d07a6a6573080f5317186236",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__TW-formal-dry-run-retains-honest-unknown.json",
       "passed": true,
       "severity": "critical"
@@ -1129,7 +1189,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=875dc1f4024e3b2e61c974192d8e95ec43c26d8eb8e0eef7ada04274540c9e8f actual=875dc1f4024e3b2e61c974192d8e95ec43c26d8eb8e0eef7ada04274540c9e8f",
+      "details": "claimed=7df1cfec73dc0caa3dff4dd8651c2c3bac8eb371f9c421eb8061c169598342ce actual=7df1cfec73dc0caa3dff4dd8651c2c3bac8eb371f9c421eb8061c169598342ce",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__TW-formal-nonempty-text-block-authenticates.json",
       "passed": true,
       "severity": "critical"
@@ -1141,7 +1201,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=dec421adedd32e7a0e120db2883bbd4cf22eaa18f1300ea2d87516f42113c787 actual=dec421adedd32e7a0e120db2883bbd4cf22eaa18f1300ea2d87516f42113c787",
+      "details": "claimed=1369c72242c2576d6b1b8bec404c9e3edff2bbc57a22039fd46be2d1ac80dd5b actual=1369c72242c2576d6b1b8bec404c9e3edff2bbc57a22039fd46be2d1ac80dd5b",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__TW-formal-valid-role-direction.json",
       "passed": true,
       "severity": "critical"
@@ -1153,7 +1213,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=8173577f8ae5e2f4e5359f8b342aef08ea3fc24b738a918f1cfa93b9e9278310 actual=8173577f8ae5e2f4e5359f8b342aef08ea3fc24b738a918f1cfa93b9e9278310",
+      "details": "claimed=5ce6746fdb3bd9aede54a71276140ed99d6d09cd590c6e884ded73520c1a0339 actual=5ce6746fdb3bd9aede54a71276140ed99d6d09cd590c6e884ded73520c1a0339",
       "name": "stable release manifest hash matches: self_validation/evidence/C-formal-invocation__claim.json",
       "passed": true,
       "severity": "critical"
@@ -1177,7 +1237,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=e0a17c53ddf9aec46bcc940b35442ec87ab4db83571588730cf6495f2346552f actual=e0a17c53ddf9aec46bcc940b35442ec87ab4db83571588730cf6495f2346552f",
+      "details": "claimed=1802f4ad3f5eed54c9a60be694efc3fa02b23fed8fe72fc4583966391defdb6f actual=1802f4ad3f5eed54c9a60be694efc3fa02b23fed8fe72fc4583966391defdb6f",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-1.json",
       "passed": true,
       "severity": "critical"
@@ -1189,7 +1249,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=9aab2ff374afa1c6fcd5d8af35f1ab1618de9c474b2e7b7617387d75428336ab actual=9aab2ff374afa1c6fcd5d8af35f1ab1618de9c474b2e7b7617387d75428336ab",
+      "details": "claimed=9119d86193eb39fc11b09a28484fc93faf2d4b073af170a0b508c8759e0c89e3 actual=9119d86193eb39fc11b09a28484fc93faf2d4b073af170a0b508c8759e0c89e3",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-2.json",
       "passed": true,
       "severity": "critical"
@@ -1201,7 +1261,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=805a3d6ab62e652a70fce2a443c773324005c36a1e935d3f028830f8cde12552 actual=805a3d6ab62e652a70fce2a443c773324005c36a1e935d3f028830f8cde12552",
+      "details": "claimed=93c535dd8e85e5557cc7cf995c7adddf5ba0b41fa299d6f4cec1ac7eedfbc1f7 actual=93c535dd8e85e5557cc7cf995c7adddf5ba0b41fa299d6f4cec1ac7eedfbc1f7",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-aliased-claim-evidence-ref.json",
       "passed": true,
       "severity": "critical"
@@ -1213,7 +1273,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=907b1a684ee421667ed5751c52eb3d5ec4360ba4a3aa55cfde0d3fb65b069601 actual=907b1a684ee421667ed5751c52eb3d5ec4360ba4a3aa55cfde0d3fb65b069601",
+      "details": "claimed=927c2ddd78b45c55893a1afe85533d0a2417c4acea7b631016012a7b4c15fc50 actual=927c2ddd78b45c55893a1afe85533d0a2417c4acea7b631016012a7b4c15fc50",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-aliased-same-claim-evidence-ref.json",
       "passed": true,
       "severity": "critical"
@@ -1225,7 +1285,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=73e4bb7c5759db72a7edce250f6798d7f636168251909b0cc1dc8e9ef0dcd46e actual=73e4bb7c5759db72a7edce250f6798d7f636168251909b0cc1dc8e9ef0dcd46e",
+      "details": "claimed=64ef4e006685ef04e8875bac3f76dbb338ac6f2d4a95560ada0369167ac35b83 actual=64ef4e006685ef04e8875bac3f76dbb338ac6f2d4a95560ada0369167ac35b83",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-aliased-same-false-world-test-evidence.json",
       "passed": true,
       "severity": "critical"
@@ -1237,7 +1297,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=83d49041afaa7f6729164b6ec3397d2fe19193815b0e7814f927914fdc33429c actual=83d49041afaa7f6729164b6ec3397d2fe19193815b0e7814f927914fdc33429c",
+      "details": "claimed=033e5cea272c6e4c6d41cd5378531421107ead712addbbaa848ffee133cf890c actual=033e5cea272c6e4c6d41cd5378531421107ead712addbbaa848ffee133cf890c",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-arbitrary-scheme.json",
       "passed": true,
       "severity": "critical"
@@ -1249,7 +1309,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=d39cdca1c56f4acf864a38b41db9c8942f1cb6633a7da848848d27b127f56719 actual=d39cdca1c56f4acf864a38b41db9c8942f1cb6633a7da848848d27b127f56719",
+      "details": "claimed=760f1eebd963e19c7732d566702b5d37c5a2ba6359f5cb61d22f3f3ac90316b4 actual=760f1eebd963e19c7732d566702b5d37c5a2ba6359f5cb61d22f3f3ac90316b4",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-lowercase-https-uri.json",
       "passed": true,
       "severity": "critical"
@@ -1261,7 +1321,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=65e4cd19f81b4ed9765c29e687d1943ecc72475e7b7a2046d50ea43391361d8c actual=65e4cd19f81b4ed9765c29e687d1943ecc72475e7b7a2046d50ea43391361d8c",
+      "details": "claimed=f678b0ce1fe9026852757ed6085f12de72202bf91a473ed97e23fa34ef809667 actual=f678b0ce1fe9026852757ed6085f12de72202bf91a473ed97e23fa34ef809667",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-mixedcase-uri.json",
       "passed": true,
       "severity": "critical"
@@ -1273,7 +1333,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=3fad12f23f8d4c32915dc6fe5afeaa1266f2506f277cb9cc40ce45b3fecb04f9 actual=3fad12f23f8d4c32915dc6fe5afeaa1266f2506f277cb9cc40ce45b3fecb04f9",
+      "details": "claimed=2e7e738e19f303e7ecd22f91f7264d2d38aaf0fd9cc14ccdd33414fcac3e8f90 actual=2e7e738e19f303e7ecd22f91f7264d2d38aaf0fd9cc14ccdd33414fcac3e8f90",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-uppercase-https-uri.json",
       "passed": true,
       "severity": "critical"
@@ -1285,7 +1345,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=0fabdc471199445d260b3e1ed5639b82a6be66e7d14bdeae956e8cc9f910af0c actual=0fabdc471199445d260b3e1ed5639b82a6be66e7d14bdeae956e8cc9f910af0c",
+      "details": "claimed=04b8a0456f21b66d7a7a5527ed48f173490e11f655acf5289470f1175f4f3ec1 actual=04b8a0456f21b66d7a7a5527ed48f173490e11f655acf5289470f1175f4f3ec1",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-duplicate-claim-evidence-ref.json",
       "passed": true,
       "severity": "critical"
@@ -1297,7 +1357,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=3fbdee2e4ce7d71751041c57b1f89b7912dfabb92861382e4521061cf079eff2 actual=3fbdee2e4ce7d71751041c57b1f89b7912dfabb92861382e4521061cf079eff2",
+      "details": "claimed=2c3c19ec08f64a3c573c4fbd51a001429bad3803ce6694cf0c338021252389bf actual=2c3c19ec08f64a3c573c4fbd51a001429bad3803ce6694cf0c338021252389bf",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-duplicate-false-world-test-id.json",
       "passed": true,
       "severity": "critical"
@@ -1309,7 +1369,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=5417bc0cb6e3a2cf859f685b28d8777dee717067ad9b2891e0c97f39e6336f20 actual=5417bc0cb6e3a2cf859f685b28d8777dee717067ad9b2891e0c97f39e6336f20",
+      "details": "claimed=7f0069f0fe8a2473fab6e8d6c3191761b5f13af1dc7c96d6adb87134d86c5026 actual=7f0069f0fe8a2473fab6e8d6c3191761b5f13af1dc7c96d6adb87134d86c5026",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-duplicate-structured-evidence-file.json",
       "passed": true,
       "severity": "critical"
@@ -1321,7 +1381,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=a7f909c14d95a2042012811c68779b7b6f2ec7d29370af664e900564dfebe769 actual=a7f909c14d95a2042012811c68779b7b6f2ec7d29370af664e900564dfebe769",
+      "details": "claimed=af01de2f6d72708db2742b8d34f6cbf1a036a28b386662b995b41dbb59858acb actual=af01de2f6d72708db2742b8d34f6cbf1a036a28b386662b995b41dbb59858acb",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-duplicate-true-world-test-id.json",
       "passed": true,
       "severity": "critical"
@@ -1333,7 +1393,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=1b4f852431670907542aff0073ea37e922e5d31bcfc01d521c51272d418664c4 actual=1b4f852431670907542aff0073ea37e922e5d31bcfc01d521c51272d418664c4",
+      "details": "claimed=b1e3374317fa5f3f1e73ee38276e6e8f201a06f3b344274abe94a7d3ad0f06d0 actual=b1e3374317fa5f3f1e73ee38276e6e8f201a06f3b344274abe94a7d3ad0f06d0",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-duplicated-false-world-test-object.json",
       "passed": true,
       "severity": "critical"
@@ -1345,7 +1405,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=2c5393fd9d0fb53775bd9fc2f6e7989b409b506dbfb63edf8349350357fff030 actual=2c5393fd9d0fb53775bd9fc2f6e7989b409b506dbfb63edf8349350357fff030",
+      "details": "claimed=07f453f51b7164d150405b560d7b0235704cc8638933932eb6b5a668f0621610 actual=07f453f51b7164d150405b560d7b0235704cc8638933932eb6b5a668f0621610",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-evidence-ref-absolute-path.json",
       "passed": true,
       "severity": "critical"
@@ -1357,7 +1417,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=648d44b3a70b2f1431d6ee63b1b6065f0aaf4f77f91ac7a12defaee779e3ce1b actual=648d44b3a70b2f1431d6ee63b1b6065f0aaf4f77f91ac7a12defaee779e3ce1b",
+      "details": "claimed=e2634ff5ac93136ef8efad134d4c95bbf0201bd5a0db6a1d8751b3eaafdab14d actual=e2634ff5ac93136ef8efad134d4c95bbf0201bd5a0db6a1d8751b3eaafdab14d",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-evidence-ref-path-escape.json",
       "passed": true,
       "severity": "critical"
@@ -1369,7 +1429,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=8a14302fd84e101cdd59dab68fddb0cbbb471a3d5c92b1c92c4a19d1b7b46276 actual=8a14302fd84e101cdd59dab68fddb0cbbb471a3d5c92b1c92c4a19d1b7b46276",
+      "details": "claimed=8a2f33b993d7bfe16f64ed240f3c70baea5df9a2d60f1938c70d375c742bcc3c actual=8a2f33b993d7bfe16f64ed240f3c70baea5df9a2d60f1938c70d375c742bcc3c",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-external-ref-valid-hash.json",
       "passed": true,
       "severity": "critical"
@@ -1381,7 +1441,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=7508c05d6fa39aca69ff309d6833f27332b740eb8e618c7e1eb74212d76953f9 actual=7508c05d6fa39aca69ff309d6833f27332b740eb8e618c7e1eb74212d76953f9",
+      "details": "claimed=74723b71aeb41461545e8186c75046f1f0145934748a113a67ef7861606550da actual=74723b71aeb41461545e8186c75046f1f0145934748a113a67ef7861606550da",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-missing-false-world-test-id.json",
       "passed": true,
       "severity": "critical"
@@ -1393,7 +1453,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=f00b47b440c1ff20886ae8bb1820c0d8b4e86340f4e99a8274c03b0ef78eefab actual=f00b47b440c1ff20886ae8bb1820c0d8b4e86340f4e99a8274c03b0ef78eefab",
+      "details": "claimed=9ca2512952a159a32fbf28ef1a88447aa0678406f2e032c0d6e4d1f390eddf0e actual=9ca2512952a159a32fbf28ef1a88447aa0678406f2e032c0d6e4d1f390eddf0e",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-missing-true-world-test-id.json",
       "passed": true,
       "severity": "critical"
@@ -1405,7 +1465,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=569812960a0712bd6c00cd831d59213e16dc4df524f0594de3243161e31585f8 actual=569812960a0712bd6c00cd831d59213e16dc4df524f0594de3243161e31585f8",
+      "details": "claimed=589fbee07657b181b8e77cb6fb587a19b4c43f8835a8c7d236c5e5081067cf6a actual=589fbee07657b181b8e77cb6fb587a19b4c43f8835a8c7d236c5e5081067cf6a",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-mixedcase-https-evidence-ref.json",
       "passed": true,
       "severity": "critical"
@@ -1417,7 +1477,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=08cfd707d10d3be14599b10d3064d0fc18ac1924c79d730a892a46c28a99069d actual=08cfd707d10d3be14599b10d3064d0fc18ac1924c79d730a892a46c28a99069d",
+      "details": "claimed=84d47cc659a233f64677bc54de6b04626c419e31b1594715c9183bceef71e667 actual=84d47cc659a233f64677bc54de6b04626c419e31b1594715c9183bceef71e667",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-one-of-two-claim-evidence-wrong.json",
       "passed": true,
       "severity": "critical"
@@ -1429,7 +1489,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=3e095ebd10acdaff0e42c3d592d1a5ccace73f1c8041265b26f48cefd512a5b9 actual=3e095ebd10acdaff0e42c3d592d1a5ccace73f1c8041265b26f48cefd512a5b9",
+      "details": "claimed=575459c1eeb7a80daf1d5451c61cb72eecfe6db3b3f106abc1e358ea05706cd7 actual=575459c1eeb7a80daf1d5451c61cb72eecfe6db3b3f106abc1e358ea05706cd7",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-one-of-two-test-evidence-wrong.json",
       "passed": true,
       "severity": "critical"
@@ -1441,7 +1501,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=a98cd93c33c7f1a4b85c80fb6a229159f4d9cdc73e31025778140589c77bedc0 actual=a98cd93c33c7f1a4b85c80fb6a229159f4d9cdc73e31025778140589c77bedc0",
+      "details": "claimed=412e06854465f2cef72ea5996c743ec535486f344407a936a28bef7f636acc7b actual=412e06854465f2cef72ea5996c743ec535486f344407a936a28bef7f636acc7b",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-remote-ref-strict.json",
       "passed": true,
       "severity": "critical"
@@ -1453,7 +1513,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=9ba35e98d9ca022402676b6bbd2fddb204fbf54b8e1a5da307d65112f6f557f4 actual=9ba35e98d9ca022402676b6bbd2fddb204fbf54b8e1a5da307d65112f6f557f4",
+      "details": "claimed=02284d7cb2908a69a007592f3653a71572115a23bfbe486117918bf5ec4c5647 actual=02284d7cb2908a69a007592f3653a71572115a23bfbe486117918bf5ec4c5647",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-same-artifact-path-all-claim-refs.json",
       "passed": true,
       "severity": "critical"
@@ -1465,7 +1525,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=92ff49aeb40c5ed92351410e030ba0f3c43fb5ba8157b644644c5bc197ec27ff actual=92ff49aeb40c5ed92351410e030ba0f3c43fb5ba8157b644644c5bc197ec27ff",
+      "details": "claimed=0802e2daf106990ef142e8d5e469f0fce4d8efed95035ca74a24c61e6f5c93d3 actual=0802e2daf106990ef142e8d5e469f0fce4d8efed95035ca74a24c61e6f5c93d3",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-same-artifact-path-for-claim-refs.json",
       "passed": true,
       "severity": "critical"
@@ -1477,7 +1537,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=e8427398086826d348f72a6eb08115651354cf8d6f63883422dd2b754e37e41e actual=e8427398086826d348f72a6eb08115651354cf8d6f63883422dd2b754e37e41e",
+      "details": "claimed=015c06245e8fcdc51031a1a394a92016b9b5d5b3e995568d06e5edc5651ec9bb actual=015c06245e8fcdc51031a1a394a92016b9b5d5b3e995568d06e5edc5651ec9bb",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-scheme-like-evidence-ref.json",
       "passed": true,
       "severity": "critical"
@@ -1489,7 +1549,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=cab918c791ec1c6d1325bf17f694e3f2a99d237423db4a99e334c6401d1a84b6 actual=cab918c791ec1c6d1325bf17f694e3f2a99d237423db4a99e334c6401d1a84b6",
+      "details": "claimed=f9f90fe93f57b1e4127188b6afe2f99cf20bd7a375a13fb5afadce26ccb3afaa actual=f9f90fe93f57b1e4127188b6afe2f99cf20bd7a375a13fb5afadce26ccb3afaa",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-uppercase-doi-urn-evidence-ref.json",
       "passed": true,
       "severity": "critical"
@@ -1501,7 +1561,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=fdd7f8c6e0b58ed58fd50860aafd0ad710b0a090506a2cec88f27b97915e7a1f actual=fdd7f8c6e0b58ed58fd50860aafd0ad710b0a090506a2cec88f27b97915e7a1f",
+      "details": "claimed=5dda6f863d0128747baebfff63321be0fa3d37cf8abacbef0709d6012789683f actual=5dda6f863d0128747baebfff63321be0fa3d37cf8abacbef0709d6012789683f",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-uppercase-https-evidence-ref.json",
       "passed": true,
       "severity": "critical"
@@ -1513,7 +1573,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=d33e953f03164e3c85995b68a3cb5041eba5cd76191cae3c2cf23f8b3a509eb3 actual=d33e953f03164e3c85995b68a3cb5041eba5cd76191cae3c2cf23f8b3a509eb3",
+      "details": "claimed=6e808d09926ee0db0ea67ea41da709e38079dec1d8c8ec5af43e0f07b718e1d8 actual=6e808d09926ee0db0ea67ea41da709e38079dec1d8c8ec5af43e0f07b718e1d8",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-wildcard-applies-to-tests-missing-id.json",
       "passed": true,
       "severity": "critical"
@@ -1525,7 +1585,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=fac1d9e8182510314739afe3addcd9d9f6db1ca91d514cb24e25c3bb55995c34 actual=fac1d9e8182510314739afe3addcd9d9f6db1ca91d514cb24e25c3bb55995c34",
+      "details": "claimed=9ed7b1f0d3af12b262654cbf741e8671e85fa01603203b5598330aa6b1b46bf2 actual=9ed7b1f0d3af12b262654cbf741e8671e85fa01603203b5598330aa6b1b46bf2",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-wrong-evidence-hash.json",
       "passed": true,
       "severity": "critical"
@@ -1537,7 +1597,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=54974344f2b5d27a8e61b613c40c4f54d63d44a6fd0a81d337e822f68e85487d actual=54974344f2b5d27a8e61b613c40c4f54d63d44a6fd0a81d337e822f68e85487d",
+      "details": "claimed=e20d47b3727fdfc5405ff0e7057e95bbf012d5e7f2873b2f84547afcd5b20e51 actual=e20d47b3727fdfc5405ff0e7057e95bbf012d5e7f2873b2f84547afcd5b20e51",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-wrong-false-world-target-claim.json",
       "passed": true,
       "severity": "critical"
@@ -1549,7 +1609,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=fa604fd8406c03c7f7ed91a186713175d5817c10c6393a72ae1fbb425f2eb231 actual=fa604fd8406c03c7f7ed91a186713175d5817c10c6393a72ae1fbb425f2eb231",
+      "details": "claimed=101061095e548aeb4e72462053af3353a311cb64e2359a6af92b133d3179fe74 actual=101061095e548aeb4e72462053af3353a311cb64e2359a6af92b133d3179fe74",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__FW-gate-wrong-true-world-target-claim.json",
       "passed": true,
       "severity": "critical"
@@ -1561,7 +1621,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=a54fa1c78339e2ab70500fac198ea146d2b7dfba2f425d4eb6295d32daf92838 actual=a54fa1c78339e2ab70500fac198ea146d2b7dfba2f425d4eb6295d32daf92838",
+      "details": "claimed=72cf6bf0f7149f12eff66f3841e4b6a2007ba59ce8cb65db2e4cd3c8bdf0ff65 actual=72cf6bf0f7149f12eff66f3841e4b6a2007ba59ce8cb65db2e4cd3c8bdf0ff65",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__TW-gate-1.json",
       "passed": true,
       "severity": "critical"
@@ -1573,7 +1633,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=9cf38af888ea00329446192e457fc358a87132150abdaae54fb78b64b1f582ca actual=9cf38af888ea00329446192e457fc358a87132150abdaae54fb78b64b1f582ca",
+      "details": "claimed=001bd6f368c67fce8394bf1aa3ec5faba30550f8aa3394744769cc2cb8e20016 actual=001bd6f368c67fce8394bf1aa3ec5faba30550f8aa3394744769cc2cb8e20016",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__TW-gate-target-claim-ids-list.json",
       "passed": true,
       "severity": "critical"
@@ -1585,7 +1645,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=96c5651537246f9b551e81e9f7e09a9e963ea14c66f51afc91ef1e8385e21ffa actual=96c5651537246f9b551e81e9f7e09a9e963ea14c66f51afc91ef1e8385e21ffa",
+      "details": "claimed=0afbce4f69dbfb4f288c55208f49dfcff92507d8589080d61aa1f638b177bc16 actual=0afbce4f69dbfb4f288c55208f49dfcff92507d8589080d61aa1f638b177bc16",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__TW-gate-unique-evidence-refs-pass.json",
       "passed": true,
       "severity": "critical"
@@ -1621,7 +1681,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=11586b6a6c8e97a76adcedaa2271b82ea8206c37b9bb74ed89b90e0699c7f8a8 actual=11586b6a6c8e97a76adcedaa2271b82ea8206c37b9bb74ed89b90e0699c7f8a8",
+      "details": "claimed=1161d0f320d7df878ba8448eb42a0ff100a67933b3722fecb1995197f9bb2356 actual=1161d0f320d7df878ba8448eb42a0ff100a67933b3722fecb1995197f9bb2356",
       "name": "stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__FW-github-readmes-degraded.json",
       "passed": true,
       "severity": "critical"
@@ -1633,7 +1693,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=7d895002413385530f5e51508b8c877f36c2fcdf20e6b16b09eee02be175a389 actual=7d895002413385530f5e51508b8c877f36c2fcdf20e6b16b09eee02be175a389",
+      "details": "claimed=5b590a8789a48f58139588b95e5315366f82aedf210968fbcc49e1542b833abd actual=5b590a8789a48f58139588b95e5315366f82aedf210968fbcc49e1542b833abd",
       "name": "stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__TW-github-readmes-benign-doc-note.json",
       "passed": true,
       "severity": "critical"
@@ -1657,7 +1717,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=775831112d7703160b7d8441a93a0c4c6882a23b32ebe05df3d30ac7fedcdef3 actual=775831112d7703160b7d8441a93a0c4c6882a23b32ebe05df3d30ac7fedcdef3",
+      "details": "claimed=ea916a98cb8cc819d755061bbd29b87a524b2435f33f2309c36fdb8dbc0accac actual=ea916a98cb8cc819d755061bbd29b87a524b2435f33f2309c36fdb8dbc0accac",
       "name": "stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__validator.json",
       "passed": true,
       "severity": "critical"
@@ -1669,7 +1729,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=234c9167cc6bd03663cf5753d4e0ca3ebd91df313d3b8e05208ce2639bc5b30e actual=234c9167cc6bd03663cf5753d4e0ca3ebd91df313d3b8e05208ce2639bc5b30e",
+      "details": "claimed=70e7b95592df107a274d28715967d22d08520b74c983053b92e1d12ca03d71e5 actual=70e7b95592df107a274d28715967d22d08520b74c983053b92e1d12ca03d71e5",
       "name": "stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__certifier.json",
       "passed": true,
       "severity": "critical"
@@ -1681,7 +1741,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=6c8d60eedb13c4bdec1e286b22f897bc86018b11f72f96fb631ec396f5bc8b5f actual=6c8d60eedb13c4bdec1e286b22f897bc86018b11f72f96fb631ec396f5bc8b5f",
+      "details": "claimed=1fddee2b21d606b7860cdcb97bf2f79371fe348cc7c7394d585dbb005c083cad actual=1fddee2b21d606b7860cdcb97bf2f79371fe348cc7c7394d585dbb005c083cad",
       "name": "stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
       "passed": true,
       "severity": "critical"
@@ -1717,7 +1777,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=6e8da508b66029e4adf3eeeb41a3513e2b094c4a561a7248aebd0abee3ecfcb6 actual=6e8da508b66029e4adf3eeeb41a3513e2b094c4a561a7248aebd0abee3ecfcb6",
+      "details": "claimed=f072a0501fbb18185a0df7acd46d99961793c74a8b75f8097589f831f36356b3 actual=f072a0501fbb18185a0df7acd46d99961793c74a8b75f8097589f831f36356b3",
       "name": "stable release manifest hash matches: self_validation/evidence/C-structure__FW-agent-unsupported-key.json",
       "passed": true,
       "severity": "critical"
@@ -1729,7 +1789,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=c1ffc9ed11773e39ec31a8278c4c496b4a5465dff49b88a2bb844a4a8fcaa89e actual=c1ffc9ed11773e39ec31a8278c4c496b4a5465dff49b88a2bb844a4a8fcaa89e",
+      "details": "claimed=e27cafb5e1f4e8d8b075356983030d3d3c9bbbf14b6a080dd3665247fa799e46 actual=e27cafb5e1f4e8d8b075356983030d3d3c9bbbf14b6a080dd3665247fa799e46",
       "name": "stable release manifest hash matches: self_validation/evidence/C-structure__FW-skill-dynamic-shell.json",
       "passed": true,
       "severity": "critical"
@@ -1741,7 +1801,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=a90406e9447a5458c7b6496de03468a2be8e613ac2dfe7b512192302bc2293f0 actual=a90406e9447a5458c7b6496de03468a2be8e613ac2dfe7b512192302bc2293f0",
+      "details": "claimed=cd2ad26efab79cfc49957c9ceddeac7bab279030792caada03b0177c50e47db0 actual=cd2ad26efab79cfc49957c9ceddeac7bab279030792caada03b0177c50e47db0",
       "name": "stable release manifest hash matches: self_validation/evidence/C-structure__FW-structure-1.json",
       "passed": true,
       "severity": "critical"
@@ -1753,7 +1813,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=f29972ae7580ba8d8d0b3b5e4b7438446638ed44fcc1111ab9dae624f3e0085d actual=f29972ae7580ba8d8d0b3b5e4b7438446638ed44fcc1111ab9dae624f3e0085d",
+      "details": "claimed=c98aedc61cb3ab2f60005246db3a4284618a76fc1cd45bd61353daab9de48503 actual=c98aedc61cb3ab2f60005246db3a4284618a76fc1cd45bd61353daab9de48503",
       "name": "stable release manifest hash matches: self_validation/evidence/C-structure__FW-structure-2.json",
       "passed": true,
       "severity": "critical"
@@ -1765,7 +1825,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=75f2dda9b86ce3aa677dca7b2d55edf045df1555626c9c6bf33fe0e97fc8e511 actual=75f2dda9b86ce3aa677dca7b2d55edf045df1555626c9c6bf33fe0e97fc8e511",
+      "details": "claimed=20c2216f0ea69ffc516443848e8cf49109b1976621c541cea629e6a7cf0a77a7 actual=20c2216f0ea69ffc516443848e8cf49109b1976621c541cea629e6a7cf0a77a7",
       "name": "stable release manifest hash matches: self_validation/evidence/C-structure__FW-surface-manifest-inline.json",
       "passed": true,
       "severity": "critical"
@@ -1777,7 +1837,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=ba70d64275435fb245e566ae7f9e4d534021c7530eed6c4b8c9f0ce03615156e actual=ba70d64275435fb245e566ae7f9e4d534021c7530eed6c4b8c9f0ce03615156e",
+      "details": "claimed=992c070f3c42438483acc297e602e56707912a6799cd7122dd339ef05bc135a5 actual=992c070f3c42438483acc297e602e56707912a6799cd7122dd339ef05bc135a5",
       "name": "stable release manifest hash matches: self_validation/evidence/C-structure__TW-structure-1.json",
       "passed": true,
       "severity": "critical"
@@ -1789,7 +1849,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=95288bdbbc5bea2261ae7ee736f75777274cca2b8b0cfde463ed93489f45c89b actual=95288bdbbc5bea2261ae7ee736f75777274cca2b8b0cfde463ed93489f45c89b",
+      "details": "claimed=7db6965d15e93e303af3fc393c02c1ea8ec4f7c6bfeb947d1b67403e634c049f actual=7db6965d15e93e303af3fc393c02c1ea8ec4f7c6bfeb947d1b67403e634c049f",
       "name": "stable release manifest hash matches: self_validation/evidence/C-structure__claim.json",
       "passed": true,
       "severity": "critical"
@@ -1801,7 +1861,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=9fc59731ebf6017ae31c2737f6a27a8f4230f85f5bdb16ada63f0c85392396d1 actual=9fc59731ebf6017ae31c2737f6a27a8f4230f85f5bdb16ada63f0c85392396d1",
+      "details": "claimed=ddd16d07cf65dc4d32154fbf81b6ab315fb5b1fcf77e6619e9db4ac78c1206d4 actual=ddd16d07cf65dc4d32154fbf81b6ab315fb5b1fcf77e6619e9db4ac78c1206d4",
       "name": "stable release manifest hash matches: self_validation/evidence/C-structure__gate.json",
       "passed": true,
       "severity": "critical"
@@ -1813,7 +1873,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=f88712c55ef4c1d68f1f1026fc977e62a9616c0fbe1f9f2b0a4ddde2279af0ec actual=f88712c55ef4c1d68f1f1026fc977e62a9616c0fbe1f9f2b0a4ddde2279af0ec",
+      "details": "claimed=7ffbc1de85c2891688cc9e121e1bddc127a6f145568dd29eb548e743992f9c6e actual=7ffbc1de85c2891688cc9e121e1bddc127a6f145568dd29eb548e743992f9c6e",
       "name": "stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__FW-recursive-agent-after-manifest.json",
       "passed": true,
       "severity": "critical"
@@ -1825,7 +1885,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=025a287a6ce87cd3fcba1dca4439679c65e133ed6d8a0d7698e4cca3e2599044 actual=025a287a6ce87cd3fcba1dca4439679c65e133ed6d8a0d7698e4cca3e2599044",
+      "details": "claimed=a9aa2786498de0254dd4f4605edc7351c7b53a1e98d17fb7032c7b48e5bc4136 actual=a9aa2786498de0254dd4f4605edc7351c7b53a1e98d17fb7032c7b48e5bc4136",
       "name": "stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__FW-validator-1.json",
       "passed": true,
       "severity": "critical"
@@ -1837,7 +1897,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=211738afc12a8c4e18103b4c4e4e0cddc9991bef4fa4d3273e3b5971c79530a0 actual=211738afc12a8c4e18103b4c4e4e0cddc9991bef4fa4d3273e3b5971c79530a0",
+      "details": "claimed=b42060b1aed2b52c8dccfb12b5b71c02bec8db2de5d9bc78e69443fd4ad622f6 actual=b42060b1aed2b52c8dccfb12b5b71c02bec8db2de5d9bc78e69443fd4ad622f6",
       "name": "stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__FW-validator-2.json",
       "passed": true,
       "severity": "critical"
@@ -1849,7 +1909,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=d0442bd0aea4d6b929fa1739656811a167d2dc9ffe862a04d7a69ca46aa51254 actual=d0442bd0aea4d6b929fa1739656811a167d2dc9ffe862a04d7a69ca46aa51254",
+      "details": "claimed=1abaf5eac820b27c6217282042fb935ad552f0d780bdac423d1fff38f42b9db0 actual=1abaf5eac820b27c6217282042fb935ad552f0d780bdac423d1fff38f42b9db0",
       "name": "stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__TW-validator-1.json",
       "passed": true,
       "severity": "critical"
@@ -1861,7 +1921,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=f86b1d4b8a7077a66579a5f9239eb04ed45c1edeeb9f5d66dda63913582bb2e9 actual=f86b1d4b8a7077a66579a5f9239eb04ed45c1edeeb9f5d66dda63913582bb2e9",
+      "details": "claimed=a9ca397551716e21000fedb93607bc0e95148e85536ff4b6dc363c512c0c0129 actual=a9ca397551716e21000fedb93607bc0e95148e85536ff4b6dc363c512c0c0129",
       "name": "stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__claim.json",
       "passed": true,
       "severity": "critical"
@@ -2941,49 +3001,61 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=a802fbf9f0d46d7600c2130d9fae918de9d48b597ecfab7ff81c940d87af7cad actual=a802fbf9f0d46d7600c2130d9fae918de9d48b597ecfab7ff81c940d87af7cad",
+      "details": "claimed=3ea6bed452ddf334bf0878415de946256355e50e93e9538535c8b676c678e64e actual=3ea6bed452ddf334bf0878415de946256355e50e93e9538535c8b676c678e64e",
       "name": "stable release manifest hash matches: self_validation/self_certificate.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=98489 actual=98489",
+      "details": "claimed=108427 actual=108427",
       "name": "stable release manifest bytes match: self_validation/self_certificate.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1 actual=0ea274f6765788a72d26a6e5a0811c0e74c1ab3a4f7c46126337f5c6d55c6ac1",
+      "details": "claimed=7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47 actual=7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
       "name": "stable release manifest hash matches: self_validation/v101_targeted_probe_results.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=3099 actual=3099",
+      "details": "claimed=3186 actual=3186",
       "name": "stable release manifest bytes match: self_validation/v101_targeted_probe_results.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=ed6e49b3aa31394692b8d8fcee36f39fc64c202164b4a29bdbe1ca5d34362eb4 actual=ed6e49b3aa31394692b8d8fcee36f39fc64c202164b4a29bdbe1ca5d34362eb4",
+      "details": "claimed=20513dff697391ad605193a37f494870673e28aee7f789b781a6c09072f45b9e actual=20513dff697391ad605193a37f494870673e28aee7f789b781a6c09072f45b9e",
+      "name": "stable release manifest hash matches: self_validation/v102_charter_caps_probe_results.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=3927 actual=3927",
+      "name": "stable release manifest bytes match: self_validation/v102_charter_caps_probe_results.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=0c90aba64b96bd1502afdc5b5272249feb5c75987c896ac313855f5ff4264440 actual=0c90aba64b96bd1502afdc5b5272249feb5c75987c896ac313855f5ff4264440",
       "name": "stable release manifest hash matches: skills/nozickian-verify/SKILL.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=10243 actual=10243",
+      "details": "claimed=13084 actual=13084",
       "name": "stable release manifest bytes match: skills/nozickian-verify/SKILL.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=c914bd4c9e5bdb9c20557706a817ee8152021272a9c9420d94527727d4a55cd7 actual=c914bd4c9e5bdb9c20557706a817ee8152021272a9c9420d94527727d4a55cd7",
+      "details": "claimed=e0368bdf6b00be4c71bb75032ba30663eea76f041b966b1e067ab6b2b868ec17 actual=e0368bdf6b00be4c71bb75032ba30663eea76f041b966b1e067ab6b2b868ec17",
       "name": "stable release manifest hash matches: skills/nozickian-verify/assets/certificate-template.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1860 actual=1860",
+      "details": "claimed=2048 actual=2048",
       "name": "stable release manifest bytes match: skills/nozickian-verify/assets/certificate-template.json",
       "passed": true,
       "severity": "critical"
@@ -3085,13 +3157,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=18ec209bbe81b5fda00541d7f949d7e30b1dc5a08e3fa7c5932f7e9915cfb360 actual=18ec209bbe81b5fda00541d7f949d7e30b1dc5a08e3fa7c5932f7e9915cfb360",
+      "details": "claimed=4bfcf63bd1020ff614a58e09fb2dcb210fb50d9d956023d0b9f095a6f9a66029 actual=4bfcf63bd1020ff614a58e09fb2dcb210fb50d9d956023d0b9f095a6f9a66029",
       "name": "stable release manifest hash matches: skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=2888 actual=2888",
+      "details": "claimed=3925 actual=3925",
       "name": "stable release manifest bytes match: skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
       "passed": true,
       "severity": "critical"
@@ -3121,37 +3193,37 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=494b99f882745ab1113d87aee1eae7e8c94874027bf6e955146289a579afb8d4 actual=494b99f882745ab1113d87aee1eae7e8c94874027bf6e955146289a579afb8d4",
+      "details": "claimed=d9d83c6fba0c0dea89150db6a21d4822c06cd82d7302ae39d3eff6d7eb1c7d31 actual=d9d83c6fba0c0dea89150db6a21d4822c06cd82d7302ae39d3eff6d7eb1c7d31",
       "name": "stable release manifest hash matches: skills/nozickian-verify/references/STANDARD.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=6970 actual=6970",
+      "details": "claimed=7422 actual=7422",
       "name": "stable release manifest bytes match: skills/nozickian-verify/references/STANDARD.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=6ffc4f24b92bb373e4bbf4f7f64f5bc0a6262bc5ecbede78b5e2c674bf5946e3 actual=6ffc4f24b92bb373e4bbf4f7f64f5bc0a6262bc5ecbede78b5e2c674bf5946e3",
+      "details": "claimed=37facb7c3e1f0eb86ec8974dff840dd2111446a7c2d409c1659c55a58ca2331a actual=37facb7c3e1f0eb86ec8974dff840dd2111446a7c2d409c1659c55a58ca2331a",
       "name": "stable release manifest hash matches: skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=2097 actual=2097",
+      "details": "claimed=5242 actual=5242",
       "name": "stable release manifest bytes match: skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=8455f591a1773c83ef5f7423fc3088857a41d89743a2faa4c39c56bf8b07360f actual=8455f591a1773c83ef5f7423fc3088857a41d89743a2faa4c39c56bf8b07360f",
+      "details": "claimed=b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a actual=b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a",
       "name": "stable release manifest hash matches: skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=24030 actual=24030",
+      "details": "claimed=24026 actual=24026",
       "name": "stable release manifest bytes match: skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
       "passed": true,
       "severity": "critical"
@@ -3169,13 +3241,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=0c297f685ffad01e0ec0e915135d32fa6d69f7a2c4159b1463d4630984ddefc5 actual=0c297f685ffad01e0ec0e915135d32fa6d69f7a2c4159b1463d4630984ddefc5",
+      "details": "claimed=4b52c8477d2fb8def2ea0bf360eab56171df5bcc9c96c37018dd535583941c58 actual=4b52c8477d2fb8def2ea0bf360eab56171df5bcc9c96c37018dd535583941c58",
       "name": "stable release manifest hash matches: skills/nozickian-verify/scripts/run_formal_artifact_verification.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=45345 actual=45345",
+      "details": "claimed=45341 actual=45341",
       "name": "stable release manifest bytes match: skills/nozickian-verify/scripts/run_formal_artifact_verification.py",
       "passed": true,
       "severity": "critical"
@@ -3205,13 +3277,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=57fd246e60716305a855aba5547bee8638ea1d44df01f033b412ed3cca8b6bf0 actual=57fd246e60716305a855aba5547bee8638ea1d44df01f033b412ed3cca8b6bf0",
+      "details": "claimed=a20d34b945fd7fd502172b337dafe63f02e7743eb9e9ea55973b168cec702d5c actual=a20d34b945fd7fd502172b337dafe63f02e7743eb9e9ea55973b168cec702d5c",
       "name": "stable release manifest hash matches: skills/nozickian-verify/scripts/run_live_skill_evals.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=9002 actual=9002",
+      "details": "claimed=9012 actual=9012",
       "name": "stable release manifest bytes match: skills/nozickian-verify/scripts/run_live_skill_evals.py",
       "passed": true,
       "severity": "critical"
@@ -3229,13 +3301,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=ab6c40fa74c0aa62168b69920ed6969d64cf7cb6e4dee80ad77b724e15d0bbd7 actual=ab6c40fa74c0aa62168b69920ed6969d64cf7cb6e4dee80ad77b724e15d0bbd7",
+      "details": "claimed=e6ca47d22bda5e82480572078d87dc4b380761857add492135ef7f5a50662a37 actual=e6ca47d22bda5e82480572078d87dc4b380761857add492135ef7f5a50662a37",
       "name": "stable release manifest hash matches: skills/nozickian-verify/scripts/validate_package.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=98881 actual=98881",
+      "details": "claimed=98865 actual=98865",
       "name": "stable release manifest bytes match: skills/nozickian-verify/scripts/validate_package.py",
       "passed": true,
       "severity": "critical"
@@ -3337,7 +3409,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=5767",
+      "details": "chars=5763",
       "name": "root GitHub README is substantive",
       "passed": true,
       "severity": "critical"
@@ -3457,7 +3529,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=1490",
+      "details": "chars=1486",
       "name": "GitHub README substantive: docs/quickstart/README.md",
       "passed": true,
       "severity": "critical"
@@ -4135,7 +4207,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=d2c09ee25e9c71be53ead944dc8ca5255f9740ad45d3ec1ca640587ab5edccdf actual=d2c09ee25e9c71be53ead944dc8ca5255f9740ad45d3ec1ca640587ab5edccdf",
+      "details": "expected=18f05c9f2af7625099894cecb4784d2e7404e3eb325c654114f5cefd29acacbe actual=18f05c9f2af7625099894cecb4784d2e7404e3eb325c654114f5cefd29acacbe",
       "name": "manifest hash matches: .claude-plugin/plugin.json",
       "passed": true,
       "severity": "critical"
@@ -4147,19 +4219,19 @@
       "severity": "critical"
     },
     {
-      "details": "expected=886952804c0e0c7c973e86b0173c67782199a6193fdbaafe143d0be034b7d3c2 actual=886952804c0e0c7c973e86b0173c67782199a6193fdbaafe143d0be034b7d3c2",
+      "details": "expected=7ca9440f4b702e4e11f083665839ef5a66010b0efb47c8c42517101260d0f0f7 actual=7ca9440f4b702e4e11f083665839ef5a66010b0efb47c8c42517101260d0f0f7",
       "name": "manifest hash matches: PACKAGE_SURFACE.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=1078d70420f69547f0806dc89263360b0279c787a347f6ca4479f5a929e2aa4f actual=1078d70420f69547f0806dc89263360b0279c787a347f6ca4479f5a929e2aa4f",
+      "details": "expected=9b4f50213654f846a3b69ba177f97a3c98990b7da063eb1f377e2fe4b69ee9fb actual=9b4f50213654f846a3b69ba177f97a3c98990b7da063eb1f377e2fe4b69ee9fb",
       "name": "manifest hash matches: RELEASE_LOCK.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=ec1e2fdc98a645fe946b24032bdc1578261ea0d5f04c77f332c264c4d053e0df actual=ec1e2fdc98a645fe946b24032bdc1578261ea0d5f04c77f332c264c4d053e0df",
+      "details": "expected=0ff7836ab241b148cd0aaa7c47e9252badd81ac71c3f1f173d0acaecdb056164 actual=0ff7836ab241b148cd0aaa7c47e9252badd81ac71c3f1f173d0acaecdb056164",
       "name": "manifest hash matches: agents/ntt-claim-extractor.md",
       "passed": true,
       "severity": "critical"
@@ -4183,7 +4255,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=03f86435ca61a8f0979a015d08727e0d1fbc2fc63c17cbd7625f11eebf1de996 actual=03f86435ca61a8f0979a015d08727e0d1fbc2fc63c17cbd7625f11eebf1de996",
+      "details": "expected=c3919d8c6322ff20d66b0c2c7d640812a81f702e4d8806387f6bb3df0985b78e actual=c3919d8c6322ff20d66b0c2c7d640812a81f702e4d8806387f6bb3df0985b78e",
       "name": "manifest hash matches: agents/ntt-gate-auditor.md",
       "passed": true,
       "severity": "critical"
@@ -4201,7 +4273,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=a097e2c78674cdf018baad3329eecc41aa9f32093ad05a1bced9fefd11790542 actual=a097e2c78674cdf018baad3329eecc41aa9f32093ad05a1bced9fefd11790542",
+      "details": "expected=aac1402aaf2d63d631ed09fee2eb65742583bd3d180211d41d42c9dc30a91de3 actual=aac1402aaf2d63d631ed09fee2eb65742583bd3d180211d41d42c9dc30a91de3",
       "name": "manifest hash matches: agents/ntt-source-verifier.md",
       "passed": true,
       "severity": "critical"
@@ -4255,7 +4327,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=fdd9b8f9a5e4ac3ff7ba8d351e6bcdf7adc679ec6f447131e18b61bad88bbdb6 actual=fdd9b8f9a5e4ac3ff7ba8d351e6bcdf7adc679ec6f447131e18b61bad88bbdb6",
+      "details": "expected=d01c6ae0b1ea1cc28d7fdf56c82457d2cd02787c0273cd73c644ef7981ba07ae actual=d01c6ae0b1ea1cc28d7fdf56c82457d2cd02787c0273cd73c644ef7981ba07ae",
       "name": "manifest hash matches: docs/quickstart/README.md",
       "passed": true,
       "severity": "critical"
@@ -4279,7 +4351,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=ed6e49b3aa31394692b8d8fcee36f39fc64c202164b4a29bdbe1ca5d34362eb4 actual=ed6e49b3aa31394692b8d8fcee36f39fc64c202164b4a29bdbe1ca5d34362eb4",
+      "details": "expected=0c90aba64b96bd1502afdc5b5272249feb5c75987c896ac313855f5ff4264440 actual=0c90aba64b96bd1502afdc5b5272249feb5c75987c896ac313855f5ff4264440",
       "name": "manifest hash matches: skills/nozickian-verify/SKILL.md",
       "passed": true,
       "severity": "critical"
@@ -4327,7 +4399,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=18ec209bbe81b5fda00541d7f949d7e30b1dc5a08e3fa7c5932f7e9915cfb360 actual=18ec209bbe81b5fda00541d7f949d7e30b1dc5a08e3fa7c5932f7e9915cfb360",
+      "details": "expected=4bfcf63bd1020ff614a58e09fb2dcb210fb50d9d956023d0b9f095a6f9a66029 actual=4bfcf63bd1020ff614a58e09fb2dcb210fb50d9d956023d0b9f095a6f9a66029",
       "name": "manifest hash matches: skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
       "passed": true,
       "severity": "critical"
@@ -4345,19 +4417,19 @@
       "severity": "critical"
     },
     {
-      "details": "expected=494b99f882745ab1113d87aee1eae7e8c94874027bf6e955146289a579afb8d4 actual=494b99f882745ab1113d87aee1eae7e8c94874027bf6e955146289a579afb8d4",
+      "details": "expected=d9d83c6fba0c0dea89150db6a21d4822c06cd82d7302ae39d3eff6d7eb1c7d31 actual=d9d83c6fba0c0dea89150db6a21d4822c06cd82d7302ae39d3eff6d7eb1c7d31",
       "name": "manifest hash matches: skills/nozickian-verify/references/STANDARD.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=6ffc4f24b92bb373e4bbf4f7f64f5bc0a6262bc5ecbede78b5e2c674bf5946e3 actual=6ffc4f24b92bb373e4bbf4f7f64f5bc0a6262bc5ecbede78b5e2c674bf5946e3",
+      "details": "expected=37facb7c3e1f0eb86ec8974dff840dd2111446a7c2d409c1659c55a58ca2331a actual=37facb7c3e1f0eb86ec8974dff840dd2111446a7c2d409c1659c55a58ca2331a",
       "name": "manifest hash matches: skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=8455f591a1773c83ef5f7423fc3088857a41d89743a2faa4c39c56bf8b07360f actual=8455f591a1773c83ef5f7423fc3088857a41d89743a2faa4c39c56bf8b07360f",
+      "details": "expected=b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a actual=b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a",
       "name": "manifest hash matches: skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
       "passed": true,
       "severity": "critical"
@@ -4369,7 +4441,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=0c297f685ffad01e0ec0e915135d32fa6d69f7a2c4159b1463d4630984ddefc5 actual=0c297f685ffad01e0ec0e915135d32fa6d69f7a2c4159b1463d4630984ddefc5",
+      "details": "expected=4b52c8477d2fb8def2ea0bf360eab56171df5bcc9c96c37018dd535583941c58 actual=4b52c8477d2fb8def2ea0bf360eab56171df5bcc9c96c37018dd535583941c58",
       "name": "manifest hash matches: skills/nozickian-verify/scripts/run_formal_artifact_verification.py",
       "passed": true,
       "severity": "critical"
@@ -4387,7 +4459,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=57fd246e60716305a855aba5547bee8638ea1d44df01f033b412ed3cca8b6bf0 actual=57fd246e60716305a855aba5547bee8638ea1d44df01f033b412ed3cca8b6bf0",
+      "details": "expected=a20d34b945fd7fd502172b337dafe63f02e7743eb9e9ea55973b168cec702d5c actual=a20d34b945fd7fd502172b337dafe63f02e7743eb9e9ea55973b168cec702d5c",
       "name": "manifest hash matches: skills/nozickian-verify/scripts/run_live_skill_evals.py",
       "passed": true,
       "severity": "critical"
@@ -4399,7 +4471,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=ab6c40fa74c0aa62168b69920ed6969d64cf7cb6e4dee80ad77b724e15d0bbd7 actual=ab6c40fa74c0aa62168b69920ed6969d64cf7cb6e4dee80ad77b724e15d0bbd7",
+      "details": "expected=e6ca47d22bda5e82480572078d87dc4b380761857add492135ef7f5a50662a37 actual=e6ca47d22bda5e82480572078d87dc4b380761857add492135ef7f5a50662a37",
       "name": "manifest hash matches: skills/nozickian-verify/scripts/validate_package.py",
       "passed": true,
       "severity": "critical"
@@ -4519,7 +4591,7 @@
       "severity": "critical"
     },
     {
-      "details": "lines=140",
+      "details": "lines=146",
       "name": "skill line count within guidance",
       "passed": true,
       "severity": "critical"
@@ -4537,7 +4609,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=6970",
+      "details": "chars=7422",
       "name": "STANDARD.md substantive length",
       "passed": true,
       "severity": "critical"
@@ -4633,6 +4705,30 @@
       "severity": "critical"
     },
     {
+      "details": "EVAL_BEST_PRACTICES.md",
+      "name": "reference exists: EVAL_BEST_PRACTICES.md",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "EVAL_BEST_PRACTICES.md",
+      "name": "reference substantive: EVAL_BEST_PRACTICES.md",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "SOURCES.md",
+      "name": "reference exists: SOURCES.md",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "SOURCES.md",
+      "name": "reference substantive: SOURCES.md",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
       "details": "ARTIFACT_GUIDE.md",
       "name": "reference exists: ARTIFACT_GUIDE.md",
       "passed": true,
@@ -4657,42 +4753,6 @@
       "severity": "critical"
     },
     {
-      "details": "SUBAGENT_PROTOCOLS.md",
-      "name": "reference exists: SUBAGENT_PROTOCOLS.md",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "SUBAGENT_PROTOCOLS.md",
-      "name": "reference substantive: SUBAGENT_PROTOCOLS.md",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "SOURCES.md",
-      "name": "reference exists: SOURCES.md",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "SOURCES.md",
-      "name": "reference substantive: SOURCES.md",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "EVAL_BEST_PRACTICES.md",
-      "name": "reference exists: EVAL_BEST_PRACTICES.md",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "EVAL_BEST_PRACTICES.md",
-      "name": "reference substantive: EVAL_BEST_PRACTICES.md",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
       "details": "EVIDENCE_SCHEMA.md",
       "name": "reference exists: EVIDENCE_SCHEMA.md",
       "passed": true,
@@ -4701,6 +4761,30 @@
     {
       "details": "EVIDENCE_SCHEMA.md",
       "name": "reference substantive: EVIDENCE_SCHEMA.md",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "STANDARD.md",
+      "name": "reference exists: STANDARD.md",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "STANDARD.md",
+      "name": "reference substantive: STANDARD.md",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "SUBAGENT_PROTOCOLS.md",
+      "name": "reference exists: SUBAGENT_PROTOCOLS.md",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "SUBAGENT_PROTOCOLS.md",
+      "name": "reference substantive: SUBAGENT_PROTOCOLS.md",
       "passed": true,
       "severity": "critical"
     },
@@ -4797,18 +4881,6 @@
     {
       "details": "no automatic",
       "name": "PASS-TRACKED upgrade audit contains term: no automatic",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "STANDARD.md",
-      "name": "reference exists: STANDARD.md",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "STANDARD.md",
-      "name": "reference substantive: STANDARD.md",
       "passed": true,
       "severity": "critical"
     },
@@ -5185,7 +5257,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=1154",
+      "details": "chars=2554",
       "name": "agent body substantive: ntt-claim-extractor",
       "passed": true,
       "severity": "critical"
@@ -5329,7 +5401,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=1234",
+      "details": "chars=2516",
       "name": "agent body substantive: ntt-source-verifier",
       "passed": true,
       "severity": "critical"
@@ -5905,7 +5977,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=1782",
+      "details": "chars=2787",
       "name": "agent body substantive: ntt-gate-auditor",
       "passed": true,
       "severity": "critical"
@@ -6799,7 +6871,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=98881",
+      "details": "chars=98865",
       "name": "script substantive length: validate_package.py",
       "passed": true,
       "severity": "critical"
@@ -7153,7 +7225,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=9002",
+      "details": "chars=9012",
       "name": "script substantive length: run_live_skill_evals.py",
       "passed": true,
       "severity": "critical"
@@ -7279,7 +7351,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=45345",
+      "details": "chars=45341",
       "name": "script substantive length: run_formal_artifact_verification.py",
       "passed": true,
       "severity": "critical"
@@ -7531,7 +7603,7 @@
       "severity": "critical"
     },
     {
-      "details": "{'PASS-TRACKED', 'PASS-SCOPED'}",
+      "details": "{'PASS-SCOPED', 'PASS-TRACKED'}",
       "name": "formal runner PASS_STATUSES excludes LIMITED",
       "passed": true,
       "severity": "critical"
@@ -7543,7 +7615,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=24030",
+      "details": "chars=24026",
       "name": "script substantive length: certify_pass_tracked_upgrade.py",
       "passed": true,
       "severity": "critical"
@@ -7633,13 +7705,13 @@
       "severity": "critical"
     },
     {
-      "details": "chars=24030",
+      "details": "chars=24026",
       "name": "PASS-TRACKED certifier rejects missing runtime evidence",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "chars=24030",
+      "details": "chars=24026",
       "name": "PASS-TRACKED certifier requires trace and downstream checks",
       "passed": true,
       "severity": "critical"
@@ -7873,7 +7945,7 @@
       "severity": "critical"
     },
     {
-      "details": "{\"commands_executed\": 6, \"commands\": [{\"command\": \"python3 skills/nozickian-verify/scripts/validate_package.py . --self-test [equivalent: base package validator in temp copy]\", \"passed\": true, \"details\": {\"status\": \"PASS\", \"critical_failed\": 0}}, {\"command\": \"python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence\", \"passed\": true, \"details\": {\"status\": \"PASS-SCOPED\", \"critical_failed\": 0}}, {\"command\": \"python3 skills/nozickian-verify/scripts/run_regression_evals.py .\", \"passed\": true, \"details\": {\"checks_total\": 166, \"checks_failed\": 0}}, {\"command\": \"python3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . README.md --dry-run --skip-prechecks --external-output\", \"passed\": true, \"details\": {\"status\": \"UNVERIFIED_RUNTIME\", \"output_dir\": \"<tmp-nozickian-path>\"}}, {\"command\": \"python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json <external>\", \"passed\": true, \"details\": {\"passed\": 47, \"total\": 47}}, {\"command\": \"python3 skills/nozickian-verify/scripts/validate_package.py . [final]\", \"passed\": true, \"details\": {\"status\": \"PASS\", \"critical_failed\": 0}}], \"changed_package_files\": [], \"outputs_external\": true}",
+      "details": "{\"commands_executed\": 6, \"commands\": [{\"command\": \"python3 skills/nozickian-verify/scripts/validate_package.py . --self-test [equivalent: base package validator in temp copy]\", \"passed\": true, \"details\": {\"status\": \"PASS\", \"critical_failed\": 0}}, {\"command\": \"python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence\", \"passed\": true, \"details\": {\"status\": \"PASS-SCOPED\", \"critical_failed\": 0}}, {\"command\": \"python3 skills/nozickian-verify/scripts/run_regression_evals.py .\", \"passed\": true, \"details\": {\"checks_total\": 166, \"checks_failed\": 0}}, {\"command\": \"python3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . README.md --dry-run --skip-prechecks --external-output\", \"passed\": true, \"details\": {\"status\": \"UNVERIFIED_RUNTIME\", \"output_dir\": \"<tmp-nozickian-path>/ntt_release_formal_invocation_dry_run\"}}, {\"command\": \"python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json <external>\", \"passed\": true, \"details\": {\"passed\": 47, \"total\": 47}}, {\"command\": \"python3 skills/nozickian-verify/scripts/validate_package.py . [final]\", \"passed\": true, \"details\": {\"status\": \"PASS\", \"critical_failed\": 0}}], \"changed_package_files\": [], \"outputs_external\": true}",
       "name": "release-lock command chain is idempotent with stable manifest",
       "passed": true,
       "severity": "critical"
@@ -8119,8 +8191,8 @@
       "severity": "critical"
     }
   ],
-  "checks_passed": 1353,
-  "checks_total": 1353,
+  "checks_passed": 1365,
+  "checks_total": 1365,
   "critical_failed": 0,
   "gate_contract": {
     "cases": [
@@ -8509,7 +8581,7 @@
         "outside_root": "<temporary outside-root probe>",
         "passed": true,
         "reasons": [
-          "C-001: invalid evidence refs: <tmp-ntt-path>: evidence ref must be relative to evidence_root"
+          "C-001: invalid evidence refs: /tmp/ntt_gate_absolute_ref_probe.json: evidence ref must be relative to evidence_root"
         ],
         "status": "FAIL"
       },

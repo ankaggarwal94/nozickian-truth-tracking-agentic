@@ -43,19 +43,21 @@ python3 skills/nozickian-verify/scripts/validate_package.py <plugin-root> --self
 ```
 
 8. If the user asks to certify or promote PASS-SCOPED to PASS-TRACKED, require the separate PASS-TRACKED upgrade audit bundle, live Claude Code fixture run, formal artifact run with trace authentication, official validator outputs, and `certify_pass_tracked_upgrade.py`; otherwise retain PASS-SCOPED or lower.
-9. Report a gate result using only these statuses: `PASS-TRACKED`, `PASS-SCOPED`, `LIMITED`, `FAIL`, or `UNVERIFIED`.
+9. Consistency sweep (stale-echo lane) - mandatory whenever the artifact is a revision of previously corrected material, or any claim was corrected or refuted during this verification: after per-claim adjudication, sweep the ENTIRE artifact for residues of every superseded wording (old values, enums, phrases, identifiers, quoted and paraphrased forms). Flag every echo even when it sits inside a sentence whose main proposition is true - stale echoes are consistency-class defects that per-claim truth-testing will not surface. Dispatch `ntt-claim-extractor` in echo-sweep mode (see `references/SUBAGENT_PROTOCOLS.md`). Before declaring the sweep inapplicable, affirmatively check for correction evidence (a supplied corrections list, changelog entries, "previously"/"corrected"/"superseded" markers in the artifact) and state in the report what was checked; only then may the sweep be skipped.
+10. Remote ground-truth escalation enforcement (hard rule): the source/claim/audit subagents are local-only (Read, Grep, Glob) by design. When any subagent returns a `REMOTE_GROUND_TRUTH_REQUIRED` escalation, the parent MUST either (a) fetch the remote evidence itself or via a web-capable general-purpose verifier and feed it back for re-adjudication, or (b) leave the claim UNKNOWN/UNVERIFIED and reflect that in the gate - a critical claim with an unresolved escalation caps the gate at `LIMITED`. Never let a claim pass as verified on a local mirror alone unless the mirror carries explicit freshness provenance (pinned commit/date). Parent-enforced and audited by `ntt-gate-auditor`; `ntt_gate.py` does not mechanically check it.
+11. Report a gate result using only these statuses: `PASS-TRACKED`, `PASS-SCOPED`, `LIMITED`, `FAIL`, or `UNVERIFIED`.
 
 ## Delegation pattern
 
 Use the following subagents when available:
 
 - `ntt-method-cartographer`: reconstruct method M and identify unknowns.
-- `ntt-claim-extractor`: extract and rank atomic claims.
-- `ntt-source-verifier`: verify source/provenance claims and detect stale or context-only support.
+- `ntt-claim-extractor`: extract and rank atomic claims; also runs echo-sweep mode after corrections (consistency sweep - see `references/SUBAGENT_PROTOCOLS.md`).
+- `ntt-source-verifier`: verify source/provenance claims and detect stale or context-only support; emits `REMOTE_GROUND_TRUTH_REQUIRED` escalations for remote-only ground truth - never verifies from an unproven local mirror.
 - `ntt-code-verifier`: test code behavior, build/test commands, dependency drift, and mutation-resistant evidence.
 - `ntt-false-world-adversary`: construct and test nearby false worlds.
 - `ntt-true-world-adherence`: construct and test nearby true worlds.
-- `ntt-gate-auditor`: independently audit the certificate and gate result.
+- `ntt-gate-auditor`: independently audit the certificate and gate result; audits that the consistency sweep ran when corrections occurred and that no verified claim rests on an unresolved remote escalation or unproven local mirror.
 - `ntt-skill-self-auditor`: validate this package or another skill/plugin against the same standard.
 
 For complex codebases or documents, dispatch many narrow subagent tasks rather than asking one agent to hold the entire artifact. Ask each subagent to return only claim IDs, evidence IDs, pass/fail/unknown status, and residual risks.
@@ -69,6 +71,8 @@ A claim is not verified merely because it is cited, plausible, grounded to retri
 - In relevant nearby worlds where `p` is false, `M` rejects, revises, or flags `p`.
 - In relevant nearby worlds where `p` remains true, `M` retains or recovers `p`.
 - The gate thresholds are met and not self-relaxed by the certificate.
+- A revised or corrected artifact is not `PASS-TRACKED` while stale echoes of superseded claims remain unswept: the consistency sweep must have run (or been explicitly ruled inapplicable) before that status is issued. Parent-enforced; `ntt_gate.py` does not check it.
+- A claim whose authoritative ground truth is remote-only is never verified from a local mirror alone without explicit freshness provenance (pinned commit/date), and unresolved `REMOTE_GROUND_TRUTH_REQUIRED` escalations leave the claim UNKNOWN - critical ones cap the gate at `LIMITED`. Parent-enforced; `ntt_gate.py` does not check it.
 
 ## Required output
 
@@ -81,8 +85,10 @@ Always include:
 5. True-world adherence evidence.
 6. Contradictions and residual risks.
 7. Derived/downstream claims, if any, with independent status rather than inherited closure.
-8. Final gate result.
-9. Commands run and artifacts generated.
+8. Consistency sweep findings (stale echoes of corrected claims), or the explicit reason the sweep did not apply.
+9. Remote escalations raised and how each was resolved (fetched evidence / UNVERIFIED), or none.
+10. Final gate result.
+11. Commands run and artifacts generated.
 
 If live runtime testing was not performed, say so explicitly and downgrade to `PASS-SCOPED`, `LIMITED`, or `UNVERIFIED` as appropriate.
 

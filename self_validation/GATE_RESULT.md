@@ -7,11 +7,11 @@ Status: **PASS-SCOPED**
 
 | Metric | Value |
 |---|---:|
-| claims | 6 |
+| claims | 7 |
 | failed_claims | 0 |
 | critical_failed | 0 |
 | major_failed | 0 |
-| scope_limitations | 31 |
+| scope_limitations | 32 |
 | certificate_method_completeness | 1.0 |
 | evidence_root_checked | True |
 | strict_evidence | True |
@@ -29,5 +29,6 @@ Status: **PASS-SCOPED**
 | C-formal-invocation | critical | PASS | 1.00 | 1.00 | 1.00 | 2 | 2 | 36 | 3 | — |
 | C-pass-tracked-upgrade-audit | critical | PASS | 1.00 | 1.00 | 1.00 | 2 | 2 | 3 | 1 | — |
 | C-github-readme-documentation | major | PASS | 1.00 | 1.00 | 1.00 | 2 | 2 | 1 | 1 | — |
+| C-charter-caps | critical | PASS | 1.00 | 1.00 | 1.00 | 2 | 2 | 2 | 1 | — |
 
 This deterministic result checks declared fields, thresholds, tests, outcomes, local evidence-ref containment, unique canonical evidence-ref and modal-test counting, structured evidence binding for every cited local ref, and exact SHA-256 equality between artifact_path and hash_or_version, and URI-scheme rejection for both evidence refs and artifact_path. It does not independently prove expert-level semantic adequacy of every evidence artifact or perturbation.
