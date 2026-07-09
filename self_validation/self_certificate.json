@@ -3,7 +3,7 @@
     "assurance_tier": "team-internal-reuse-with-hardened-static-evidence-and-trace-authentication",
     "name": "nozickian-truth-tracking-agentic",
     "type": "Claude Code plugin with Agent Skill and subagents",
-    "version": "1.0.1"
+    "version": "1.0.2"
   },
   "claims": [
     {

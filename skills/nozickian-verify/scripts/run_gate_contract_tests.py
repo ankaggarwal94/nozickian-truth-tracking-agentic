@@ -541,6 +541,51 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     minor["claims"][0]["false_world_tests"] = []
     minor["claims"][0]["true_world_tests"] = []
     add("minor_claim_without_modal_tests", minor, {"PASS-TRACKED"})
+
+    manifest_unknowns = copy.deepcopy(base)
+    manifest_unknowns["scope_limitations"] = []
+    manifest_unknowns["method_manifest"]["unknowns"] = ["x"]
+    add("manifest_unknowns_downgrades_scoped", manifest_unknowns, {"PASS-SCOPED"})
+
+    manifest_method_unknowns = copy.deepcopy(base)
+    manifest_method_unknowns["scope_limitations"] = []
+    manifest_method_unknowns["method_manifest"]["method_unknowns"] = ["x"]
+    add("manifest_method_unknowns_synonym_downgrades", manifest_method_unknowns, {"PASS-SCOPED"})
+
+    top_level_unknowns = copy.deepcopy(base)
+    top_level_unknowns["scope_limitations"] = []
+    top_level_unknowns["unknowns"] = ["x"]
+    add("top_level_unknowns_downgrades", top_level_unknowns, {"PASS-SCOPED"})
+
+    nested_manifest_unknowns = copy.deepcopy(base)
+    nested_manifest_unknowns["scope_limitations"] = []
+    nested_manifest_unknowns["method_manifest"]["runtime"] = {"unknowns": ["x"]}
+    add("nested_manifest_unknowns_downgrades", nested_manifest_unknowns, {"PASS-SCOPED"})
+
+    nested_clean_manifest = copy.deepcopy(base)
+    nested_clean_manifest["scope_limitations"] = []
+    nested_clean_manifest["method_manifest"]["runtime"] = {"env": "local", "notes": ["fine"]}
+    add("nested_clean_manifest_still_tracked", nested_clean_manifest, {"PASS-TRACKED"})
+
+    placeholder_unknowns = copy.deepcopy(base)
+    placeholder_unknowns["scope_limitations"] = []
+    placeholder_unknowns["method_manifest"]["unknowns"] = ["none", "n/a", ""]
+    add("placeholder_unknowns_still_tracked", placeholder_unknowns, {"PASS-TRACKED"})
+
+    scalar_zero_unknowns = copy.deepcopy(base)
+    scalar_zero_unknowns["scope_limitations"] = []
+    scalar_zero_unknowns["method_manifest"]["unknowns"] = 0
+    add("scalar_zero_unknowns_still_tracked", scalar_zero_unknowns, {"PASS-TRACKED"})
+
+    major_claim_unknowns = copy.deepcopy(base)
+    major_claim_unknowns["claims"][0]["importance"] = "major"
+    major_claim_unknowns["claims"][0]["method_m"]["method_unknowns"] = ["x"]
+    add("major_claim_method_unknowns_blocks", major_claim_unknowns, {"FAIL"})
+
+    minor_claim_unknowns = copy.deepcopy(base)
+    minor_claim_unknowns["claims"][0]["importance"] = "minor"
+    minor_claim_unknowns["claims"][0]["method_m"]["method_unknowns"] = ["x"]
+    add("minor_claim_method_unknowns_still_tracked", minor_claim_unknowns, {"PASS-TRACKED"})
     return cases
 
 

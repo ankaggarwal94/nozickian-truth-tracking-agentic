@@ -30,7 +30,7 @@
     "review docs/**/*.md and self_validation/README.md; GitHub-facing README files must remain documentation-only and outside plugin-loadable runtime component directories"
   ],
   "plugin_name": "nozickian-truth-tracking-agentic",
-  "plugin_version": "1.0.1",
+  "plugin_version": "1.0.2",
   "release_status": "PASS-SCOPED",
   "required_commands": [
     "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test",
@@ -61,5 +61,5 @@
     "Add PASS_TRACKED_UPGRADE_AUDIT.md and certify_pass_tracked_upgrade.py so a Claude Code runtime environment can machine-check PASS-SCOPED to PASS-TRACKED promotion bundles.",
     "Add a comprehensive GitHub README documentation tree under docs/ and a self_validation README without expanding the plugin runtime surface."
   ],
-  "version": "1.0.1"
+  "version": "1.0.2"
 }

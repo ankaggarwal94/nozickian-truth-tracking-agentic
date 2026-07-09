@@ -96,6 +96,38 @@ def _lower(v: Any) -> str:
     return str(v or "").strip().lower()
 
 
+def _unknown_item(v: Any) -> bool:
+    if isinstance(v, bool): return False
+    if isinstance(v, (int, float)): return False
+    return _nonempty(v)
+
+
+def _collect_method_unknowns(cert: Mapping[str, Any], max_depth: int = 6) -> List[Any]:
+    """Collect non-placeholder method unknowns recorded at certificate scope.
+    Covers canonical method_manifest.unknowns plus near-miss locations (synonym key
+    method_unknowns, nested sub-objects, top-level cert keys) so a material unknown
+    cannot escape PASS-TRACKED by being recorded off-schema. Per-claim method_unknowns
+    are handled separately in evaluate_claim. max_depth < 0 means unbounded.
+    """
+    found: List[Any] = []
+    def walk(node: Any, depth: int = 0) -> None:
+        if max_depth >= 0 and depth > max_depth: return
+        if isinstance(node, Mapping):
+            for k, v in node.items():
+                if k in ("unknowns", "method_unknowns"):
+                    found.extend([u for u in _as_list(v) if _unknown_item(u)])
+                else:
+                    walk(v, depth + 1)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item, depth + 1)
+    if isinstance(cert, Mapping):
+        walk(cert.get("method_manifest"))
+        for key in ("unknowns", "method_unknowns"):
+            found.extend([u for u in _as_list(cert.get(key)) if _unknown_item(u)])
+    return found
+
+
 def load_json(path: Path) -> Dict[str, Any]:
     try: return json.loads(path.read_text(encoding="utf-8"))
     except Exception as exc: raise SystemExit(f"Could not load JSON {path}: {exc}") from exc
@@ -559,7 +591,7 @@ def evaluate_claim(claim: Mapping[str, Any], thresholds: Mapping[str, Mapping[st
     if unresolved: reasons.append(f"unresolved contradictions present: {len(unresolved)}")
     if isinstance(method, Mapping):
         mus = [u for u in _as_list(method.get("method_unknowns")) if _nonempty(u)]
-        if mus and imp == "critical": reasons.append(f"critical method unknowns present: {len(mus)}")
+        if mus and imp in {"critical", "major"}: reasons.append(f"{imp} method unknowns present: {len(mus)}")
     status = "PASS" if not reasons else "FAIL"
     return ClaimResult(cid, imp, status, reasons, sens, adh, method_score, ev_count, structured_count, len(ftests), len(ttests), fr + tr, ev_count, structured_count, unique_artifact_count)
 
@@ -600,7 +632,7 @@ def evaluate_downstream_nonclosure(cert: Mapping[str, Any], claim_ids: set[str])
             reasons.append(f"downstream claim {did} is unverified but lacks a reason")
     return reasons, len(records)
 
-def evaluate_certificate(cert: Mapping[str, Any], evidence_root: Optional[Path] = None, strict_evidence: bool = False) -> Dict[str, Any]:
+def evaluate_certificate(cert: Mapping[str, Any], evidence_root: Optional[Path] = None, strict_evidence: bool = False, max_unknown_depth: int = 6) -> Dict[str, Any]:
     thresholds, notes = merge_thresholds(cert.get("gate_thresholds") if isinstance(cert, Mapping) else None)
     reasons: List[str] = list(notes)
     claims = [c for c in _as_list(cert.get("claims") if isinstance(cert, Mapping) else None) if isinstance(c, Mapping)]
@@ -616,17 +648,18 @@ def evaluate_certificate(cert: Mapping[str, Any], evidence_root: Optional[Path] 
     critical_fail = sum(r.status == "FAIL" and r.importance == "critical" for r in results)
     major_fail = sum(r.status == "FAIL" and r.importance == "major" for r in results)
     scope_unknowns = [x for x in _as_list(cert.get("scope_limitations")) if _nonempty(x)]
+    cert_method_unknowns = _collect_method_unknowns(cert, max_depth=max_unknown_depth)
     if critical_fail or major_fail or not claims or downstream_reasons:
         status = "FAIL"
     elif fail_count or reasons:
         status = "LIMITED"
-    elif scope_unknowns:
+    elif scope_unknowns or cert_method_unknowns:
         status = "PASS-SCOPED"
     else:
         status = "PASS-TRACKED"
     return {
         "status": status,
-        "summary": {"claims": len(claims), "failed_claims": fail_count, "critical_failed": critical_fail, "major_failed": major_fail, "scope_limitations": len(scope_unknowns), "certificate_method_completeness": round(method_score,4), "evidence_root_checked": bool(evidence_root), "strict_evidence": bool(strict_evidence or evidence_root is not None), "structured_evidence_required": bool(strict_evidence or evidence_root is not None), "derived_or_downstream_claims": downstream_count, "downstream_nonclosure_violations": len(downstream_reasons)},
+        "summary": {"claims": len(claims), "failed_claims": fail_count, "critical_failed": critical_fail, "major_failed": major_fail, "scope_limitations": len(scope_unknowns), "certificate_method_unknowns": len(cert_method_unknowns), "certificate_method_completeness": round(method_score,4), "evidence_root_checked": bool(evidence_root), "strict_evidence": bool(strict_evidence or evidence_root is not None), "structured_evidence_required": bool(strict_evidence or evidence_root is not None), "derived_or_downstream_claims": downstream_count, "downstream_nonclosure_violations": len(downstream_reasons)},
         "reasons": reasons,
         "claim_results": [{"claim_id": r.claim_id, "importance": r.importance, "status": r.status, "reasons": r.reasons, "evidence_count": r.evidence_count, "structured_evidence_count": r.structured_evidence_count, "unique_evidence_count": r.unique_evidence_count, "unique_structured_evidence_count": r.unique_structured_evidence_count, "unique_artifact_count": r.unique_artifact_count, "false_world_tests": r.false_world_tests, "true_world_tests": r.true_world_tests, "sensitivity_rate": round(r.sensitivity_rate,4), "adherence_rate": round(r.adherence_rate,4), "method_completeness": round(r.method_completeness,4), "test_results": [asdict(t) for t in r.test_results]} for r in results]
     }
@@ -648,9 +681,10 @@ def to_markdown(result: Mapping[str, Any], cert_path: Path) -> str:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Evaluate a Nozickian truth-tracking certificate JSON")
     ap.add_argument("certificate", type=Path); ap.add_argument("--markdown", type=Path); ap.add_argument("--evidence-root", type=Path); ap.add_argument("--strict-evidence", "--require-structured-evidence", dest="strict_evidence", action="store_true", help="Require structured local evidence binding when --evidence-root is supplied")
+    ap.add_argument("--max-unknown-depth", type=int, default=6, help="Max recursion depth for collecting certificate-scope method unknowns; negative means unbounded (default: 6).")
     args = ap.parse_args(argv)
     evidence_root = args.evidence_root.resolve() if args.evidence_root else None
-    result = evaluate_certificate(load_json(args.certificate), evidence_root=evidence_root, strict_evidence=(args.strict_evidence or evidence_root is not None))
+    result = evaluate_certificate(load_json(args.certificate), evidence_root=evidence_root, strict_evidence=(args.strict_evidence or evidence_root is not None), max_unknown_depth=args.max_unknown_depth)
     print(json.dumps(result, indent=2, sort_keys=True))
     if args.markdown:
         args.markdown.parent.mkdir(parents=True, exist_ok=True); args.markdown.write_text(to_markdown(result, args.certificate), encoding="utf-8")

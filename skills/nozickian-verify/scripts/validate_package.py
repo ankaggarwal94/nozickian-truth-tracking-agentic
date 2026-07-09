@@ -124,6 +124,23 @@ def is_volatile_release_file(rel: str) -> bool:
     return rel in VOLATILE_RELEASE_EXCLUSION_FILES or any(rel.startswith(prefix) for prefix in VOLATILE_RELEASE_EXCLUSION_PREFIXES)
 
 
+IGNORED_CRUFT_DIR_NAMES = {".git", "__pycache__"}
+IGNORED_CRUFT_FILE_NAMES = {".DS_Store"}
+CRUFT_IGNORE_GLOBS = (".git", "__pycache__", "*.pyc", ".DS_Store")
+
+
+def _is_cruft_name(name: str) -> bool:
+    return name in IGNORED_CRUFT_DIR_NAMES or name in IGNORED_CRUFT_FILE_NAMES or name.endswith(".pyc")
+
+
+def _is_cruft_path(root: Path, p: Path) -> bool:
+    try:
+        parts = p.relative_to(root).parts
+    except ValueError:
+        parts = p.parts
+    return any(part in IGNORED_CRUFT_DIR_NAMES for part in parts) or _is_cruft_name(p.name) or p.suffix == ".pyc"
+
+
 PROVENANCE_HYGIENE_FILES = {
     "README.md",
     "AUDIT_REPORT.md",
@@ -152,7 +169,7 @@ STALE_PROVENANCE_PATTERNS = {
 def iter_release_provenance_hygiene_files(root: Path) -> List[str]:
     rels: List[str] = []
     for p in root.rglob("*"):
-        if not p.is_file() or "__pycache__" in p.parts or p.suffix == ".pyc":
+        if not p.is_file() or _is_cruft_path(root, p):
             continue
         rel = relpath(root, p)
         if rel in PROVENANCE_HYGIENE_FILES or any(rel.startswith(prefix) for prefix in PROVENANCE_HYGIENE_PREFIXES):
@@ -326,7 +343,7 @@ def iter_release_inventory_files(root: Path) -> List[str]:
     for p in root.rglob("*"):
         if not p.is_file():
             continue
-        if "__pycache__" in p.parts or p.suffix == ".pyc":
+        if _is_cruft_path(root, p):
             continue
         rel = relpath(root, p)
         if rel == STABLE_RELEASE_MANIFEST or is_volatile_release_file(rel):
@@ -660,7 +677,7 @@ class Validator:
         self.add("GitHub README set matches expected docs tree", set(found_readmes) == {p for p in expected if p.startswith("docs/")}, details=", ".join(sorted(set(found_readmes) ^ {p for p in expected if p.startswith("docs/")})))
         if docs_dir.exists():
             non_readme_md = sorted(relpath(self.root, p) for p in docs_dir.rglob("*.md") if p.is_file() and p.name != "README.md")
-            non_md_files = sorted(relpath(self.root, p) for p in docs_dir.rglob("*") if p.is_file() and p.suffix != ".md")
+            non_md_files = sorted(relpath(self.root, p) for p in docs_dir.rglob("*") if p.is_file() and p.suffix != ".md" and not _is_cruft_name(p.name))
             self.add("GitHub docs tree uses README.md-only Markdown files", not non_readme_md, details=", ".join(non_readme_md))
             self.add("GitHub docs tree has no non-Markdown files", not non_md_files, details=", ".join(non_md_files))
         for rel, terms in EXPECTED_GITHUB_READMES.items():
@@ -689,15 +706,15 @@ class Validator:
 
     def check_closed_surface(self) -> None:
         # Top-level surface closure.
-        top_files = {p.name for p in self.root.iterdir() if p.is_file()} if self.root.exists() else set()
-        top_dirs = {p.name for p in self.root.iterdir() if p.is_dir()} if self.root.exists() else set()
+        top_files = {p.name for p in self.root.iterdir() if p.is_file() and not _is_cruft_name(p.name)} if self.root.exists() else set()
+        top_dirs = {p.name for p in self.root.iterdir() if p.is_dir() and not _is_cruft_name(p.name)} if self.root.exists() else set()
         extra_files = sorted(top_files - ALLOWED_TOP_LEVEL_FILES - FORBIDDEN_ROOT_FILES)
         extra_dirs = sorted(top_dirs - ALLOWED_TOP_LEVEL_DIRS - FORBIDDEN_SURFACES)
         self.add("no unexpected top-level files", not extra_files, details=", ".join(extra_files))
         self.add("no unexpected top-level directories", not extra_dirs, details=", ".join(extra_dirs))
         # CI directory is allowed only for the scoped deterministic workflow.
         if self.path(".github").exists():
-            ci_files = sorted(relpath(self.root, p) for p in self.path(".github").rglob("*") if p.is_file())
+            ci_files = sorted(relpath(self.root, p) for p in self.path(".github").rglob("*") if p.is_file() and not _is_cruft_name(p.name))
             self.add("only expected team CI workflow present", ci_files == [".github/workflows/nozickian-team-ci.yml"], details=", ".join(ci_files))
             ci_path = self.path(".github/workflows/nozickian-team-ci.yml")
             if ci_path.exists():
@@ -711,12 +728,12 @@ class Validator:
         # Plugin manifest directory contains only plugin.json.
         plugdir = self.path(".claude-plugin")
         if plugdir.exists():
-            files = sorted(relpath(self.root, p) for p in plugdir.rglob("*") if p.is_file())
+            files = sorted(relpath(self.root, p) for p in plugdir.rglob("*") if p.is_file() and not _is_cruft_name(p.name))
             self.add(".claude-plugin contains only plugin.json", files == [".claude-plugin/plugin.json"], details=", ".join(files))
         # Only one skill directory.
         skills = self.path("skills")
         if skills.exists():
-            skill_dirs = sorted(relpath(self.root, p) for p in skills.iterdir() if p.is_dir())
+            skill_dirs = sorted(relpath(self.root, p) for p in skills.iterdir() if p.is_dir() and not _is_cruft_name(p.name))
             self.add("only expected skill directory present", skill_dirs == [SKILL_DIR], details=", ".join(skill_dirs))
         agents = self.path("agents")
         if agents.exists():
@@ -724,8 +741,8 @@ class Validator:
             # closed-surface check must enumerate agents/**/*.md rather than
             # only agents/*.md. This guards nested recursive plugin agent false
             # worlds such as agents/evil/hidden.md after a manifest update.
-            agent_files = sorted(relpath(self.root, p) for p in agents.rglob("*.md") if p.is_file())
-            non_md_agent_files = sorted(relpath(self.root, p) for p in agents.rglob("*") if p.is_file() and p.suffix != ".md")
+            agent_files = sorted(relpath(self.root, p) for p in agents.rglob("*.md") if p.is_file() and not _is_cruft_name(p.name))
+            non_md_agent_files = sorted(relpath(self.root, p) for p in agents.rglob("*") if p.is_file() and p.suffix != ".md" and not _is_cruft_name(p.name))
             extra_agents = sorted(set(agent_files) - EXPECTED_AGENT_FILES)
             missing_agents = sorted(EXPECTED_AGENT_FILES - set(agent_files))
             self.add("no extra plugin agents, including recursive subdirectory agents", not extra_agents, details=", ".join(extra_agents))
@@ -735,15 +752,15 @@ class Validator:
         sdir = self.path(SKILL_DIR)
         if sdir.exists():
             allowed = {"SKILL.md", "references", "evals", "assets", "scripts"}
-            children = {p.name for p in sdir.iterdir()}
+            children = {p.name for p in sdir.iterdir() if not _is_cruft_name(p.name)}
             self.add("skill directory contains only expected children", not (children - allowed), details=", ".join(sorted(children - allowed)))
             scripts_dir = sdir/"scripts"
             if scripts_dir.exists():
-                files = {p.name for p in scripts_dir.iterdir() if p.is_file()}
+                files = {p.name for p in scripts_dir.iterdir() if p.is_file() and not _is_cruft_name(p.name)}
                 self.add("scripts directory contains only expected scripts", files == EXPECTED_SCRIPTS, details=", ".join(sorted(files)))
             refs_dir = sdir/"references"
             if refs_dir.exists():
-                files = {p.name for p in refs_dir.iterdir() if p.is_file()}
+                files = {p.name for p in refs_dir.iterdir() if p.is_file() and not _is_cruft_name(p.name)}
                 self.add("references directory contains only expected files", files == EXPECTED_REFERENCES, details=", ".join(sorted(files)))
 
     def check_manifest_hashes(self) -> None:
@@ -967,7 +984,7 @@ class Validator:
     def mutation_copy(self) -> Path:
         tmp = Path(tempfile.mkdtemp(prefix="nozickian_pkg_mut_"))
         dest = tmp / self.root.name
-        shutil.copytree(self.root, dest, ignore=shutil.ignore_patterns("self_validation", "__pycache__", "*.pyc"))
+        shutil.copytree(self.root, dest, ignore=shutil.ignore_patterns("self_validation", "__pycache__", "*.pyc", *CRUFT_IGNORE_GLOBS))
         return dest
 
     def run_mutation_tests(self) -> None:
@@ -1169,7 +1186,7 @@ class Validator:
         with tempfile.TemporaryDirectory(prefix="nozickian_release_idempotence_") as tmp_s:
             tmp = Path(tmp_s)
             dest = tmp / self.root.name
-            shutil.copytree(self.root, dest, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+            shutil.copytree(self.root, dest, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", *CRUFT_IGNORE_GLOBS))
             script_dir = dest / f"{SKILL_DIR}/scripts"
             out_dir = tmp / "ntt_release_formal_invocation_dry_run"
             formal_json = tmp / "ntt_release_formal_invocation_dry_run.json"
@@ -1178,7 +1195,7 @@ class Validator:
             def snapshot(root: Path) -> Dict[str, Tuple[str, int]]:
                 snap: Dict[str, Tuple[str, int]] = {}
                 for p in root.rglob("*"):
-                    if not p.is_file() or "__pycache__" in p.parts or p.suffix == ".pyc":
+                    if not p.is_file() or _is_cruft_path(root, p):
                         continue
                     rel = relpath(root, p)
                     snap[rel] = (sha256_path(p), p.stat().st_size)
