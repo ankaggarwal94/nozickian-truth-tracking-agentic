@@ -3,7 +3,7 @@
   "claim_id": "C-gate-hardening",
   "command_or_source": "v1.0.3 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:0813185c42f1fba4edaf5a7dcb882b00c8ad4816957a737cb53c9bb6c2a67b64",
+  "hash_or_version": "sha256:c7e468e9b1bd106719da03dff50a9b9b2708ab7a4040bfdad3e315259a9b0d1b",
   "observed_result": "Observed v1.0.3 deterministic evidence for C-gate-hardening / FW-gate-one-of-two-test-evidence-wrong",
   "support_summary": "This structured evidence binds FW-gate-one-of-two-test-evidence-wrong to self_validation/v101_targeted_probe_results.json, a package-local artifact with exact SHA-256 provenance under strict local evidence mode. v1.0.3 additionally checks unique canonical evidence refs, unique artifact/hash identities for critical evidence sufficiency, and substantive trace-result payload content. v1.0.3 additionally checks context-aware trace payload isolation and unique modal-test thresholds.",
   "test_id": "FW-gate-one-of-two-test-evidence-wrong",

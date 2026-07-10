@@ -91,6 +91,17 @@ The source verifier is local-only (Read, Grep, Glob). When the authoritative gro
 - `staleness_risk`: how the local mirror could be wrong. Required for EVERY escalation, and ALSO whenever a pinned mirror is accepted as evidence - record what could have changed since the pin.
 - `resolution`: `unresolved` | `fetched-and-readjudicated` | `left-unknown`. Emit `unresolved`; only the parent updates this field after acting on the escalation.
 
+When (and only when) the parent updates `resolution` to `fetched-and-readjudicated`, the record MUST also carry the companion evidence fields proving what was fetched and how it was re-adjudicated - a bare status flip with no fetched evidence is a defect the gate auditor flags:
+
+- `validated_fetch_request`: the request the PARENT reconstructed and validated before fetching (never the verbatim `exact_fetch_spec`), as `scheme` / `host` / `method` / `requested_revision`.
+- `fetched_artifact_sha256`: SHA-256 of the fetched authoritative artifact.
+- `fetched_at_utc`: UTC timestamp of the fetch.
+- `fetched_evidence_refs`: refs to the stored fetched evidence.
+- `readjudicated_truth_status`: `confirmed` | `unknown` | `refuted` - the claim's status after re-adjudication against the fetched evidence.
+- `readjudication_evidence_refs`: refs to the re-adjudication record/tests.
+
+For `unresolved` or `left-unknown` these companion fields are `none`/empty.
+
 Vocabulary (canonical mapping, use consistently everywhere): a claim's status is UNKNOWN - claims are never labeled `UNVERIFIED`. `UNVERIFIED` is the GATE status word, one of the whole-artifact results. An unresolved escalation therefore leaves the claim UNKNOWN and is reflected in the gate result, where the applicable gate word may be `UNVERIFIED`.
 
 Rules: an unresolved escalation means the claim is UNKNOWN, never verified. A local mirror with `mirror_provenance: unproven` is not evidence. Freshness is evaluated relative to the CLAIM: a claim about current state requires current evidence - a pinned commit/date mirror satisfies only claims about the state at that pinned point, never a current-state claim. Leaving a remote-only claim UNKNOWN does not waive the entry: every remote-only claim must carry its `REMOTE_GROUND_TRUTH_REQUIRED` entry regardless of its status label, so the parent always receives the `exact_fetch_spec` needed to resolve it. The parent must fetch the remote evidence (directly or via a web-capable general-purpose verifier) and return it for re-adjudication, or leave the claim UNKNOWN; `ntt_gate.py` does not mechanically enforce this - the parent and gate auditor own it.

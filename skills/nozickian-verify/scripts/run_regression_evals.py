@@ -55,7 +55,7 @@ def validate_fixture(root: Path, fixture: Dict[str, Any], checks: List[Dict[str,
             for field in required:
                 add(checks, f"{fid}/{wid}: {world_field} has {field}", field in w and bool(w.get(field)) is not False, str(w.get(field)))
             targets = set(w.get("target_claim_ids", [])) if isinstance(w.get("target_claim_ids"), list) else set()
-            add(checks, f"{fid}/{wid}: target claims known", bool(targets) and targets.issubset(claim_ids), str(targets))
+            add(checks, f"{fid}/{wid}: target claims known", bool(targets) and targets.issubset(claim_ids), str(sorted(targets)))
             add(checks, f"{fid}/{wid}: {text_field} substantive", isinstance(w.get(text_field), str) and len(w[text_field]) >= 30, str(w.get(text_field)))
             sc = w.get("success_criteria")
             add(checks, f"{fid}/{wid}: success criteria multi-part", isinstance(sc, list) and len(sc) >= 2, str(sc))

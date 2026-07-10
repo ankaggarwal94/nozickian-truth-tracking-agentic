@@ -3,7 +3,7 @@
   "claim_id": "C-charter-caps",
   "command_or_source": "v1.0.3 charter-caps probes (rerun at finalization): deterministic validator runs on mutated and intact package copies, recorded in self_validation/v102_charter_caps_probe_results.json",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:ce83e5741f2ac6e819e09a429f6a21797b776466ea8980f912a60fbe522e8952",
+  "hash_or_version": "sha256:323da8ffaf457bce8c1a524834af908b5988fea7253645c250fd8aec740c4d0a",
   "observed_result": "Observed v1.0.3 deterministic evidence for C-charter-caps / FW-charter-skill-step-removed",
   "support_summary": "Binds FW-charter-skill-step-removed to the recorded probe: deleting the consistency-sweep checklist step from a SKILL.md package copy made validate_package.py return FAIL (rc=2) on 'manifest hash matches: skills/nozickian-verify/SKILL.md' and the matching stable-release-manifest hash/bytes checks.",
   "test_id": "FW-charter-skill-step-removed",

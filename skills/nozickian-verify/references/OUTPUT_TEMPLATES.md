@@ -62,7 +62,7 @@ A verified source claim does not automatically verify an entailed or operational
 
 Use `assets/certificate-template.json` for a machine-readable skeleton. Gate scripts require substantive tests and evidence for critical and major claims. Certificate authors should include `derived_or_downstream_claims` whenever they mention entailed, summarized, downstream, deployment, safety, compliance, or action-authorizing conclusions that are not independently verified as claims.
 
-The template's `consistency_sweep` and `remote_escalations` fields are record-keeping for the report contract above: `ntt_gate.py` ignores unknown certificate fields (verified against its parsing code and the self-certificate fixture) and does not evaluate them. The consistency-sweep and remote-escalation rules are enforced by the parent and audited by `ntt-gate-auditor`, not mechanically checked by the gate script.
+The template's `consistency_sweep` and `remote_escalations` fields are parent-enforced record-keeping for the report contract above: `ntt_gate.py` ignores unknown certificate fields (verified against its parsing code and the self-certificate fixture) and does not evaluate them, and the formal runner (`run_formal_artifact_verification.py`) does not read or evaluate them either. The consistency-sweep and remote-escalation rules are applied by the parent and audited by `ntt-gate-auditor` - neither the gate script nor the formal runner mechanically enforces them. Wiring these caps into mechanical enforcement is tracked in issue #5.
 
 ## PASS-TRACKED upgrade certificate skeleton
 

@@ -6,10 +6,10 @@ Target artifact:
 <package-root>/README.md
 
 Required output artifacts:
-- /private<tmp-v103-final-outputs>/README_NOZICKIAN_REPORT.md
-- /private<tmp-v103-final-outputs>/README_NOZICKIAN_certificate.json
-- /private<tmp-v103-final-outputs>/README_NOZICKIAN_GATE.md
-- /private<tmp-v103-final-outputs>/README_NOZICKIAN_INVOCATION_LEDGER.md
+- <formal-output-dir>/README_NOZICKIAN_REPORT.md
+- <formal-output-dir>/README_NOZICKIAN_certificate.json
+- <formal-output-dir>/README_NOZICKIAN_GATE.md
+- <formal-output-dir>/README_NOZICKIAN_INVOCATION_LEDGER.md
 
 Formal invocation rules:
 1. Use the loaded plugin skill /nozickian-truth-tracking-agentic:nozickian-verify, not an informal imitation.
@@ -28,7 +28,7 @@ Formal invocation rules:
 7. For every critical and major claim, produce structured certificate entries with: claim_id/id, text, importance, artifact_location, truth_status, method_m, method_completeness, evidence_refs, false_world_tests, true_world_tests, unresolved_contradictions, and residual_risks.
 8. For every local evidence reference intended to satisfy the gate, write a structured evidence artifact with fields: evidence_schema_version, claim_id, test_id or applies_to_tests, artifact_path, command_or_source, observed_result, support_summary, timestamp_utc, and hash_or_version.
 9. Run exactly this gate command after writing the certificate:
-   python3 <package-root>/skills/nozickian-verify/scripts/ntt_gate.py /private<tmp-v103-final-outputs>/README_NOZICKIAN_certificate.json --evidence-root <package-root> --strict-evidence --markdown /private<tmp-v103-final-outputs>/README_NOZICKIAN_GATE.md
+   python3 <package-root>/skills/nozickian-verify/scripts/ntt_gate.py <formal-output-dir>/README_NOZICKIAN_certificate.json --evidence-root <package-root> --strict-evidence --markdown <formal-output-dir>/README_NOZICKIAN_GATE.md
 10. The final report must include scope, artifact identity, method M, claim table, false-world sensitivity, true-world adherence, contradictions, residual risks, commands run, subagents actually used, gate status, and explicit downgrade reasons.
 11. The invocation ledger must include:
     Skill invoked: /nozickian-truth-tracking-agentic:nozickian-verify
@@ -38,7 +38,7 @@ Formal invocation rules:
     Substitution used: none OR FORMAL_SUBAGENT_FAILURE
     Machine gate run: yes
     Gate script: <package-root>/skills/nozickian-verify/scripts/ntt_gate.py
-    Gate output: /private<tmp-v103-final-outputs>/README_NOZICKIAN_GATE.md
-    Runtime transcript: /private<tmp-v103-final-outputs>/README_NOZICKIAN_FORMAL_TRANSCRIPT.stream.jsonl
+    Gate output: <formal-output-dir>/README_NOZICKIAN_GATE.md
+    Runtime transcript: <formal-output-dir>/README_NOZICKIAN_FORMAL_TRANSCRIPT.stream.jsonl
 12. Do not claim PASS-TRACKED unless ntt_gate.py returns PASS-TRACKED, no method/runtime/subagent unknowns remain, and the runtime transcript contains native Agent/Task tool-use events plus successful matching tool-result/completion events for every required ntt-* lane. If ntt_gate.py returns PASS-SCOPED, do not promote it.
 13. For any PASS-SCOPED to PASS-TRACKED promotion claim, follow references/PASS_TRACKED_UPGRADE_AUDIT.md: require deterministic outputs, official validator outputs, live fixture outputs, this formal artifact run, strict-gate PASS-TRACKED, trace authentication, promotion_certificate.json, and downstream non-closure review.

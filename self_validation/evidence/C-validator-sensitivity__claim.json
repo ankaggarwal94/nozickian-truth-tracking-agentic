@@ -6,7 +6,7 @@
   "claim_id": "C-validator-sensitivity",
   "command_or_source": "v1.0.3 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:4fa325a3fc5ed563054b3fda64e6285dd127aeb7221e7f7a4a11ce1a314c5f18",
+  "hash_or_version": "sha256:01c9382f30b60e48e23a69a27aac2749164761186eb6c603ddae3503760cef98",
   "observed_result": "Observed v1.0.3 deterministic evidence for C-validator-sensitivity",
   "support_summary": "This structured evidence binds C-validator-sensitivity to skills/nozickian-verify/scripts/validate_package.py, a package-local artifact with exact SHA-256 provenance under strict local evidence mode. v1.0.3 additionally checks unique canonical evidence refs, unique artifact/hash identities for critical evidence sufficiency, and substantive trace-result payload content. v1.0.3 additionally checks context-aware trace payload isolation and unique modal-test thresholds.",
   "timestamp": "1970-01-01T00:00:00Z",

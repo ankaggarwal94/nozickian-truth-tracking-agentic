@@ -1,7 +1,7 @@
 # Team/internal package validation report
 
 **Status:** PASS
-**Checks:** 1328 / 1328 passed
+**Checks:** 1327 / 1327 passed
 **Critical failures:** 0
 
 ## All checks
@@ -62,6 +62,8 @@
 - PASS: stable release manifest bytes match: .claude-plugin/plugin.json
 - PASS: stable release manifest hash matches: .github/workflows/nozickian-team-ci.yml
 - PASS: stable release manifest bytes match: .github/workflows/nozickian-team-ci.yml
+- PASS: stable release manifest hash matches: .gitignore
+- PASS: stable release manifest bytes match: .gitignore
 - PASS: stable release manifest hash matches: AUDIT_REPORT.md
 - PASS: stable release manifest bytes match: AUDIT_REPORT.md
 - PASS: stable release manifest hash matches: LICENSE
@@ -559,10 +561,8 @@
 - PASS: stable release manifest hash matches: skills/nozickian-verify/scripts/validate_package.py
 - PASS: stable release manifest bytes match: skills/nozickian-verify/scripts/validate_package.py
 - PASS: release provenance hygiene has no stale generated artifact or absolute build path tokens
-- PASS: release provenance files have no semver tokens older than current plugin version
 - PASS: self certificate exists for downstream non-closure check
 - PASS: self certificate parses for downstream non-closure check
-- PASS: self certificate has no stale active package-version provenance
 - PASS: self certificate declares downstream non-closure records
 - PASS: package surface policy exists
 - PASS: package surface policy parses
@@ -681,6 +681,7 @@
 - PASS: self_validation GitHub README contains term: evidence
 - PASS: self_validation GitHub README contains term: UNVERIFIED_RUNTIME
 - PASS: GitHub README docs avoid plugin-loadable runtime component paths
+- PASS: no git-tracked build cruft (__pycache__/.pyc/.DS_Store)
 - PASS: no unexpected top-level files
 - PASS: no unexpected top-level directories
 - PASS: only expected team CI workflow present
@@ -791,20 +792,14 @@
 - PASS: STANDARD.md contains term: PASS-TRACKED upgrade audit
 - PASS: STANDARD.md contains term: upgrade from PASS-SCOPED
 - PASS: STANDARD.md not obvious nonsense
-- PASS: reference exists: EVIDENCE_SCHEMA.md
-- PASS: reference substantive: EVIDENCE_SCHEMA.md
-- PASS: reference exists: SOURCES.md
-- PASS: reference substantive: SOURCES.md
-- PASS: reference exists: STANDARD.md
-- PASS: reference substantive: STANDARD.md
-- PASS: reference exists: SUBAGENT_PROTOCOLS.md
-- PASS: reference substantive: SUBAGENT_PROTOCOLS.md
-- PASS: reference exists: OUTPUT_TEMPLATES.md
-- PASS: reference substantive: OUTPUT_TEMPLATES.md
 - PASS: reference exists: ARTIFACT_GUIDE.md
 - PASS: reference substantive: ARTIFACT_GUIDE.md
 - PASS: reference exists: EVAL_BEST_PRACTICES.md
 - PASS: reference substantive: EVAL_BEST_PRACTICES.md
+- PASS: reference exists: EVIDENCE_SCHEMA.md
+- PASS: reference substantive: EVIDENCE_SCHEMA.md
+- PASS: reference exists: OUTPUT_TEMPLATES.md
+- PASS: reference substantive: OUTPUT_TEMPLATES.md
 - PASS: reference exists: PASS_TRACKED_UPGRADE_AUDIT.md
 - PASS: reference substantive: PASS_TRACKED_UPGRADE_AUDIT.md
 - PASS: PASS-TRACKED upgrade audit contains term: PASS-SCOPED to PASS-TRACKED
@@ -821,6 +816,12 @@
 - PASS: PASS-TRACKED upgrade audit contains term: UNVERIFIED_RUNTIME
 - PASS: PASS-TRACKED upgrade audit contains term: downstream
 - PASS: PASS-TRACKED upgrade audit contains term: no automatic
+- PASS: reference exists: SOURCES.md
+- PASS: reference substantive: SOURCES.md
+- PASS: reference exists: STANDARD.md
+- PASS: reference substantive: STANDARD.md
+- PASS: reference exists: SUBAGENT_PROTOCOLS.md
+- PASS: reference substantive: SUBAGENT_PROTOCOLS.md
 - PASS: agent exists: ntt-formal-coordinator
 - PASS: agent frontmatter parses: ntt-formal-coordinator
 - PASS: agent frontmatter has only expected keys: ntt-formal-coordinator
@@ -1155,8 +1156,6 @@
 - PASS: script substantive length: validate_package.py
 - PASS: script contains hardening token validate_package.py: check_closed_surface
 - PASS: script contains hardening token validate_package.py: check_self_certificate_nonclosure
-- PASS: script contains hardening token validate_package.py: scan_active_self_certificate_package_versions
-- PASS: script contains hardening token validate_package.py: scan_stale_semver_provenance
 - PASS: script contains hardening token validate_package.py: self certificate artifact version matches plugin
 - PASS: script contains hardening token validate_package.py: downstream non-closure
 - PASS: script contains hardening token validate_package.py: plugin manifest has no component-path/runtime fields

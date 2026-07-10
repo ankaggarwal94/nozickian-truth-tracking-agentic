@@ -3,7 +3,7 @@
   "formal_coordinator": "ntt-formal-coordinator",
   "gate_status": null,
   "output_checks": [],
-  "output_dir": "/private<tmp-v103-final-outputs>",
+  "output_dir": "<formal-output-dir>",
   "plugin_root": "<package-root>",
   "precheck_summary": {
     "failed": 0,
@@ -12,7 +12,7 @@
     "total": 0
   },
   "prechecks": [],
-  "prompt_file": "/private<tmp-v103-final-outputs>/README_NOZICKIAN_FORMAL_PROMPT.md",
+  "prompt_file": "<formal-output-dir>/README_NOZICKIAN_FORMAL_PROMPT.md",
   "reason": "dry-run requested; formal prompt written but Claude Code was not invoked",
   "required_native_agents": [
     "ntt-method-cartographer",
@@ -26,5 +26,5 @@
   "status": "UNVERIFIED_RUNTIME",
   "target_artifact": "<package-root>/README.md",
   "trace_authentication": null,
-  "transcript_file": "/private<tmp-v103-final-outputs>/README_NOZICKIAN_FORMAL_TRANSCRIPT.stream.jsonl"
+  "transcript_file": "<formal-output-dir>/README_NOZICKIAN_FORMAL_TRANSCRIPT.stream.jsonl"
 }

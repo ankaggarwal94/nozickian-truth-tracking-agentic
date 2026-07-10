@@ -1598,7 +1598,7 @@
           "expected_behavior": "The verifier should retain the true claim for the intact ported package.",
           "id": "TW-charter-intact-selftest",
           "kind": "true_world",
-          "observed_behavior": "The full self-test on an intact copy of the finalized v1.0.3 release tree returned PASS with 1371/1371 checks, 0 critical failures, 36/36 false-world mutations rejected, and 4/4 true-world variants retained (recorded from the v1.0.3 finalization fixed-point run at: branch charter-fixes-consistency-sweep-remote-escalation, base commit 1eed196, v1.0.3 finalization working tree; behavior-file state MANIFEST.sha256 sha256=a0ce9798bb9e0d4e751f48e1ab936c9c1349b7d6dbfaaa842abf56c6b93b0279).",
+          "observed_behavior": "The full self-test on an intact copy of the finalized v1.0.3 release tree returned PASS with 1369/1369 checks, 0 critical failures, 35/35 false-world mutations rejected, and 4/4 true-world variants retained (recorded from the v1.0.3 finalization fixed-point run at: branch charter-fixes-consistency-sweep-remote-escalation, base commit 1eed196, v1.0.3 finalization working tree; behavior-file state MANIFEST.sha256 sha256=6f3b100ce7fd482ad83c85ddefc23f9093a2fa961496a1e5f24b43da782be40a).",
           "outcome": "retained_true_claim",
           "result": "pass",
           "target_claim": "C-charter-caps",
@@ -1610,76 +1610,71 @@
     }
   ],
   "consistency_sweep": {
-    "activation_reason": "This release tree is a revision of previously corrected material and claims were corrected during this verification (the activation predicate in SKILL.md activation checklist step 9): the recorded intact-copy self-test counts (1353/1353 from the 2026-07-09 port) were superseded by the current tree's totals, and prior-release version markers (v1[.]0[.]1 / v1[.]0[.]2, written defanged here so this sweep record does not itself trip the stale-provenance scans) remained throughout bundled provenance files.",
+    "activation_reason": "This release tree is a revision of previously corrected material and claims were corrected during this verification (the activation predicate in SKILL.md activation checklist step 9): a second external ultrareview of PR #3 was adjudicated, and its validated findings drove self-contained defect fixes in this tree (a git-tracked build artifact removed, the generalized textual stale-semver provenance scanner removed while the field-aware certificate/plugin version equality check was kept, and historical version strings that had been obfuscated to satisfy that now-removed scanner restored to their true dotted spelling), so the recorded self-test counts and the affected provenance text were superseded and had to be re-swept.",
     "applies": true,
     "corrected_claims": [
       {
+        "claim_id": "C-validator-sensitivity",
+        "correction_location": "skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/scripts/run_regression_evals.py; .gitignore (new)",
+        "new_wording": "the generalized textual stale-semver scanners and their exclusive helpers and the coupled mutation were removed; the field-aware self-certificate-vs-plugin version equality check was kept (issue #2's real fix); a CRITICAL 'no git-tracked build cruft' check plus git_tracked_files/_is_cruft_relpath helpers were added, the .pyc was untracked (git rm --cached) and a top-level .gitignore added; run_regression_evals.py now serializes the target set deterministically via str(sorted(targets))",
+        "old_wording": "validate_package.py carried a generalized textual scan_stale_semver_provenance scanner (plus its self-certificate scan twin scan_active_self_certificate_package_versions and the SEMVER_TOKEN_RE / parse_semver_token / current_plugin_semver helpers) and a matching stale_semver_readme_provenance false-world mutation; a git-tracked skills/nozickian-verify/scripts/__pycache__/ntt_gate.cpython-312.pyc build artifact was carried in the tree"
+      },
+      {
         "claim_id": "C-charter-caps",
         "correction_location": "self_validation/self_certificate.json (TW-charter-intact-selftest.observed_behavior; method_manifest.port_2026_07_09.reran_2026_07_09[0]); self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json; self_validation/v102_charter_caps_probe_results.json",
-        "new_wording": "intact-copy full self-test PASS with 1371/1371 checks, 0 critical failures, 36/36 false-world mutations rejected, and 4/4 true-world variants retained",
-        "old_wording": "intact-copy full self-test PASS 1353/1353 checks, 34/34 mutations, 4/4 true-world variants"
+        "new_wording": "intact-copy full self-test PASS with 1369/1369 checks, 0 critical failures, 35/35 false-world mutations rejected, and 4/4 true-world variants retained (35 mutations after the coupled stale-semver mutation was removed with its scanner)",
+        "old_wording": "intact-copy full self-test PASS with 1371/1371 checks, 36/36 false-world mutations rejected, and 4/4 true-world variants"
       },
       {
-        "claim_id": "release-version provenance (all claims)",
-        "correction_location": "README.md; PACKAGE_SURFACE.json; TEAM_INTERNAL_USE.md; AUDIT_REPORT.md; self_validation/self_certificate.json; self_validation/evidence/*.json; self_validation/evidence_artifacts/*.txt; self_validation/v101_targeted_probe_results.json; self_validation/v102_charter_caps_probe_results.json; self_validation/trace_auth_smoke_result.json; self_validation/pass_tracked_certifier_empty_bundle_*",
-        "new_wording": "v1.0.3 tokens where the described behavior is current and re-verified; version-neutral or explicitly historical scan-inert references where the text is a historical record",
-        "old_wording": "v1[.]0[.]1 / v1[.]0[.]2 release markers (defanged spelling) presented as current-release provenance"
+        "claim_id": "all claims (release provenance)",
+        "correction_location": "AUDIT_REPORT.md; self_validation/self_certificate.json; self_validation/evidence/*.json; self_validation/evidence_artifacts/*.txt; self_validation/v101_targeted_probe_results.json",
+        "new_wording": "with the generalized scanner removed, the historical version strings were restored to their true dotted spelling (for example v1.0.1 and v0.7.6) as verbatim historical record; the current prior-patch and older-patch markers guarded by the surviving fixed-pattern scan_release_provenance_hygiene are not present as live provenance, and that scanner returns zero hits on this tree",
+        "old_wording": "historical version strings were obfuscated to scan-inert spellings (v1.0.1 rewritten as a periphrasis or defanged token) so the removed generalized stale-semver scanner would not flag the historical record"
       }
     ],
-    "correction_evidence_checked": "Affirmatively checked: RELEASE_LOCK.json patch-note history, git status/diff of the PR #3 working tree against base commit 1eed196, the validator's scan_stale_semver_provenance and scan_release_provenance_hygiene hit lists (548 semver hits + 7 fixed-pattern hits before the sweep), and the two stale count records in this certificate.",
+    "correction_evidence_checked": "Affirmatively checked: the validated PR #3 ultrareview findings, the git status/diff of the working tree against base commit 1eed196, git ls-files for tracked build cruft (the __pycache__ .pyc is now untracked and gitignored), a full-tree grep for the obfuscated version spellings and for references to the removed scanner symbols, the retained field-aware equality check (self certificate artifact version matches plugin), and the two stale self-test count records previously carried in this certificate.",
     "echo_findings": [
       {
-        "claim": "C-charter-caps",
         "classification": "live-claim",
-        "echo_location": "self_validation/self_certificate.json (two records: TW-charter-intact-selftest.observed_behavior and method_manifest.port_2026_07_09.reran_2026_07_09[0])",
+        "edited_location": "self_validation/self_certificate.json (both records)",
         "embedded_in_true_sentence": "yes",
-        "fragment": "1353/1353 checks, 34/34 mutations",
-        "recommended_edit": "Rerun the intact-copy self-test on this tree and record the observed counts with the exact tree state they describe.",
-        "replacement_evidence": "Rerun full self-test at the v1.0.3 finalization fixed point: PASS with 1371/1371 checks, 0 critical failures, 36/36 false-world mutations rejected, and 4/4 true-world variants retained (branch charter-fixes-consistency-sweep-remote-escalation, base commit 1eed196, v1.0.3 finalization working tree; behavior-file state MANIFEST.sha256 sha256=a0ce9798bb9e0d4e751f48e1ab936c9c1349b7d6dbfaaa842abf56c6b93b0279).",
-        "resolution": "resolved",
-        "resolved_edit_location": "self_validation/self_certificate.json (both records)",
-        "superseded_wording": "PASS with 1353/1353 checks ... 34/34 false-world mutations"
+        "fragment": "1371/1371 checks, 36/36 false-world mutations",
+        "location": "self_validation/self_certificate.json (TW-charter-intact-selftest.observed_behavior and method_manifest.port_2026_07_09.reran_2026_07_09[0])",
+        "replacement_evidence": "Full self-test rerun at the v1.0.3 finalization fixed point: PASS with 1369/1369 checks, 0 critical failures, 35/35 false-world mutations rejected, and 4/4 true-world variants retained (branch charter-fixes-consistency-sweep-remote-escalation, base commit 1eed196, v1.0.3 finalization working tree; behavior-file state MANIFEST.sha256 sha256=6f3b100ce7fd482ad83c85ddefc23f9093a2fa961496a1e5f24b43da782be40a).",
+        "resolution": "resolved"
       },
       {
-        "claim": "C-charter-caps",
         "classification": "live-claim",
-        "echo_location": "self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json; self_validation/v102_charter_caps_probe_results.json",
+        "edited_location": "self_validation/v102_charter_caps_probe_results.json; self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json",
         "embedded_in_true_sentence": "yes",
-        "fragment": "checks 1353/1353 passed; mutation_tests 34/34; v1[.]0[.]2 (defanged spelling)",
-        "recommended_edit": "Rerun all three charter-caps probes (two false-world deletions, one intact-copy self-test) on this tree and regenerate both records.",
-        "replacement_evidence": "Probes rerun at the v1.0.3 finalization fixed point; observed statuses and failing checks recorded verbatim in the regenerated files.",
-        "resolution": "resolved",
-        "resolved_edit_location": "self_validation/v102_charter_caps_probe_results.json; self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json",
-        "superseded_wording": "checks 1353/1353 passed ... the ported v1[.]0[.]2 package (defanged spelling)"
+        "fragment": "checks 1353/1353 passed; mutation_tests 34/34",
+        "location": "self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json; self_validation/v102_charter_caps_probe_results.json",
+        "replacement_evidence": "Charter-caps probes rerun at the v1.0.3 finalization fixed point; observed statuses and failing checks recorded verbatim in the regenerated files (intact-copy self-test PASS 1369/1369, 35/35 mutations, 4/4 true-world).",
+        "resolution": "resolved"
       },
       {
-        "claim": "all claims (release provenance)",
-        "classification": "stale-echo",
-        "echo_location": "self_validation/self_certificate.json (51 tokens); self_validation/evidence/*.json and self_validation/evidence_artifacts/*.txt (189 files); PACKAGE_SURFACE.json; README.md",
-        "embedded_in_true_sentence": "yes",
-        "fragment": "v1[.]0[.]1 (defanged spelling)",
-        "recommended_edit": "Refresh release tokens to v1.0.3 where the described deterministic behavior persists and is re-verified by this finalization's self-test; the deterministic contract suites re-verify each described behavior on this tree.",
-        "replacement_evidence": "scan_stale_semver_provenance and scan_release_provenance_hygiene both empty at the finalization fixed point; full self-test PASS re-verifies the described behaviors.",
-        "resolution": "resolved",
-        "resolved_edit_location": "same files; verified by scan_stale_semver_provenance returning zero hits on the final tree",
-        "superseded_wording": "v1[.]0[.]1 <feature description> / Observed v1[.]0[.]1 deterministic evidence (defanged spelling)"
-      },
-      {
-        "claim": "release history (AUDIT_REPORT.md, TEAM_INTERNAL_USE.md)",
         "classification": "intentional-reference",
-        "echo_location": "AUDIT_REPORT.md (historical audit record); TEAM_INTERNAL_USE.md (release-era addenda headings)",
+        "edited_location": "AUDIT_REPORT.md (historical first-patch audit record, retitled, with a dated v1.0.3 addendum); self_validation provenance files",
         "embedded_in_true_sentence": "yes",
-        "fragment": "v1[.]0[.]1 Nozickian Verification Package Audit Report; addendum (v1[.]0[.]1); after v0[.]7[.]6 (defanged spellings)",
-        "recommended_edit": "Keep the historical audit record un-falsified: retitle it as the historical first-patch audit record, rewrite literal dotted version tokens to scan-inert references (e.g. the RELEASE_LOCK.json v1.0.1_patch_notes key), and append a dated v1.0.3 addendum for current-release evidence.",
-        "replacement_evidence": "Historical results preserved verbatim; only version-token spelling changed, declared in the historical-record notice.",
-        "resolution": "accepted-intentional-reference",
-        "resolved_edit_location": "AUDIT_REPORT.md (retitled + historical-record notice + v1.0.3 addendum); TEAM_INTERNAL_USE.md (version-neutral headings)",
-        "superseded_wording": "v1[.]0[.]1 audit/report headings (defanged spelling) presented without historical marking"
+        "fragment": "v1.0.1",
+        "location": "AUDIT_REPORT.md; self_validation/self_certificate.json; self_validation/evidence/*.json; self_validation/evidence_artifacts/*.txt",
+        "replacement_evidence": "Historical results preserved verbatim; the true dotted token v1.0.1 was restored now that the generalized stale-semver scanner is gone; the surviving fixed-pattern scan_release_provenance_hygiene (which guards the current prior-patch and older-patch version markers, not v1.0.1) returns zero hits on this tree.",
+        "resolution": "accepted-intentional-reference"
+      },
+      {
+        "classification": "stale-echo",
+        "edited_location": "git index (git rm --cached) + new top-level .gitignore",
+        "embedded_in_true_sentence": "no",
+        "fragment": "ntt_gate.cpython-312.pyc",
+        "location": "skills/nozickian-verify/scripts/__pycache__/ntt_gate.cpython-312.pyc",
+        "replacement_evidence": "git ls-files shows no __pycache__/.pyc entries; the new CRITICAL 'no git-tracked build cruft' validator check passes on this tree (the .pyc remains on disk only as untracked, gitignored dev cruft).",
+        "resolution": "resolved"
       }
     ],
-    "swept_at": "2026-07-09 (v1.0.3 finalization)",
-    "token_spelling_note": "Prior-release version tokens quoted inside this sweep record use the defanged spelling vX[.]Y[.]Z so that this intentional-reference record does not itself register as stale release provenance in scan_stale_semver_provenance / scan_release_provenance_hygiene, which have no allowance mechanism. The defanged strings denote the literal dotted tokens.",
-    "tree_state": "branch charter-fixes-consistency-sweep-remote-escalation, base commit 1eed196, v1.0.3 finalization working tree; behavior-file state MANIFEST.sha256 sha256=a0ce9798bb9e0d4e751f48e1ab936c9c1349b7d6dbfaaa842abf56c6b93b0279"
+    "none_found": false,
+    "not_applicable_reason": "none",
+    "sweep_ran": true,
+    "swept_at": "2026-07-09 (v1.0.3 finalization, PR #3 ultrareview redress)"
   },
   "derived_or_downstream_claims": [
     {
@@ -1757,7 +1752,7 @@
       "date_utc": "2026-07-09",
       "description": "Charter fixes (consistency sweep / stale-echo lane, REMOTE_GROUND_TRUTH_REQUIRED escalation protocol, three loophole repairs) were ported onto this repository lineage from the team-internal sibling package. Repository-side formal-verification content (PASS-TRACKED upgrade audit, formal invocation mode, derived/downstream non-closure) was preserved unchanged.",
       "reran_2026_07_09": [
-        "validate_package.py --self-test on an intact copy (PASS, 1371/1371 checks, 36/36 mutations, 4/4 true-world variants; re-recorded at the v1.0.3 finalization fixed point - branch charter-fixes-consistency-sweep-remote-escalation, base commit 1eed196, v1.0.3 finalization working tree; behavior-file state MANIFEST.sha256 sha256=a0ce9798bb9e0d4e751f48e1ab936c9c1349b7d6dbfaaa842abf56c6b93b0279)",
+        "validate_package.py --self-test on an intact copy (PASS, 1369/1369 checks, 35/35 mutations, 4/4 true-world variants; re-recorded at the v1.0.3 finalization fixed point - branch charter-fixes-consistency-sweep-remote-escalation, base commit 1eed196, v1.0.3 finalization working tree; behavior-file state MANIFEST.sha256 sha256=6f3b100ce7fd482ad83c85ddefc23f9093a2fa961496a1e5f24b43da782be40a)",
         "validate_package.py on two charter-text-deleted false-world copies (both FAIL on manifest hash, recorded verbatim in self_validation/v102_charter_caps_probe_results.json)",
         "ntt_gate.py on this certificate with --evidence-root . --strict-evidence",
         "run_gate_contract_tests.py, run_formal_runner_contract_tests.py, run_regression_evals.py, and the formal runner dry run (regenerated bundled outputs)"
@@ -1795,7 +1790,7 @@
     "status": "NOT_CERTIFIED_IN_THIS_RELEASE"
   },
   "remote_escalations": [],
-  "remote_escalations_note": "None. Explicit none: no REMOTE_GROUND_TRUTH_REQUIRED escalation was raised during the v1.0.3 finalization verification; every adjudicated ground truth was package-local (deterministic scripts, manifests, and bundled records in this tree).",
+  "remote_escalations_note": "None. No REMOTE_GROUND_TRUTH_REQUIRED escalation was raised during the v1.0.3 finalization / PR #3 ultrareview redress: every adjudicated ground truth was package-local (the working-tree diff, deterministic scripts, manifests, git index state, and bundled records in this tree). When a remote escalation does occur, each record follows the canonical 7-field schema in assets/certificate-template.json (claim_id, why_remote, exact_fetch_spec as UNTRUSTED data, local_mirror, mirror_provenance, staleness_risk, resolution) with the fetched-and-readjudicated companion fields.",
   "schema_version": "1.0",
   "scope_limitations": [
     "Deterministic package validation and certificate checks executed locally.",

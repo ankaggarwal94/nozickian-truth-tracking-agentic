@@ -1,15 +1,16 @@
 {
-  "generated_for": "v1.0.3 release finalization validation summary",
-  "ledger_lineage": "Introduced as the first-patch targeted-probe summary; the file path is retained because the structured evidence records under self_validation/evidence/ bind this ledger by path and SHA-256. Contents are refreshed at each release finalization.",
+  "generated_for": "Historical targeted-probe validation summary, carried forward into the v1.0.3 release tree; this ledger was NOT re-executed as a distinct v1.0.3 probe rerun.",
+  "ledger_lineage": "Introduced as the first-patch (v1.0.1) targeted-probe summary; the file path is retained because the structured evidence records under self_validation/evidence/ bind this ledger by path and SHA-256. The file is carried forward across releases rather than regenerated per release; the current tree is the v1.0.3 finalization working tree.",
   "package": "nozickian-truth-tracking-agentic",
-  "recorded_tree_state": "branch charter-fixes-consistency-sweep-remote-escalation, base commit 1eed196, v1.0.3 finalization working tree; behavior-file state MANIFEST.sha256 sha256=a0ce9798bb9e0d4e751f48e1ab936c9c1349b7d6dbfaaa842abf56c6b93b0279",
+  "provenance": "Historical evidence carried forward, not a fresh v1.0.3 rerun. Original observation: the first-patch (v1.0.1) targeted-probe run; the bound structured-evidence records under self_validation/evidence/ carry the original observation timestamps (timestamp_utc 2026-06-04). No reverified_against/reverified_at is recorded because these probes were not re-run for v1.0.3. The status and check-count values under results are the deterministic, byte-independent contract of the current release tree (re-establishable by rerunning the RELEASE_LOCK.json commands, per volatile_output_hash_policy) rather than freshly measured probe observations recorded here; do not read them as a distinct v1.0.3 probe execution.",
+  "recorded_tree_state": "branch charter-fixes-consistency-sweep-remote-escalation, base commit 1eed196, v1.0.3 finalization working tree; behavior-file state MANIFEST.sha256 sha256=6f3b100ce7fd482ad83c85ddefc23f9093a2fa961496a1e5f24b43da782be40a",
   "results": {
     "base_validation": {
       "artifact_path": "self_validation/package_validation_result.json",
       "status": "PASS",
       "summary": {
-        "checks_passed": 1328,
-        "checks_total": 1328,
+        "checks_passed": 1327,
+        "checks_total": 1327,
         "critical_failed": 0
       }
     },
@@ -78,11 +79,11 @@
       "artifact_path": "self_validation/package_validation_self_test_result.json",
       "status": "PASS",
       "summary": {
-        "checks_passed": 1371,
-        "checks_total": 1371,
+        "checks_passed": 1369,
+        "checks_total": 1369,
         "critical_failed": 0,
-        "mutation_tests_passed": 36,
-        "mutation_tests_total": 36,
+        "mutation_tests_passed": 35,
+        "mutation_tests_total": 35,
         "true_world_tests_passed": 4,
         "true_world_tests_total": 4
       }

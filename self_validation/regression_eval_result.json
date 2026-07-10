@@ -141,7 +141,7 @@
       "passed": true
     },
     {
-      "details": "{'MM-C2', 'MM-C1'}",
+      "details": "['MM-C1', 'MM-C2']",
       "name": "mini-manual-version-drift/MM-FW1: target claims known",
       "passed": true
     },
@@ -191,7 +191,7 @@
       "passed": true
     },
     {
-      "details": "{'MM-C1'}",
+      "details": "['MM-C1']",
       "name": "mini-manual-version-drift/MM-FW2: target claims known",
       "passed": true
     },
@@ -246,7 +246,7 @@
       "passed": true
     },
     {
-      "details": "{'MM-C1'}",
+      "details": "['MM-C1']",
       "name": "mini-manual-version-drift/MM-TW1: target claims known",
       "passed": true
     },
@@ -296,7 +296,7 @@
       "passed": true
     },
     {
-      "details": "{'MM-C1'}",
+      "details": "['MM-C1']",
       "name": "mini-manual-version-drift/MM-TW2: target claims known",
       "passed": true
     },
@@ -446,7 +446,7 @@
       "passed": true
     },
     {
-      "details": "{'MC-C2', 'MC-C1'}",
+      "details": "['MC-C1', 'MC-C2']",
       "name": "mini-code-mutation/MC-FW1: target claims known",
       "passed": true
     },
@@ -496,7 +496,7 @@
       "passed": true
     },
     {
-      "details": "{'MC-C1'}",
+      "details": "['MC-C1']",
       "name": "mini-code-mutation/MC-FW2: target claims known",
       "passed": true
     },
@@ -551,7 +551,7 @@
       "passed": true
     },
     {
-      "details": "{'MC-C2', 'MC-C1'}",
+      "details": "['MC-C1', 'MC-C2']",
       "name": "mini-code-mutation/MC-TW1: target claims known",
       "passed": true
     },
@@ -601,7 +601,7 @@
       "passed": true
     },
     {
-      "details": "{'MC-C2'}",
+      "details": "['MC-C2']",
       "name": "mini-code-mutation/MC-TW2: target claims known",
       "passed": true
     },
@@ -751,7 +751,7 @@
       "passed": true
     },
     {
-      "details": "{'FT-C2', 'FT-C1'}",
+      "details": "['FT-C1', 'FT-C2']",
       "name": "fake-tool-output-trace/FT-FW1: target claims known",
       "passed": true
     },
@@ -806,7 +806,7 @@
       "passed": true
     },
     {
-      "details": "{'FT-C2'}",
+      "details": "['FT-C2']",
       "name": "fake-tool-output-trace/FT-TW1: target claims known",
       "passed": true
     },
