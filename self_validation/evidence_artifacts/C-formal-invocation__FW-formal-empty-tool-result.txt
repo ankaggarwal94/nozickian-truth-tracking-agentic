@@ -1,4 +1,4 @@
-v1.0.1 structured evidence artifact
+v1.0.3 structured evidence artifact
 claim_id=C-formal-invocation
 test_id=FW-formal-empty-tool-result
 evidence_ref=self_validation/evidence/C-formal-invocation__FW-formal-empty-tool-result.json

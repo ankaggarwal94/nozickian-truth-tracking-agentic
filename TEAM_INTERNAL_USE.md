@@ -33,7 +33,7 @@ python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures
 
 The validator intentionally rejects plugin-root hooks, bins, monitors, MCP/LSP configs, settings activation, broad skill `allowed-tools`, dynamic skill shell substitutions, manifest-declared runtime components, and unmanifested agents. Those can be added later, but only by explicitly changing the surface policy, adding focused tests, and raising the review tier.
 
-## Formal invocation addendum (v1.0.1)
+## Formal invocation addendum
 
 A prose audit that applies this skill's protocol is useful, but a formal package invocation requires the additional machine-gated artifacts:
 
@@ -45,32 +45,32 @@ A prose audit that applies this skill's protocol is useful, but a formal package
 For internal review, do not promote an artifact-verification run to `PASS-TRACKED` if the run only produced prose, skipped `certificate.json`, skipped `ntt_gate.py`, or used role-equivalent fallback agents without recording the downgrade.
 
 
-### v1.0.1 patch note
-This regeneration closes the remaining trace-authentication and URI-scheme edge cases found after v0.7.6. Team review should verify that `nested_tool_result_inside_tool_input_does_not_authenticate`, `nested_tool_result_inside_arguments_does_not_authenticate`, `tool_result_before_tool_use_does_not_authenticate`, and `same_event_input_embedded_result_does_not_authenticate` pass in `formal_runner_contract_results.json`. Strict local evidence mode now rejects any non-empty URI scheme, including uppercase and mixed-case `HTTPS://`, `DOI:`, `URN:`, and scheme-like refs; review `uppercase_https_evidence_ref_rejected`, `mixed_case_https_evidence_ref_rejected`, `uppercase_doi_urn_refs_rejected`, and `scheme_like_evidence_ref_rejected_in_strict_mode` in `gate_contract_results.json`.
+### Trace-authentication regeneration patch note (`v1.0.1_patch_notes` release)
+That regeneration closed the remaining trace-authentication and URI-scheme edge cases found after the late pre-1.0 hardening series. Team review should verify that `nested_tool_result_inside_tool_input_does_not_authenticate`, `nested_tool_result_inside_arguments_does_not_authenticate`, `tool_result_before_tool_use_does_not_authenticate`, and `same_event_input_embedded_result_does_not_authenticate` pass in `formal_runner_contract_results.json`. Strict local evidence mode now rejects any non-empty URI scheme, including uppercase and mixed-case `HTTPS://`, `DOI:`, `URN:`, and scheme-like refs; review `uppercase_https_evidence_ref_rejected`, `mixed_case_https_evidence_ref_rejected`, `uppercase_doi_urn_refs_rejected`, and `scheme_like_evidence_ref_rejected_in_strict_mode` in `gate_contract_results.json`.
 
-## Release idempotence addendum (v1.0.1)
+## Release idempotence addendum
 
 Normal release-lock validation must not write generated formal-runner artifacts into the package tree. Use the external `../ntt_release_formal_invocation_dry_run` paths from `RELEASE_LOCK.json`, or choose another out-of-tree directory. In-tree generated outputs are allowed only when `run_formal_artifact_verification.py` is invoked with `--refresh-release-manifest`, after which the stable release manifest must be reviewed again.
 
 
-## v1.0.1 release-lock idempotence note
+## Release-lock idempotence note
 
 The release-lock command chain invokes `validate_package.py . --self-test` inside the idempotence regression so the command list can be replayed without recursively spawning another release-lock replay. A normal maintainer self-test without that flag still exercises the release-lock idempotence check.
 
 
-### v1.0.1 trace-authentication addendum
+### Trace-authentication addendum
 
 PASS-TRACKED trace authentication must parse only recognized stream-json event positions. Do not count fake `tool_result` dictionaries embedded inside `tool_use.input`, `arguments`, `args`, or `parameters`; they are tool input data, not runtime completion events. A successful result/completion must explicitly match the native tool-use id and appear after that tool-use event. Strict local evidence mode rejects all URI-scheme evidence refs case-insensitively, including uppercase HTTPS/DOI/URN and arbitrary scheme-like refs.
 
 
-## v1.0.1 trace/evidence hardening note
+## Trace/evidence hardening note
 
 PASS-TRACKED runtime promotion requires authentic tool-use/tool-result event types, exact structured ntt-* selectors, matching post-call result IDs, no unexpected Agent/Task calls, and no text/message masquerade. Strict local evidence rejects URI-scheme evidence_refs and URI-scheme artifact_path values.
 
-## v1.0.1 reviewer note
+## Reviewer note
 Check formal traces for payload-bearing result content, not merely success-like metadata. Check strict evidence ledgers for unique evidence-file identities and unique artifact/hash identities; duplicate refs or aliases should not satisfy critical claim evidence minima.
 
-## v1.0.1 release-provenance hygiene addendum
+## Release-provenance hygiene addendum
 
 Before reuse, review the validator output for the release-provenance hygiene check. Bundled audit and self-validation artifacts must not contain stale prior-version package roots, stale targeted-probe names, or machine-local build paths. This check is intentionally about release evidence hygiene; it does not promote the package beyond PASS-SCOPED without live runtime traces.
 

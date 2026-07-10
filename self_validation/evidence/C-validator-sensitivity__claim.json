@@ -4,11 +4,11 @@
   ],
   "artifact_path": "skills/nozickian-verify/scripts/validate_package.py",
   "claim_id": "C-validator-sensitivity",
-  "command_or_source": "v1.0.1 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
+  "command_or_source": "v1.0.3 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:cf92b011a0d150b3e72bc94c0d432afc0f59587bce032d764e4e70dc354ffdce",
-  "observed_result": "Observed v1.0.1 deterministic evidence for C-validator-sensitivity",
-  "support_summary": "This structured evidence binds C-validator-sensitivity to skills/nozickian-verify/scripts/validate_package.py, a package-local artifact with exact SHA-256 provenance under strict local evidence mode. v1.0.1 additionally checks unique canonical evidence refs, unique artifact/hash identities for critical evidence sufficiency, and substantive trace-result payload content. v1.0.1 additionally checks context-aware trace payload isolation and unique modal-test thresholds.",
+  "hash_or_version": "sha256:4fa325a3fc5ed563054b3fda64e6285dd127aeb7221e7f7a4a11ce1a314c5f18",
+  "observed_result": "Observed v1.0.3 deterministic evidence for C-validator-sensitivity",
+  "support_summary": "This structured evidence binds C-validator-sensitivity to skills/nozickian-verify/scripts/validate_package.py, a package-local artifact with exact SHA-256 provenance under strict local evidence mode. v1.0.3 additionally checks unique canonical evidence refs, unique artifact/hash identities for critical evidence sufficiency, and substantive trace-result payload content. v1.0.3 additionally checks context-aware trace payload isolation and unique modal-test thresholds.",
   "timestamp": "1970-01-01T00:00:00Z",
   "timestamp_utc": "2026-06-04T00:00:00Z"
 }

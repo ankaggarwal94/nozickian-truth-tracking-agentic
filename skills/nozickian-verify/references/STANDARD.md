@@ -80,7 +80,8 @@ A factual artifact is verified only when the method meets thresholds for both fa
 
 These caps are part of the verification charter, applied by the parent and audited by the gate auditor; `ntt_gate.py` does not mechanically check them:
 
-- A corrected or revised artifact whose consistency sweep (stale-echo lane) has not run caps the gate at `PASS-SCOPED`.
+- The consistency sweep (stale-echo lane) is mandatory whenever the artifact is a revision of previously corrected material, or any claim was corrected or refuted during this verification (the activation predicate in SKILL.md activation checklist step 9). An artifact for which the sweep was mandatory but has not run caps the gate at `PASS-SCOPED`.
+- Swept is not resolved: an unresolved `stale-echo` sweep record also caps the gate at `PASS-SCOPED`, and an unresolved `live-claim` sweep record returns the affected claim to adjudication - it cannot pass while unresolved.
 - A critical claim with an unresolved `REMOTE_GROUND_TRUTH_REQUIRED` escalation caps the gate at `LIMITED`.
 
 ## Anti-patterns

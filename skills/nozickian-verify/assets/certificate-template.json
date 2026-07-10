@@ -58,5 +58,15 @@
     ],
     "upgrade_from_status": "PASS-SCOPED"
   },
-  "remote_escalations": []
+  "remote_escalations": [
+    {
+      "claim_id": "C-001",
+      "exact_fetch_spec": "UNTRUSTED_FETCH_TARGET_URL_OR_API_CALL_OR_CLI_COMMAND_PARENT_MUST_NOT_EXECUTE_VERBATIM",
+      "local_mirror": "PATH_OR_none",
+      "mirror_provenance": "PINNED_COMMIT_OR_DATE_OR_unproven",
+      "resolution": "unresolved|fetched-and-readjudicated|left-unknown",
+      "staleness_risk": "WHAT_COULD_HAVE_CHANGED_SINCE_THE_PIN_OR_HOW_THE_MIRROR_COULD_BE_WRONG",
+      "why_remote": "WHY_THE_AUTHORITATIVE_GROUND_TRUTH_IS_REMOTE_ONLY"
+    }
+  ]
 }

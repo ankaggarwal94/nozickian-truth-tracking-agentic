@@ -146,11 +146,12 @@ PROVENANCE_HYGIENE_FILES = {
     "AUDIT_REPORT.md",
     "TEAM_INTERNAL_USE.md",
     "PACKAGE_SURFACE.json",
+    f"{SKILL_DIR}/references/OUTPUT_TEMPLATES.md",
 }
 PROVENANCE_HYGIENE_PREFIXES = ("self_validation/", "docs/")
 LOCAL_DATA_ROOT = "/" + "mnt" + "/" + "data"
 LOCAL_HOME_ROOT = "/" + "home" + "/" + "oai"
-PREVIOUS_PATCH_VERSION = "1.0." + "0"
+PREVIOUS_PATCH_VERSION = "1.0." + "2"
 OLDER_STALE_PATCH_VERSION = "0.7." + "13"
 PREVIOUS_WORK_ROOT = "ntt_v10" + "0_work"
 PREVIOUS_TARGETED_PROBE = "v10" + "0_targeted_probe_results"
@@ -195,6 +196,64 @@ def scan_release_provenance_hygiene(root: Path) -> List[Dict[str, Any]]:
     return hits
 
 
+SEMVER_TOKEN_RE = re.compile(r"\bv?\d+\.\d+\.\d+\b")
+
+
+def parse_semver_token(token: str) -> Tuple[int, int, int] | None:
+    norm = token[1:] if token[:1] in ("v", "V") else token
+    parts = norm.split(".")
+    if len(parts) != 3:
+        return None
+    try:
+        return (int(parts[0]), int(parts[1]), int(parts[2]))
+    except ValueError:
+        return None
+
+
+def current_plugin_semver(root: Path) -> Tuple[str, Tuple[int, int, int] | None]:
+    plugin_path = root / ".claude-plugin/plugin.json"
+    if not plugin_path.exists():
+        return "", None
+    try:
+        raw = str(json.loads(plugin_path.read_text(encoding="utf-8")).get("version", "")).strip()
+    except Exception:
+        return "", None
+    return raw, parse_semver_token(raw)
+
+
+def scan_stale_semver_provenance(root: Path) -> List[Dict[str, Any]]:
+    """Flag semver tokens older than the current plugin version in provenance-scanned files.
+
+    The fixed STALE_PROVENANCE_PATTERNS grep only knows specific prior release
+    tokens. This scan generalizes the stale-version rule: any v?X.Y.Z token in a
+    provenance-scanned release file that parses as a semver strictly LOWER than
+    the current plugin.json version is stale release provenance. If the current
+    plugin version is missing or unparseable, the scan fails closed and flags
+    every semver token. The provenance file set has no explicitly-allowed
+    historical contexts, so no exclusions are applied.
+    """
+    hits: List[Dict[str, Any]] = []
+    current_raw, current = current_plugin_semver(root)
+    for rel in iter_release_provenance_hygiene_files(root):
+        p = root / rel
+        try:
+            text = p.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        for match in SEMVER_TOKEN_RE.finditer(text):
+            token = match.group(0)
+            parsed = parse_semver_token(token)
+            if parsed is None:
+                continue
+            if current is None or parsed < current:
+                line = text.count("\n", 0, match.start()) + 1
+                start = max(0, match.start() - 60)
+                end = min(len(text), match.end() + 60)
+                excerpt = text[start:end].replace("\n", " ")
+                hits.append({"path": rel, "line": line, "token": token, "current": current_raw, "excerpt": excerpt})
+    return hits
+
+
 
 def scan_active_self_certificate_package_versions(root: Path) -> List[Dict[str, Any]]:
     """Find stale active package-version claims in the self-certificate.
@@ -216,7 +275,7 @@ def scan_active_self_certificate_package_versions(root: Path) -> List[Dict[str, 
     except Exception as exc:
         return [{"path": "self_validation/self_certificate.json", "json_path": "$", "version": "<parse-error>", "excerpt": str(exc)}]
     current = str(plugin.get("version", "")).strip()
-    package_version_re = re.compile(r"\bv?0\.\d+\.\d+\b")
+    current_tuple = parse_semver_token(current)
     def walk(value: Any, path: str) -> None:
         if isinstance(value, Mapping):
             for k, v in value.items():
@@ -225,10 +284,12 @@ def scan_active_self_certificate_package_versions(root: Path) -> List[Dict[str, 
             for i, v in enumerate(value):
                 walk(v, f"{path}[{i}]")
         elif isinstance(value, str):
-            for match in package_version_re.finditer(value):
+            for match in SEMVER_TOKEN_RE.finditer(value):
                 raw = match.group(0)
-                norm = raw[1:] if raw.startswith("v") else raw
-                if norm != current:
+                parsed = parse_semver_token(raw)
+                if parsed is None:
+                    continue
+                if current_tuple is None or parsed < current_tuple:
                     start = max(0, match.start() - 60)
                     end = min(len(value), match.end() + 60)
                     hits.append({"path": "self_validation/self_certificate.json", "json_path": path, "version": raw, "excerpt": value[start:end]})
@@ -529,6 +590,20 @@ class Validator:
         except Exception:
             plugin = {}
         self.add("release lock version matches plugin", data.get("plugin_version") == plugin.get("version"), details=f"lock={data.get('plugin_version')} plugin={plugin.get('version')}")
+        cert_path = self.path("self_validation/self_certificate.json")
+        if cert_path.exists():
+            try:
+                cert = json.loads(cert_path.read_text(encoding="utf-8"))
+                artifact = cert.get("artifact")
+                cert_version = artifact.get("version") if isinstance(artifact, Mapping) else None
+                self.add("self certificate artifact version matches plugin", cert_version == plugin.get("version"), details=f"certificate={cert_version} plugin={plugin.get('version')}")
+            except Exception as exc:
+                self.add("self certificate artifact version matches plugin", False, details=str(exc))
+        else:
+            # Mutation and benign-variation copies intentionally omit generated
+            # self_validation artifacts; when a self-certificate is present the
+            # artifact-version match check above is mandatory.
+            self.add("self certificate absent; artifact version match check not applicable", True, details=str(cert_path))
         cmds = data.get("required_commands")
         self.add("release lock commands listed", isinstance(cmds, list) and len(cmds) >= 5, details=str(cmds))
         joined = "\n".join(cmds or []) if isinstance(cmds, list) else ""
@@ -615,6 +690,12 @@ class Validator:
             "release provenance hygiene has no stale generated artifact or absolute build path tokens",
             not hits,
             details=json.dumps(hits[:20], sort_keys=True),
+        )
+        stale_semver_hits = scan_stale_semver_provenance(self.root)
+        self.add(
+            "release provenance files have no semver tokens older than current plugin version",
+            not stale_semver_hits,
+            details=json.dumps(stale_semver_hits[:20], sort_keys=True),
         )
 
 
@@ -905,7 +986,7 @@ class Validator:
         sdir = self.path(f"{SKILL_DIR}/scripts")
         scripts = {
             "ntt_gate.py": ["DEFAULT_THRESHOLDS", "derived_or_downstream_claims", "evaluate_downstream_nonclosure", "automatic closure", "threshold relaxation attempt ignored", "false_world_tests", "true_world_tests", "method_completeness", "evidence_refs", "unresolved_contradictions", "--evidence-root", "structured evidence", "structured_evidence_count", "evidence_schema_version", "_verify_artifact_sha256", "hash_or_version does not match artifact_path SHA-256", "_ref_to_path_checked", "invalid evidence refs", "evidence ref escapes evidence_root", "remote evidence refs are not allowed in strict local evidence mode", "urlparse", "URI schemes are case-insensitive", "non-empty URI scheme", "unique evidence refs", "unique structured evidence artifacts", "duplicate or aliased evidence refs", "missing modal test id", "test target_claim does not match evaluated claim", "target_claim_ids"],
-            "validate_package.py": ["check_closed_surface", "check_self_certificate_nonclosure", "scan_active_self_certificate_package_versions", "downstream non-closure", "plugin manifest has no component-path/runtime fields", "dynamic skill shell disabled", "semantic prompt poisoning", "placeholder eval", "run_live_skill_evals.py", "update_manifest", "agents.rglob", "recursive plugin agent", "check_release_audit_artifacts", "check_release_provenance_hygiene", "check_github_readmes", "EXPECTED_GITHUB_READMES", "GitHub README", "stale generated artifact", "absolute build path", "provenance hygiene", "stable release manifest self-hash", "run_release_lock_idempotence_test", "--skip-release-idempotence", "volatile generated exclusions", "TemporaryDirectory"],
+            "validate_package.py": ["check_closed_surface", "check_self_certificate_nonclosure", "scan_active_self_certificate_package_versions", "scan_stale_semver_provenance", "self certificate artifact version matches plugin", "downstream non-closure", "plugin manifest has no component-path/runtime fields", "dynamic skill shell disabled", "semantic prompt poisoning", "placeholder eval", "run_live_skill_evals.py", "update_manifest", "agents.rglob", "recursive plugin agent", "check_release_audit_artifacts", "check_release_provenance_hygiene", "check_github_readmes", "EXPECTED_GITHUB_READMES", "GitHub README", "stale generated artifact", "absolute build path", "provenance hygiene", "stable release manifest self-hash", "run_release_lock_idempotence_test", "--skip-release-idempotence", "volatile generated exclusions", "TemporaryDirectory"],
             "run_gate_contract_tests.py": ["downstream_claim_auto_pass_rejected", "downstream_unverified_record_retains_pass", "zero_threshold_no_tests_bypass", "observed_accepts_false", "observed_rejects_true", "method_component_overclaim", "valid_structured_evidence_hashes", "wrong_structured_evidence_hash_rejected", "artifact_path_escape_rejected", "one_of_two_claim_evidence_hashes_wrong_rejected", "one_of_two_test_evidence_hashes_wrong_rejected", "evidence_ref_path_escape_rejected", "evidence_ref_absolute_path_rejected", "external_ref_with_valid_artifact_hash_rejected", "remote_ref_rejected_in_strict_local_mode", "uppercase_https_evidence_ref_rejected", "mixed_case_https_evidence_ref_rejected", "uppercase_doi_urn_refs_rejected", "scheme_like_evidence_ref_rejected_in_strict_mode", "duplicate_claim_evidence_ref_does_not_satisfy_minimum", "aliased_same_claim_evidence_ref_does_not_satisfy_minimum", "duplicate_structured_evidence_file_counted_once", "same_artifact_path_for_all_claim_refs_fails_for_critical_claims", "unique_evidence_refs_with_valid_hashes_still_pass", "wrong_false_world_target_claim_rejected", "wrong_true_world_target_claim_rejected", "missing_false_world_test_id_rejected", "missing_true_world_test_id_rejected", "wildcard_applies_to_tests_does_not_replace_test_id", "valid_target_claim_ids_list_still_passes"],
             "run_live_skill_evals.py": ["--plugin-dir", "-p", "--output-format", "--max-turns", "build_fixture_prompt", "transcript_checks", "UNVERIFIED_RUNTIME", "--run-fixtures", "ACCEPTABLE_PASS_STATUSES", "dominant_status"],
             "run_regression_evals.py": ["REQUIRED_FIXTURE_FIELDS", "false_worlds", "true_worlds", "expected_gate", "evidence_required"],
@@ -1118,6 +1199,20 @@ class Validator:
             stale_root = LOCAL_DATA_ROOT + "/" + PREVIOUS_WORK_ROOT + "/nozickian-truth-tracking-agentic-v" + PREVIOUS_PATCH_VERSION + "/stale-output.json"
             p.write_text(json.dumps({"details": stale_root}) + "\n", encoding="utf-8")
         mutations.append(("rejects stale generated self-validation artifact provenance", stale_generated_artifact_provenance))
+
+        def certificate_version_plugin_mismatch(dest: Path):
+            p = dest / "self_validation/self_certificate.json"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            data = {"artifact": {"version": "9.9." + "9"}, "claims": [{"id": "C-structure"}], "derived_or_downstream_claims": [{"id": "D-ok", "from_claim_ids": ["C-structure"], "derived_claim": "Downstream claim remains unverified.", "status": "UNVERIFIED", "reason": "not tested"}]}
+            p.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            write_stable_release_manifest(dest)
+        mutations.append(("rejects self-certificate artifact version mismatching plugin version", certificate_version_plugin_mismatch))
+
+        def stale_semver_readme_provenance(dest: Path):
+            p = dest / "README.md"
+            p.write_text(p.read_text() + "\nRegenerated from the v0.9." + "9 release evidence ledger.\n", encoding="utf-8")
+            write_stable_release_manifest(dest)
+        mutations.append(("rejects stale lower-semver provenance token in README", stale_semver_readme_provenance))
 
         for idx, (name, mut) in enumerate(mutations, start=1):
             self.progress(f"mutation {idx}/{len(mutations)}: {name}")

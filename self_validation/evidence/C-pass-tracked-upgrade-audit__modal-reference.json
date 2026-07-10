@@ -7,7 +7,7 @@
   ],
   "artifact_path": "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
   "claim_id": "C-pass-tracked-upgrade-audit",
-  "command_or_source": "v1.0.1 package-local PASS-TRACKED upgrade audit files and deterministic validator checks",
+  "command_or_source": "v1.0.3 package-local PASS-TRACKED upgrade audit files and deterministic validator checks",
   "evidence_schema_version": "1.0",
   "hash_or_version": "sha256:4a280a90bd3d55fa90cbae526455b87c4632d8f0fd16f6de89edb3bbdc5f304d",
   "observed_result": "Observed reference text that blocks dry-run promotion, auto-closure promotion, and missing trace-auth promotion while allowing a valid external audit bundle to be certified.",

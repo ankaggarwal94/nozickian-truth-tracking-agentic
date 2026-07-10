@@ -616,8 +616,91 @@
       "passed": true,
       "reasons": [],
       "status": "PASS-TRACKED"
+    },
+    {
+      "expected_any": [
+        "PASS-SCOPED"
+      ],
+      "name": "manifest_unknowns_downgrades_scoped",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-SCOPED"
+    },
+    {
+      "expected_any": [
+        "PASS-SCOPED"
+      ],
+      "name": "manifest_method_unknowns_synonym_downgrades",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-SCOPED"
+    },
+    {
+      "expected_any": [
+        "PASS-SCOPED"
+      ],
+      "name": "top_level_unknowns_downgrades",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-SCOPED"
+    },
+    {
+      "expected_any": [
+        "PASS-SCOPED"
+      ],
+      "name": "nested_manifest_unknowns_downgrades",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-SCOPED"
+    },
+    {
+      "expected_any": [
+        "PASS-TRACKED"
+      ],
+      "name": "nested_clean_manifest_still_tracked",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-TRACKED"
+    },
+    {
+      "expected_any": [
+        "PASS-TRACKED"
+      ],
+      "name": "placeholder_unknowns_still_tracked",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-TRACKED"
+    },
+    {
+      "expected_any": [
+        "PASS-TRACKED"
+      ],
+      "name": "scalar_zero_unknowns_still_tracked",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-TRACKED"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "major_claim_method_unknowns_blocks",
+      "passed": true,
+      "reasons": [
+        "C-001: major method unknowns present: 1"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "PASS-TRACKED"
+      ],
+      "name": "minor_claim_method_unknowns_still_tracked",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-TRACKED"
     }
   ],
-  "passed": 48,
-  "total": 48
+  "passed": 57,
+  "total": 57
 }

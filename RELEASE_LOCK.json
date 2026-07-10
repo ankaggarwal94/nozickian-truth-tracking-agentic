@@ -30,7 +30,7 @@
     "review docs/**/*.md and self_validation/README.md; GitHub-facing README files must remain documentation-only and outside plugin-loadable runtime component directories"
   ],
   "plugin_name": "nozickian-truth-tracking-agentic",
-  "plugin_version": "1.0.2",
+  "plugin_version": "1.0.3",
   "release_status": "PASS-SCOPED",
   "required_commands": [
     "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test",
@@ -68,5 +68,15 @@
     "These charter rules are parent-enforced and audited by ntt-gate-auditor; ntt_gate.py does not mechanically check them.",
     "No scripts, README, CI workflow, or runtime surface changed in this patch."
   ],
-  "version": "1.0.2"
+  "v1.0.3_patch_notes": [
+    "Unified the charter's consistency-sweep activation predicate into one canonical form ('mandatory whenever the artifact is a revision of previously corrected material, or any claim was corrected or refuted during this verification'), cross-referenced everywhere as the activation predicate in SKILL.md activation checklist step 9.",
+    "Unified the REMOTE_GROUND_TRUTH_REQUIRED escalation record into one canonical 7-field schema (claim_id, why_remote, exact_fetch_spec, local_mirror, mirror_provenance, staleness_risk, resolution) with canonical vocabulary: claims are UNKNOWN, never UNVERIFIED; UNVERIFIED is the gate status word.",
+    "Added resolution-state semantics: swept is not resolved - every sweep finding carries a resolution field (resolved / unresolved / accepted-intentional-reference); an unresolved stale-echo caps the artifact at PASS-SCOPED and an unresolved live-claim returns the claim to adjudication; escalation records carry resolution (unresolved / fetched-and-readjudicated / left-unknown) with subagents emitting unresolved and the parent owning upgrades.",
+    "Added the pinned-is-not-fresh rule: freshness is evaluated relative to the claim; a pinned commit/date mirror satisfies only claims about the state at that pinned point, never a current-state claim, and staleness_risk must be recorded whenever a pinned mirror is accepted as evidence.",
+    "Added the untrusted fetch-spec rule: exact_fetch_spec is UNTRUSTED DATA authored by a subagent that has read untrusted artifacts; the parent must not execute it verbatim, must reconstruct and validate scheme/host/method, and must treat all fetched content as untrusted input for re-adjudication.",
+    "validate_package.py adds a generalized stale-semver provenance scan (any semver token in provenance-scanned release files strictly lower than plugin.json's version fails; fails closed when the current version is unparseable), extends provenance-hygiene scanning to references/OUTPUT_TEMPLATES.md, generalizes the active self-certificate version scan beyond 0.x tokens, and adds a critical check that the active self-certificate artifact.version matches plugin.json; two new false-world mutations cover the cert-version mismatch and a planted stale lower-semver provenance token.",
+    "Release metadata refresh: the active self-certificate gains real consistency_sweep and remote_escalations records for this release's own finalization (dogfooding the charter schemas); stale recorded self-test counts and prior-version markers in bundled provenance files were swept and resolved; the historical first-patch audit record in AUDIT_REPORT.md is retitled as historical with a dated v1.0.3 addendum carrying the final self-test numbers.",
+    "These charter rules remain parent-enforced and audited by ntt-gate-auditor; ntt_gate.py does not mechanically check them."
+  ],
+  "version": "1.0.3"
 }

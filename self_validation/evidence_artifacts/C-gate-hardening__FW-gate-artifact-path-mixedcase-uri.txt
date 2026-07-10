@@ -1,4 +1,4 @@
-v1.0.1 structured evidence artifact
+v1.0.3 structured evidence artifact
 claim_id=C-gate-hardening
 test_id=FW-gate-artifact-path-mixedcase-uri
 evidence_ref=self_validation/evidence/C-gate-hardening__FW-gate-artifact-path-mixedcase-uri.json

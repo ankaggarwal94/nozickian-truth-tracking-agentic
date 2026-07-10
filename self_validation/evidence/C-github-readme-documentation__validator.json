@@ -1,9 +1,9 @@
 {
   "artifact_path": "skills/nozickian-verify/scripts/validate_package.py",
   "claim_id": "C-github-readme-documentation",
-  "command_or_source": "v1.0.1 package-local GitHub README documentation and deterministic validator checks",
+  "command_or_source": "v1.0.3 package-local GitHub README documentation and deterministic validator checks",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:cf92b011a0d150b3e72bc94c0d432afc0f59587bce032d764e4e70dc354ffdce",
+  "hash_or_version": "sha256:4fa325a3fc5ed563054b3fda64e6285dd127aeb7221e7f7a4a11ce1a314c5f18",
   "observed_result": "Observed validator code that requires the GitHub README documentation set and checks closed-surface documentation placement.",
   "support_summary": "The validator implements check_github_readmes, expected README topic coverage, non-runtime documentation placement, and false-world mutation coverage for degraded GitHub documentation.",
   "timestamp_utc": "2026-06-07T00:00:00Z"

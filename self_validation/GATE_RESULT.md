@@ -12,6 +12,7 @@ Status: **PASS-SCOPED**
 | critical_failed | 0 |
 | major_failed | 0 |
 | scope_limitations | 32 |
+| certificate_method_unknowns | 1 |
 | certificate_method_completeness | 1.0 |
 | evidence_root_checked | True |
 | strict_evidence | True |

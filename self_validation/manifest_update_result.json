@@ -1,9 +1,9 @@
 {
-  "manifest_sha256": "sha256:0e86f662ed45a8f823a5c05addff89137b87d0493060a7bd1da072cbe09b9ce9",
-  "note": "MANIFEST.sha256 and STABLE_RELEASE_MANIFEST.json regenerated after the 2026-07-09 charter-caps port (consistency sweep, remote ground-truth escalation, loophole repairs).",
+  "manifest_sha256": "sha256:a0ce9798bb9e0d4e751f48e1ab936c9c1349b7d6dbfaaa842abf56c6b93b0279",
+  "note": "MANIFEST.sha256 and STABLE_RELEASE_MANIFEST.json regenerated at the 2026-07-09 v1.0.3 release finalization (charter predicate/schema unification, resolution-state semantics, untrusted fetch-spec rule, validator stale-version and cert-version checks, release-metadata refresh).",
   "package": "nozickian-truth-tracking-agentic",
   "schema_version": "1.0",
-  "stable_release_manifest_sha256": "sha256:c52a0b4395dd987eafa338b15112fa4cea79e6aa6b67d204230fb3aeb0345160",
+  "stable_release_manifest_sha256": "sha256:f5453743075cf2e7177fc377a849cae5f7620d4619cce59ba783e41b6f4e6634",
   "status": "PASS",
-  "version": "1.0.2"
+  "version": "1.0.3"
 }

@@ -1,11 +1,11 @@
 # Team/internal package validation report
 
 **Status:** PASS
-**Checks:** 1365 / 1365 passed
+**Checks:** 1371 / 1371 passed
 **Critical failures:** 0
 
 ## Gate contract tests
-Passed 48 / 48
+Passed 57 / 57
 - PASS: valid_substantive_certificate -> PASS-TRACKED
 - PASS: valid_structured_evidence_hashes -> PASS-TRACKED
 - PASS: wrong_structured_evidence_hash_rejected -> FAIL
@@ -54,6 +54,15 @@ Passed 48 / 48
 - PASS: observed_accepts_false -> FAIL
 - PASS: observed_rejects_true -> FAIL
 - PASS: minor_claim_without_modal_tests -> PASS-TRACKED
+- PASS: manifest_unknowns_downgrades_scoped -> PASS-SCOPED
+- PASS: manifest_method_unknowns_synonym_downgrades -> PASS-SCOPED
+- PASS: top_level_unknowns_downgrades -> PASS-SCOPED
+- PASS: nested_manifest_unknowns_downgrades -> PASS-SCOPED
+- PASS: nested_clean_manifest_still_tracked -> PASS-TRACKED
+- PASS: placeholder_unknowns_still_tracked -> PASS-TRACKED
+- PASS: scalar_zero_unknowns_still_tracked -> PASS-TRACKED
+- PASS: major_claim_method_unknowns_blocks -> FAIL
+- PASS: minor_claim_method_unknowns_still_tracked -> PASS-TRACKED
 
 ## False-world package mutations
 - PASS: rejects degraded STANDARD.md even with updated manifest observed=FAIL critical_failed=16
@@ -87,9 +96,11 @@ Passed 48 / 48
 - PASS: rejects formal coordinator general-purpose fallback observed=FAIL critical_failed=1
 - PASS: rejects formal runner LIMITED as pass status observed=FAIL critical_failed=1
 - PASS: rejects token-preserving formal runner pass stub observed=FAIL critical_failed=33
-- PASS: rejects active self-certificate stale package-version provenance observed=FAIL critical_failed=2
-- PASS: rejects downstream auto-pass epistemic closure observed=FAIL critical_failed=2
-- PASS: rejects stale generated self-validation artifact provenance observed=FAIL critical_failed=3
+- PASS: rejects active self-certificate stale package-version provenance observed=FAIL critical_failed=4
+- PASS: rejects downstream auto-pass epistemic closure observed=FAIL critical_failed=5
+- PASS: rejects stale generated self-validation artifact provenance observed=FAIL critical_failed=4
+- PASS: rejects self-certificate artifact version mismatching plugin version observed=FAIL critical_failed=2
+- PASS: rejects stale lower-semver provenance token in README observed=FAIL critical_failed=1
 
 ## True-world benign variations
 - PASS: retains pass after README note observed=PASS
@@ -121,6 +132,7 @@ Passed 48 / 48
 - PASS: release lock tier is team-internal
 - PASS: release lock plugin name matches
 - PASS: release lock version matches plugin
+- PASS: self certificate artifact version matches plugin
 - PASS: release lock commands listed
 - PASS: release lock command includes validate_package.py
 - PASS: release lock command includes ntt_gate.py
@@ -651,6 +663,7 @@ Passed 48 / 48
 - PASS: stable release manifest hash matches: skills/nozickian-verify/scripts/validate_package.py
 - PASS: stable release manifest bytes match: skills/nozickian-verify/scripts/validate_package.py
 - PASS: release provenance hygiene has no stale generated artifact or absolute build path tokens
+- PASS: release provenance files have no semver tokens older than current plugin version
 - PASS: self certificate exists for downstream non-closure check
 - PASS: self certificate parses for downstream non-closure check
 - PASS: self certificate has no stale active package-version provenance
@@ -882,20 +895,14 @@ Passed 48 / 48
 - PASS: STANDARD.md contains term: PASS-TRACKED upgrade audit
 - PASS: STANDARD.md contains term: upgrade from PASS-SCOPED
 - PASS: STANDARD.md not obvious nonsense
-- PASS: reference exists: EVAL_BEST_PRACTICES.md
-- PASS: reference substantive: EVAL_BEST_PRACTICES.md
 - PASS: reference exists: SOURCES.md
 - PASS: reference substantive: SOURCES.md
-- PASS: reference exists: ARTIFACT_GUIDE.md
-- PASS: reference substantive: ARTIFACT_GUIDE.md
-- PASS: reference exists: OUTPUT_TEMPLATES.md
-- PASS: reference substantive: OUTPUT_TEMPLATES.md
 - PASS: reference exists: EVIDENCE_SCHEMA.md
 - PASS: reference substantive: EVIDENCE_SCHEMA.md
+- PASS: reference exists: OUTPUT_TEMPLATES.md
+- PASS: reference substantive: OUTPUT_TEMPLATES.md
 - PASS: reference exists: STANDARD.md
 - PASS: reference substantive: STANDARD.md
-- PASS: reference exists: SUBAGENT_PROTOCOLS.md
-- PASS: reference substantive: SUBAGENT_PROTOCOLS.md
 - PASS: reference exists: PASS_TRACKED_UPGRADE_AUDIT.md
 - PASS: reference substantive: PASS_TRACKED_UPGRADE_AUDIT.md
 - PASS: PASS-TRACKED upgrade audit contains term: PASS-SCOPED to PASS-TRACKED
@@ -912,6 +919,12 @@ Passed 48 / 48
 - PASS: PASS-TRACKED upgrade audit contains term: UNVERIFIED_RUNTIME
 - PASS: PASS-TRACKED upgrade audit contains term: downstream
 - PASS: PASS-TRACKED upgrade audit contains term: no automatic
+- PASS: reference exists: ARTIFACT_GUIDE.md
+- PASS: reference substantive: ARTIFACT_GUIDE.md
+- PASS: reference exists: SUBAGENT_PROTOCOLS.md
+- PASS: reference substantive: SUBAGENT_PROTOCOLS.md
+- PASS: reference exists: EVAL_BEST_PRACTICES.md
+- PASS: reference substantive: EVAL_BEST_PRACTICES.md
 - PASS: agent exists: ntt-formal-coordinator
 - PASS: agent frontmatter parses: ntt-formal-coordinator
 - PASS: agent frontmatter has only expected keys: ntt-formal-coordinator
@@ -1247,6 +1260,8 @@ Passed 48 / 48
 - PASS: script contains hardening token validate_package.py: check_closed_surface
 - PASS: script contains hardening token validate_package.py: check_self_certificate_nonclosure
 - PASS: script contains hardening token validate_package.py: scan_active_self_certificate_package_versions
+- PASS: script contains hardening token validate_package.py: scan_stale_semver_provenance
+- PASS: script contains hardening token validate_package.py: self certificate artifact version matches plugin
 - PASS: script contains hardening token validate_package.py: downstream non-closure
 - PASS: script contains hardening token validate_package.py: plugin manifest has no component-path/runtime fields
 - PASS: script contains hardening token validate_package.py: dynamic skill shell disabled
@@ -1457,6 +1472,8 @@ Passed 48 / 48
 - PASS: false-world mutation: rejects active self-certificate stale package-version provenance
 - PASS: false-world mutation: rejects downstream auto-pass epistemic closure
 - PASS: false-world mutation: rejects stale generated self-validation artifact provenance
+- PASS: false-world mutation: rejects self-certificate artifact version mismatching plugin version
+- PASS: false-world mutation: rejects stale lower-semver provenance token in README
 - PASS: true-world benign variation: retains pass after README note
 - PASS: true-world benign variation: retains pass after benign GitHub docs note
 - PASS: true-world benign variation: retains pass after unused inert asset

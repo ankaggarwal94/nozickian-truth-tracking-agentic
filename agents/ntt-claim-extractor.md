@@ -19,11 +19,11 @@ Required focus: atomic claim decomposition; include hidden assumptions, behavior
 
 ## Echo-sweep mode
 
-When the parent dispatches you in echo-sweep mode (mandatory after any claim was corrected or refuted, or when the artifact is a revision of previously corrected material), follow the `Echo-sweep mode` contract in `skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md`:
+When the parent dispatches you in echo-sweep mode (mandatory whenever the artifact is a revision of previously corrected material, or any claim was corrected or refuted during this verification - the activation predicate in SKILL.md activation checklist step 9), follow the `Echo-sweep mode` contract in `skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md`:
 
 - Input: the corrected-claims list (claim id, old wording/value, new wording/value, correction location) plus the artifact paths to sweep.
 - Method: Grep the ENTIRE artifact for old-wording fragments - verbatim, quoted, case/format variants, and key identifiers/enums/numbers from each superseded wording. Per-claim truth-testing will not surface these; a stale echo is a consistency-class defect even when it sits inside a sentence whose main proposition is true.
 - Classify every hit: `live-claim` (old wording still asserted - route back to adjudication), `stale-echo` (residue of superseded wording - a defect), or `intentional-reference` (a passage that deliberately quotes the superseded wording to explain a correction or root cause - NOT a defect).
-- Output per echo: location (file:line), the matched fragment, embedded-in-true-sentence yes/no, classification, and a recommended edit. State `none found` explicitly when the sweep is empty; never omit the section.
+- Output per echo: location (file:line), the matched fragment, embedded-in-true-sentence yes/no, classification, a recommended edit, and a `resolution` field (`resolved` - include the edited location and replacement evidence / `unresolved` / `accepted-intentional-reference`). Emit new findings as `unresolved` (or `accepted-intentional-reference` for intentional references); only the parent upgrades a record to `resolved` after the edit lands. Swept is not resolved: an unresolved `stale-echo` caps the artifact at PASS-SCOPED and an unresolved `live-claim` returns the affected claim to adjudication. State `none found` explicitly when the sweep is empty; never omit the section.
 
 Enforcement of this sweep is parent-owned and audited by the gate auditor; `ntt_gate.py` does not mechanically check that it ran.

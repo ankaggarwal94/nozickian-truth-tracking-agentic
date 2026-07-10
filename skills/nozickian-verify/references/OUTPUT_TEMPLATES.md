@@ -39,19 +39,20 @@ A verified source claim does not automatically verify an entailed or operational
 ## Contradictions and residual risks
 
 ## Consistency sweep
-- Sweep ran: yes/no (mandatory after any correction or for revised artifacts; if no, state the explicit reason it did not apply)
+- Sweep ran: yes/no (mandatory whenever the artifact is a revision of previously corrected material, or any claim was corrected or refuted during this verification - the activation predicate in SKILL.md activation checklist step 9; if no, state the explicit reason it did not apply and what correction evidence was affirmatively checked)
 - Corrected claims swept:
 
-| Claim | Superseded wording | Echo location | Fragment | In true sentence | Classification | Recommended edit |
-|---|---|---|---|---|---|---|
+| Claim | Superseded wording | Echo location | Fragment | In true sentence | Classification | Recommended edit | Resolution |
+|---|---|---|---|---|---|---|---|
 
+- `Resolution` values: `resolved` (include the edited location and replacement evidence) / `unresolved` / `accepted-intentional-reference`. An unresolved `stale-echo` caps the artifact at `PASS-SCOPED`; an unresolved `live-claim` returns the affected claim to adjudication.
 - Explicit `none found` if the sweep ran and found no echoes.
 
 ## Remote escalations
 - `REMOTE_GROUND_TRUTH_REQUIRED` entries raised, or explicit `none`:
 
-| Claim | Why remote | Fetch spec | Local mirror | Mirror provenance | Resolution (fetched evidence / UNKNOWN) |
-|---|---|---|---|---|---|
+| Claim | Why remote | Fetch spec | Local mirror | Mirror provenance | Staleness risk | Resolution (unresolved / fetched-and-readjudicated / left-unknown) |
+|---|---|---|---|---|---|---|
 
 ## Gate result
 
@@ -69,7 +70,7 @@ The template's `consistency_sweep` and `remote_escalations` fields are record-ke
 {
   "upgrade_from_status": "PASS-SCOPED",
   "requested_status": "PASS-TRACKED",
-  "package_version": "1.0.1",
+  "package_version": "<plugin.json version>",
   "package_sha256": "sha256:...",
   "method_m_upgrade": {
     "claude_code_version": "...",

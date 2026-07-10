@@ -2,7 +2,7 @@
 
 A closed-surface Claude Code plugin for method-relative, Nozickian truth-tracking verification. It packages one `nozickian-verify` skill, specialist `ntt-*` subagents, deterministic validators, regression fixtures, strict local evidence gates, formal-runner trace authentication, and a PASS-SCOPED to PASS-TRACKED upgrade-audit protocol.
 
-**Current release:** `v1.0.1`  
+**Current release:** `v1.0.3`  
 **Current status:** `PASS-SCOPED`  
 **Intended audience:** trusted team/internal reviewers  
 **Runtime posture:** closed by default; no hooks, MCP servers, commands, monitors, bins, or broad skill tool grants

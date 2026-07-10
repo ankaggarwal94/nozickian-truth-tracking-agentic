@@ -1,11 +1,11 @@
 {
   "artifact_path": "self_validation/v101_targeted_probe_results.json",
   "claim_id": "C-formal-invocation",
-  "command_or_source": "v1.0.1 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
+  "command_or_source": "v1.0.3 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:7c5f6914c6b5369e7d621ecf746589a63b233e4790bd3678c29928334bc9cf47",
-  "observed_result": "Observed v1.0.1 deterministic evidence for C-formal-invocation / FW-formal-fake-tool-events-inside-tool-result-content",
-  "support_summary": "This structured evidence binds FW-formal-fake-tool-events-inside-tool-result-content to self_validation/v101_targeted_probe_results.json, a package-local targeted probe artifact showing v1.0.1 rejects result-payload event smuggling and duplicate modal-test coverage false worlds. v1.0.1 additionally checks context-aware trace payload isolation and unique modal-test thresholds.",
+  "hash_or_version": "sha256:0813185c42f1fba4edaf5a7dcb882b00c8ad4816957a737cb53c9bb6c2a67b64",
+  "observed_result": "Observed v1.0.3 deterministic evidence for C-formal-invocation / FW-formal-fake-tool-events-inside-tool-result-content",
+  "support_summary": "This structured evidence binds FW-formal-fake-tool-events-inside-tool-result-content to self_validation/v101_targeted_probe_results.json, a package-local targeted probe artifact showing v1.0.3 rejects result-payload event smuggling and duplicate modal-test coverage false worlds. v1.0.3 additionally checks context-aware trace payload isolation and unique modal-test thresholds.",
   "test_id": "FW-formal-fake-tool-events-inside-tool-result-content",
   "timestamp": "1970-01-01T00:00:00Z",
   "timestamp_utc": "2026-06-04T00:00:00Z"

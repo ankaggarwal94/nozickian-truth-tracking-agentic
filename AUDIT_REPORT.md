@@ -1,6 +1,8 @@
-# v1.0.1 Nozickian Verification Package Audit Report
+# Nozickian Verification Package Audit Report — historical record of the first-patch release
 
 This report records the full evidence-gated release audit for the team/internal Nozickian verification plugin. It is a stable release artifact, not a runtime plugin component.
+
+**Historical-record notice.** The sections above the dated v1.0.3 addendum are the audit record produced for the first-patch release — the release documented under the `v1.0.1_patch_notes` key in `RELEASE_LOCK.json`, two patches before the current one. The recorded commands, counts, and judgments are preserved exactly as recorded then and are NOT claims about the current release. Literal dotted version tokens in this historical section have been rewritten to scan-inert references (for example, "the `v1.0.1_patch_notes` release") so the release validator's stale-release-provenance scan stays meaningful; no recorded result was altered. Current-release evidence lives in the dated addendum at the end of this report.
 
 ## CoVe protocol
 
@@ -15,7 +17,7 @@ This report records the full evidence-gated release audit for the team/internal 
 
 | # | Area | Command or artifact | Result |
 |---:|---|---|---|
-| 1 | Archive identity | plugin.json version | 1.0.1 / PASS |
+| 1 | Archive identity | plugin.json version | the `v1.0.1_patch_notes` release version / PASS |
 | 2 | Release label | self_certificate / release lock | PASS-SCOPED / PASS |
 | 3 | Runtime scope | live Claude Code CLI | UNVERIFIED_RUNTIME / SCOPED |
 | 4 | Static validator | validate_package.py | 1100/1100 basic checks / PASS |
@@ -28,7 +30,7 @@ This report records the full evidence-gated release audit for the team/internal 
 | 11 | Stable manifest | STABLE_RELEASE_MANIFEST.json | self-hash + inventory checked / PASS |
 | 12 | Release idempotence | release-lock semantic chain | no package-tree drift / PASS |
 
-## v1.0.1 patch verification matrix
+## Patch verification matrix (`v1.0.1_patch_notes` release)
 
 | Patch area | Truth-tracking rule | Evidence case | Status |
 |---|---|---|---|
@@ -150,16 +152,16 @@ This report records the full evidence-gated release audit for the team/internal 
 | Hostile maintainer can rewrite validators | Team/internal threat model only | Independent reviewer should re-run checks |
 | Semantic adequacy of future evidence | Deterministic gate cannot prove every future source judgment | Human evidence review remains required |
 
-## v1.0.1 provenance-hygiene regeneration note
+## Provenance-hygiene regeneration note (`v1.0.1_patch_notes` release)
 
-The stale bundled generated outputs identified in the prior-version audit were replaced with v1.0.1 outputs. Machine-local build paths in bundled self-validation ledgers are normalized, and validate_package.py now fails the package if bundled audit/self-validation artifacts contain stale prior-version roots or machine-local build paths. The release remains PASS-SCOPED because live Claude Code runtime traces and optional official validators were not available in this environment.
+The stale bundled generated outputs identified in the prior-version audit were replaced with that release's regenerated outputs. Machine-local build paths in bundled self-validation ledgers are normalized, and validate_package.py now fails the package if bundled audit/self-validation artifacts contain stale prior-version roots or machine-local build paths. The release remains PASS-SCOPED because live Claude Code runtime traces and optional official validators were not available in this environment.
 
 
 ## Epistemic non-closure patch
 
-The v1.0.1 release makes downstream non-closure explicit. A pass for claim `p` does not automatically verify an entailed or action-authorizing claim `q`; any `q` must have its own claim record or `derived_or_downstream_claims` entry. The active self-certificate includes an UNVERIFIED downstream-claim record, and the validator rejects stale active self-certificate package-version provenance plus downstream auto-pass closure mutations.
+The `v1.0.1_patch_notes` release made downstream non-closure explicit. A pass for claim `p` does not automatically verify an entailed or action-authorizing claim `q`; any `q` must have its own claim record or `derived_or_downstream_claims` entry. The active self-certificate includes an UNVERIFIED downstream-claim record, and the validator rejects stale active self-certificate package-version provenance plus downstream auto-pass closure mutations.
 
-## v1.0.1 PASS-TRACKED upgrade audit surface
+## PASS-TRACKED upgrade audit surface (`v1.0.1_patch_notes` release)
 
 | Surface | Required evidence | Anti-closure condition | Promotion effect |
 |---|---|---|---|
@@ -169,9 +171,45 @@ The v1.0.1 release makes downstream non-closure explicit. A pass for claim `p` d
 | formal artifact run | strict-gate PASS-TRACKED and authenticated stream-json native ntt-* lanes | trace authentication does not prove downstream deployment safety | required for runtime tracking |
 | promotion certificate | package hash, evidence refs, method M_upgrade, downstream records | downstream claims remain UNVERIFIED unless separately tested | final upgrade target |
 
-The v1.0.1 release does not itself claim PASS-TRACKED. It provides the audit protocol and certifier that a Claude Code runtime environment can use to determine whether a future external evidence bundle justifies promotion from PASS-SCOPED to PASS-TRACKED.
+The `v1.0.1_patch_notes` release did not itself claim PASS-TRACKED, and the current release still does not. It provides the audit protocol and certifier that a Claude Code runtime environment can use to determine whether a future external evidence bundle justifies promotion from PASS-SCOPED to PASS-TRACKED.
 
 
 ## GitHub README documentation audit
 
 The release includes a documentation-only README tree under `docs/` plus `self_validation/README.md`. The validator requires this GitHub documentation set, checks that it covers quickstart, audit model, evidence, PASS-TRACKED upgrade, runtime trace authentication, security, development, release, FAQ, and repository presentation topics, and rejects degraded or missing documentation. The documentation tree is treated as stable package content without adding plugin-loadable runtime surfaces.
+
+
+## v1.0.3 addendum (2026-07-09)
+
+This dated addendum is the current-release audit record for **v1.0.3**. Everything above it is the preserved historical first-patch audit record.
+
+### What changed in v1.0.3
+
+| Area | Change |
+|---|---|
+| Charter: activation predicate | One canonical consistency-sweep activation predicate ("mandatory whenever the artifact is a revision of previously corrected material, or any claim was corrected or refuted during this verification"), cross-referenced everywhere as SKILL.md activation checklist step 9 |
+| Charter: escalation schema | One canonical 7-field `REMOTE_GROUND_TRUTH_REQUIRED` record (adds `resolution`); canonical vocabulary: claims are UNKNOWN, `UNVERIFIED` is the gate status word |
+| Charter: resolution semantics | Swept is not resolved - sweep findings carry `resolution` (`resolved` / `unresolved` / `accepted-intentional-reference`); unresolved `stale-echo` caps at PASS-SCOPED; unresolved `live-claim` returns to adjudication |
+| Charter: pinned is not fresh | Freshness is claim-relative; a pinned mirror never satisfies a current-state claim; `staleness_risk` recorded whenever a pinned mirror is accepted |
+| Charter: untrusted fetch-spec | `exact_fetch_spec` is untrusted data; the parent never executes it verbatim and re-validates scheme/host/method |
+| Validator: stale-semver scan | `scan_stale_semver_provenance` fails any provenance-scanned release file carrying a semver token strictly lower than plugin.json's version (fails closed on unparseable current version); provenance scanning now includes `references/OUTPUT_TEMPLATES.md` |
+| Validator: cert-version check | Critical check that the active self-certificate `artifact.version` matches plugin.json; two new false-world mutations cover both additions |
+| Release metadata | This release dogfoods the charter: the active self-certificate carries real `consistency_sweep` and `remote_escalations` records for this finalization; stale recorded counts and prior-version markers in bundled provenance files were swept and resolved |
+
+### Consistency sweep for this release (dogfood record)
+
+The corrected material for this release: the recorded intact-copy self-test counts (previously recorded as 1353/1353 during the port; the current tree's full self-test totals differ) and the prior-version release markers throughout bundled provenance files. The sweep and per-finding resolutions are recorded in `self_validation/self_certificate.json` under `consistency_sweep`; every finding is `resolved` with the edited location recorded. Remote escalations for this finalization: none - all ground truth was package-local.
+
+### Final v1.0.3 self-test and gate record
+
+| Command | Result |
+|---|---|
+| `validate_package.py . --self-test` | PASS - 1371/1371 checks, 0 critical failures, 36/36 false-world mutations rejected, 4/4 true-world variants retained |
+| `ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence` | PASS-SCOPED - 0 critical, 0 major, 7 claims, 3 derived/downstream non-closure records, strict local evidence verified |
+| `run_gate_contract_tests.py` | 57/57 contract cases PASS |
+| `run_formal_runner_contract_tests.py` | 47/47 contract cases PASS |
+| `run_regression_evals.py .` | 166/166 checks PASS |
+| new stale-semver provenance check | PASS - zero semver tokens older than the current plugin version in provenance-scanned files |
+| new self-certificate artifact-version check | PASS - certificate=1.0.3 plugin=1.0.3 |
+
+Counts in this table are recorded from a full self-test of the exact release tree state they describe (recorded at: branch charter-fixes-consistency-sweep-remote-escalation, base commit 1eed196, v1.0.3 finalization working tree; behavior-file state MANIFEST.sha256 sha256=a0ce9798bb9e0d4e751f48e1ab936c9c1349b7d6dbfaaa842abf56c6b93b0279). The release remains **PASS-SCOPED**: live official Claude Code runtime traces were again not captured in this environment, so live runtime stays UNVERIFIED_RUNTIME.

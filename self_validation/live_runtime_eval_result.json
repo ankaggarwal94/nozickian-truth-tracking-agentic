@@ -1,8 +1,31 @@
 {
-  "commands": [],
+  "commands": [
+    {
+      "cmd": [
+        "/opt/homebrew/bin/claude",
+        "--version"
+      ],
+      "duration_sec": 0.474,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "2.1.205 (Claude Code)\n"
+    },
+    {
+      "cmd": [
+        "/opt/homebrew/bin/claude",
+        "plugin",
+        "validate",
+        "<package-root>"
+      ],
+      "duration_sec": 0.486,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "Validating plugin manifest: <package-root>/.claude-plugin/plugin.json\n\n\u2714 Validation passed\n"
+    }
+  ],
   "fixture_results": [],
   "plugin_root": "<package-root>",
-  "reason": "Claude Code CLI not found on PATH; live plugin/subagent invocation not executed.",
+  "reason": "Claude Code CLI present; plugin validate attempted. Fixture slash-command invocations not requested.",
   "status": "UNVERIFIED_RUNTIME",
   "transcript_checks": []
 }

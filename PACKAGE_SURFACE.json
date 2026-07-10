@@ -58,12 +58,12 @@
   "assurance_tier": "team-internal-reuse",
   "closed_surface": true,
   "closed_surface_invariants": [
-    "v1.0.1 formal trace authentication treats tool_result.content and tool_use.content as payload data; fake tool_use/tool_result blocks embedded there cannot authenticate runtime lanes.",
-    "v1.0.1 strict gate thresholds count unique false-world and true-world modal tests; duplicate IDs, copied test objects, and reused canonical test evidence sets do not inflate coverage.",
-    "v1.0.1 formal trace authentication treats every tool_use/tool_result node as a hard event boundary; nested tool-like objects under data/payload/delta/message/content are payload data, not runtime events.",
-    "v1.0.1 formal trace authentication enforces assistant-origin tool_use and user-origin tool_result direction when role context is available.",
-    "v1.0.1 strict gate modal tests must have stable nonempty IDs and target the evaluated claim; duplicated, anonymous, or wrong-claim modal coverage cannot satisfy thresholds.",
-    "v1.0.1 release provenance hygiene rejects stale generated self-validation artifacts, previous package-root names, and machine-local build paths before team/internal reuse."
+    "v1.0.3 formal trace authentication treats tool_result.content and tool_use.content as payload data; fake tool_use/tool_result blocks embedded there cannot authenticate runtime lanes.",
+    "v1.0.3 strict gate thresholds count unique false-world and true-world modal tests; duplicate IDs, copied test objects, and reused canonical test evidence sets do not inflate coverage.",
+    "v1.0.3 formal trace authentication treats every tool_use/tool_result node as a hard event boundary; nested tool-like objects under data/payload/delta/message/content are payload data, not runtime events.",
+    "v1.0.3 formal trace authentication enforces assistant-origin tool_use and user-origin tool_result direction when role context is available.",
+    "v1.0.3 strict gate modal tests must have stable nonempty IDs and target the evaluated claim; duplicated, anonymous, or wrong-claim modal coverage cannot satisfy thresholds.",
+    "v1.0.3 release provenance hygiene rejects stale generated self-validation artifacts, previous package-root names, and machine-local build paths before team/internal reuse."
   ],
   "forbidden_plugin_manifest_runtime_fields": [
     "skills",
@@ -126,15 +126,15 @@
     "Formal trace authentication parses only recognized stream-json event positions; fake tool_result dictionaries nested inside tool inputs or arguments cannot authenticate PASS-TRACKED.",
     "Formal trace authentication requires result/completion events to occur after their matching tool-use events.",
     "Strict local evidence mode rejects every URI-scheme evidence ref case-insensitively, including HTTPS://, DOI:, URN:, and arbitrary scheme-like refs.",
-    "v1.0.1 formal trace authentication treats recognized stream-json positions as necessary but not sufficient: event type must be an authentic tool_use/tool_result style type, so text/message/assistant blocks cannot masquerade as native Agent/Task calls or results.",
+    "v1.0.3 formal trace authentication treats recognized stream-json positions as necessary but not sufficient: event type must be an authentic tool_use/tool_result style type, so text/message/assistant blocks cannot masquerade as native Agent/Task calls or results.",
     "Unexpected native Agent/Task tool-use events without exact required ntt-* structured selectors are flagged and prevent PASS-TRACKED promotion.",
     "Strict local evidence rejects URI-scheme values in both evidence_refs and artifact_path, regardless of URI scheme case.",
-    "v1.0.1 formal trace authentication rejects data/payload/delta event smuggling under tool_result events and rejects role-inverted tool_use/tool_result message directions.",
-    "v1.0.1 strict evidence gating requires modal tests to target their evaluated claim and carry stable nonempty IDs; wildcard evidence applicability cannot substitute for a missing test ID.",
-    "v1.0.1 adds a release-time provenance hygiene guard over bundled audit/self-validation artifacts so stale old-version ledgers and absolute build paths cannot masquerade as current release evidence.",
-    "v1.0.1 adds a no-automatic-epistemic-closure certificate rule: downstream/deployment/safety/action claims do not inherit pass status from source claims and must be separately represented and tested.",
-    "v1.0.1 adds a PASS-TRACKED promotion audit path; promotion requires an external audit bundle, live runtime fixture evidence, official validator evidence, formal artifact trace authentication, strict-gate PASS-TRACKED on the generated certificate, and downstream non-closure review.",
-    "v1.0.1 adds a GitHub-ready README documentation tree under docs/ while preserving the closed runtime surface and forbidding README files inside plugin-loadable component directories."
+    "v1.0.3 formal trace authentication rejects data/payload/delta event smuggling under tool_result events and rejects role-inverted tool_use/tool_result message directions.",
+    "v1.0.3 strict evidence gating requires modal tests to target their evaluated claim and carry stable nonempty IDs; wildcard evidence applicability cannot substitute for a missing test ID.",
+    "v1.0.3 adds a release-time provenance hygiene guard over bundled audit/self-validation artifacts so stale old-version ledgers and absolute build paths cannot masquerade as current release evidence.",
+    "v1.0.3 adds a no-automatic-epistemic-closure certificate rule: downstream/deployment/safety/action claims do not inherit pass status from source claims and must be separately represented and tested.",
+    "v1.0.3 adds a PASS-TRACKED promotion audit path; promotion requires an external audit bundle, live runtime fixture evidence, official validator evidence, formal artifact trace authentication, strict-gate PASS-TRACKED on the generated certificate, and downstream non-closure review.",
+    "v1.0.3 adds a GitHub-ready README documentation tree under docs/ while preserving the closed runtime surface and forbidding README files inside plugin-loadable component directories."
   ],
   "package": "nozickian-truth-tracking-agentic",
   "schema_version": "1.2",
@@ -149,5 +149,5 @@
     "Add first-class PASS-TRACKED upgrade audit instructions and a promotion certifier script while preserving PASS-SCOPED as this release artifact status."
   ],
   "v1.0.1_trace_authentication_hardening": "Strict formal trace authentication uses hard event boundaries for tool events, exact structured ntt-* selectors, post-call matching result IDs, role-aware message direction when available, no unexpected Agent/Task calls, and substantive nonempty result content.",
-  "version": "1.0.1"
+  "version": "1.0.3"
 }

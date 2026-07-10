@@ -7,7 +7,7 @@
       "severity": "critical"
     },
     {
-      "details": "<tmp-v101-final-outputs>",
+      "details": "<tmp-v103-final-outputs>",
       "name": "audit bundle exists",
       "passed": true,
       "severity": "critical"
@@ -61,7 +61,7 @@
       "severity": "critical"
     },
     {
-      "details": "<tmp-v101-final-outputs>",
+      "details": "<tmp-v103-final-outputs>/live_fixtures/live_runtime_eval_result.json",
       "name": "live runtime eval result present",
       "passed": false,
       "severity": "critical"
@@ -73,7 +73,7 @@
       "severity": "critical"
     },
     {
-      "details": "<tmp-v101-final-outputs>",
+      "details": "<tmp-v103-final-outputs>/promotion_certificate.json",
       "name": "promotion certificate present",
       "passed": false,
       "severity": "critical"
@@ -85,7 +85,7 @@
       "severity": "critical"
     },
     {
-      "details": "1.0.1",
+      "details": "1.0.3",
       "name": "current plugin version is semver",
       "passed": true,
       "severity": "critical"
@@ -144,7 +144,7 @@
       "severity": "critical"
     },
     {
-      "details": "<tmp-v101-final-outputs>",
+      "details": "<tmp-v103-final-outputs>/live_fixtures/live_runtime_eval_result.json",
       "name": "live runtime eval result present",
       "passed": false,
       "severity": "critical"
@@ -156,7 +156,7 @@
       "severity": "critical"
     },
     {
-      "details": "<tmp-v101-final-outputs>",
+      "details": "<tmp-v103-final-outputs>/promotion_certificate.json",
       "name": "promotion certificate present",
       "passed": false,
       "severity": "critical"

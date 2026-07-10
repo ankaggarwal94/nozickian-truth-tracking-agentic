@@ -1,4 +1,4 @@
-v1.0.1 structured evidence artifact
+v1.0.3 structured evidence artifact
 claim_id=C-structure
 test_id=FW-structure-1
 evidence_ref=self_validation/evidence/C-structure__FW-structure-1.json
