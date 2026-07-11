@@ -1,7 +1,7 @@
 # Team/internal package validation report
 
 **Status:** PASS
-**Checks:** 1428 / 1428 passed
+**Checks:** 1429 / 1429 passed
 **Critical failures:** 0
 
 ## All checks
@@ -15,8 +15,9 @@
 - PASS: no unexpected top-level directories
 - PASS: only expected team CI workflow present
 - PASS: CI workflow includes validate_package.py . --self-test
-- PASS: CI workflow includes git archive --format=tar --output=/tmp/nozickian_git_archive.tar HEAD
-- PASS: CI workflow includes validate_package.py /tmp/nozickian_git_archive_tree
+- PASS: CI workflow includes archive_root="$(mktemp -d)"
+- PASS: CI workflow includes git archive --format=tar HEAD | tar -xf - -C "$archive_root"
+- PASS: CI workflow includes validate_package.py" "$archive_root"
 - PASS: CI workflow includes ntt_gate.py self_validation/self_certificate.json --evidence-root .
 - PASS: CI workflow includes run_regression_evals.py .
 - PASS: CI workflow includes run_formal_runner_contract_tests.py .

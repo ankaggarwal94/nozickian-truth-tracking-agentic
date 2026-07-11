@@ -845,7 +845,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/validate_package.py",
-              "artifact_sha256": "8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f",
+              "artifact_sha256": "6d4d1557f9ef2fcbd4bb44590cd6ebd678ded86c8dfd4ff83e6b93f02b794002",
               "canonical_ref": "<package-root>/self_validation/evidence/C-validator-sensitivity__FW-historical-nested-cruft.json",
               "exists": true,
               "reasons": [],
@@ -1757,7 +1757,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/validate_package.py",
-              "artifact_sha256": "8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f",
+              "artifact_sha256": "6d4d1557f9ef2fcbd4bb44590cd6ebd678ded86c8dfd4ff83e6b93f02b794002",
               "canonical_ref": "<package-root>/self_validation/evidence/C-github-readme-documentation__FW-github-readmes-degraded.json",
               "exists": true,
               "reasons": [],
@@ -1775,7 +1775,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/validate_package.py",
-              "artifact_sha256": "8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f",
+              "artifact_sha256": "6d4d1557f9ef2fcbd4bb44590cd6ebd678ded86c8dfd4ff83e6b93f02b794002",
               "canonical_ref": "<package-root>/self_validation/evidence/C-github-readme-documentation__TW-github-readmes-benign-doc-note.json",
               "exists": true,
               "reasons": [],

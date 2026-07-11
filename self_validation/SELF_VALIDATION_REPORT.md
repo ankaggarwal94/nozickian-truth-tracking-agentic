@@ -1,7 +1,7 @@
 # Team/internal package validation report
 
 **Status:** PASS
-**Checks:** 1564 / 1564 passed
+**Checks:** 1565 / 1565 passed
 **Critical failures:** 0
 
 ## Gate contract tests
@@ -93,7 +93,7 @@ Passed 57 / 57
 - PASS: rejects degraded PACKAGE_SURFACE.json observed=FAIL critical_failed=23
 - PASS: rejects non-object PACKAGE_SURFACE.json root observed=FAIL critical_failed=1
 - PASS: rejects duplicate PACKAGE_SURFACE allowed_agents observed=FAIL critical_failed=2
-- PASS: rejects no-op CI workflow after manifest update observed=FAIL critical_failed=7
+- PASS: rejects no-op CI workflow after manifest update observed=FAIL critical_failed=8
 - PASS: rejects formal runner pass stub after manifest update observed=FAIL critical_failed=43
 - PASS: rejects formal coordinator general-purpose fallback observed=FAIL critical_failed=1
 - PASS: rejects formal runner LIMITED as pass status observed=FAIL critical_failed=1
@@ -145,8 +145,9 @@ Passed 57 / 57
 - PASS: no unexpected top-level directories
 - PASS: only expected team CI workflow present
 - PASS: CI workflow includes validate_package.py . --self-test
-- PASS: CI workflow includes git archive --format=tar --output=/tmp/nozickian_git_archive.tar HEAD
-- PASS: CI workflow includes validate_package.py /tmp/nozickian_git_archive_tree
+- PASS: CI workflow includes archive_root="$(mktemp -d)"
+- PASS: CI workflow includes git archive --format=tar HEAD | tar -xf - -C "$archive_root"
+- PASS: CI workflow includes validate_package.py" "$archive_root"
 - PASS: CI workflow includes ntt_gate.py self_validation/self_certificate.json --evidence-root .
 - PASS: CI workflow includes run_regression_evals.py .
 - PASS: CI workflow includes run_formal_runner_contract_tests.py .

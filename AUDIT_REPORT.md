@@ -228,7 +228,7 @@ The current sweep covers stale charter-hash prose, obsolete current-state MANIFE
 
 | Command | Result |
 |---|---|
-| `validate_package.py . --self-test` | PASS - 1564/1564 checks, 0 critical failures, 56/56 false-world mutations rejected, 10/10 true-world variants retained |
+| `validate_package.py . --self-test` | PASS - 1565/1565 checks, 0 critical failures, 56/56 false-world mutations rejected, 10/10 true-world variants retained |
 | `ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence` | PASS-SCOPED - 0 critical, 0 major, 7 claims, 3 derived/downstream non-closure records, strict local evidence verified |
 | `run_gate_contract_tests.py` | 57/57 contract cases PASS |
 | `run_formal_runner_contract_tests.py` | 47/47 contract cases PASS |

@@ -1686,7 +1686,7 @@
           "RELEASE_LOCK.json:85",
           "self_validation/manifest_update_result.json:3"
         ],
-        "new_wording": "Current release-wide self-test evidence is 1564/1564 checks, 56/56 false-world mutations, and 10/10 true-world variants; dated 2026-07-09 charter-probe ledgers retain their earlier 1369/35/4 observations as explicit history.",
+        "new_wording": "Current release-wide self-test evidence is 1565/1565 checks, 56/56 false-world mutations, and 10/10 true-world variants; dated 2026-07-09 charter-probe ledgers retain their earlier 1369/35/4 observations as explicit history.",
         "old_wording": "Current-state release prose still used the pre-Slice-A 1369/1369 checks, 35/35 mutations, and 4/4 true-world counts."
       },
       {
@@ -1915,8 +1915,8 @@
           "git:f5d0e984c624da1b3e98ed92392b919a7634b590:RELEASE_LOCK.json",
           "git:f5d0e984c624da1b3e98ed92392b919a7634b590:self_validation/manifest_update_result.json"
         ],
-        "recommended_edit": "Replace current-state totals with 1564/1564 checks, 56/56 mutations, and 10/10 true worlds while preserving dated earlier ledgers as history.",
-        "replacement_evidence": "The current audit, release metadata, and manifest regeneration note use 1564/1564, 56/56, and 10/10; the dated v102 ledger retains its historical 1369/35/4 observation.",
+        "recommended_edit": "Replace current-state totals with 1565/1565 checks, 56/56 mutations, and 10/10 true worlds while preserving dated earlier ledgers as history.",
+        "replacement_evidence": "The current audit, release metadata, and manifest regeneration note use 1565/1565, 56/56, and 10/10; the dated v102 ledger retains its historical 1369/35/4 observation.",
         "resolution": "resolved"
       },
       {

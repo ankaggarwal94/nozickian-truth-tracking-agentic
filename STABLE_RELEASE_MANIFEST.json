@@ -11,10 +11,10 @@
       "sha256": "8e16ce008bbc7f71b2fe428342b1189d3862cf3b392e56773660cf26c634b10a"
     },
     {
-      "bytes": 2355,
+      "bytes": 2245,
       "path": ".github/workflows/nozickian-team-ci.yml",
       "role": "behavior",
-      "sha256": "95035309a4c9c5bb88a847455d92772f8266b235ac0f461a9175df9dc2348cf5"
+      "sha256": "d24676c02b8e34b5203d67275a451c6b4f84309c6e099979e6e9f38efa3b3030"
     },
     {
       "bytes": 71,
@@ -26,7 +26,7 @@
       "bytes": 34186,
       "path": "AUDIT_REPORT.md",
       "role": "release-metadata",
-      "sha256": "6a7f0cb9f96754b300cbeed67b2b631eae2bd47368d908aa4f9b63319a213999"
+      "sha256": "29edb0eafeb42a6e496e1dd19a7b1c3584c77147a571cf19376447a8ed12d24b"
     },
     {
       "bytes": 1056,
@@ -38,7 +38,7 @@
       "bytes": 4776,
       "path": "MANIFEST.sha256",
       "role": "release-metadata",
-      "sha256": "cefcdada160cb45e532691d5676d072870cfcf6f3e13d88de5742de454fec0d6"
+      "sha256": "f6dd7e4e88ccede1323ec848e1fded86ffab743395dadc4d22c8cd67ce13084f"
     },
     {
       "bytes": 13510,
@@ -56,7 +56,7 @@
       "bytes": 20802,
       "path": "RELEASE_LOCK.json",
       "role": "behavior",
-      "sha256": "7c47d5d43828643a043568e1ece0c7e7099fb7da8be9105de6c924cdae4c537e"
+      "sha256": "573fbcb6fe35fe5a6df07cddd9ca334d4ad2508377381a0e0a131f0748763c4b"
     },
     {
       "bytes": 1060,
@@ -698,13 +698,13 @@
       "bytes": 762,
       "path": "self_validation/evidence/C-github-readme-documentation__FW-github-readmes-degraded.json",
       "role": "self_validation",
-      "sha256": "e534999f157b0c9416d3f36ac3225a5763727a5f883667f2ae49e623091e97f0"
+      "sha256": "1557018b2edc5ffeb8893839d8aaec7721b96ceef239d3293b65037cebfdb3af"
     },
     {
       "bytes": 822,
       "path": "self_validation/evidence/C-github-readme-documentation__TW-github-readmes-benign-doc-note.json",
       "role": "self_validation",
-      "sha256": "b81efc174317dfce3732a0a23e427982f2f7a3b14073e8da0b5e278f6dd6a776"
+      "sha256": "26028dddd384dd486c8aec9e638f86b8a4db02aad275678d67e74e40794bece0"
     },
     {
       "bytes": 765,
@@ -716,7 +716,7 @@
       "bytes": 767,
       "path": "self_validation/evidence/C-github-readme-documentation__validator.json",
       "role": "self_validation",
-      "sha256": "da3a714f4e092cd3b7cb51d66fe93caa4600f1f3fbb97b261a2da1ede4add37a"
+      "sha256": "1eafc8733eff1565a5b96836a9fbd25b65a66e613a857c8c265ee3ed647e4d62"
     },
     {
       "bytes": 1986,
@@ -794,7 +794,7 @@
       "bytes": 1017,
       "path": "self_validation/evidence/C-validator-sensitivity__FW-historical-nested-cruft.json",
       "role": "self_validation",
-      "sha256": "f1bb43ceed681397dcea31b8595a93695f1a27e748a69f68bebadcd0b780ad81"
+      "sha256": "edbe65d29a16ecccaa4c9c2a5f9cd8d507ccc722a4650320bf6fe4efe43e3aeb"
     },
     {
       "bytes": 1139,
@@ -824,7 +824,7 @@
       "bytes": 1543,
       "path": "self_validation/evidence/C-validator-sensitivity__claim.json",
       "role": "self_validation",
-      "sha256": "550356b118b02abd07d64cfbce836cfbaf9e4db3f8a07ed04ede0212097767a9"
+      "sha256": "972dacf32007c0eb07b011bffffc0ad7d88e7af5f38c0584494895f24e873351"
     },
     {
       "bytes": 1064,
@@ -1364,7 +1364,7 @@
       "bytes": 151557,
       "path": "self_validation/self_certificate.json",
       "role": "self_validation",
-      "sha256": "3663c54c824f5b38486ba2619097ad1524978cdaa2cc2effb2aebbdfbdf0b692"
+      "sha256": "d1426a1b0d766e2004c6c7322b7afc412beb1056282c9bb6451b3882a7ed06f0"
     },
     {
       "bytes": 4830,
@@ -1511,10 +1511,10 @@
       "sha256": "0b8f0c622ab3eee944c21f4b0d94c0f1b38ed98cc5e74bd5b0649428c071c23a"
     },
     {
-      "bytes": 255613,
+      "bytes": 255620,
       "path": "skills/nozickian-verify/scripts/validate_package.py",
       "role": "behavior",
-      "sha256": "8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f"
+      "sha256": "6d4d1557f9ef2fcbd4bb44590cd6ebd678ded86c8dfd4ff83e6b93f02b794002"
     }
   ],
   "generated_utc": "2026-05-26T00:00:00Z",
@@ -1534,7 +1534,7 @@
   ],
   "self_exclusion": "file_inventory intentionally excludes STABLE_RELEASE_MANIFEST.json to avoid a self-referential hash cycle; self_hash_sha256 is computed over canonical JSON with self_hash_sha256 set to null.",
   "self_file": "STABLE_RELEASE_MANIFEST.json",
-  "self_hash_sha256": "28c0acdceea43579754e360d4b9a529d02f2eae2a5ef0b7d49c2b13986c692ab",
+  "self_hash_sha256": "2eddaaad91f31461e3620180fd54fb9743cafe98fb3a2161e23963daeefddd12",
   "validation_commands": [
     "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test",
     "python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence",

@@ -1572,7 +1572,7 @@ class Validator:
             ci_path = self.path(".github/workflows/nozickian-team-ci.yml")
             if ci_path.exists() and not ci_path.is_symlink():
                 ci_text = ci_path.read_text(encoding="utf-8")
-                for token in ["validate_package.py . --self-test", "git archive --format=tar --output=/tmp/nozickian_git_archive.tar HEAD", "validate_package.py /tmp/nozickian_git_archive_tree", "ntt_gate.py self_validation/self_certificate.json --evidence-root .", "run_regression_evals.py .", "run_formal_runner_contract_tests.py .", "run_formal_artifact_verification.py . README.md --dry-run"]:
+                for token in ["validate_package.py . --self-test", 'archive_root="$(mktemp -d)"', 'git archive --format=tar HEAD | tar -xf - -C "$archive_root"', 'validate_package.py" "$archive_root"', "ntt_gate.py self_validation/self_certificate.json --evidence-root .", "run_regression_evals.py .", "run_formal_runner_contract_tests.py .", "run_formal_artifact_verification.py . README.md --dry-run"]:
                     self.add(f"CI workflow includes {token}", token in ci_text, details=token)
         for name in sorted(FORBIDDEN_ROOT_FILES):
             self.add(f"forbidden root file absent: {name}", not self.path(name).exists(), details=name)

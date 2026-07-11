@@ -3,7 +3,7 @@
   "claim_id": "C-validator-sensitivity",
   "command_or_source": "v1.0.3 Slice J package-local checkout false-world mutation and exact nested probe",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f",
+  "hash_or_version": "sha256:6d4d1557f9ef2fcbd4bb44590cd6ebd678ded86c8dfd4ff83e6b93f02b794002",
   "observed_result": "Observed ordinary critical rejection of the force-added historical nested bytecode path.",
   "support_summary": "The validator derives tracked cruft directly from every typed Git index entry using _is_cruft_relpath, independently of physical traversal. The checkout false world force-adds skills/nozickian-verify/scripts/__pycache__/ntt_gate.cpython-312.pyc, requires the named critical cruft check to fail with one ordinary critical failure, and directly requires every tracked cruft index path to appear in that check's failure details.",
   "test_id": "FW-validator-historical-nested-cruft",

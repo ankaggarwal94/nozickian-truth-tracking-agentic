@@ -1,7 +1,7 @@
 {
   "checks": [
     {
-      "details": "state=verified-worktree; verified root worktree with 272 staged index entries",
+      "details": "state=verified-worktree; verified root worktree with 273 staged index entries",
       "name": "package Git evidence is verified or genuinely absent",
       "passed": true,
       "severity": "critical"
@@ -19,7 +19,7 @@
       "severity": "critical"
     },
     {
-      "details": "tracked index cruft: ; rejected physical/tracked cruft: ; tolerated untracked bytecode: ",
+      "details": "tracked index cruft: ; rejected physical/tracked cruft: ; tolerated untracked bytecode: skills/nozickian-verify/scripts/__pycache__",
       "name": "no shippable build cruft (__pycache__/.pyc/.DS_Store)",
       "passed": true,
       "severity": "critical"
@@ -61,14 +61,20 @@
       "severity": "critical"
     },
     {
-      "details": "git archive --format=tar --output=/tmp/nozickian_git_archive.tar HEAD",
-      "name": "CI workflow includes git archive --format=tar --output=/tmp/nozickian_git_archive.tar HEAD",
+      "details": "archive_root=\"$(mktemp -d)\"",
+      "name": "CI workflow includes archive_root=\"$(mktemp -d)\"",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "validate_package.py /tmp/nozickian_git_archive_tree",
-      "name": "CI workflow includes validate_package.py /tmp/nozickian_git_archive_tree",
+      "details": "git archive --format=tar HEAD | tar -xf - -C \"$archive_root\"",
+      "name": "CI workflow includes git archive --format=tar HEAD | tar -xf - -C \"$archive_root\"",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "validate_package.py\" \"$archive_root\"",
+      "name": "CI workflow includes validate_package.py\" \"$archive_root\"",
       "passed": true,
       "severity": "critical"
     },
@@ -493,7 +499,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=28c0acdceea43579754e360d4b9a529d02f2eae2a5ef0b7d49c2b13986c692ab actual=28c0acdceea43579754e360d4b9a529d02f2eae2a5ef0b7d49c2b13986c692ab",
+      "details": "claimed=2eddaaad91f31461e3620180fd54fb9743cafe98fb3a2161e23963daeefddd12 actual=2eddaaad91f31461e3620180fd54fb9743cafe98fb3a2161e23963daeefddd12",
       "name": "stable release manifest self-hash matches canonical content",
       "passed": true,
       "severity": "critical"
@@ -535,13 +541,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=95035309a4c9c5bb88a847455d92772f8266b235ac0f461a9175df9dc2348cf5 actual=95035309a4c9c5bb88a847455d92772f8266b235ac0f461a9175df9dc2348cf5",
+      "details": "claimed=d24676c02b8e34b5203d67275a451c6b4f84309c6e099979e6e9f38efa3b3030 actual=d24676c02b8e34b5203d67275a451c6b4f84309c6e099979e6e9f38efa3b3030",
       "name": "stable release manifest hash matches: .github/workflows/nozickian-team-ci.yml",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=2355 actual=2355",
+      "details": "claimed=2245 actual=2245",
       "name": "stable release manifest bytes match: .github/workflows/nozickian-team-ci.yml",
       "passed": true,
       "severity": "critical"
@@ -559,7 +565,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=6a7f0cb9f96754b300cbeed67b2b631eae2bd47368d908aa4f9b63319a213999 actual=6a7f0cb9f96754b300cbeed67b2b631eae2bd47368d908aa4f9b63319a213999",
+      "details": "claimed=29edb0eafeb42a6e496e1dd19a7b1c3584c77147a571cf19376447a8ed12d24b actual=29edb0eafeb42a6e496e1dd19a7b1c3584c77147a571cf19376447a8ed12d24b",
       "name": "stable release manifest hash matches: AUDIT_REPORT.md",
       "passed": true,
       "severity": "critical"
@@ -583,7 +589,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=cefcdada160cb45e532691d5676d072870cfcf6f3e13d88de5742de454fec0d6 actual=cefcdada160cb45e532691d5676d072870cfcf6f3e13d88de5742de454fec0d6",
+      "details": "claimed=f6dd7e4e88ccede1323ec848e1fded86ffab743395dadc4d22c8cd67ce13084f actual=f6dd7e4e88ccede1323ec848e1fded86ffab743395dadc4d22c8cd67ce13084f",
       "name": "stable release manifest hash matches: MANIFEST.sha256",
       "passed": true,
       "severity": "critical"
@@ -619,7 +625,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=7c47d5d43828643a043568e1ece0c7e7099fb7da8be9105de6c924cdae4c537e actual=7c47d5d43828643a043568e1ece0c7e7099fb7da8be9105de6c924cdae4c537e",
+      "details": "claimed=573fbcb6fe35fe5a6df07cddd9ca334d4ad2508377381a0e0a131f0748763c4b actual=573fbcb6fe35fe5a6df07cddd9ca334d4ad2508377381a0e0a131f0748763c4b",
       "name": "stable release manifest hash matches: RELEASE_LOCK.json",
       "passed": true,
       "severity": "critical"
@@ -1903,7 +1909,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=e534999f157b0c9416d3f36ac3225a5763727a5f883667f2ae49e623091e97f0 actual=e534999f157b0c9416d3f36ac3225a5763727a5f883667f2ae49e623091e97f0",
+      "details": "claimed=1557018b2edc5ffeb8893839d8aaec7721b96ceef239d3293b65037cebfdb3af actual=1557018b2edc5ffeb8893839d8aaec7721b96ceef239d3293b65037cebfdb3af",
       "name": "stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__FW-github-readmes-degraded.json",
       "passed": true,
       "severity": "critical"
@@ -1915,7 +1921,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=b81efc174317dfce3732a0a23e427982f2f7a3b14073e8da0b5e278f6dd6a776 actual=b81efc174317dfce3732a0a23e427982f2f7a3b14073e8da0b5e278f6dd6a776",
+      "details": "claimed=26028dddd384dd486c8aec9e638f86b8a4db02aad275678d67e74e40794bece0 actual=26028dddd384dd486c8aec9e638f86b8a4db02aad275678d67e74e40794bece0",
       "name": "stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__TW-github-readmes-benign-doc-note.json",
       "passed": true,
       "severity": "critical"
@@ -1939,7 +1945,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=da3a714f4e092cd3b7cb51d66fe93caa4600f1f3fbb97b261a2da1ede4add37a actual=da3a714f4e092cd3b7cb51d66fe93caa4600f1f3fbb97b261a2da1ede4add37a",
+      "details": "claimed=1eafc8733eff1565a5b96836a9fbd25b65a66e613a857c8c265ee3ed647e4d62 actual=1eafc8733eff1565a5b96836a9fbd25b65a66e613a857c8c265ee3ed647e4d62",
       "name": "stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__validator.json",
       "passed": true,
       "severity": "critical"
@@ -2095,7 +2101,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=f1bb43ceed681397dcea31b8595a93695f1a27e748a69f68bebadcd0b780ad81 actual=f1bb43ceed681397dcea31b8595a93695f1a27e748a69f68bebadcd0b780ad81",
+      "details": "claimed=edbe65d29a16ecccaa4c9c2a5f9cd8d507ccc722a4650320bf6fe4efe43e3aeb actual=edbe65d29a16ecccaa4c9c2a5f9cd8d507ccc722a4650320bf6fe4efe43e3aeb",
       "name": "stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__FW-historical-nested-cruft.json",
       "passed": true,
       "severity": "critical"
@@ -2155,7 +2161,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=550356b118b02abd07d64cfbce836cfbaf9e4db3f8a07ed04ede0212097767a9 actual=550356b118b02abd07d64cfbce836cfbaf9e4db3f8a07ed04ede0212097767a9",
+      "details": "claimed=972dacf32007c0eb07b011bffffc0ad7d88e7af5f38c0584494895f24e873351 actual=972dacf32007c0eb07b011bffffc0ad7d88e7af5f38c0584494895f24e873351",
       "name": "stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__claim.json",
       "passed": true,
       "severity": "critical"
@@ -3235,7 +3241,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=3663c54c824f5b38486ba2619097ad1524978cdaa2cc2effb2aebbdfbdf0b692 actual=3663c54c824f5b38486ba2619097ad1524978cdaa2cc2effb2aebbdfbdf0b692",
+      "details": "claimed=d1426a1b0d766e2004c6c7322b7afc412beb1056282c9bb6451b3882a7ed06f0 actual=d1426a1b0d766e2004c6c7322b7afc412beb1056282c9bb6451b3882a7ed06f0",
       "name": "stable release manifest hash matches: self_validation/self_certificate.json",
       "passed": true,
       "severity": "critical"
@@ -3535,13 +3541,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f actual=8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f",
+      "details": "claimed=6d4d1557f9ef2fcbd4bb44590cd6ebd678ded86c8dfd4ff83e6b93f02b794002 actual=6d4d1557f9ef2fcbd4bb44590cd6ebd678ded86c8dfd4ff83e6b93f02b794002",
       "name": "stable release manifest hash matches: skills/nozickian-verify/scripts/validate_package.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=255613 actual=255613",
+      "details": "claimed=255620 actual=255620",
       "name": "stable release manifest bytes match: skills/nozickian-verify/scripts/validate_package.py",
       "passed": true,
       "severity": "critical"
@@ -4411,7 +4417,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=95035309a4c9c5bb88a847455d92772f8266b235ac0f461a9175df9dc2348cf5 actual=95035309a4c9c5bb88a847455d92772f8266b235ac0f461a9175df9dc2348cf5",
+      "details": "expected=d24676c02b8e34b5203d67275a451c6b4f84309c6e099979e6e9f38efa3b3030 actual=d24676c02b8e34b5203d67275a451c6b4f84309c6e099979e6e9f38efa3b3030",
       "name": "manifest hash matches: .github/workflows/nozickian-team-ci.yml",
       "passed": true,
       "severity": "critical"
@@ -4423,7 +4429,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=7c47d5d43828643a043568e1ece0c7e7099fb7da8be9105de6c924cdae4c537e actual=7c47d5d43828643a043568e1ece0c7e7099fb7da8be9105de6c924cdae4c537e",
+      "details": "expected=573fbcb6fe35fe5a6df07cddd9ca334d4ad2508377381a0e0a131f0748763c4b actual=573fbcb6fe35fe5a6df07cddd9ca334d4ad2508377381a0e0a131f0748763c4b",
       "name": "manifest hash matches: RELEASE_LOCK.json",
       "passed": true,
       "severity": "critical"
@@ -4669,7 +4675,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f actual=8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f",
+      "details": "expected=6d4d1557f9ef2fcbd4bb44590cd6ebd678ded86c8dfd4ff83e6b93f02b794002 actual=6d4d1557f9ef2fcbd4bb44590cd6ebd678ded86c8dfd4ff83e6b93f02b794002",
       "name": "manifest hash matches: skills/nozickian-verify/scripts/validate_package.py",
       "passed": true,
       "severity": "critical"
@@ -7069,7 +7075,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=255613",
+      "details": "chars=255620",
       "name": "script substantive length: validate_package.py",
       "passed": true,
       "severity": "critical"
@@ -8575,13 +8581,13 @@
       "severity": "critical"
     },
     {
-      "details": "top=/private/var/folders/w6/3ph6jxyd4c9f7krfqwvcwvj80000gp/T/nozickian_pkg_checkout_c4nx06rb/redress destination=/private/var/folders/w6/3ph6jxyd4c9f7krfqwvcwvj80000gp/T/nozickian_pkg_checkout_c4nx06rb/redress",
+      "details": "top=/private/var/folders/w6/3ph6jxyd4c9f7krfqwvcwvj80000gp/T/nozickian_pkg_checkout_39lec9gm/redress destination=/private/var/folders/w6/3ph6jxyd4c9f7krfqwvcwvj80000gp/T/nozickian_pkg_checkout_39lec9gm/redress",
       "name": "checkout fixture Git top level is the disposable destination",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "index=/private/var/folders/w6/3ph6jxyd4c9f7krfqwvcwvj80000gp/T/nozickian_pkg_checkout_c4nx06rb/redress/.git/index destination=/private/var/folders/w6/3ph6jxyd4c9f7krfqwvcwvj80000gp/T/nozickian_pkg_checkout_c4nx06rb/redress",
+      "details": "index=/private/var/folders/w6/3ph6jxyd4c9f7krfqwvcwvj80000gp/T/nozickian_pkg_checkout_39lec9gm/redress/.git/index destination=/private/var/folders/w6/3ph6jxyd4c9f7krfqwvcwvj80000gp/T/nozickian_pkg_checkout_39lec9gm/redress",
       "name": "checkout fixture index resolves inside the disposable destination",
       "passed": true,
       "severity": "critical"
@@ -8803,19 +8809,19 @@
       "severity": "critical"
     },
     {
-      "details": "{\"expected_failed_names\": [\"live package-tree SHA-256 matches current package bytes\", \"live fixture 1 artifact SHA-256 matches current exact bytes\"], \"failed_names\": [\"live package-tree SHA-256 matches current package bytes\", \"live artifact SHA-256 bindings exactly match every current fixture\", \"live fixture 1 artifact SHA-256 matches current exact bytes\"], \"refreshed_tree\": {\"algorithm\": \"ntt-stable-release-tree-v1\", \"errors\": [], \"file_count\": 252, \"inventory_policy\": {\"derived_path_count\": 252, \"source\": \"shared validate_package.compute_stable_release_tree\", \"volatile_generated_exclusions\": {\"files\": [\"self_validation/GATE_RESULT.md\", \"self_validation/SELF_VALIDATION_REPORT.md\", \"self_validation/formal_dry_stdout.json\", \"self_validation/formal_invocation_dry_run.json\", \"self_validation/formal_runner_contract_results.json\", \"self_validation/formal_runner_contract_stdout.json\", \"self_validation/gate_contract_results.json\", \"self_validation/gate_contract_stdout.json\", \"self_validation/gate_result.json\", \"self_validation/gate_stdout.json\", \"self_validation/live_runtime_eval_result.json\", \"self_validation/live_runtime_eval_stdout.json\", \"self_validation/manifest_update_result.json\", \"self_validation/package_validation_report_basic.md\", \"self_validation/package_validation_result.json\", \"self_validation/package_validation_self_test_result.json\", \"self_validation/regression_eval_result.json\", \"self_validation/regression_stdout.json\", \"self_validation/trace_auth_smoke_result.json\"], \"prefixes\": [\"self_validation/formal_invocation_dry_run/\"]}}, \"manifest_identity\": {\"file_count_excluding_self\": 252, \"package\": \"nozickian-truth-tracking-agentic\", \"plugin_version\": \"1.0.3\", \"release_lock_version\": \"1.0.3\", \"schema_version\": \"1.0\", \"self_file\": \"STABLE_RELEASE_MANIFEST.json\", \"self_hash_sha256\": \"b2cf5cd5c49340c1c60beacd7d34c76f44dad5aefd317c9d88e089ae8a91dbc4\"}, \"sha256\": \"d327295d84a5fc0acdd0d18b272dc31d75f7841d011c2908c84c1bc01b2aeb10\", \"valid\": true}, \"refreshed_validation\": {\"checks_total\": 1428, \"critical_failed\": 0, \"status\": \"PASS\"}}",
+      "details": "{\"expected_failed_names\": [\"live package-tree SHA-256 matches current package bytes\", \"live fixture 1 artifact SHA-256 matches current exact bytes\"], \"failed_names\": [\"live package-tree SHA-256 matches current package bytes\", \"live artifact SHA-256 bindings exactly match every current fixture\", \"live fixture 1 artifact SHA-256 matches current exact bytes\"], \"refreshed_tree\": {\"algorithm\": \"ntt-stable-release-tree-v1\", \"errors\": [], \"file_count\": 252, \"inventory_policy\": {\"derived_path_count\": 252, \"source\": \"shared validate_package.compute_stable_release_tree\", \"volatile_generated_exclusions\": {\"files\": [\"self_validation/GATE_RESULT.md\", \"self_validation/SELF_VALIDATION_REPORT.md\", \"self_validation/formal_dry_stdout.json\", \"self_validation/formal_invocation_dry_run.json\", \"self_validation/formal_runner_contract_results.json\", \"self_validation/formal_runner_contract_stdout.json\", \"self_validation/gate_contract_results.json\", \"self_validation/gate_contract_stdout.json\", \"self_validation/gate_result.json\", \"self_validation/gate_stdout.json\", \"self_validation/live_runtime_eval_result.json\", \"self_validation/live_runtime_eval_stdout.json\", \"self_validation/manifest_update_result.json\", \"self_validation/package_validation_report_basic.md\", \"self_validation/package_validation_result.json\", \"self_validation/package_validation_self_test_result.json\", \"self_validation/regression_eval_result.json\", \"self_validation/regression_stdout.json\", \"self_validation/trace_auth_smoke_result.json\"], \"prefixes\": [\"self_validation/formal_invocation_dry_run/\"]}}, \"manifest_identity\": {\"file_count_excluding_self\": 252, \"package\": \"nozickian-truth-tracking-agentic\", \"plugin_version\": \"1.0.3\", \"release_lock_version\": \"1.0.3\", \"schema_version\": \"1.0\", \"self_file\": \"STABLE_RELEASE_MANIFEST.json\", \"self_hash_sha256\": \"7114d63a3a8c761e77f22e5a0c455ffe6e4fcff65ba0ad394c3779663de62708\"}, \"sha256\": \"6038e4cfd0c75bb360b8e043ead7f0c82554b22b7d7ec044177184a7f8ae5dde\", \"valid\": true}, \"refreshed_validation\": {\"checks_total\": 1429, \"critical_failed\": 0, \"status\": \"PASS\"}}",
       "name": "promotion false world: artifact-bytes-refreshed-manifests-stale-live",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"expected_failed_names\": [\"live package-tree SHA-256 matches current package bytes\", \"live fixture specification SHA-256 matches current evals bytes\"], \"failed_names\": [\"live package-tree SHA-256 matches current package bytes\", \"live fixture specification SHA-256 matches current evals bytes\"], \"refreshed_tree\": {\"algorithm\": \"ntt-stable-release-tree-v1\", \"errors\": [], \"file_count\": 252, \"inventory_policy\": {\"derived_path_count\": 252, \"source\": \"shared validate_package.compute_stable_release_tree\", \"volatile_generated_exclusions\": {\"files\": [\"self_validation/GATE_RESULT.md\", \"self_validation/SELF_VALIDATION_REPORT.md\", \"self_validation/formal_dry_stdout.json\", \"self_validation/formal_invocation_dry_run.json\", \"self_validation/formal_runner_contract_results.json\", \"self_validation/formal_runner_contract_stdout.json\", \"self_validation/gate_contract_results.json\", \"self_validation/gate_contract_stdout.json\", \"self_validation/gate_result.json\", \"self_validation/gate_stdout.json\", \"self_validation/live_runtime_eval_result.json\", \"self_validation/live_runtime_eval_stdout.json\", \"self_validation/manifest_update_result.json\", \"self_validation/package_validation_report_basic.md\", \"self_validation/package_validation_result.json\", \"self_validation/package_validation_self_test_result.json\", \"self_validation/regression_eval_result.json\", \"self_validation/regression_stdout.json\", \"self_validation/trace_auth_smoke_result.json\"], \"prefixes\": [\"self_validation/formal_invocation_dry_run/\"]}}, \"manifest_identity\": {\"file_count_excluding_self\": 252, \"package\": \"nozickian-truth-tracking-agentic\", \"plugin_version\": \"1.0.3\", \"release_lock_version\": \"1.0.3\", \"schema_version\": \"1.0\", \"self_file\": \"STABLE_RELEASE_MANIFEST.json\", \"self_hash_sha256\": \"d119bc81207149f78c561cdabe65b9218363ec073b51b0421c1cc98b644271cc\"}, \"sha256\": \"c6b81ea273a9278e3d02a8d301f04b5eb4dba153d1938f3b7b661fdc304bb7cb\", \"valid\": true}, \"refreshed_validation\": {\"checks_total\": 1428, \"critical_failed\": 0, \"status\": \"PASS\"}}",
+      "details": "{\"expected_failed_names\": [\"live package-tree SHA-256 matches current package bytes\", \"live fixture specification SHA-256 matches current evals bytes\"], \"failed_names\": [\"live package-tree SHA-256 matches current package bytes\", \"live fixture specification SHA-256 matches current evals bytes\"], \"refreshed_tree\": {\"algorithm\": \"ntt-stable-release-tree-v1\", \"errors\": [], \"file_count\": 252, \"inventory_policy\": {\"derived_path_count\": 252, \"source\": \"shared validate_package.compute_stable_release_tree\", \"volatile_generated_exclusions\": {\"files\": [\"self_validation/GATE_RESULT.md\", \"self_validation/SELF_VALIDATION_REPORT.md\", \"self_validation/formal_dry_stdout.json\", \"self_validation/formal_invocation_dry_run.json\", \"self_validation/formal_runner_contract_results.json\", \"self_validation/formal_runner_contract_stdout.json\", \"self_validation/gate_contract_results.json\", \"self_validation/gate_contract_stdout.json\", \"self_validation/gate_result.json\", \"self_validation/gate_stdout.json\", \"self_validation/live_runtime_eval_result.json\", \"self_validation/live_runtime_eval_stdout.json\", \"self_validation/manifest_update_result.json\", \"self_validation/package_validation_report_basic.md\", \"self_validation/package_validation_result.json\", \"self_validation/package_validation_self_test_result.json\", \"self_validation/regression_eval_result.json\", \"self_validation/regression_stdout.json\", \"self_validation/trace_auth_smoke_result.json\"], \"prefixes\": [\"self_validation/formal_invocation_dry_run/\"]}}, \"manifest_identity\": {\"file_count_excluding_self\": 252, \"package\": \"nozickian-truth-tracking-agentic\", \"plugin_version\": \"1.0.3\", \"release_lock_version\": \"1.0.3\", \"schema_version\": \"1.0\", \"self_file\": \"STABLE_RELEASE_MANIFEST.json\", \"self_hash_sha256\": \"e63518237d8ac11aa44786ba04994531de5b2080df5749ba32850ccd709ffaa1\"}, \"sha256\": \"c07ec2cd8a6c4749d871c4b50fe2419a2bb644312db10000637ca54c9f7ae76a\", \"valid\": true}, \"refreshed_validation\": {\"checks_total\": 1429, \"critical_failed\": 0, \"status\": \"PASS\"}}",
       "name": "promotion false world: fixture-spec-refreshed-manifests-stale-live",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"expected_failed_names\": [\"live package-tree SHA-256 matches current package bytes\"], \"failed_names\": [\"live package-tree SHA-256 matches current package bytes\"], \"refreshed_tree\": {\"algorithm\": \"ntt-stable-release-tree-v1\", \"errors\": [], \"file_count\": 252, \"inventory_policy\": {\"derived_path_count\": 252, \"source\": \"shared validate_package.compute_stable_release_tree\", \"volatile_generated_exclusions\": {\"files\": [\"self_validation/GATE_RESULT.md\", \"self_validation/SELF_VALIDATION_REPORT.md\", \"self_validation/formal_dry_stdout.json\", \"self_validation/formal_invocation_dry_run.json\", \"self_validation/formal_runner_contract_results.json\", \"self_validation/formal_runner_contract_stdout.json\", \"self_validation/gate_contract_results.json\", \"self_validation/gate_contract_stdout.json\", \"self_validation/gate_result.json\", \"self_validation/gate_stdout.json\", \"self_validation/live_runtime_eval_result.json\", \"self_validation/live_runtime_eval_stdout.json\", \"self_validation/manifest_update_result.json\", \"self_validation/package_validation_report_basic.md\", \"self_validation/package_validation_result.json\", \"self_validation/package_validation_self_test_result.json\", \"self_validation/regression_eval_result.json\", \"self_validation/regression_stdout.json\", \"self_validation/trace_auth_smoke_result.json\"], \"prefixes\": [\"self_validation/formal_invocation_dry_run/\"]}}, \"manifest_identity\": {\"file_count_excluding_self\": 252, \"package\": \"nozickian-truth-tracking-agentic\", \"plugin_version\": \"1.0.3\", \"release_lock_version\": \"1.0.3\", \"schema_version\": \"1.0\", \"self_file\": \"STABLE_RELEASE_MANIFEST.json\", \"self_hash_sha256\": \"cc54a0636b5a7c2d0d0f3aa18a8d399b9dafa822e0730702e17a3ff2fb41551b\"}, \"sha256\": \"d13e512294d2b1d1a308cce0df52131ef1a663b31fa96c526bdec01f29e3f846\", \"valid\": true}, \"refreshed_validation\": {\"checks_total\": 1428, \"critical_failed\": 0, \"status\": \"PASS\"}}",
+      "details": "{\"expected_failed_names\": [\"live package-tree SHA-256 matches current package bytes\"], \"failed_names\": [\"live package-tree SHA-256 matches current package bytes\"], \"refreshed_tree\": {\"algorithm\": \"ntt-stable-release-tree-v1\", \"errors\": [], \"file_count\": 252, \"inventory_policy\": {\"derived_path_count\": 252, \"source\": \"shared validate_package.compute_stable_release_tree\", \"volatile_generated_exclusions\": {\"files\": [\"self_validation/GATE_RESULT.md\", \"self_validation/SELF_VALIDATION_REPORT.md\", \"self_validation/formal_dry_stdout.json\", \"self_validation/formal_invocation_dry_run.json\", \"self_validation/formal_runner_contract_results.json\", \"self_validation/formal_runner_contract_stdout.json\", \"self_validation/gate_contract_results.json\", \"self_validation/gate_contract_stdout.json\", \"self_validation/gate_result.json\", \"self_validation/gate_stdout.json\", \"self_validation/live_runtime_eval_result.json\", \"self_validation/live_runtime_eval_stdout.json\", \"self_validation/manifest_update_result.json\", \"self_validation/package_validation_report_basic.md\", \"self_validation/package_validation_result.json\", \"self_validation/package_validation_self_test_result.json\", \"self_validation/regression_eval_result.json\", \"self_validation/regression_stdout.json\", \"self_validation/trace_auth_smoke_result.json\"], \"prefixes\": [\"self_validation/formal_invocation_dry_run/\"]}}, \"manifest_identity\": {\"file_count_excluding_self\": 252, \"package\": \"nozickian-truth-tracking-agentic\", \"plugin_version\": \"1.0.3\", \"release_lock_version\": \"1.0.3\", \"schema_version\": \"1.0\", \"self_file\": \"STABLE_RELEASE_MANIFEST.json\", \"self_hash_sha256\": \"851f086849e4b7277ae07e5e880663502ddbff795742d13f89f3ece6a310cc0e\"}, \"sha256\": \"b6569ddab9b89ff1c9d70e4ec2f7959813459636c70de291075a1e44b462eee3\", \"valid\": true}, \"refreshed_validation\": {\"checks_total\": 1429, \"critical_failed\": 0, \"status\": \"PASS\"}}",
       "name": "promotion false world: nonartifact-source-refreshed-manifests-stale-live",
       "passed": true,
       "severity": "critical"
@@ -8905,7 +8911,7 @@
       "severity": "critical"
     },
     {
-      "details": "{\"failed\": [], \"tree\": {\"algorithm\": \"ntt-stable-release-tree-v1\", \"errors\": [], \"file_count\": 252, \"inventory_policy\": {\"derived_path_count\": 252, \"source\": \"shared validate_package.compute_stable_release_tree\", \"volatile_generated_exclusions\": {\"files\": [\"self_validation/GATE_RESULT.md\", \"self_validation/SELF_VALIDATION_REPORT.md\", \"self_validation/formal_dry_stdout.json\", \"self_validation/formal_invocation_dry_run.json\", \"self_validation/formal_runner_contract_results.json\", \"self_validation/formal_runner_contract_stdout.json\", \"self_validation/gate_contract_results.json\", \"self_validation/gate_contract_stdout.json\", \"self_validation/gate_result.json\", \"self_validation/gate_stdout.json\", \"self_validation/live_runtime_eval_result.json\", \"self_validation/live_runtime_eval_stdout.json\", \"self_validation/manifest_update_result.json\", \"self_validation/package_validation_report_basic.md\", \"self_validation/package_validation_result.json\", \"self_validation/package_validation_self_test_result.json\", \"self_validation/regression_eval_result.json\", \"self_validation/regression_stdout.json\", \"self_validation/trace_auth_smoke_result.json\"], \"prefixes\": [\"self_validation/formal_invocation_dry_run/\"]}}, \"manifest_identity\": {\"file_count_excluding_self\": 252, \"package\": \"nozickian-truth-tracking-agentic\", \"plugin_version\": \"1.0.3\", \"release_lock_version\": \"1.0.3\", \"schema_version\": \"1.0\", \"self_file\": \"STABLE_RELEASE_MANIFEST.json\", \"self_hash_sha256\": \"28c0acdceea43579754e360d4b9a529d02f2eae2a5ef0b7d49c2b13986c692ab\"}, \"sha256\": \"745bfd1955ee20389141249d3a6fa31b021f560e08d2fa9e473bf0a627ae008b\", \"valid\": true}}",
+      "details": "{\"failed\": [], \"tree\": {\"algorithm\": \"ntt-stable-release-tree-v1\", \"errors\": [], \"file_count\": 252, \"inventory_policy\": {\"derived_path_count\": 252, \"source\": \"shared validate_package.compute_stable_release_tree\", \"volatile_generated_exclusions\": {\"files\": [\"self_validation/GATE_RESULT.md\", \"self_validation/SELF_VALIDATION_REPORT.md\", \"self_validation/formal_dry_stdout.json\", \"self_validation/formal_invocation_dry_run.json\", \"self_validation/formal_runner_contract_results.json\", \"self_validation/formal_runner_contract_stdout.json\", \"self_validation/gate_contract_results.json\", \"self_validation/gate_contract_stdout.json\", \"self_validation/gate_result.json\", \"self_validation/gate_stdout.json\", \"self_validation/live_runtime_eval_result.json\", \"self_validation/live_runtime_eval_stdout.json\", \"self_validation/manifest_update_result.json\", \"self_validation/package_validation_report_basic.md\", \"self_validation/package_validation_result.json\", \"self_validation/package_validation_self_test_result.json\", \"self_validation/regression_eval_result.json\", \"self_validation/regression_stdout.json\", \"self_validation/trace_auth_smoke_result.json\"], \"prefixes\": [\"self_validation/formal_invocation_dry_run/\"]}}, \"manifest_identity\": {\"file_count_excluding_self\": 252, \"package\": \"nozickian-truth-tracking-agentic\", \"plugin_version\": \"1.0.3\", \"release_lock_version\": \"1.0.3\", \"schema_version\": \"1.0\", \"self_file\": \"STABLE_RELEASE_MANIFEST.json\", \"self_hash_sha256\": \"2eddaaad91f31461e3620180fd54fb9743cafe98fb3a2161e23963daeefddd12\"}, \"sha256\": \"a0bd958e4a221adeca5c57344668b01d6457f30e47f410ccd0b653b9611d999a\", \"valid\": true}}",
       "name": "promotion true world: package tree and five local evidence refs bind",
       "passed": true,
       "severity": "critical"
@@ -9145,7 +9151,7 @@
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects no-op CI workflow after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 7, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "details": "{\"name\": \"rejects no-op CI workflow after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 8, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects no-op CI workflow after manifest update",
       "passed": true,
       "severity": "critical"
@@ -9385,8 +9391,8 @@
       "severity": "critical"
     }
   ],
-  "checks_passed": 1564,
-  "checks_total": 1564,
+  "checks_passed": 1565,
+  "checks_total": 1565,
   "critical_failed": 0,
   "gate_contract": {
     "cases": [
@@ -10348,7 +10354,7 @@
       "returncode": 2
     },
     {
-      "critical_failed": 7,
+      "critical_failed": 8,
       "exception": null,
       "harness_error": false,
       "name": "rejects no-op CI workflow after manifest update",
