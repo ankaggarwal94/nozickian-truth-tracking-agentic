@@ -6,7 +6,7 @@
   "claim_id": "C-structure",
   "command_or_source": "v1.0.3 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:06072951107cb0738ac2a8a5db9216886d9f52d180b78bbd5fe8cc6064d0aa36",
+  "hash_or_version": "sha256:dad025667482f14f737fa4324dcbc485de3696f9dde8affa50b7e758eedab11e",
   "observed_result": "Observed v1.0.3 deterministic evidence for C-structure",
   "support_summary": "This structured evidence binds C-structure to README.md, a package-local artifact with exact SHA-256 provenance under strict local evidence mode. v1.0.3 additionally checks unique canonical evidence refs, unique artifact/hash identities for critical evidence sufficiency, and substantive trace-result payload content. v1.0.3 additionally checks context-aware trace payload isolation and unique modal-test thresholds.",
   "timestamp": "1970-01-01T00:00:00Z",

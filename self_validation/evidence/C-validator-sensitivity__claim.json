@@ -6,9 +6,9 @@
   "claim_id": "C-validator-sensitivity",
   "command_or_source": "v1.0.3 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:01c9382f30b60e48e23a69a27aac2749164761186eb6c603ddae3503760cef98",
+  "hash_or_version": "sha256:8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f",
   "observed_result": "Observed v1.0.3 deterministic evidence for C-validator-sensitivity",
-  "support_summary": "This structured evidence binds C-validator-sensitivity to skills/nozickian-verify/scripts/validate_package.py, a package-local artifact with exact SHA-256 provenance under strict local evidence mode. v1.0.3 additionally checks unique canonical evidence refs, unique artifact/hash identities for critical evidence sufficiency, and substantive trace-result payload content. v1.0.3 additionally checks context-aware trace payload isolation and unique modal-test thresholds.",
+  "support_summary": "This structured evidence binds C-validator-sensitivity to skills/nozickian-verify/scripts/validate_package.py, a package-local artifact with exact SHA-256 provenance under strict local evidence mode. v1.0.3 checks unique canonical evidence refs, unique artifact/hash identities, substantive trace-result payload content, context-aware trace payload isolation, unique modal-test thresholds, one-to-one live prompt/transcript bindings, shared package-tree computation, current package/evals/artifact byte bindings, exact normalized argv false worlds, independently derived release inventory/exclusion false worlds, and unconditional fresh promotion validation. Slice J additionally derives tracked cruft from every typed Git index entry independently of physical traversal, rejects the exact historical nested bytecode path, and verifies complete tracked-cruft failure details while retaining ignored untracked checkout bytecode.",
   "timestamp": "1970-01-01T00:00:00Z",
   "timestamp_utc": "2026-06-04T00:00:00Z"
 }

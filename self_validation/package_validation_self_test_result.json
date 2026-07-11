@@ -1,8 +1,194 @@
 {
   "checks": [
     {
+      "details": "state=verified-worktree; verified root worktree with 272 staged index entries",
+      "name": "package Git evidence is verified or genuinely absent",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "Git index has only stage-zero entries",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "Git index has only regular blob modes 100644/100755",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "tracked index cruft: ; rejected physical/tracked cruft: ; tolerated untracked bytecode: ",
+      "name": "no shippable build cruft (__pycache__/.pyc/.DS_Store)",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "physical worktree symlinks: ",
+      "name": "no shippable symlink package entries",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "physical worktree unsupported entries: ",
+      "name": "no shippable unsupported package entry types",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "no unexpected top-level files",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "no unexpected top-level directories",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": ".github/workflows/nozickian-team-ci.yml",
+      "name": "only expected team CI workflow present",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "validate_package.py . --self-test",
+      "name": "CI workflow includes validate_package.py . --self-test",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "git archive --format=tar --output=/tmp/nozickian_git_archive.tar HEAD",
+      "name": "CI workflow includes git archive --format=tar --output=/tmp/nozickian_git_archive.tar HEAD",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "validate_package.py /tmp/nozickian_git_archive_tree",
+      "name": "CI workflow includes validate_package.py /tmp/nozickian_git_archive_tree",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "ntt_gate.py self_validation/self_certificate.json --evidence-root .",
+      "name": "CI workflow includes ntt_gate.py self_validation/self_certificate.json --evidence-root .",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "run_regression_evals.py .",
+      "name": "CI workflow includes run_regression_evals.py .",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "run_formal_runner_contract_tests.py .",
+      "name": "CI workflow includes run_formal_runner_contract_tests.py .",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "run_formal_artifact_verification.py . README.md --dry-run",
+      "name": "CI workflow includes run_formal_artifact_verification.py . README.md --dry-run",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": ".lsp.json",
+      "name": "forbidden root file absent: .lsp.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": ".mcp.json",
+      "name": "forbidden root file absent: .mcp.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "settings.json",
+      "name": "forbidden root file absent: settings.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "bin",
+      "name": "forbidden plugin surface absent: bin/",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "commands",
+      "name": "forbidden plugin surface absent: commands/",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "hooks",
+      "name": "forbidden plugin surface absent: hooks/",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "monitors",
+      "name": "forbidden plugin surface absent: monitors/",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": ".claude-plugin/plugin.json",
+      "name": ".claude-plugin contains only plugin.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "skills/nozickian-verify",
+      "name": "only expected skill directory present",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "no extra plugin agents, including recursive subdirectory agents",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "all expected plugin agents present",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "plugin agents directory contains only markdown agent files",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "skill directory contains only expected children",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "certify_pass_tracked_upgrade.py, ntt_gate.py, run_formal_artifact_verification.py, run_formal_runner_contract_tests.py, run_gate_contract_tests.py, run_live_skill_evals.py, run_regression_evals.py, validate_package.py",
+      "name": "scripts directory contains only expected scripts",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "ARTIFACT_GUIDE.md, EVAL_BEST_PRACTICES.md, EVIDENCE_SCHEMA.md, OUTPUT_TEMPLATES.md, PASS_TRACKED_UPGRADE_AUDIT.md, SOURCES.md, STANDARD.md, SUBAGENT_PROTOCOLS.md",
+      "name": "references directory contains only expected files",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
       "details": "<package-root>/.claude-plugin/plugin.json",
-      "name": "plugin manifest exists",
+      "name": "plugin manifest exists as a regular file",
       "passed": true,
       "severity": "critical"
     },
@@ -145,7 +331,7 @@
       "severity": "critical"
     },
     {
-      "details": "['python3 skills/nozickian-verify/scripts/validate_package.py . --self-test', 'python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence', 'python3 skills/nozickian-verify/scripts/run_regression_evals.py .', 'python3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . <target-artifact> --dry-run --skip-prechecks --output-dir ../ntt_release_formal_invocation_dry_run --json ../ntt_release_formal_invocation_dry_run.json', 'python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json ../ntt_release_formal_runner_contract_results.json', 'optional: claude plugin validate . --strict', 'optional: skills-ref validate skills/nozickian-verify', 'optional: python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures', 'python3 skills/nozickian-verify/scripts/validate_package.py .', 'python3 - <<\\'PY\\'\\nfrom pathlib import Path\\ntext = \"\\\\n\".join(p.read_text(encoding=\"utf-8\", errors=\"replace\") for p in Path(\"self_validation\").rglob(\"*\") if p.is_file())\\ntokens = [\\n    \"/\" + \"mnt\" + \"/\" + \"data\",\\n    \"/\" + \"home\" + \"/\" + \"oai\",\\n    \"ntt_v07\" + \"12_work\",\\n    \"ntt_v07\" + \"11_work\",\\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"12\",\\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"11\",\\n    \"v07\" + \"12_targeted_probe_results\",\\n    \"v07\" + \"11_targeted_probe_results\",\\n]\\nfor token in tokens:\\n    assert token not in text, token\\nPY', 'python3 - <<\\'PY\\'\\nimport json, pathlib\\njson.loads(pathlib.Path(\"STABLE_RELEASE_MANIFEST.json\").read_text())\\nPY', 'promotion-only: python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json']",
+      "details": "['python3 skills/nozickian-verify/scripts/validate_package.py . --self-test', 'python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence', 'python3 skills/nozickian-verify/scripts/run_regression_evals.py .', 'python3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . <target-artifact> --dry-run --skip-prechecks --output-dir ../ntt_release_formal_invocation_dry_run --json ../ntt_release_formal_invocation_dry_run.json', 'python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json ../ntt_release_formal_runner_contract_results.json', 'optional: claude plugin validate . --strict', 'optional: skills-ref validate skills/nozickian-verify', 'optional: python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures', 'python3 skills/nozickian-verify/scripts/validate_package.py .', 'python3 - <<\\'PY\\'\\nfrom pathlib import Path\\nroot = Path(\".\").resolve()\\ntext = \"\\\\n\".join(p.read_text(encoding=\"utf-8\", errors=\"replace\") for p in Path(\"self_validation\").rglob(\"*\") if p.is_file())\\ntokens = [\\n    \"/\" + \"mnt\" + \"/\" + \"data\",\\n    \"/\" + \"home\" + \"/\" + \"oai\",\\n    \"ntt_v07\" + \"12_work\",\\n    \"ntt_v07\" + \"11_work\",\\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"12\",\\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"11\",\\n    \"v07\" + \"12_targeted_probe_results\",\\n    \"v07\" + \"11_targeted_probe_results\",\\n    str(root),\\n]\\nfor token in tokens:\\n    assert token not in text, token\\nPY', 'python3 - <<\\'PY\\'\\nimport json, pathlib\\njson.loads(pathlib.Path(\"STABLE_RELEASE_MANIFEST.json\").read_text())\\nPY', 'promotion-only: python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json']",
       "name": "release lock commands listed",
       "passed": true,
       "severity": "critical"
@@ -181,13 +367,13 @@
       "severity": "critical"
     },
     {
-      "details": "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test\npython3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence\npython3 skills/nozickian-verify/scripts/run_regression_evals.py .\npython3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . <target-artifact> --dry-run --skip-prechecks --output-dir ../ntt_release_formal_invocation_dry_run --json ../ntt_release_formal_invocation_dry_run.json\npython3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json ../ntt_release_formal_runner_contract_results.json\noptional: claude plugin validate . --strict\noptional: skills-ref validate skills/nozickian-verify\noptional: python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures\npython3 skills/nozickian-verify/scripts/validate_package.py .\npython3 - <<'PY'\nfrom pathlib import Path\ntext = \"\\n\".join(p.read_text(encoding=\"utf-8\", errors=\"replace\") for p in Path(\"self_validation\").rglob(\"*\") if p.is_file())\ntokens = [\n    \"/\" + \"mnt\" + \"/\" + \"data\",\n    \"/\" + \"home\" + \"/\" + \"oai\",\n    \"ntt_v07\" + \"12_work\",\n    \"ntt_v07\" + \"11_work\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"12\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"11\",\n    \"v07\" + \"12_targeted_probe_results\",\n    \"v07\" + \"11_targeted_probe_results\",\n]\nfor token in tokens:\n    assert token not in text, token\nPY\npython3 - <<'PY'\nimport json, pathlib\njson.loads(pathlib.Path(\"STABLE_RELEASE_MANIFEST.json\").read_text())\nPY\npromotion-only: python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json",
+      "details": "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test\npython3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence\npython3 skills/nozickian-verify/scripts/run_regression_evals.py .\npython3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . <target-artifact> --dry-run --skip-prechecks --output-dir ../ntt_release_formal_invocation_dry_run --json ../ntt_release_formal_invocation_dry_run.json\npython3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json ../ntt_release_formal_runner_contract_results.json\noptional: claude plugin validate . --strict\noptional: skills-ref validate skills/nozickian-verify\noptional: python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures\npython3 skills/nozickian-verify/scripts/validate_package.py .\npython3 - <<'PY'\nfrom pathlib import Path\nroot = Path(\".\").resolve()\ntext = \"\\n\".join(p.read_text(encoding=\"utf-8\", errors=\"replace\") for p in Path(\"self_validation\").rglob(\"*\") if p.is_file())\ntokens = [\n    \"/\" + \"mnt\" + \"/\" + \"data\",\n    \"/\" + \"home\" + \"/\" + \"oai\",\n    \"ntt_v07\" + \"12_work\",\n    \"ntt_v07\" + \"11_work\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"12\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"11\",\n    \"v07\" + \"12_targeted_probe_results\",\n    \"v07\" + \"11_targeted_probe_results\",\n    str(root),\n]\nfor token in tokens:\n    assert token not in text, token\nPY\npython3 - <<'PY'\nimport json, pathlib\njson.loads(pathlib.Path(\"STABLE_RELEASE_MANIFEST.json\").read_text())\nPY\npromotion-only: python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json",
       "name": "release lock formal dry-run avoids package-tree output",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test\npython3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence\npython3 skills/nozickian-verify/scripts/run_regression_evals.py .\npython3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . <target-artifact> --dry-run --skip-prechecks --output-dir ../ntt_release_formal_invocation_dry_run --json ../ntt_release_formal_invocation_dry_run.json\npython3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json ../ntt_release_formal_runner_contract_results.json\noptional: claude plugin validate . --strict\noptional: skills-ref validate skills/nozickian-verify\noptional: python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures\npython3 skills/nozickian-verify/scripts/validate_package.py .\npython3 - <<'PY'\nfrom pathlib import Path\ntext = \"\\n\".join(p.read_text(encoding=\"utf-8\", errors=\"replace\") for p in Path(\"self_validation\").rglob(\"*\") if p.is_file())\ntokens = [\n    \"/\" + \"mnt\" + \"/\" + \"data\",\n    \"/\" + \"home\" + \"/\" + \"oai\",\n    \"ntt_v07\" + \"12_work\",\n    \"ntt_v07\" + \"11_work\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"12\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"11\",\n    \"v07\" + \"12_targeted_probe_results\",\n    \"v07\" + \"11_targeted_probe_results\",\n]\nfor token in tokens:\n    assert token not in text, token\nPY\npython3 - <<'PY'\nimport json, pathlib\njson.loads(pathlib.Path(\"STABLE_RELEASE_MANIFEST.json\").read_text())\nPY\npromotion-only: python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json",
+      "details": "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test\npython3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence\npython3 skills/nozickian-verify/scripts/run_regression_evals.py .\npython3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . <target-artifact> --dry-run --skip-prechecks --output-dir ../ntt_release_formal_invocation_dry_run --json ../ntt_release_formal_invocation_dry_run.json\npython3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json ../ntt_release_formal_runner_contract_results.json\noptional: claude plugin validate . --strict\noptional: skills-ref validate skills/nozickian-verify\noptional: python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures\npython3 skills/nozickian-verify/scripts/validate_package.py .\npython3 - <<'PY'\nfrom pathlib import Path\nroot = Path(\".\").resolve()\ntext = \"\\n\".join(p.read_text(encoding=\"utf-8\", errors=\"replace\") for p in Path(\"self_validation\").rglob(\"*\") if p.is_file())\ntokens = [\n    \"/\" + \"mnt\" + \"/\" + \"data\",\n    \"/\" + \"home\" + \"/\" + \"oai\",\n    \"ntt_v07\" + \"12_work\",\n    \"ntt_v07\" + \"11_work\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"12\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"11\",\n    \"v07\" + \"12_targeted_probe_results\",\n    \"v07\" + \"11_targeted_probe_results\",\n    str(root),\n]\nfor token in tokens:\n    assert token not in text, token\nPY\npython3 - <<'PY'\nimport json, pathlib\njson.loads(pathlib.Path(\"STABLE_RELEASE_MANIFEST.json\").read_text())\nPY\npromotion-only: python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json",
       "name": "release lock records external generated-output path",
       "passed": true,
       "severity": "critical"
@@ -199,7 +385,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=19943",
+      "details": "chars=34180",
       "name": "audit report is substantive",
       "passed": true,
       "severity": "critical"
@@ -241,7 +427,7 @@
       "severity": "critical"
     },
     {
-      "details": "table_rows=137",
+      "details": "table_rows=177",
       "name": "audit report is tabulated",
       "passed": true,
       "severity": "critical"
@@ -271,6 +457,24 @@
       "severity": "critical"
     },
     {
+      "details": "2026-05-26T00:00:00Z",
+      "name": "stable release manifest generated_utc is the reproducible-build epoch",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "reproducible-build-epoch",
+      "name": "stable release manifest generated_utc kind is reproducible-build-epoch",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "Reproducible-build epoch: stable deterministic release-manifest default, not wall-clock generation time.",
+      "name": "stable release manifest explains generated_utc reproducible-build semantics",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
       "details": "manifest=1.0.3 plugin=1.0.3",
       "name": "stable release manifest version matches plugin",
       "passed": true,
@@ -284,18 +488,18 @@
     },
     {
       "details": "{'files': ['self_validation/GATE_RESULT.md', 'self_validation/SELF_VALIDATION_REPORT.md', 'self_validation/formal_dry_stdout.json', 'self_validation/formal_invocation_dry_run.json', 'self_validation/formal_runner_contract_results.json', 'self_validation/formal_runner_contract_stdout.json', 'self_validation/gate_contract_results.json', 'self_validation/gate_contract_stdout.json', 'self_validation/gate_result.json', 'self_validation/gate_stdout.json', 'self_validation/live_runtime_eval_result.json', 'self_validation/live_runtime_eval_stdout.json', 'self_validation/manifest_update_result.json', 'self_validation/package_validation_report_basic.md', 'self_validation/package_validation_result.json', 'self_validation/package_validation_self_test_result.json', 'self_validation/regression_eval_result.json', 'self_validation/regression_stdout.json', 'self_validation/trace_auth_smoke_result.json'], 'prefixes': ['self_validation/formal_invocation_dry_run/'], 'rationale': 'validation and formal dry-run outputs are regenerated by release commands and may contain absolute paths, durations, stdout copies, or environment-specific precheck data; release-lock commands write new volatile outputs outside the package by default'}",
-      "name": "stable release manifest documents volatile generated exclusions",
+      "name": "stable release manifest volatile generated exclusions exactly match executable policy",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=74f3bc01324ee67ccff5f73fc101dc34c51fbeb8fbf877d6aabb570f13e2bb9b actual=74f3bc01324ee67ccff5f73fc101dc34c51fbeb8fbf877d6aabb570f13e2bb9b",
+      "details": "claimed=28c0acdceea43579754e360d4b9a529d02f2eae2a5ef0b7d49c2b13986c692ab actual=28c0acdceea43579754e360d4b9a529d02f2eae2a5ef0b7d49c2b13986c692ab",
       "name": "stable release manifest self-hash matches canonical content",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "items=251",
+      "details": "items=252",
       "name": "stable release manifest inventory is list",
       "passed": true,
       "severity": "critical"
@@ -331,13 +535,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=9c6cf9f204a34656660b870d512c7a419169464890e1e0081eb86c157831cd45 actual=9c6cf9f204a34656660b870d512c7a419169464890e1e0081eb86c157831cd45",
+      "details": "claimed=95035309a4c9c5bb88a847455d92772f8266b235ac0f461a9175df9dc2348cf5 actual=95035309a4c9c5bb88a847455d92772f8266b235ac0f461a9175df9dc2348cf5",
       "name": "stable release manifest hash matches: .github/workflows/nozickian-team-ci.yml",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1760 actual=1760",
+      "details": "claimed=2355 actual=2355",
       "name": "stable release manifest bytes match: .github/workflows/nozickian-team-ci.yml",
       "passed": true,
       "severity": "critical"
@@ -355,13 +559,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=3f99d685a83d316d81000f2f1c7c1f7f44d581ce67cb8ca5f09b75535c24d7f2 actual=3f99d685a83d316d81000f2f1c7c1f7f44d581ce67cb8ca5f09b75535c24d7f2",
+      "details": "claimed=6a7f0cb9f96754b300cbeed67b2b631eae2bd47368d908aa4f9b63319a213999 actual=6a7f0cb9f96754b300cbeed67b2b631eae2bd47368d908aa4f9b63319a213999",
       "name": "stable release manifest hash matches: AUDIT_REPORT.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=19949 actual=19949",
+      "details": "claimed=34186 actual=34186",
       "name": "stable release manifest bytes match: AUDIT_REPORT.md",
       "passed": true,
       "severity": "critical"
@@ -379,7 +583,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=6f3b100ce7fd482ad83c85ddefc23f9093a2fa961496a1e5f24b43da782be40a actual=6f3b100ce7fd482ad83c85ddefc23f9093a2fa961496a1e5f24b43da782be40a",
+      "details": "claimed=cefcdada160cb45e532691d5676d072870cfcf6f3e13d88de5742de454fec0d6 actual=cefcdada160cb45e532691d5676d072870cfcf6f3e13d88de5742de454fec0d6",
       "name": "stable release manifest hash matches: MANIFEST.sha256",
       "passed": true,
       "severity": "critical"
@@ -391,37 +595,37 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=f474a376e02f29b4160fba91dca900e62cfacb07e7484abf54eecbd0722cae9b actual=f474a376e02f29b4160fba91dca900e62cfacb07e7484abf54eecbd0722cae9b",
+      "details": "claimed=399b9e0243b00fb635333b66ffe79d947ea33600dca80c658f148241ab845065 actual=399b9e0243b00fb635333b66ffe79d947ea33600dca80c658f148241ab845065",
       "name": "stable release manifest hash matches: PACKAGE_SURFACE.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=10262 actual=10262",
+      "details": "claimed=13510 actual=13510",
       "name": "stable release manifest bytes match: PACKAGE_SURFACE.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=06072951107cb0738ac2a8a5db9216886d9f52d180b78bbd5fe8cc6064d0aa36 actual=06072951107cb0738ac2a8a5db9216886d9f52d180b78bbd5fe8cc6064d0aa36",
+      "details": "claimed=dad025667482f14f737fa4324dcbc485de3696f9dde8affa50b7e758eedab11e actual=dad025667482f14f737fa4324dcbc485de3696f9dde8affa50b7e758eedab11e",
       "name": "stable release manifest hash matches: README.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=5765 actual=5765",
+      "details": "claimed=5837 actual=5837",
       "name": "stable release manifest bytes match: README.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=57022c38c39be576813023ad67be9a036b1d7fbde8fb91ccbfaabcc5519b49f4 actual=57022c38c39be576813023ad67be9a036b1d7fbde8fb91ccbfaabcc5519b49f4",
+      "details": "claimed=7c47d5d43828643a043568e1ece0c7e7099fb7da8be9105de6c924cdae4c537e actual=7c47d5d43828643a043568e1ece0c7e7099fb7da8be9105de6c924cdae4c537e",
       "name": "stable release manifest hash matches: RELEASE_LOCK.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=13436 actual=13436",
+      "details": "claimed=20802 actual=20802",
       "name": "stable release manifest bytes match: RELEASE_LOCK.json",
       "passed": true,
       "severity": "critical"
@@ -439,25 +643,25 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=ddd05e452adcade0a5f20f8e1cfaead7cc0cdd8c4d63a1edfb4f819ab4411315 actual=ddd05e452adcade0a5f20f8e1cfaead7cc0cdd8c4d63a1edfb4f819ab4411315",
+      "details": "claimed=e8d0d299897abca7deb6df2780a64bc354730b25dcca03c863ab584815c5e1ed actual=e8d0d299897abca7deb6df2780a64bc354730b25dcca03c863ab584815c5e1ed",
       "name": "stable release manifest hash matches: TEAM_INTERNAL_USE.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=8373 actual=8373",
+      "details": "claimed=11696 actual=11696",
       "name": "stable release manifest bytes match: TEAM_INTERNAL_USE.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=671df3a2d8a644dbf0b5297509af561ffec5e5cfb6ce2cc8a8b7b512f7a893e4 actual=671df3a2d8a644dbf0b5297509af561ffec5e5cfb6ce2cc8a8b7b512f7a893e4",
+      "details": "claimed=41b20952dd3a06edb55927ee4fb8cff153d254ac58d352947436ab9f0c1f37bc actual=41b20952dd3a06edb55927ee4fb8cff153d254ac58d352947436ab9f0c1f37bc",
       "name": "stable release manifest hash matches: agents/ntt-claim-extractor.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=3418 actual=3418",
+      "details": "claimed=4408 actual=4408",
       "name": "stable release manifest bytes match: agents/ntt-claim-extractor.md",
       "passed": true,
       "severity": "critical"
@@ -499,13 +703,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=6e97551b877145046d58e3508f1748bc7248342cdcb6ddc36b4bef2bcafd9522 actual=6e97551b877145046d58e3508f1748bc7248342cdcb6ddc36b4bef2bcafd9522",
+      "details": "claimed=ad0478cf3770b4c731890183fb46785fbab3203bc6248e0c4027bc9c169d2374 actual=ad0478cf3770b4c731890183fb46785fbab3203bc6248e0c4027bc9c169d2374",
       "name": "stable release manifest hash matches: agents/ntt-gate-auditor.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=4297 actual=4297",
+      "details": "claimed=5760 actual=5760",
       "name": "stable release manifest bytes match: agents/ntt-gate-auditor.md",
       "passed": true,
       "severity": "critical"
@@ -631,13 +835,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=2cdb53be02fac26caf43175c1a178adf88ac7a0cab25fb535c5e50b012fc8475 actual=2cdb53be02fac26caf43175c1a178adf88ac7a0cab25fb535c5e50b012fc8475",
+      "details": "claimed=3e495137fa5bb69160c675fbc43024acde8fcd84cd4d8aa0ccd76970611c9388 actual=3e495137fa5bb69160c675fbc43024acde8fcd84cd4d8aa0ccd76970611c9388",
       "name": "stable release manifest hash matches: docs/pass-tracked-upgrade/README.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1851 actual=1851",
+      "details": "claimed=2701 actual=2701",
       "name": "stable release manifest bytes match: docs/pass-tracked-upgrade/README.md",
       "passed": true,
       "severity": "critical"
@@ -655,13 +859,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=afd9e1cc67eb57e2c28f5508403dc386b9247fa6fed1ebdb00ed7b07e546da3e actual=afd9e1cc67eb57e2c28f5508403dc386b9247fa6fed1ebdb00ed7b07e546da3e",
+      "details": "claimed=eb368c6e7e2ac81b0508fc61594fecf5cb33eb63aaae6a1b03544fec9592af4e actual=eb368c6e7e2ac81b0508fc61594fecf5cb33eb63aaae6a1b03544fec9592af4e",
       "name": "stable release manifest hash matches: docs/release/README.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1258 actual=1258",
+      "details": "claimed=2721 actual=2721",
       "name": "stable release manifest bytes match: docs/release/README.md",
       "passed": true,
       "severity": "critical"
@@ -739,7 +943,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=689433af89004fbc37b80c8777de4e538b6998f7b46d52292aed93e330eb7714 actual=689433af89004fbc37b80c8777de4e538b6998f7b46d52292aed93e330eb7714",
+      "details": "claimed=bb194951e992fac60369ffd40e9c5aea09bf6f5e3d8c0538ac439e51584913a6 actual=bb194951e992fac60369ffd40e9c5aea09bf6f5e3d8c0538ac439e51584913a6",
       "name": "stable release manifest hash matches: self_validation/evidence/C-charter-caps__claim.json",
       "passed": true,
       "severity": "critical"
@@ -1675,7 +1879,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=2eecaa31b7aa3ff07e7cbdbb31483e87415226b9c09c5d20fb0d3f71d06a8eab actual=2eecaa31b7aa3ff07e7cbdbb31483e87415226b9c09c5d20fb0d3f71d06a8eab",
+      "details": "claimed=c41a798afefcbe50dbc67d9d75f74a4e154d0e6970e023b774ea3ff983a7f4f8 actual=c41a798afefcbe50dbc67d9d75f74a4e154d0e6970e023b774ea3ff983a7f4f8",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__claim.json",
       "passed": true,
       "severity": "critical"
@@ -1699,7 +1903,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=98ae65453fde6618345447dc452db6c13cd93cb787f8e7eae53df1a7d574462d actual=98ae65453fde6618345447dc452db6c13cd93cb787f8e7eae53df1a7d574462d",
+      "details": "claimed=e534999f157b0c9416d3f36ac3225a5763727a5f883667f2ae49e623091e97f0 actual=e534999f157b0c9416d3f36ac3225a5763727a5f883667f2ae49e623091e97f0",
       "name": "stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__FW-github-readmes-degraded.json",
       "passed": true,
       "severity": "critical"
@@ -1711,7 +1915,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=9876288aa6f96f1f9ddce443f0458552e01799a8eb94387072d34c7a57b2a639 actual=9876288aa6f96f1f9ddce443f0458552e01799a8eb94387072d34c7a57b2a639",
+      "details": "claimed=b81efc174317dfce3732a0a23e427982f2f7a3b14073e8da0b5e278f6dd6a776 actual=b81efc174317dfce3732a0a23e427982f2f7a3b14073e8da0b5e278f6dd6a776",
       "name": "stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__TW-github-readmes-benign-doc-note.json",
       "passed": true,
       "severity": "critical"
@@ -1735,7 +1939,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=c6af8a66884b09f93da05922cbd3f190b6023f976bbff41c42f4056e2c1fb7a4 actual=c6af8a66884b09f93da05922cbd3f190b6023f976bbff41c42f4056e2c1fb7a4",
+      "details": "claimed=da3a714f4e092cd3b7cb51d66fe93caa4600f1f3fbb97b261a2da1ede4add37a actual=da3a714f4e092cd3b7cb51d66fe93caa4600f1f3fbb97b261a2da1ede4add37a",
       "name": "stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__validator.json",
       "passed": true,
       "severity": "critical"
@@ -1747,49 +1951,49 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=6f2c67cad913f661a343588e78f6174acf13a62315d9a1227a37ebec8f8cb468 actual=6f2c67cad913f661a343588e78f6174acf13a62315d9a1227a37ebec8f8cb468",
+      "details": "claimed=e08a3500a274b444f4d7075ee86748984214851514ceae42e63ddd95c02c0687 actual=e08a3500a274b444f4d7075ee86748984214851514ceae42e63ddd95c02c0687",
       "name": "stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__certifier.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=993 actual=993",
+      "details": "claimed=1986 actual=1986",
       "name": "stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__certifier.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=e329648a94bc8e0c81165591ebf8b97e3d816201edfd553a6a0aafc99b5f6897 actual=e329648a94bc8e0c81165591ebf8b97e3d816201edfd553a6a0aafc99b5f6897",
+      "details": "claimed=62363ab47b3abd545282a0719f11ce6559a2bc02a178b2ba4801227240145c2f actual=62363ab47b3abd545282a0719f11ce6559a2bc02a178b2ba4801227240145c2f",
       "name": "stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1118 actual=1118",
+      "details": "claimed=2088 actual=2088",
       "name": "stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=b0a777ed5dde0048694f4386839ca3a37cff855d74e1cd299412154a292c91e9 actual=b0a777ed5dde0048694f4386839ca3a37cff855d74e1cd299412154a292c91e9",
+      "details": "claimed=a66f9444f5327a2e06f670d459eacf58d7ed0baa945ec81b7bf33803cffc0c70 actual=a66f9444f5327a2e06f670d459eacf58d7ed0baa945ec81b7bf33803cffc0c70",
       "name": "stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1140 actual=1140",
+      "details": "claimed=1908 actual=1908",
       "name": "stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=4e01962e3752b593f2254b7e903b61c2bca6b0b0febb54967552f17d42a19978 actual=4e01962e3752b593f2254b7e903b61c2bca6b0b0febb54967552f17d42a19978",
+      "details": "claimed=5536b717783f4c1aa436d99d68836064431ec008aaf74b29d3ef05996bb630a1 actual=5536b717783f4c1aa436d99d68836064431ec008aaf74b29d3ef05996bb630a1",
       "name": "stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__reference.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=878 actual=878",
+      "details": "claimed=1443 actual=1443",
       "name": "stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__reference.json",
       "passed": true,
       "severity": "critical"
@@ -1867,19 +2071,19 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=3ca90fe15d64247d92de1009221c731f4dcd750dd8351080358fa5698e35bf1c actual=3ca90fe15d64247d92de1009221c731f4dcd750dd8351080358fa5698e35bf1c",
+      "details": "claimed=27a57a637fe42c0514c5d028bf7a452397b05015d8ea03c1caf3fe1fbb36818b actual=27a57a637fe42c0514c5d028bf7a452397b05015d8ea03c1caf3fe1fbb36818b",
       "name": "stable release manifest hash matches: self_validation/evidence/C-structure__claim.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=988 actual=988",
+      "details": "claimed=1148 actual=1148",
       "name": "stable release manifest bytes match: self_validation/evidence/C-structure__claim.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=88ad7f62439e0580ab8ac5b7336ed09d7feb8d7271287cb0e4e4c60f402b0239 actual=88ad7f62439e0580ab8ac5b7336ed09d7feb8d7271287cb0e4e4c60f402b0239",
+      "details": "claimed=1fd8a3f7cc95b72727f485b559bdb75db0c031ef7f7f43604eecdb23df2fbd96 actual=1fd8a3f7cc95b72727f485b559bdb75db0c031ef7f7f43604eecdb23df2fbd96",
       "name": "stable release manifest hash matches: self_validation/evidence/C-structure__gate.json",
       "passed": true,
       "severity": "critical"
@@ -1887,6 +2091,18 @@
     {
       "details": "claimed=966 actual=966",
       "name": "stable release manifest bytes match: self_validation/evidence/C-structure__gate.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=f1bb43ceed681397dcea31b8595a93695f1a27e748a69f68bebadcd0b780ad81 actual=f1bb43ceed681397dcea31b8595a93695f1a27e748a69f68bebadcd0b780ad81",
+      "name": "stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__FW-historical-nested-cruft.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=1017 actual=1017",
+      "name": "stable release manifest bytes match: self_validation/evidence/C-validator-sensitivity__FW-historical-nested-cruft.json",
       "passed": true,
       "severity": "critical"
     },
@@ -1939,13 +2155,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=fe234bd5a50b6e3092aa983eba26724d51984f5c7b8429ddb04a827f6e75e31d actual=fe234bd5a50b6e3092aa983eba26724d51984f5c7b8429ddb04a827f6e75e31d",
+      "details": "claimed=550356b118b02abd07d64cfbce836cfbaf9e4db3f8a07ed04ede0212097767a9 actual=550356b118b02abd07d64cfbce836cfbaf9e4db3f8a07ed04ede0212097767a9",
       "name": "stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__claim.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1086 actual=1086",
+      "details": "claimed=1543 actual=1543",
       "name": "stable release manifest bytes match: self_validation/evidence/C-validator-sensitivity__claim.json",
       "passed": true,
       "severity": "critical"
@@ -2983,49 +3199,49 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=03ef4d5d6d969ea36ba2b497a0823235f950bf35289b848ab460d00edb9c6142 actual=03ef4d5d6d969ea36ba2b497a0823235f950bf35289b848ab460d00edb9c6142",
+      "details": "claimed=b9ff493dbb04a7138cc6f154e4837562d826aa003d6f0d107f8b5ffaf5595047 actual=b9ff493dbb04a7138cc6f154e4837562d826aa003d6f0d107f8b5ffaf5595047",
       "name": "stable release manifest hash matches: self_validation/pass_tracked_certifier_empty_bundle_result.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=4970 actual=4970",
+      "details": "claimed=7291 actual=7291",
       "name": "stable release manifest bytes match: self_validation/pass_tracked_certifier_empty_bundle_result.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=092e22441ff1f58778ae9f14fe62a50faaae6d0db175dbae04b7ab6e6ef405f3 actual=092e22441ff1f58778ae9f14fe62a50faaae6d0db175dbae04b7ab6e6ef405f3",
+      "details": "claimed=75e9877120a57726c3dba119a0195da7d676478349bb10eadcd7244c41c50e4b actual=75e9877120a57726c3dba119a0195da7d676478349bb10eadcd7244c41c50e4b",
       "name": "stable release manifest hash matches: self_validation/pass_tracked_certifier_empty_bundle_result.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1684 actual=1684",
+      "details": "claimed=2808 actual=2808",
       "name": "stable release manifest bytes match: self_validation/pass_tracked_certifier_empty_bundle_result.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=a0881aa028220e15892b80b33a74f2b8ee89c3a94f9e4baa8a049884e84de73c actual=a0881aa028220e15892b80b33a74f2b8ee89c3a94f9e4baa8a049884e84de73c",
+      "details": "claimed=b9ff493dbb04a7138cc6f154e4837562d826aa003d6f0d107f8b5ffaf5595047 actual=b9ff493dbb04a7138cc6f154e4837562d826aa003d6f0d107f8b5ffaf5595047",
       "name": "stable release manifest hash matches: self_validation/pass_tracked_certifier_empty_bundle_stdout.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=4971 actual=4971",
+      "details": "claimed=7291 actual=7291",
       "name": "stable release manifest bytes match: self_validation/pass_tracked_certifier_empty_bundle_stdout.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=6ae86736bbabd038455a8b49153dece6d880b923e2b088ae7827e49656939795 actual=6ae86736bbabd038455a8b49153dece6d880b923e2b088ae7827e49656939795",
+      "details": "claimed=3663c54c824f5b38486ba2619097ad1524978cdaa2cc2effb2aebbdfbdf0b692 actual=3663c54c824f5b38486ba2619097ad1524978cdaa2cc2effb2aebbdfbdf0b692",
       "name": "stable release manifest hash matches: self_validation/self_certificate.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=117202 actual=117202",
+      "details": "claimed=151557 actual=151557",
       "name": "stable release manifest bytes match: self_validation/self_certificate.json",
       "passed": true,
       "severity": "critical"
@@ -3055,25 +3271,25 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=703a9b33360f301fd60840a88c88c658c5bfd9c2e3018a1eb7feab85581338b1 actual=703a9b33360f301fd60840a88c88c658c5bfd9c2e3018a1eb7feab85581338b1",
+      "details": "claimed=e2e91d0e2a9f65cdcaa850c6db7a1af6db992ea93934fd55ec223d4165d085b0 actual=e2e91d0e2a9f65cdcaa850c6db7a1af6db992ea93934fd55ec223d4165d085b0",
       "name": "stable release manifest hash matches: skills/nozickian-verify/SKILL.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=16851 actual=16851",
+      "details": "claimed=17499 actual=17499",
       "name": "stable release manifest bytes match: skills/nozickian-verify/SKILL.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=81196094ccd4459ae50802aef738af097656f34cbd4bdb912a336b78640053a3 actual=81196094ccd4459ae50802aef738af097656f34cbd4bdb912a336b78640053a3",
+      "details": "claimed=55b03e008641176ab9955c4e041337cd70a98ed2d83afdd306bbd10602b21b1d actual=55b03e008641176ab9955c4e041337cd70a98ed2d83afdd306bbd10602b21b1d",
       "name": "stable release manifest hash matches: skills/nozickian-verify/assets/certificate-template.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=4228 actual=4228",
+      "details": "claimed=5439 actual=5439",
       "name": "stable release manifest bytes match: skills/nozickian-verify/assets/certificate-template.json",
       "passed": true,
       "severity": "critical"
@@ -3175,25 +3391,25 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=64f35237d93c27efaec7ae1ef839659e92c906180c8fe3aaab35d81fca74f5f2 actual=64f35237d93c27efaec7ae1ef839659e92c906180c8fe3aaab35d81fca74f5f2",
+      "details": "claimed=bb4485fc3ddb07043f61875373033e91a1ff064ec15b0cef72f0321f348974b8 actual=bb4485fc3ddb07043f61875373033e91a1ff064ec15b0cef72f0321f348974b8",
       "name": "stable release manifest hash matches: skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=4705 actual=4705",
+      "details": "claimed=9339 actual=9339",
       "name": "stable release manifest bytes match: skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=4a280a90bd3d55fa90cbae526455b87c4632d8f0fd16f6de89edb3bbdc5f304d actual=4a280a90bd3d55fa90cbae526455b87c4632d8f0fd16f6de89edb3bbdc5f304d",
+      "details": "claimed=1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21 actual=1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21",
       "name": "stable release manifest hash matches: skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=11045 actual=11045",
+      "details": "claimed=20911 actual=20911",
       "name": "stable release manifest bytes match: skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
       "passed": true,
       "severity": "critical"
@@ -3223,37 +3439,37 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=8a1223bba27c5230e50462bc4ece620c15a89297335ff1b712ba582b895084cb actual=8a1223bba27c5230e50462bc4ece620c15a89297335ff1b712ba582b895084cb",
+      "details": "claimed=42e3bd1ec8584d2616cb6ef67ac871f6dfb66af9f81d48154ad4b57764089e42 actual=42e3bd1ec8584d2616cb6ef67ac871f6dfb66af9f81d48154ad4b57764089e42",
       "name": "stable release manifest hash matches: skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=8163 actual=8163",
+      "details": "claimed=9743 actual=9743",
       "name": "stable release manifest bytes match: skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a actual=b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a",
+      "details": "claimed=5d97289564d618e9e6cb3d95195f2c3e3a0949f2daf8dd1d45f10ca2ac419832 actual=5d97289564d618e9e6cb3d95195f2c3e3a0949f2daf8dd1d45f10ca2ac419832",
       "name": "stable release manifest hash matches: skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=24026 actual=24026",
+      "details": "claimed=68060 actual=68060",
       "name": "stable release manifest bytes match: skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=76821143e6e911c0bd47e7ac2ecd0539901a5f2f5f8d77c67c5cd7f0925afe05 actual=76821143e6e911c0bd47e7ac2ecd0539901a5f2f5f8d77c67c5cd7f0925afe05",
+      "details": "claimed=3df08a56cf692e65ec7e8d82397905a152538b0dee8a4106c8c68c938b0caf76 actual=3df08a56cf692e65ec7e8d82397905a152538b0dee8a4106c8c68c938b0caf76",
       "name": "stable release manifest hash matches: skills/nozickian-verify/scripts/ntt_gate.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=38890 actual=38890",
+      "details": "claimed=39891 actual=39891",
       "name": "stable release manifest bytes match: skills/nozickian-verify/scripts/ntt_gate.py",
       "passed": true,
       "severity": "critical"
@@ -3295,37 +3511,37 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=a20d34b945fd7fd502172b337dafe63f02e7743eb9e9ea55973b168cec702d5c actual=a20d34b945fd7fd502172b337dafe63f02e7743eb9e9ea55973b168cec702d5c",
+      "details": "claimed=7e65db2e76a2e6197230e35a568ed6ba28903608155c1d98bd327d44fdcc3916 actual=7e65db2e76a2e6197230e35a568ed6ba28903608155c1d98bd327d44fdcc3916",
       "name": "stable release manifest hash matches: skills/nozickian-verify/scripts/run_live_skill_evals.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=9012 actual=9012",
+      "details": "claimed=29755 actual=29755",
       "name": "stable release manifest bytes match: skills/nozickian-verify/scripts/run_live_skill_evals.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=b15369f0181e2ad311553c8ae1168238b0c94b2b3a803971801c2e95cd732dd0 actual=b15369f0181e2ad311553c8ae1168238b0c94b2b3a803971801c2e95cd732dd0",
+      "details": "claimed=0b8f0c622ab3eee944c21f4b0d94c0f1b38ed98cc5e74bd5b0649428c071c23a actual=0b8f0c622ab3eee944c21f4b0d94c0f1b38ed98cc5e74bd5b0649428c071c23a",
       "name": "stable release manifest hash matches: skills/nozickian-verify/scripts/run_regression_evals.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=5902 actual=5902",
+      "details": "claimed=6751 actual=6751",
       "name": "stable release manifest bytes match: skills/nozickian-verify/scripts/run_regression_evals.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=01c9382f30b60e48e23a69a27aac2749164761186eb6c603ddae3503760cef98 actual=01c9382f30b60e48e23a69a27aac2749164761186eb6c603ddae3503760cef98",
+      "details": "claimed=8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f actual=8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f",
       "name": "stable release manifest hash matches: skills/nozickian-verify/scripts/validate_package.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=102785 actual=102785",
+      "details": "claimed=255613 actual=255613",
       "name": "stable release manifest bytes match: skills/nozickian-verify/scripts/validate_package.py",
       "passed": true,
       "severity": "critical"
@@ -3367,6 +3583,18 @@
       "severity": "critical"
     },
     {
+      "details": "dict",
+      "name": "package surface policy root is a JSON object",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "package surface policy has no unknown top-level keys",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
       "details": "team-internal-reuse",
       "name": "package surface tier is team-internal",
       "passed": true,
@@ -3386,19 +3614,115 @@
     },
     {
       "details": "['agents/ntt-formal-coordinator.md', 'agents/ntt-method-cartographer.md', 'agents/ntt-claim-extractor.md', 'agents/ntt-source-verifier.md', 'agents/ntt-code-verifier.md', 'agents/ntt-false-world-adversary.md', 'agents/ntt-true-world-adherence.md', 'agents/ntt-gate-auditor.md', 'agents/ntt-skill-self-auditor.md']",
+      "name": "package surface allowed_agents is a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "['agents/ntt-formal-coordinator.md', 'agents/ntt-method-cartographer.md', 'agents/ntt-claim-extractor.md', 'agents/ntt-source-verifier.md', 'agents/ntt-code-verifier.md', 'agents/ntt-false-world-adversary.md', 'agents/ntt-true-world-adherence.md', 'agents/ntt-gate-auditor.md', 'agents/ntt-skill-self-auditor.md']",
       "name": "package surface agents match expected",
       "passed": true,
       "severity": "critical"
     },
     {
+      "details": "['.gitignore', 'AUDIT_REPORT.md', 'LICENSE', 'MANIFEST.sha256', 'PACKAGE_SURFACE.json', 'README.md', 'RELEASE_LOCK.json', 'SECURITY.md', 'STABLE_RELEASE_MANIFEST.json', 'TEAM_INTERNAL_USE.md']",
+      "name": "package surface allowed_top_level_files is a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "['.claude-plugin', '.github', 'agents', 'docs', 'self_validation', 'skills']",
+      "name": "package surface allowed_top_level_dirs is a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "['.github/workflows/nozickian-team-ci.yml']",
+      "name": "package surface allowed_ci_files is a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "['.claude-plugin/plugin.json']",
+      "name": "package surface allowed_plugin_manifest_files is a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "['name', 'displayName', 'version', 'description', 'author', 'homepage', 'repository', 'license', 'keywords']",
+      "name": "package surface plugin manifest fields are a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "['assets', 'evals', 'references', 'scripts']",
+      "name": "package surface allowed_skill_runtime_dirs is a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
       "details": "['skills', 'commands', 'agents', 'hooks', 'mcpServers', 'outputStyles', 'lspServers', 'experimental.monitors', 'experimental.themes', 'userConfig', 'channels', 'dependencies']",
-      "name": "package surface forbids runtime plugin fields",
+      "name": "package surface forbidden runtime fields are a unique string array",
       "passed": true,
       "severity": "critical"
     },
     {
       "details": "['commands', 'hooks', 'monitors', 'bin', 'settings.json', '.mcp.json', '.lsp.json']",
-      "name": "package surface forbids plugin surfaces",
+      "name": "package surface forbidden surfaces are a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['.gitignore', 'AUDIT_REPORT.md', 'LICENSE', 'MANIFEST.sha256', 'PACKAGE_SURFACE.json', 'README.md', 'RELEASE_LOCK.json', 'SECURITY.md', 'STABLE_RELEASE_MANIFEST.json', 'TEAM_INTERNAL_USE.md'] executable=['.gitignore', 'AUDIT_REPORT.md', 'LICENSE', 'MANIFEST.sha256', 'PACKAGE_SURFACE.json', 'README.md', 'RELEASE_LOCK.json', 'SECURITY.md', 'STABLE_RELEASE_MANIFEST.json', 'TEAM_INTERNAL_USE.md']",
+      "name": "package surface top-level file allowlist matches executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['.claude-plugin', '.github', 'agents', 'docs', 'self_validation', 'skills'] executable=['.claude-plugin', '.github', 'agents', 'docs', 'self_validation', 'skills']",
+      "name": "package surface top-level directory allowlist matches executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['.github/workflows/nozickian-team-ci.yml'] executable=['.github/workflows/nozickian-team-ci.yml']",
+      "name": "package surface CI file allowlist matches executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['.claude-plugin/plugin.json'] executable=['.claude-plugin/plugin.json']",
+      "name": "package surface plugin manifest file allowlist matches executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['author', 'description', 'displayName', 'homepage', 'keywords', 'license', 'name', 'repository', 'version'] executable=['author', 'description', 'displayName', 'homepage', 'keywords', 'license', 'name', 'repository', 'version']",
+      "name": "package surface plugin manifest field allowlist matches executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['assets', 'evals', 'references', 'scripts'] executable=['assets', 'evals', 'references', 'scripts']",
+      "name": "package surface skill runtime directory allowlist matches executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['agents', 'channels', 'commands', 'dependencies', 'experimental.monitors', 'experimental.themes', 'hooks', 'lspServers', 'mcpServers', 'outputStyles', 'skills', 'userConfig'] executable=['agents', 'channels', 'commands', 'dependencies', 'experimental.monitors', 'experimental.themes', 'hooks', 'lspServers', 'mcpServers', 'outputStyles', 'skills', 'userConfig']",
+      "name": "package surface forbidden runtime plugin fields match executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['.lsp.json', '.mcp.json', 'bin', 'commands', 'hooks', 'monitors', 'settings.json'] executable=['.lsp.json', '.mcp.json', 'bin', 'commands', 'hooks', 'monitors', 'settings.json']",
+      "name": "package surface forbidden plugin surfaces match executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "package surface has no allowed/forbidden contradictions",
       "passed": true,
       "severity": "critical"
     },
@@ -3421,7 +3745,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=5763",
+      "details": "chars=5835",
       "name": "root GitHub README is substantive",
       "passed": true,
       "severity": "critical"
@@ -3685,7 +4009,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=1851",
+      "details": "chars=2701",
       "name": "GitHub README substantive: docs/pass-tracked-upgrade/README.md",
       "passed": true,
       "severity": "critical"
@@ -3877,7 +4201,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=1258",
+      "details": "chars=2721",
       "name": "GitHub README substantive: docs/release/README.md",
       "passed": true,
       "severity": "critical"
@@ -4057,150 +4381,6 @@
       "severity": "critical"
     },
     {
-      "details": "",
-      "name": "no git-tracked build cruft (__pycache__/.pyc/.DS_Store)",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "",
-      "name": "no unexpected top-level files",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "",
-      "name": "no unexpected top-level directories",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": ".github/workflows/nozickian-team-ci.yml",
-      "name": "only expected team CI workflow present",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "validate_package.py . --self-test",
-      "name": "CI workflow includes validate_package.py . --self-test",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "ntt_gate.py self_validation/self_certificate.json --evidence-root .",
-      "name": "CI workflow includes ntt_gate.py self_validation/self_certificate.json --evidence-root .",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "run_regression_evals.py .",
-      "name": "CI workflow includes run_regression_evals.py .",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "run_formal_runner_contract_tests.py .",
-      "name": "CI workflow includes run_formal_runner_contract_tests.py .",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "run_formal_artifact_verification.py . README.md --dry-run",
-      "name": "CI workflow includes run_formal_artifact_verification.py . README.md --dry-run",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": ".lsp.json",
-      "name": "forbidden root file absent: .lsp.json",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": ".mcp.json",
-      "name": "forbidden root file absent: .mcp.json",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "settings.json",
-      "name": "forbidden root file absent: settings.json",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "bin",
-      "name": "forbidden plugin surface absent: bin/",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "commands",
-      "name": "forbidden plugin surface absent: commands/",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "hooks",
-      "name": "forbidden plugin surface absent: hooks/",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "monitors",
-      "name": "forbidden plugin surface absent: monitors/",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": ".claude-plugin/plugin.json",
-      "name": ".claude-plugin contains only plugin.json",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "skills/nozickian-verify",
-      "name": "only expected skill directory present",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "",
-      "name": "no extra plugin agents, including recursive subdirectory agents",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "",
-      "name": "all expected plugin agents present",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "",
-      "name": "plugin agents directory contains only markdown agent files",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "",
-      "name": "skill directory contains only expected children",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "certify_pass_tracked_upgrade.py, ntt_gate.py, run_formal_artifact_verification.py, run_formal_runner_contract_tests.py, run_gate_contract_tests.py, run_live_skill_evals.py, run_regression_evals.py, validate_package.py",
-      "name": "scripts directory contains only expected scripts",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "ARTIFACT_GUIDE.md, EVAL_BEST_PRACTICES.md, EVIDENCE_SCHEMA.md, OUTPUT_TEMPLATES.md, PASS_TRACKED_UPGRADE_AUDIT.md, SOURCES.md, STANDARD.md, SUBAGENT_PROTOCOLS.md",
-      "name": "references directory contains only expected files",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
       "details": "<package-root>/MANIFEST.sha256",
       "name": "behavior manifest exists",
       "passed": true,
@@ -4231,25 +4411,25 @@
       "severity": "critical"
     },
     {
-      "details": "expected=9c6cf9f204a34656660b870d512c7a419169464890e1e0081eb86c157831cd45 actual=9c6cf9f204a34656660b870d512c7a419169464890e1e0081eb86c157831cd45",
+      "details": "expected=95035309a4c9c5bb88a847455d92772f8266b235ac0f461a9175df9dc2348cf5 actual=95035309a4c9c5bb88a847455d92772f8266b235ac0f461a9175df9dc2348cf5",
       "name": "manifest hash matches: .github/workflows/nozickian-team-ci.yml",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=f474a376e02f29b4160fba91dca900e62cfacb07e7484abf54eecbd0722cae9b actual=f474a376e02f29b4160fba91dca900e62cfacb07e7484abf54eecbd0722cae9b",
+      "details": "expected=399b9e0243b00fb635333b66ffe79d947ea33600dca80c658f148241ab845065 actual=399b9e0243b00fb635333b66ffe79d947ea33600dca80c658f148241ab845065",
       "name": "manifest hash matches: PACKAGE_SURFACE.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=57022c38c39be576813023ad67be9a036b1d7fbde8fb91ccbfaabcc5519b49f4 actual=57022c38c39be576813023ad67be9a036b1d7fbde8fb91ccbfaabcc5519b49f4",
+      "details": "expected=7c47d5d43828643a043568e1ece0c7e7099fb7da8be9105de6c924cdae4c537e actual=7c47d5d43828643a043568e1ece0c7e7099fb7da8be9105de6c924cdae4c537e",
       "name": "manifest hash matches: RELEASE_LOCK.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=671df3a2d8a644dbf0b5297509af561ffec5e5cfb6ce2cc8a8b7b512f7a893e4 actual=671df3a2d8a644dbf0b5297509af561ffec5e5cfb6ce2cc8a8b7b512f7a893e4",
+      "details": "expected=41b20952dd3a06edb55927ee4fb8cff153d254ac58d352947436ab9f0c1f37bc actual=41b20952dd3a06edb55927ee4fb8cff153d254ac58d352947436ab9f0c1f37bc",
       "name": "manifest hash matches: agents/ntt-claim-extractor.md",
       "passed": true,
       "severity": "critical"
@@ -4273,7 +4453,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=6e97551b877145046d58e3508f1748bc7248342cdcb6ddc36b4bef2bcafd9522 actual=6e97551b877145046d58e3508f1748bc7248342cdcb6ddc36b4bef2bcafd9522",
+      "details": "expected=ad0478cf3770b4c731890183fb46785fbab3203bc6248e0c4027bc9c169d2374 actual=ad0478cf3770b4c731890183fb46785fbab3203bc6248e0c4027bc9c169d2374",
       "name": "manifest hash matches: agents/ntt-gate-auditor.md",
       "passed": true,
       "severity": "critical"
@@ -4339,7 +4519,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=2cdb53be02fac26caf43175c1a178adf88ac7a0cab25fb535c5e50b012fc8475 actual=2cdb53be02fac26caf43175c1a178adf88ac7a0cab25fb535c5e50b012fc8475",
+      "details": "expected=3e495137fa5bb69160c675fbc43024acde8fcd84cd4d8aa0ccd76970611c9388 actual=3e495137fa5bb69160c675fbc43024acde8fcd84cd4d8aa0ccd76970611c9388",
       "name": "manifest hash matches: docs/pass-tracked-upgrade/README.md",
       "passed": true,
       "severity": "critical"
@@ -4351,7 +4531,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=afd9e1cc67eb57e2c28f5508403dc386b9247fa6fed1ebdb00ed7b07e546da3e actual=afd9e1cc67eb57e2c28f5508403dc386b9247fa6fed1ebdb00ed7b07e546da3e",
+      "details": "expected=eb368c6e7e2ac81b0508fc61594fecf5cb33eb63aaae6a1b03544fec9592af4e actual=eb368c6e7e2ac81b0508fc61594fecf5cb33eb63aaae6a1b03544fec9592af4e",
       "name": "manifest hash matches: docs/release/README.md",
       "passed": true,
       "severity": "critical"
@@ -4369,7 +4549,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=703a9b33360f301fd60840a88c88c658c5bfd9c2e3018a1eb7feab85581338b1 actual=703a9b33360f301fd60840a88c88c658c5bfd9c2e3018a1eb7feab85581338b1",
+      "details": "expected=e2e91d0e2a9f65cdcaa850c6db7a1af6db992ea93934fd55ec223d4165d085b0 actual=e2e91d0e2a9f65cdcaa850c6db7a1af6db992ea93934fd55ec223d4165d085b0",
       "name": "manifest hash matches: skills/nozickian-verify/SKILL.md",
       "passed": true,
       "severity": "critical"
@@ -4417,13 +4597,13 @@
       "severity": "critical"
     },
     {
-      "details": "expected=64f35237d93c27efaec7ae1ef839659e92c906180c8fe3aaab35d81fca74f5f2 actual=64f35237d93c27efaec7ae1ef839659e92c906180c8fe3aaab35d81fca74f5f2",
+      "details": "expected=bb4485fc3ddb07043f61875373033e91a1ff064ec15b0cef72f0321f348974b8 actual=bb4485fc3ddb07043f61875373033e91a1ff064ec15b0cef72f0321f348974b8",
       "name": "manifest hash matches: skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=4a280a90bd3d55fa90cbae526455b87c4632d8f0fd16f6de89edb3bbdc5f304d actual=4a280a90bd3d55fa90cbae526455b87c4632d8f0fd16f6de89edb3bbdc5f304d",
+      "details": "expected=1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21 actual=1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21",
       "name": "manifest hash matches: skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
       "passed": true,
       "severity": "critical"
@@ -4441,19 +4621,19 @@
       "severity": "critical"
     },
     {
-      "details": "expected=8a1223bba27c5230e50462bc4ece620c15a89297335ff1b712ba582b895084cb actual=8a1223bba27c5230e50462bc4ece620c15a89297335ff1b712ba582b895084cb",
+      "details": "expected=42e3bd1ec8584d2616cb6ef67ac871f6dfb66af9f81d48154ad4b57764089e42 actual=42e3bd1ec8584d2616cb6ef67ac871f6dfb66af9f81d48154ad4b57764089e42",
       "name": "manifest hash matches: skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a actual=b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a",
+      "details": "expected=5d97289564d618e9e6cb3d95195f2c3e3a0949f2daf8dd1d45f10ca2ac419832 actual=5d97289564d618e9e6cb3d95195f2c3e3a0949f2daf8dd1d45f10ca2ac419832",
       "name": "manifest hash matches: skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=76821143e6e911c0bd47e7ac2ecd0539901a5f2f5f8d77c67c5cd7f0925afe05 actual=76821143e6e911c0bd47e7ac2ecd0539901a5f2f5f8d77c67c5cd7f0925afe05",
+      "details": "expected=3df08a56cf692e65ec7e8d82397905a152538b0dee8a4106c8c68c938b0caf76 actual=3df08a56cf692e65ec7e8d82397905a152538b0dee8a4106c8c68c938b0caf76",
       "name": "manifest hash matches: skills/nozickian-verify/scripts/ntt_gate.py",
       "passed": true,
       "severity": "critical"
@@ -4477,19 +4657,19 @@
       "severity": "critical"
     },
     {
-      "details": "expected=a20d34b945fd7fd502172b337dafe63f02e7743eb9e9ea55973b168cec702d5c actual=a20d34b945fd7fd502172b337dafe63f02e7743eb9e9ea55973b168cec702d5c",
+      "details": "expected=7e65db2e76a2e6197230e35a568ed6ba28903608155c1d98bd327d44fdcc3916 actual=7e65db2e76a2e6197230e35a568ed6ba28903608155c1d98bd327d44fdcc3916",
       "name": "manifest hash matches: skills/nozickian-verify/scripts/run_live_skill_evals.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=b15369f0181e2ad311553c8ae1168238b0c94b2b3a803971801c2e95cd732dd0 actual=b15369f0181e2ad311553c8ae1168238b0c94b2b3a803971801c2e95cd732dd0",
+      "details": "expected=0b8f0c622ab3eee944c21f4b0d94c0f1b38ed98cc5e74bd5b0649428c071c23a actual=0b8f0c622ab3eee944c21f4b0d94c0f1b38ed98cc5e74bd5b0649428c071c23a",
       "name": "manifest hash matches: skills/nozickian-verify/scripts/run_regression_evals.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=01c9382f30b60e48e23a69a27aac2749164761186eb6c603ddae3503760cef98 actual=01c9382f30b60e48e23a69a27aac2749164761186eb6c603ddae3503760cef98",
+      "details": "expected=8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f actual=8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f",
       "name": "manifest hash matches: skills/nozickian-verify/scripts/validate_package.py",
       "passed": true,
       "severity": "critical"
@@ -5275,7 +5455,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=3112",
+      "details": "chars=4102",
       "name": "agent body substantive: ntt-claim-extractor",
       "passed": true,
       "severity": "critical"
@@ -5995,7 +6175,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=3968",
+      "details": "chars=5431",
       "name": "agent body substantive: ntt-gate-auditor",
       "passed": true,
       "severity": "critical"
@@ -6697,7 +6877,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=38888",
+      "details": "chars=39889",
       "name": "script substantive length: ntt_gate.py",
       "passed": true,
       "severity": "critical"
@@ -6889,7 +7069,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=102785",
+      "details": "chars=255613",
       "name": "script substantive length: validate_package.py",
       "passed": true,
       "severity": "critical"
@@ -6897,6 +7077,42 @@
     {
       "details": "check_closed_surface",
       "name": "script contains hardening token validate_package.py: check_closed_surface",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "GitEntry",
+      "name": "script contains hardening token validate_package.py: GitEntry",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "ls-files\", \"--stage",
+      "name": "script contains hardening token validate_package.py: ls-files\", \"--stage",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "regular blob modes 100644/100755",
+      "name": "script contains hardening token validate_package.py: regular blob modes 100644/100755",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "atomic_write_fixed_text",
+      "name": "script contains hardening token validate_package.py: atomic_write_fixed_text",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "HARNESS_ERROR",
+      "name": "script contains hardening token validate_package.py: HARNESS_ERROR",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "GIT_OPTIONAL_LOCKS",
+      "name": "script contains hardening token validate_package.py: GIT_OPTIONAL_LOCKS",
       "passed": true,
       "severity": "critical"
     },
@@ -7021,8 +7237,122 @@
       "severity": "critical"
     },
     {
+      "details": "compute_stable_release_tree",
+      "name": "script contains hardening token validate_package.py: compute_stable_release_tree",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
       "details": "run_release_lock_idempotence_test",
       "name": "script contains hardening token validate_package.py: run_release_lock_idempotence_test",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "run_promotion_certifier_contract_probes",
+      "name": "script contains hardening token validate_package.py: run_promotion_certifier_contract_probes",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "mismatched-package-tree-sha256",
+      "name": "script contains hardening token validate_package.py: mismatched-package-tree-sha256",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "external-only formal companion paths",
+      "name": "script contains hardening token validate_package.py: external-only formal companion paths",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "shared-transcript-across-fixtures",
+      "name": "script contains hardening token validate_package.py: shared-transcript-across-fixtures",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "prompt-only-argv",
+      "name": "script contains hardening token validate_package.py: prompt-only-argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "missing-plugin-dir-argv",
+      "name": "script contains hardening token validate_package.py: missing-plugin-dir-argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "wrong-output-format-argv",
+      "name": "script contains hardening token validate_package.py: wrong-output-format-argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "wrong-max-turns-argv",
+      "name": "script contains hardening token validate_package.py: wrong-max-turns-argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "extra-fixture-arg",
+      "name": "script contains hardening token validate_package.py: extra-fixture-arg",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "swapped-fixture-arg-order",
+      "name": "script contains hardening token validate_package.py: swapped-fixture-arg-order",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "wrong-preflight-argv",
+      "name": "script contains hardening token validate_package.py: wrong-preflight-argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "returncode-bool-false-version-preflight",
+      "name": "script contains hardening token validate_package.py: returncode-bool-false-version-preflight",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "validator text nonzero 1-error summary dominates pass",
+      "name": "script contains hardening token validate_package.py: validator text nonzero 1-error summary dominates pass",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "artifact-bytes-refreshed-manifests-stale-live",
+      "name": "script contains hardening token validate_package.py: artifact-bytes-refreshed-manifests-stale-live",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "fixture-spec-refreshed-manifests-stale-live",
+      "name": "script contains hardening token validate_package.py: fixture-spec-refreshed-manifests-stale-live",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "nonartifact-source-refreshed-manifests-stale-live",
+      "name": "script contains hardening token validate_package.py: nonartifact-source-refreshed-manifests-stale-live",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "manifest exclusion cannot hide behavior file",
+      "name": "script contains hardening token validate_package.py: manifest exclusion cannot hide behavior file",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "fresh validator is unconditional",
+      "name": "script contains hardening token validate_package.py: fresh validator is unconditional",
       "passed": true,
       "severity": "critical"
     },
@@ -7243,7 +7573,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=9012",
+      "details": "chars=29755",
       "name": "script substantive length: run_live_skill_evals.py",
       "passed": true,
       "severity": "critical"
@@ -7279,8 +7609,134 @@
       "severity": "critical"
     },
     {
+      "details": "package_tree_algorithm",
+      "name": "script contains hardening token run_live_skill_evals.py: package_tree_algorithm",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "package_tree_sha256",
+      "name": "script contains hardening token run_live_skill_evals.py: package_tree_sha256",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "fixture_spec_sha256",
+      "name": "script contains hardening token run_live_skill_evals.py: fixture_spec_sha256",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "artifact_sha256",
+      "name": "script contains hardening token run_live_skill_evals.py: artifact_sha256",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "run_config",
+      "name": "script contains hardening token run_live_skill_evals.py: run_config",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "compute_stable_release_tree",
+      "name": "script contains hardening token run_live_skill_evals.py: compute_stable_release_tree",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "prompt_sha256",
+      "name": "script contains hardening token run_live_skill_evals.py: prompt_sha256",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "transcript_sha256",
+      "name": "script contains hardening token run_live_skill_evals.py: transcript_sha256",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "sha256_text",
+      "name": "script contains hardening token run_live_skill_evals.py: sha256_text",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
       "details": "transcript_checks",
       "name": "script contains hardening token run_live_skill_evals.py: transcript_checks",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "structured_json_envelope",
+      "name": "script contains hardening token run_live_skill_evals.py: structured_json_envelope",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "report_field",
+      "name": "script contains hardening token run_live_skill_evals.py: report_field",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "runtime_identity",
+      "name": "script contains hardening token run_live_skill_evals.py: runtime_identity",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "provenance_schema_version",
+      "name": "script contains hardening token run_live_skill_evals.py: provenance_schema_version",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "observed-not-cryptographically-authenticated",
+      "name": "script contains hardening token run_live_skill_evals.py: observed-not-cryptographically-authenticated",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "runtime_preflight_succeeded",
+      "name": "script contains hardening token run_live_skill_evals.py: runtime_preflight_succeeded",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "resolve_claude_executable",
+      "name": "script contains hardening token run_live_skill_evals.py: resolve_claude_executable",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "load_regular_json",
+      "name": "script contains hardening token run_live_skill_evals.py: load_regular_json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "executable_sha256_pre",
+      "name": "script contains hardening token run_live_skill_evals.py: executable_sha256_pre",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "executable_sha256_post",
+      "name": "script contains hardening token run_live_skill_evals.py: executable_sha256_post",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "fingerprint_stable",
+      "name": "script contains hardening token run_live_skill_evals.py: fingerprint_stable",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "regular non-symlink",
+      "name": "script contains hardening token run_live_skill_evals.py: regular non-symlink",
       "passed": true,
       "severity": "critical"
     },
@@ -7321,7 +7777,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=5902",
+      "details": "chars=6751",
       "name": "script substantive length: run_regression_evals.py",
       "passed": true,
       "severity": "critical"
@@ -7633,7 +8089,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=24026",
+      "details": "chars=68060",
       "name": "script substantive length: certify_pass_tracked_upgrade.py",
       "passed": true,
       "severity": "critical"
@@ -7663,6 +8119,84 @@
       "severity": "critical"
     },
     {
+      "details": "live provenance schema is 1.0",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: live provenance schema is 1.0",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "live runtime executable fingerprints are valid and stable",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: live runtime executable fingerprints are valid and stable",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "live plugin validation preflight exact normalized argv succeeded",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: live plugin validation preflight exact normalized argv succeeded",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "live fixture IDs exactly match the current package once each",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: live fixture IDs exactly match the current package once each",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "live fixture specification SHA-256 matches current evals bytes",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: live fixture specification SHA-256 matches current evals bytes",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "live fixture bundle-local transcript paths are unique and complete",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: live fixture bundle-local transcript paths are unique and complete",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "artifact SHA-256 matches current exact bytes",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: artifact SHA-256 matches current exact bytes",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "transcript SHA-256 matches fixture record",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: transcript SHA-256 matches fixture record",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "transcript command exactly matches normalized argv",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: transcript command exactly matches normalized argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "transcript command prompt binds exact fixture and artifact",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: transcript command prompt binds exact fixture and artifact",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "self-reported checks match transcript replay",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: self-reported checks match transcript replay",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "structured JSON envelope",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: structured JSON envelope",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "observed-not-cryptographically-authenticated",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: observed-not-cryptographically-authenticated",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
       "details": "formal result",
       "name": "script contains hardening token certify_pass_tracked_upgrade.py: formal result",
       "passed": true,
@@ -7671,6 +8205,78 @@
     {
       "details": "trace authenticated",
       "name": "script contains hardening token certify_pass_tracked_upgrade.py: trace authenticated",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "self-contained regular file",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: self-contained regular file",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "package_tree_sha256",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: package_tree_sha256",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "compute_stable_release_tree",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: compute_stable_release_tree",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "current package tree verifies through shared validator helper",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: current package tree verifies through shared validator helper",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "fresh deterministic package validator still passes",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: fresh deterministic package validator still passes",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "fresh_validation_unconditional",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: fresh_validation_unconditional",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "evidence refs are unique bundle-local regular files",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: evidence refs are unique bundle-local regular files",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "returncode_is_integer_zero",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: returncode_is_integer_zero",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "TEXT_NONZERO_FAILURE_SUMMARY_RE",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: TEXT_NONZERO_FAILURE_SUMMARY_RE",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "anchored negative status",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: anchored negative status",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "stale-token input is readable regular file",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: stale-token input is readable regular file",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "regular_file_error",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: regular_file_error",
       "passed": true,
       "severity": "critical"
     },
@@ -7723,13 +8329,13 @@
       "severity": "critical"
     },
     {
-      "details": "chars=24026",
+      "details": "chars=68060",
       "name": "PASS-TRACKED certifier rejects missing runtime evidence",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "chars=24026",
+      "details": "chars=68060",
       "name": "PASS-TRACKED certifier requires trace and downstream checks",
       "passed": true,
       "severity": "critical"
@@ -7969,236 +8575,800 @@
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects degraded STANDARD.md even with updated manifest\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 16, \"returncode\": 2}",
+      "details": "top=/private/var/folders/w6/3ph6jxyd4c9f7krfqwvcwvj80000gp/T/nozickian_pkg_checkout_c4nx06rb/redress destination=/private/var/folders/w6/3ph6jxyd4c9f7krfqwvcwvj80000gp/T/nozickian_pkg_checkout_c4nx06rb/redress",
+      "name": "checkout fixture Git top level is the disposable destination",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "index=/private/var/folders/w6/3ph6jxyd4c9f7krfqwvcwvj80000gp/T/nozickian_pkg_checkout_c4nx06rb/redress/.git/index destination=/private/var/folders/w6/3ph6jxyd4c9f7krfqwvcwvj80000gp/T/nozickian_pkg_checkout_c4nx06rb/redress",
+      "name": "checkout fixture index resolves inside the disposable destination",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "add_rc=0 staged_rc=0",
+      "name": "checkout fixture mutation-specific add uses the disposable index",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"git_marker_unchanged\": true, \"index_hash_unchanged\": true, \"source_state\": \"verified-worktree\", \"status_unchanged\": true}",
+      "name": "checkout fixture leaves source index and status unchanged",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"manifest_remains_symlink\": true, \"returncode\": 2}",
+      "name": "update-manifest rejects a symlinked behavior manifest",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "bytes=33",
+      "name": "update-manifest symlink probe preserves external sentinel bytes",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"manifest_is_symlink\": false, \"sentinel_unchanged\": true}",
+      "name": "atomic manifest writer replaces a link without following its target",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"index_hash_unchanged\": true, \"status_unchanged\": true}",
+      "name": "update-manifest symlink probe leaves source checkout unchanged",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"gate\": [\"<package-root>\", \"<package-root>/child.txt\", \"<package-root>\\\\child.txt\", \"/private/tmp/ntt-pr3-cove.qvbfc6/redress@sibling\", \"/private/tmp/ntt-pr3-cove.qvbfc6/redress old\", \"<package-root>\\u2603\", \"/private/tmp/ntt-pr3-cove.qvbfc6/redress-old/child.txt\"], \"live\": [\"<package-root>\", \"<package-root>/child.txt\", \"<package-root>\\\\child.txt\", \"/private/tmp/ntt-pr3-cove.qvbfc6/redress@sibling\", \"/private/tmp/ntt-pr3-cove.qvbfc6/redress old\", \"<package-root>\\u2603\", \"/private/tmp/ntt-pr3-cove.qvbfc6/redress-old/child.txt\"], \"regression\": [\"<package-root>\", \"<package-root>/child.txt\", \"<package-root>\\\\child.txt\", \"/private/tmp/ntt-pr3-cove.qvbfc6/redress@sibling\", \"/private/tmp/ntt-pr3-cove.qvbfc6/redress old\", \"<package-root>\\u2603\", \"/private/tmp/ntt-pr3-cove.qvbfc6/redress-old/child.txt\"], \"validator\": [\"<package-root>\", \"<package-root>/child.txt\", \"<package-root>\\\\child.txt\", \"/private/tmp/ntt-pr3-cove.qvbfc6/redress@sibling\", \"/private/tmp/ntt-pr3-cove.qvbfc6/redress old\", \"<package-root>\\u2603\", \"/private/tmp/ntt-pr3-cove.qvbfc6/redress-old/child.txt\"]}",
+      "name": "display path normalization is boundary-aware across all harnesses",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"acceptable_pass_statuses\": [\"PASS-SCOPED\", \"PASS-TRACKED\"], \"artifact_seen\": true, \"dominant_status\": \"PASS-SCOPED\", \"envelope_error\": \"\", \"envelope_is_error\": false, \"passed\": true, \"report_field\": \"result\", \"report_substantive\": true, \"required_terms\": {\"false-world\": true, \"gate\": true, \"method\": true, \"true-world\": true}, \"status_tokens\": [\"PASS-SCOPED\"], \"structured_json_envelope\": true}",
+      "name": "live harness true world accepts a structured substantive report envelope",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"acceptable_pass_statuses\": [\"PASS-SCOPED\", \"PASS-TRACKED\"], \"artifact_seen\": false, \"dominant_status\": null, \"envelope_error\": \"\", \"envelope_is_error\": false, \"passed\": false, \"report_field\": \"result\", \"report_substantive\": false, \"required_terms\": {\"false-world\": false, \"gate\": false, \"method\": false, \"true-world\": false}, \"status_tokens\": [], \"structured_json_envelope\": true}",
+      "name": "live harness false world rejects recursive keyword echoes outside report field",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"acceptable_pass_statuses\": [\"PASS-SCOPED\", \"PASS-TRACKED\"], \"artifact_seen\": false, \"dominant_status\": null, \"envelope_error\": \"top-level JSON is list, not an object\", \"envelope_is_error\": false, \"passed\": false, \"report_field\": null, \"report_substantive\": false, \"required_terms\": {\"false-world\": false, \"gate\": false, \"method\": false, \"true-world\": false}, \"status_tokens\": [], \"structured_json_envelope\": false}",
+      "name": "live harness false world rejects non-object JSON output",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"fixture_count\": 0, \"preflight\": {\"plugin_validate_returncode\": 9, \"successful\": false, \"version_returncode\": 0}, \"returncode\": 2, \"status\": \"FAIL\"}",
+      "name": "live harness false world reports plugin-preflight failure normally",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"binding_errors\": null, \"candidate_a_invocations\": 5, \"candidate_b_invocations\": 0, \"fingerprint_stable\": true, \"package_tree_validation\": {\"errors\": [], \"file_count\": 252, \"valid\": true}, \"reason\": \"Fixture slash-command invocations executed; PASS-SCOPED means transcripts contain required verification fields, not that subagent usage was independently proven.\", \"resolved_path_absent\": true, \"returncode\": 0, \"status\": \"PASS-SCOPED\"}",
+      "name": "live harness executes the fingerprinted absolute binary across fixture cwd changes",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"fixture_count\": 3, \"fixture_hashes_ok\": true}",
+      "name": "live harness persists package, fixture, artifact, prompt, config, and transcript byte bindings",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"fifo_rc\": 2, \"fifo_status\": \"FAIL\", \"symlink_rc\": 2, \"symlink_status\": \"FAIL\"}",
+      "name": "live harness rejects symlink and FIFO plugin manifests without following them",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"failed\": [], \"fixture_count\": 3, \"status\": \"PASS-TRACKED\"}",
+      "name": "promotion true world: valid three-fixture transcript-bound bundle passes its lane",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live provenance records the current observed run\", \"failed_names\": [\"live provenance records the current observed run\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: stale-source-release",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live provenance records the current observed run\", \"failed_names\": [\"live provenance records the current observed run\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: carried-forward-result",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture IDs exactly match the current package once each\", \"failed_names\": [\"live artifact SHA-256 bindings exactly match every current fixture\", \"live fixture IDs exactly match the current package once each\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: partial-fixture-set",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture 1 transcript is a bundle-local regular file\", \"failed_names\": [\"live fixture 1 transcript is a bundle-local regular file\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: absent-transcript",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture 1 transcript is a bundle-local regular file\", \"failed_names\": [\"live fixture 1 transcript is a bundle-local regular file\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: external-only-transcript",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture 1 self-reported checks match transcript replay\", \"failed_names\": [\"live fixture 1 transcript SHA-256 matches fixture record\", \"live fixture 1 self-reported checks match transcript replay\", \"live fixture 1 replay has structured JSON envelope, substantive report, and artifact identity\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: fabricated-self-reported-checks",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture bundle-local transcript paths are unique and complete\", \"failed_names\": [\"live fixture bundle-local transcript paths are unique and complete\", \"live fixture 2 transcript command exactly matches normalized argv\", \"live fixture 2 transcript command prompt binds exact fixture and artifact\", \"live fixture 2 transcript command prompt SHA-256 matches fixture record\", \"live fixture 3 transcript command exactly matches normalized argv\", \"live fixture 3 transcript command prompt binds exact fixture and artifact\", \"live fixture 3 transcript command prompt SHA-256 matches fixture record\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: shared-transcript-across-fixtures",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture 1 transcript command prompt binds exact fixture and artifact\", \"failed_names\": [\"live fixture 1 transcript command exactly matches normalized argv\", \"live fixture 1 transcript command prompt binds exact fixture and artifact\", \"live fixture 1 transcript command prompt SHA-256 matches fixture record\", \"live fixture 1 self-reported checks match transcript replay\", \"live fixture 1 replay has structured JSON envelope, substantive report, and artifact identity\", \"live fixture 2 transcript command exactly matches normalized argv\", \"live fixture 2 transcript command prompt binds exact fixture and artifact\", \"live fixture 2 transcript command prompt SHA-256 matches fixture record\", \"live fixture 2 self-reported checks match transcript replay\", \"live fixture 2 replay has structured JSON envelope, substantive report, and artifact identity\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: swapped-fixture-transcripts",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture 1 recorded prompt SHA-256 matches current canonical prompt\", \"failed_names\": [\"live fixture 1 recorded prompt SHA-256 matches current canonical prompt\", \"live fixture 1 transcript command prompt SHA-256 matches fixture record\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: wrong-recorded-prompt-hash",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture 1 transcript command prompt binds exact fixture and artifact\", \"failed_names\": [\"live fixture 1 transcript command exactly matches normalized argv\", \"live fixture 1 transcript command prompt binds exact fixture and artifact\", \"live fixture 1 transcript command prompt SHA-256 matches fixture record\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: wrong-artifact-fixture-command-prompt",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture 1 transcript command exactly matches normalized argv\", \"failed_names\": [\"live fixture 1 transcript command exactly matches normalized argv\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: prompt-only-argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture 1 transcript command exactly matches normalized argv\", \"failed_names\": [\"live fixture 1 transcript command exactly matches normalized argv\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: missing-plugin-dir-argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture 1 transcript command exactly matches normalized argv\", \"failed_names\": [\"live fixture 1 transcript command exactly matches normalized argv\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: wrong-output-format-argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture 1 transcript command exactly matches normalized argv\", \"failed_names\": [\"live fixture 1 transcript command exactly matches normalized argv\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: wrong-max-turns-argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture 1 transcript command exactly matches normalized argv\", \"failed_names\": [\"live fixture 1 transcript command exactly matches normalized argv\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: extra-fixture-arg",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture 1 transcript command exactly matches normalized argv\", \"failed_names\": [\"live fixture 1 transcript command exactly matches normalized argv\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: swapped-fixture-arg-order",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live plugin validation preflight exact normalized argv succeeded\", \"failed_names\": [\"live plugin validation preflight exact normalized argv succeeded\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: wrong-preflight-argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live Claude version preflight exact normalized argv succeeded\", \"failed_names\": [\"live Claude version preflight exact normalized argv succeeded\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: returncode-bool-false-version-preflight",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live harness records successful aggregate preflight\", \"failed_names\": [\"live harness records successful aggregate preflight\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: returncode-bool-true-aggregate-preflight",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture 1 command returned zero\", \"failed_names\": [\"live fixture 1 command returned zero\", \"live fixture 1 transcript returncode matches result\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: returncode-float-zero-fixture-result",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_name\": \"live fixture 1 transcript returncode matches result\", \"failed_names\": [\"live fixture 1 transcript returncode matches result\"], \"status\": \"FAIL\"}",
+      "name": "promotion false world: returncode-string-zero-transcript",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_names\": [\"live package-tree SHA-256 matches current package bytes\", \"live fixture 1 artifact SHA-256 matches current exact bytes\"], \"failed_names\": [\"live package-tree SHA-256 matches current package bytes\", \"live artifact SHA-256 bindings exactly match every current fixture\", \"live fixture 1 artifact SHA-256 matches current exact bytes\"], \"refreshed_tree\": {\"algorithm\": \"ntt-stable-release-tree-v1\", \"errors\": [], \"file_count\": 252, \"inventory_policy\": {\"derived_path_count\": 252, \"source\": \"shared validate_package.compute_stable_release_tree\", \"volatile_generated_exclusions\": {\"files\": [\"self_validation/GATE_RESULT.md\", \"self_validation/SELF_VALIDATION_REPORT.md\", \"self_validation/formal_dry_stdout.json\", \"self_validation/formal_invocation_dry_run.json\", \"self_validation/formal_runner_contract_results.json\", \"self_validation/formal_runner_contract_stdout.json\", \"self_validation/gate_contract_results.json\", \"self_validation/gate_contract_stdout.json\", \"self_validation/gate_result.json\", \"self_validation/gate_stdout.json\", \"self_validation/live_runtime_eval_result.json\", \"self_validation/live_runtime_eval_stdout.json\", \"self_validation/manifest_update_result.json\", \"self_validation/package_validation_report_basic.md\", \"self_validation/package_validation_result.json\", \"self_validation/package_validation_self_test_result.json\", \"self_validation/regression_eval_result.json\", \"self_validation/regression_stdout.json\", \"self_validation/trace_auth_smoke_result.json\"], \"prefixes\": [\"self_validation/formal_invocation_dry_run/\"]}}, \"manifest_identity\": {\"file_count_excluding_self\": 252, \"package\": \"nozickian-truth-tracking-agentic\", \"plugin_version\": \"1.0.3\", \"release_lock_version\": \"1.0.3\", \"schema_version\": \"1.0\", \"self_file\": \"STABLE_RELEASE_MANIFEST.json\", \"self_hash_sha256\": \"b2cf5cd5c49340c1c60beacd7d34c76f44dad5aefd317c9d88e089ae8a91dbc4\"}, \"sha256\": \"d327295d84a5fc0acdd0d18b272dc31d75f7841d011c2908c84c1bc01b2aeb10\", \"valid\": true}, \"refreshed_validation\": {\"checks_total\": 1428, \"critical_failed\": 0, \"status\": \"PASS\"}}",
+      "name": "promotion false world: artifact-bytes-refreshed-manifests-stale-live",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_names\": [\"live package-tree SHA-256 matches current package bytes\", \"live fixture specification SHA-256 matches current evals bytes\"], \"failed_names\": [\"live package-tree SHA-256 matches current package bytes\", \"live fixture specification SHA-256 matches current evals bytes\"], \"refreshed_tree\": {\"algorithm\": \"ntt-stable-release-tree-v1\", \"errors\": [], \"file_count\": 252, \"inventory_policy\": {\"derived_path_count\": 252, \"source\": \"shared validate_package.compute_stable_release_tree\", \"volatile_generated_exclusions\": {\"files\": [\"self_validation/GATE_RESULT.md\", \"self_validation/SELF_VALIDATION_REPORT.md\", \"self_validation/formal_dry_stdout.json\", \"self_validation/formal_invocation_dry_run.json\", \"self_validation/formal_runner_contract_results.json\", \"self_validation/formal_runner_contract_stdout.json\", \"self_validation/gate_contract_results.json\", \"self_validation/gate_contract_stdout.json\", \"self_validation/gate_result.json\", \"self_validation/gate_stdout.json\", \"self_validation/live_runtime_eval_result.json\", \"self_validation/live_runtime_eval_stdout.json\", \"self_validation/manifest_update_result.json\", \"self_validation/package_validation_report_basic.md\", \"self_validation/package_validation_result.json\", \"self_validation/package_validation_self_test_result.json\", \"self_validation/regression_eval_result.json\", \"self_validation/regression_stdout.json\", \"self_validation/trace_auth_smoke_result.json\"], \"prefixes\": [\"self_validation/formal_invocation_dry_run/\"]}}, \"manifest_identity\": {\"file_count_excluding_self\": 252, \"package\": \"nozickian-truth-tracking-agentic\", \"plugin_version\": \"1.0.3\", \"release_lock_version\": \"1.0.3\", \"schema_version\": \"1.0\", \"self_file\": \"STABLE_RELEASE_MANIFEST.json\", \"self_hash_sha256\": \"d119bc81207149f78c561cdabe65b9218363ec073b51b0421c1cc98b644271cc\"}, \"sha256\": \"c6b81ea273a9278e3d02a8d301f04b5eb4dba153d1938f3b7b661fdc304bb7cb\", \"valid\": true}, \"refreshed_validation\": {\"checks_total\": 1428, \"critical_failed\": 0, \"status\": \"PASS\"}}",
+      "name": "promotion false world: fixture-spec-refreshed-manifests-stale-live",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"expected_failed_names\": [\"live package-tree SHA-256 matches current package bytes\"], \"failed_names\": [\"live package-tree SHA-256 matches current package bytes\"], \"refreshed_tree\": {\"algorithm\": \"ntt-stable-release-tree-v1\", \"errors\": [], \"file_count\": 252, \"inventory_policy\": {\"derived_path_count\": 252, \"source\": \"shared validate_package.compute_stable_release_tree\", \"volatile_generated_exclusions\": {\"files\": [\"self_validation/GATE_RESULT.md\", \"self_validation/SELF_VALIDATION_REPORT.md\", \"self_validation/formal_dry_stdout.json\", \"self_validation/formal_invocation_dry_run.json\", \"self_validation/formal_runner_contract_results.json\", \"self_validation/formal_runner_contract_stdout.json\", \"self_validation/gate_contract_results.json\", \"self_validation/gate_contract_stdout.json\", \"self_validation/gate_result.json\", \"self_validation/gate_stdout.json\", \"self_validation/live_runtime_eval_result.json\", \"self_validation/live_runtime_eval_stdout.json\", \"self_validation/manifest_update_result.json\", \"self_validation/package_validation_report_basic.md\", \"self_validation/package_validation_result.json\", \"self_validation/package_validation_self_test_result.json\", \"self_validation/regression_eval_result.json\", \"self_validation/regression_stdout.json\", \"self_validation/trace_auth_smoke_result.json\"], \"prefixes\": [\"self_validation/formal_invocation_dry_run/\"]}}, \"manifest_identity\": {\"file_count_excluding_self\": 252, \"package\": \"nozickian-truth-tracking-agentic\", \"plugin_version\": \"1.0.3\", \"release_lock_version\": \"1.0.3\", \"schema_version\": \"1.0\", \"self_file\": \"STABLE_RELEASE_MANIFEST.json\", \"self_hash_sha256\": \"cc54a0636b5a7c2d0d0f3aa18a8d399b9dafa822e0730702e17a3ff2fb41551b\"}, \"sha256\": \"d13e512294d2b1d1a308cce0df52131ef1a663b31fa96c526bdec01f29e3f846\", \"valid\": true}, \"refreshed_validation\": {\"checks_total\": 1428, \"critical_failed\": 0, \"status\": \"PASS\"}}",
+      "name": "promotion false world: nonartifact-source-refreshed-manifests-stale-live",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "[\"official validator passed: claude_plugin_validate\", \"official validator passed: skills_ref_validate\"]",
+      "name": "promotion false world: contradictory official-validator JSON statuses",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "text contains an anchored negative status",
+      "name": "promotion false world: invalid validator text cannot match valid",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "text contains an anchored nonzero failure summary",
+      "name": "promotion false world: validator text nonzero 1-error summary dominates pass",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "text contains an anchored nonzero failure summary",
+      "name": "promotion false world: validator text nonzero 2-errors-punctuation-case summary dominates pass",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "text contains an anchored nonzero failure summary",
+      "name": "promotion false world: validator text nonzero 1-failure-punctuation-case summary dominates pass",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "text contains an anchored nonzero failure summary",
+      "name": "promotion false world: validator text nonzero 3-failed-punctuation-case summary dominates pass",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "validator JSON returncode is not integer zero",
+      "name": "promotion false world: official validator returncode false is not integer zero",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "validator JSON returncode is not integer zero",
+      "name": "promotion false world: official validator returncode true is not integer zero",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "validator JSON returncode is not integer zero",
+      "name": "promotion false world: official validator returncode float-zero is not integer zero",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "validator JSON returncode is not integer zero",
+      "name": "promotion false world: official validator returncode string-zero is not integer zero",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "validator JSON returncode is not integer zero",
+      "name": "promotion false world: official validator returncode null is not integer zero",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "text contains an anchored standalone positive status",
+      "name": "promotion true world: validator text zero-errors-plus-pass is retained",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "text contains an anchored standalone positive status",
+      "name": "promotion true world: validator text zero-failed-plus-pass is retained",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "promotion true world: integer-zero anchored official-validator success is retained",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"failed\": [], \"tree\": {\"algorithm\": \"ntt-stable-release-tree-v1\", \"errors\": [], \"file_count\": 252, \"inventory_policy\": {\"derived_path_count\": 252, \"source\": \"shared validate_package.compute_stable_release_tree\", \"volatile_generated_exclusions\": {\"files\": [\"self_validation/GATE_RESULT.md\", \"self_validation/SELF_VALIDATION_REPORT.md\", \"self_validation/formal_dry_stdout.json\", \"self_validation/formal_invocation_dry_run.json\", \"self_validation/formal_runner_contract_results.json\", \"self_validation/formal_runner_contract_stdout.json\", \"self_validation/gate_contract_results.json\", \"self_validation/gate_contract_stdout.json\", \"self_validation/gate_result.json\", \"self_validation/gate_stdout.json\", \"self_validation/live_runtime_eval_result.json\", \"self_validation/live_runtime_eval_stdout.json\", \"self_validation/manifest_update_result.json\", \"self_validation/package_validation_report_basic.md\", \"self_validation/package_validation_result.json\", \"self_validation/package_validation_self_test_result.json\", \"self_validation/regression_eval_result.json\", \"self_validation/regression_stdout.json\", \"self_validation/trace_auth_smoke_result.json\"], \"prefixes\": [\"self_validation/formal_invocation_dry_run/\"]}}, \"manifest_identity\": {\"file_count_excluding_self\": 252, \"package\": \"nozickian-truth-tracking-agentic\", \"plugin_version\": \"1.0.3\", \"release_lock_version\": \"1.0.3\", \"schema_version\": \"1.0\", \"self_file\": \"STABLE_RELEASE_MANIFEST.json\", \"self_hash_sha256\": \"28c0acdceea43579754e360d4b9a529d02f2eae2a5ef0b7d49c2b13986c692ab\"}, \"sha256\": \"745bfd1955ee20389141249d3a6fa31b021f560e08d2fa9e473bf0a627ae008b\", \"valid\": true}}",
+      "name": "promotion true world: package tree and five local evidence refs bind",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "[\"promotion certificate package_tree_sha256 matches current package tree\"]",
+      "name": "promotion false world: mismatched-package-tree-sha256",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "[\"promotion certificate evidence refs are unique bundle-local regular files\"]",
+      "name": "promotion false world: missing-evidence-ref",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "[\"promotion certificate evidence refs are unique bundle-local regular files\"]",
+      "name": "promotion false world: outside-evidence-ref",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "[\"promotion certificate evidence refs are unique bundle-local regular files\"]",
+      "name": "promotion false world: duplicate-evidence-ref",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"promotion_failed\": [\"current package tree verifies against stable release manifest\", \"promotion certificate package_tree_sha256 matches current package tree\"], \"tree_errors\": [\"stable release manifest excluded files do not match current validator policy\", \"stable release manifest misses independently derived files: ['skills/nozickian-verify/scripts/run_live_skill_evals.py']\"]}",
+      "name": "promotion false world: manifest exclusion cannot hide behavior file",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"promotion_failed\": [\"current package tree verifies against stable release manifest\", \"promotion certificate package_tree_sha256 matches current package tree\"], \"tree_errors\": [\"stable release manifest excluded prefixes do not match current validator policy\"]}",
+      "name": "promotion false world: tampered manifest exclusion arrays fail current policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"promotion_failed\": [\"current package tree verifies against stable release manifest\", \"promotion certificate package_tree_sha256 matches current package tree\"], \"tree_errors\": [\"stable release manifest misses independently derived files: ['README.md']\"]}",
+      "name": "promotion false world: missing independently derived inventory path fails",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"compatibility_flag_requested\": false, \"critical_failed\": 1, \"fresh_validation_unconditional\": true, \"returncode\": 2, \"status\": \"FAIL\"}",
+      "name": "promotion false world: fresh validator is unconditional and rejects stale package",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "[\"formal result 1 transcript is self-contained regular file\", \"formal result 1 generated certificate is self-contained regular file\", \"formal result 1 invocation ledger is self-contained regular file\"]",
+      "name": "promotion false world: external-only formal companion paths",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"deterministic_regular\": false, \"stale_external_token_seen\": false, \"stale_failures\": [\"stale-token input is readable regular file: bundle:fixed-fifo\", \"stale-token input is readable regular file: bundle:fixed-link\"]}",
+      "name": "promotion no-follow probes reject symlink and special inputs without external reads",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"completed\": false, \"critical_failed\": null, \"exception\": \"NotADirectoryError(20, 'Not a directory')\", \"harness_error\": true, \"returncode\": 125, \"status\": \"HARNESS_ERROR\"}",
+      "name": "mutation harness classifies validator exceptions as HARNESS_ERROR",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects degraded STANDARD.md even with updated manifest\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 16, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects degraded STANDARD.md even with updated manifest",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects degraded PASS-TRACKED upgrade audit\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 14, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects degraded PASS-TRACKED upgrade audit\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 14, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects degraded PASS-TRACKED upgrade audit",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects degraded GitHub README documentation\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 7, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects degraded GitHub README documentation\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 7, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects degraded GitHub README documentation",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects PASS-TRACKED upgrade certifier pass stub\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 16, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects PASS-TRACKED upgrade certifier pass stub\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 41, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects PASS-TRACKED upgrade certifier pass stub",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects broad skill allowed-tools Bash even with updated manifest\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 5, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects broad skill allowed-tools Bash even with updated manifest\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 5, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects broad skill allowed-tools Bash even with updated manifest",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects unmanifested extra plugin agent\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 5, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects unmanifested extra plugin agent\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects unmanifested extra plugin agent",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects recursive nested plugin agent after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects recursive nested plugin agent after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects recursive nested plugin agent after manifest update",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects plugin settings.json activation surface\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 3, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects plugin settings.json activation surface\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects plugin settings.json activation surface",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects plugin command hook surface\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 3, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects plugin command hook surface\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects plugin command hook surface",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects semantic prompt poisoning after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 12, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects semantic prompt poisoning after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 12, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects semantic prompt poisoning after manifest update",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects placeholder eval worlds after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects placeholder eval worlds after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects placeholder eval worlds after manifest update",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects live harness pass stub after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 12, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects live harness pass stub after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 33, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects live harness pass stub after manifest update",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects always-pass gate stub after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 31, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects always-pass gate stub after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 31, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects always-pass gate stub after manifest update",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects nonexistent eval fixture after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects nonexistent eval fixture after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects nonexistent eval fixture after manifest update",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects Bash agent without worktree isolation\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects Bash agent without worktree isolation\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects Bash agent without worktree isolation",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects missing behavior manifest\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects missing behavior manifest\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects missing behavior manifest",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects MCP plugin surface\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 3, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects MCP plugin surface\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects MCP plugin surface",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects inline plugin manifest hooks after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects inline plugin manifest hooks after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects inline plugin manifest hooks after manifest update",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects inline plugin manifest MCP after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects inline plugin manifest MCP after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects inline plugin manifest MCP after manifest update",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects manifest agent path override after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects manifest agent path override after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects manifest agent path override after manifest update",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects skill dynamic shell substitution after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects skill dynamic shell substitution after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects skill dynamic shell substitution after manifest update",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects unsupported plugin-agent hook frontmatter\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects unsupported plugin-agent hook frontmatter\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects unsupported plugin-agent hook frontmatter",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects skill-level hooks frontmatter after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects skill-level hooks frontmatter after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects skill-level hooks frontmatter after manifest update",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects skill shell frontmatter after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects skill shell frontmatter after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects skill shell frontmatter after manifest update",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects omitted subagent tools field\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects omitted subagent tools field\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects omitted subagent tools field",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects degraded PACKAGE_SURFACE.json\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 8, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects degraded PACKAGE_SURFACE.json\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 23, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects degraded PACKAGE_SURFACE.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects no-op CI workflow after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 5, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects non-object PACKAGE_SURFACE.json root\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects non-object PACKAGE_SURFACE.json root",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects duplicate PACKAGE_SURFACE allowed_agents\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects duplicate PACKAGE_SURFACE allowed_agents",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects no-op CI workflow after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 7, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects no-op CI workflow after manifest update",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects formal runner pass stub after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 43, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects formal runner pass stub after manifest update\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 43, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects formal runner pass stub after manifest update",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects formal coordinator general-purpose fallback\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects formal coordinator general-purpose fallback\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects formal coordinator general-purpose fallback",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects formal runner LIMITED as pass status\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects formal runner LIMITED as pass status\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects formal runner LIMITED as pass status",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects token-preserving formal runner pass stub\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 33, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects token-preserving formal runner pass stub\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 33, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects token-preserving formal runner pass stub",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects active self-certificate stale package-version provenance\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects active self-certificate stale package-version provenance\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects active self-certificate stale package-version provenance",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects downstream auto-pass epistemic closure\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 3, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects downstream auto-pass epistemic closure\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 3, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects downstream auto-pass epistemic closure",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects stale generated self-validation artifact provenance\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 3, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects stale generated self-validation artifact provenance\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 3, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects stale generated self-validation artifact provenance",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"rejects self-certificate artifact version mismatching plugin version\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2}",
+      "details": "{\"name\": \"rejects non-UTF-8 release provenance file\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects non-UTF-8 release provenance file",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects exact current package-root provenance leak\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects exact current package-root provenance leak",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects self-certificate artifact version mismatching plugin version\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
       "name": "false-world mutation: rejects self-certificate artifact version mismatching plugin version",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"retains pass after README note\", \"passed\": true, \"observed_status\": \"PASS\", \"critical_failed\": 0, \"returncode\": 0}",
+      "details": "{\"name\": \"rejects Git-free exported-package .pyc\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects Git-free exported-package .pyc",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects .git marker with Git evidence failure\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects .git marker with Git evidence failure",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects declared top-level allowlist drift\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects declared top-level allowlist drift",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects omitted package-surface parity declaration\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects omitted package-surface parity declaration",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects contradictory allowed and forbidden package-surface declaration\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects contradictory allowed and forbidden package-surface declaration",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects unknown package-surface top-level key\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects unknown package-surface top-level key",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects opaque undeclared experimental plugin field\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects opaque undeclared experimental plugin field",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects stale active path despite ordinary historical wording\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects stale active path despite ordinary historical wording",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects Git-free symlink before target read\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects Git-free symlink before target read",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects Git-free FIFO unsupported entry type\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects Git-free FIFO unsupported entry type",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects force-tracked checkout .pyc\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects force-tracked checkout .pyc",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects exact historical tracked __pycache__ bytecode\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null, \"targeted_cruft_assertion\": {\"expected_path_is_tracked_cruft\": true, \"ordinary_single_critical_failure\": true, \"named_critical_check_failed\": true, \"all_tracked_cruft_paths_in_failure_details\": true, \"tracked_cruft_index_paths\": [\"skills/nozickian-verify/scripts/__pycache__/ntt_gate.cpython-312.pyc\"]}}",
+      "name": "false-world mutation: rejects exact historical tracked __pycache__ bytecode",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects tracked symlink before hashing\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 2, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects tracked symlink before hashing",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects untracked checkout symlink before reads\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects untracked checkout symlink before reads",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects untracked checkout FIFO before copies\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects untracked checkout FIFO before copies",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects untracked checkout non-bytecode cruft\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects untracked checkout non-bytecode cruft",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"rejects index-only gitlink mode 160000\", \"passed\": true, \"observed_status\": \"FAIL\", \"critical_failed\": 1, \"returncode\": 2, \"harness_error\": false, \"exception\": null}",
+      "name": "false-world mutation: rejects index-only gitlink mode 160000",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"critical_failed\": 0, \"harness_error\": false, \"name\": \"retains non-path root suffixes during display normalization\", \"observed_status\": \"PASS\", \"passed\": true, \"returncode\": 0}",
+      "name": "true-world benign variation: retains non-path root suffixes during display normalization",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"retains pass after README note\", \"passed\": true, \"observed_status\": \"PASS\", \"critical_failed\": 0, \"returncode\": 0, \"harness_error\": false, \"exception\": null}",
       "name": "true-world benign variation: retains pass after README note",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"retains pass after benign GitHub docs note\", \"passed\": true, \"observed_status\": \"PASS\", \"critical_failed\": 0, \"returncode\": 0}",
+      "details": "{\"name\": \"retains pass after benign GitHub docs note\", \"passed\": true, \"observed_status\": \"PASS\", \"critical_failed\": 0, \"returncode\": 0, \"harness_error\": false, \"exception\": null}",
       "name": "true-world benign variation: retains pass after benign GitHub docs note",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"retains pass after unused inert asset\", \"passed\": true, \"observed_status\": \"PASS\", \"critical_failed\": 0, \"returncode\": 0}",
+      "details": "{\"name\": \"retains pass after unused inert asset\", \"passed\": true, \"observed_status\": \"PASS\", \"critical_failed\": 0, \"returncode\": 0, \"harness_error\": false, \"exception\": null}",
       "name": "true-world benign variation: retains pass after unused inert asset",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "{\"name\": \"retains pass after benign SOURCES whitespace with updated manifest\", \"passed\": true, \"observed_status\": \"PASS\", \"critical_failed\": 0, \"returncode\": 0}",
+      "details": "{\"name\": \"retains pass after benign SOURCES whitespace with updated manifest\", \"passed\": true, \"observed_status\": \"PASS\", \"critical_failed\": 0, \"returncode\": 0, \"harness_error\": false, \"exception\": null}",
       "name": "true-world benign variation: retains pass after benign SOURCES whitespace with updated manifest",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"retains pass for clean Git-free copy/export\", \"passed\": true, \"observed_status\": \"PASS\", \"critical_failed\": 0, \"returncode\": 0, \"harness_error\": false, \"exception\": null}",
+      "name": "true-world benign variation: retains pass for clean Git-free copy/export",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"retains pass for reordered equivalent package-surface sets\", \"passed\": true, \"observed_status\": \"PASS\", \"critical_failed\": 0, \"returncode\": 0, \"harness_error\": false, \"exception\": null}",
+      "name": "true-world benign variation: retains pass for reordered equivalent package-surface sets",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"retains pass for reordered equivalent plugin keys\", \"passed\": true, \"observed_status\": \"PASS\", \"critical_failed\": 0, \"returncode\": 0, \"harness_error\": false, \"exception\": null}",
+      "name": "true-world benign variation: retains pass for reordered equivalent plugin keys",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"retains explicit historical prose for both prior versions\", \"passed\": true, \"observed_status\": \"PASS\", \"critical_failed\": 0, \"returncode\": 0, \"harness_error\": false, \"exception\": null}",
+      "name": "true-world benign variation: retains explicit historical prose for both prior versions",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "{\"name\": \"retains ignored untracked checkout .pyc\", \"passed\": true, \"observed_status\": \"PASS\", \"critical_failed\": 0, \"returncode\": 0, \"harness_error\": false, \"exception\": null}",
+      "name": "true-world benign variation: retains ignored untracked checkout .pyc",
       "passed": true,
       "severity": "critical"
     },
@@ -8215,8 +9385,8 @@
       "severity": "critical"
     }
   ],
-  "checks_passed": 1369,
-  "checks_total": 1369,
+  "checks_passed": 1564,
+  "checks_total": 1564,
   "critical_failed": 0,
   "gate_contract": {
     "cases": [
@@ -8927,6 +10097,8 @@
   "mutation_tests": [
     {
       "critical_failed": 16,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects degraded STANDARD.md even with updated manifest",
       "observed_status": "FAIL",
       "passed": true,
@@ -8934,6 +10106,8 @@
     },
     {
       "critical_failed": 14,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects degraded PASS-TRACKED upgrade audit",
       "observed_status": "FAIL",
       "passed": true,
@@ -8941,13 +10115,17 @@
     },
     {
       "critical_failed": 7,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects degraded GitHub README documentation",
       "observed_status": "FAIL",
       "passed": true,
       "returncode": 2
     },
     {
-      "critical_failed": 16,
+      "critical_failed": 41,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects PASS-TRACKED upgrade certifier pass stub",
       "observed_status": "FAIL",
       "passed": true,
@@ -8955,13 +10133,17 @@
     },
     {
       "critical_failed": 5,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects broad skill allowed-tools Bash even with updated manifest",
       "observed_status": "FAIL",
       "passed": true,
       "returncode": 2
     },
     {
-      "critical_failed": 5,
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects unmanifested extra plugin agent",
       "observed_status": "FAIL",
       "passed": true,
@@ -8969,20 +10151,26 @@
     },
     {
       "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects recursive nested plugin agent after manifest update",
       "observed_status": "FAIL",
       "passed": true,
       "returncode": 2
     },
     {
-      "critical_failed": 3,
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects plugin settings.json activation surface",
       "observed_status": "FAIL",
       "passed": true,
       "returncode": 2
     },
     {
-      "critical_failed": 3,
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects plugin command hook surface",
       "observed_status": "FAIL",
       "passed": true,
@@ -8990,6 +10178,8 @@
     },
     {
       "critical_failed": 12,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects semantic prompt poisoning after manifest update",
       "observed_status": "FAIL",
       "passed": true,
@@ -8997,13 +10187,17 @@
     },
     {
       "critical_failed": 2,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects placeholder eval worlds after manifest update",
       "observed_status": "FAIL",
       "passed": true,
       "returncode": 2
     },
     {
-      "critical_failed": 12,
+      "critical_failed": 33,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects live harness pass stub after manifest update",
       "observed_status": "FAIL",
       "passed": true,
@@ -9011,6 +10205,8 @@
     },
     {
       "critical_failed": 31,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects always-pass gate stub after manifest update",
       "observed_status": "FAIL",
       "passed": true,
@@ -9018,6 +10214,8 @@
     },
     {
       "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects nonexistent eval fixture after manifest update",
       "observed_status": "FAIL",
       "passed": true,
@@ -9025,6 +10223,8 @@
     },
     {
       "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects Bash agent without worktree isolation",
       "observed_status": "FAIL",
       "passed": true,
@@ -9032,13 +10232,17 @@
     },
     {
       "critical_failed": 2,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects missing behavior manifest",
       "observed_status": "FAIL",
       "passed": true,
       "returncode": 2
     },
     {
-      "critical_failed": 3,
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects MCP plugin surface",
       "observed_status": "FAIL",
       "passed": true,
@@ -9046,6 +10250,8 @@
     },
     {
       "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects inline plugin manifest hooks after manifest update",
       "observed_status": "FAIL",
       "passed": true,
@@ -9053,6 +10259,8 @@
     },
     {
       "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects inline plugin manifest MCP after manifest update",
       "observed_status": "FAIL",
       "passed": true,
@@ -9060,6 +10268,8 @@
     },
     {
       "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects manifest agent path override after manifest update",
       "observed_status": "FAIL",
       "passed": true,
@@ -9067,6 +10277,8 @@
     },
     {
       "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects skill dynamic shell substitution after manifest update",
       "observed_status": "FAIL",
       "passed": true,
@@ -9074,6 +10286,8 @@
     },
     {
       "critical_failed": 2,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects unsupported plugin-agent hook frontmatter",
       "observed_status": "FAIL",
       "passed": true,
@@ -9081,6 +10295,8 @@
     },
     {
       "critical_failed": 2,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects skill-level hooks frontmatter after manifest update",
       "observed_status": "FAIL",
       "passed": true,
@@ -9088,6 +10304,8 @@
     },
     {
       "critical_failed": 2,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects skill shell frontmatter after manifest update",
       "observed_status": "FAIL",
       "passed": true,
@@ -9095,20 +10313,44 @@
     },
     {
       "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects omitted subagent tools field",
       "observed_status": "FAIL",
       "passed": true,
       "returncode": 2
     },
     {
-      "critical_failed": 8,
+      "critical_failed": 23,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects degraded PACKAGE_SURFACE.json",
       "observed_status": "FAIL",
       "passed": true,
       "returncode": 2
     },
     {
-      "critical_failed": 5,
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects non-object PACKAGE_SURFACE.json root",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 2,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects duplicate PACKAGE_SURFACE allowed_agents",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 7,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects no-op CI workflow after manifest update",
       "observed_status": "FAIL",
       "passed": true,
@@ -9116,6 +10358,8 @@
     },
     {
       "critical_failed": 43,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects formal runner pass stub after manifest update",
       "observed_status": "FAIL",
       "passed": true,
@@ -9123,6 +10367,8 @@
     },
     {
       "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects formal coordinator general-purpose fallback",
       "observed_status": "FAIL",
       "passed": true,
@@ -9130,6 +10376,8 @@
     },
     {
       "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects formal runner LIMITED as pass status",
       "observed_status": "FAIL",
       "passed": true,
@@ -9137,6 +10385,8 @@
     },
     {
       "critical_failed": 33,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects token-preserving formal runner pass stub",
       "observed_status": "FAIL",
       "passed": true,
@@ -9144,6 +10394,8 @@
     },
     {
       "critical_failed": 2,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects active self-certificate stale package-version provenance",
       "observed_status": "FAIL",
       "passed": true,
@@ -9151,6 +10403,8 @@
     },
     {
       "critical_failed": 3,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects downstream auto-pass epistemic closure",
       "observed_status": "FAIL",
       "passed": true,
@@ -9158,14 +10412,198 @@
     },
     {
       "critical_failed": 3,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects stale generated self-validation artifact provenance",
       "observed_status": "FAIL",
       "passed": true,
       "returncode": 2
     },
     {
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects non-UTF-8 release provenance file",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects exact current package-root provenance leak",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
       "critical_failed": 2,
+      "exception": null,
+      "harness_error": false,
       "name": "rejects self-certificate artifact version mismatching plugin version",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects Git-free exported-package .pyc",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 2,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects .git marker with Git evidence failure",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects declared top-level allowlist drift",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 2,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects omitted package-surface parity declaration",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 2,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects contradictory allowed and forbidden package-surface declaration",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects unknown package-surface top-level key",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects opaque undeclared experimental plugin field",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects stale active path despite ordinary historical wording",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects Git-free symlink before target read",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects Git-free FIFO unsupported entry type",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects force-tracked checkout .pyc",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects exact historical tracked __pycache__ bytecode",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2,
+      "targeted_cruft_assertion": {
+        "all_tracked_cruft_paths_in_failure_details": true,
+        "expected_path_is_tracked_cruft": true,
+        "named_critical_check_failed": true,
+        "ordinary_single_critical_failure": true,
+        "tracked_cruft_index_paths": [
+          "skills/nozickian-verify/scripts/__pycache__/ntt_gate.cpython-312.pyc"
+        ]
+      }
+    },
+    {
+      "critical_failed": 2,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects tracked symlink before hashing",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects untracked checkout symlink before reads",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects untracked checkout FIFO before copies",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects untracked checkout non-bytecode cruft",
+      "observed_status": "FAIL",
+      "passed": true,
+      "returncode": 2
+    },
+    {
+      "critical_failed": 1,
+      "exception": null,
+      "harness_error": false,
+      "name": "rejects index-only gitlink mode 160000",
       "observed_status": "FAIL",
       "passed": true,
       "returncode": 2
@@ -9177,6 +10615,16 @@
   "true_world_tests": [
     {
       "critical_failed": 0,
+      "harness_error": false,
+      "name": "retains non-path root suffixes during display normalization",
+      "observed_status": "PASS",
+      "passed": true,
+      "returncode": 0
+    },
+    {
+      "critical_failed": 0,
+      "exception": null,
+      "harness_error": false,
       "name": "retains pass after README note",
       "observed_status": "PASS",
       "passed": true,
@@ -9184,6 +10632,8 @@
     },
     {
       "critical_failed": 0,
+      "exception": null,
+      "harness_error": false,
       "name": "retains pass after benign GitHub docs note",
       "observed_status": "PASS",
       "passed": true,
@@ -9191,6 +10641,8 @@
     },
     {
       "critical_failed": 0,
+      "exception": null,
+      "harness_error": false,
       "name": "retains pass after unused inert asset",
       "observed_status": "PASS",
       "passed": true,
@@ -9198,7 +10650,54 @@
     },
     {
       "critical_failed": 0,
+      "exception": null,
+      "harness_error": false,
       "name": "retains pass after benign SOURCES whitespace with updated manifest",
+      "observed_status": "PASS",
+      "passed": true,
+      "returncode": 0
+    },
+    {
+      "critical_failed": 0,
+      "exception": null,
+      "harness_error": false,
+      "name": "retains pass for clean Git-free copy/export",
+      "observed_status": "PASS",
+      "passed": true,
+      "returncode": 0
+    },
+    {
+      "critical_failed": 0,
+      "exception": null,
+      "harness_error": false,
+      "name": "retains pass for reordered equivalent package-surface sets",
+      "observed_status": "PASS",
+      "passed": true,
+      "returncode": 0
+    },
+    {
+      "critical_failed": 0,
+      "exception": null,
+      "harness_error": false,
+      "name": "retains pass for reordered equivalent plugin keys",
+      "observed_status": "PASS",
+      "passed": true,
+      "returncode": 0
+    },
+    {
+      "critical_failed": 0,
+      "exception": null,
+      "harness_error": false,
+      "name": "retains explicit historical prose for both prior versions",
+      "observed_status": "PASS",
+      "passed": true,
+      "returncode": 0
+    },
+    {
+      "critical_failed": 0,
+      "exception": null,
+      "harness_error": false,
+      "name": "retains ignored untracked checkout .pyc",
       "observed_status": "PASS",
       "passed": true,
       "returncode": 0

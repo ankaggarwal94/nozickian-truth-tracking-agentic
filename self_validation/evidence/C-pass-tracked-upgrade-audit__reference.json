@@ -3,8 +3,8 @@
   "claim_id": "C-pass-tracked-upgrade-audit",
   "command_or_source": "v1.0.3 package-local PASS-TRACKED upgrade audit files and deterministic validator checks",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:4a280a90bd3d55fa90cbae526455b87c4632d8f0fd16f6de89edb3bbdc5f304d",
-  "observed_result": "Observed a substantive package-local reference file that makes PASS-SCOPED to PASS-TRACKED promotion a separate evidence-gated audit rather than an automatic status inheritance.",
-  "support_summary": "The PASS_TRACKED_UPGRADE_AUDIT.md reference defines the external audit bundle, required command sequence, PASS-TRACKED promotion criteria, downgrade rules, and anti-hallucination requirements for Claude Code promotion review.",
+  "hash_or_version": "sha256:1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21",
+  "observed_result": "Observed a substantive package-local reference that makes PASS-SCOPED to PASS-TRACKED promotion a separate exact-integer-returncode, noncontradictory-text, current-byte, exact-argv, one-to-one transcript/prompt-bound, current-validator-inventory-bound, bundle-local evidence audit rather than automatic inheritance.",
+  "support_summary": "The reference defines exact integer-zero return codes, anchored nonzero numeric failure-summary dominance, exact executable and live provenance, a shared package-tree helper, exact evals.json and per-artifact byte hashes, exact normalized preflight and fixture argv, distinct transcript byte hashes, canonical prompt/fixture/artifact binding, independent inventory and exclusion derivation, unconditional fresh validation, official-validator semantics, deterministic package_tree_sha256, unique evidence refs, self-contained formal artifacts, no-follow inputs, command sequence, promotion criteria, downgrade rules, and anti-hallucination requirements.",
   "timestamp_utc": "2026-06-06T00:00:00Z"
 }

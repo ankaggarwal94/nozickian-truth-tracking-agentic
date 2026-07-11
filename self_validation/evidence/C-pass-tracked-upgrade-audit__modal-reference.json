@@ -3,14 +3,15 @@
     "FW-pass-tracked-dry-run-promotion",
     "FW-pass-tracked-auto-closure",
     "FW-pass-tracked-missing-trace-auth",
+    "FW-pass-tracked-unbound-promotion-evidence",
     "TW-pass-tracked-valid-bundle-retained"
   ],
   "artifact_path": "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
   "claim_id": "C-pass-tracked-upgrade-audit",
   "command_or_source": "v1.0.3 package-local PASS-TRACKED upgrade audit files and deterministic validator checks",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:4a280a90bd3d55fa90cbae526455b87c4632d8f0fd16f6de89edb3bbdc5f304d",
-  "observed_result": "Observed reference text that blocks dry-run promotion, auto-closure promotion, and missing trace-auth promotion while allowing a valid external audit bundle to be certified.",
-  "support_summary": "The upgrade audit reference supplies modal coverage for nearby false-world rejection and true-world retention: it names dry-run, missing official validators, missing trace authentication, and downstream automatic closure as downgrade blockers while retaining properly evidenced PASS-TRACKED bundles.",
+  "hash_or_version": "sha256:1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21",
+  "observed_result": "Observed reference text that blocks non-integer-zero return codes, pass text contradicted by anchored nonzero numeric failure summaries, stale package/evals/artifact byte bindings after manifest refresh, prompt-only or malformed argv, shared/swapped/unhashed transcripts, wrong prompt/fixture/artifact binding, manifest inventory/exclusion drift, fresh-validator failure, dry-run, auto-closure, missing-trace, stale/partial live, contradictory-validator, unsafe-ref, external-formal, and nonregular-input promotion while retaining integer zero, pass-plus-zero summaries, and a valid exact-argv three-fixture bundle.",
+  "support_summary": "The upgrade audit reference specifies exact integer-zero return codes, nonzero numeric failure-summary dominance, exact executable provenance, one shared package-tree helper, exact current fixture-spec and artifact bytes, exact normalized preflight and fixture argv, one-to-one transcript bytes and canonical prompts, current-validator-derived inventory/exclusion parity, unconditional fresh validation, anchored official status, bundle-local evidence refs, self-contained formal artifacts, no-follow inputs, downgrade blockers, and properly evidenced PASS-TRACKED retention.",
   "timestamp_utc": "2026-06-06T00:00:00Z"
 }

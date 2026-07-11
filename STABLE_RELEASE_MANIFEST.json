@@ -2,7 +2,7 @@
   "assurance_tier": "team-internal-reuse",
   "audit_report": "AUDIT_REPORT.md",
   "behavior_manifest": "MANIFEST.sha256",
-  "file_count_excluding_self": 251,
+  "file_count_excluding_self": 252,
   "file_inventory": [
     {
       "bytes": 664,
@@ -11,10 +11,10 @@
       "sha256": "8e16ce008bbc7f71b2fe428342b1189d3862cf3b392e56773660cf26c634b10a"
     },
     {
-      "bytes": 1760,
+      "bytes": 2355,
       "path": ".github/workflows/nozickian-team-ci.yml",
       "role": "behavior",
-      "sha256": "9c6cf9f204a34656660b870d512c7a419169464890e1e0081eb86c157831cd45"
+      "sha256": "95035309a4c9c5bb88a847455d92772f8266b235ac0f461a9175df9dc2348cf5"
     },
     {
       "bytes": 71,
@@ -23,10 +23,10 @@
       "sha256": "ad36bf2e524de5e768aa086d8091526564d95831afb4f6c513bc7a4d0a4948d9"
     },
     {
-      "bytes": 19949,
+      "bytes": 34186,
       "path": "AUDIT_REPORT.md",
       "role": "release-metadata",
-      "sha256": "3f99d685a83d316d81000f2f1c7c1f7f44d581ce67cb8ca5f09b75535c24d7f2"
+      "sha256": "6a7f0cb9f96754b300cbeed67b2b631eae2bd47368d908aa4f9b63319a213999"
     },
     {
       "bytes": 1056,
@@ -38,25 +38,25 @@
       "bytes": 4776,
       "path": "MANIFEST.sha256",
       "role": "release-metadata",
-      "sha256": "6f3b100ce7fd482ad83c85ddefc23f9093a2fa961496a1e5f24b43da782be40a"
+      "sha256": "cefcdada160cb45e532691d5676d072870cfcf6f3e13d88de5742de454fec0d6"
     },
     {
-      "bytes": 10262,
+      "bytes": 13510,
       "path": "PACKAGE_SURFACE.json",
       "role": "behavior",
-      "sha256": "f474a376e02f29b4160fba91dca900e62cfacb07e7484abf54eecbd0722cae9b"
+      "sha256": "399b9e0243b00fb635333b66ffe79d947ea33600dca80c658f148241ab845065"
     },
     {
-      "bytes": 5765,
+      "bytes": 5837,
       "path": "README.md",
       "role": "release-metadata",
-      "sha256": "06072951107cb0738ac2a8a5db9216886d9f52d180b78bbd5fe8cc6064d0aa36"
+      "sha256": "dad025667482f14f737fa4324dcbc485de3696f9dde8affa50b7e758eedab11e"
     },
     {
-      "bytes": 13436,
+      "bytes": 20802,
       "path": "RELEASE_LOCK.json",
       "role": "behavior",
-      "sha256": "57022c38c39be576813023ad67be9a036b1d7fbde8fb91ccbfaabcc5519b49f4"
+      "sha256": "7c47d5d43828643a043568e1ece0c7e7099fb7da8be9105de6c924cdae4c537e"
     },
     {
       "bytes": 1060,
@@ -65,16 +65,16 @@
       "sha256": "013455e005043b1a8f60fa0fb3e933e73c0fa58dbf1f1fc5cf5cb0a5514fb5fd"
     },
     {
-      "bytes": 8373,
+      "bytes": 11696,
       "path": "TEAM_INTERNAL_USE.md",
       "role": "release-metadata",
-      "sha256": "ddd05e452adcade0a5f20f8e1cfaead7cc0cdd8c4d63a1edfb4f819ab4411315"
+      "sha256": "e8d0d299897abca7deb6df2780a64bc354730b25dcca03c863ab584815c5e1ed"
     },
     {
-      "bytes": 3418,
+      "bytes": 4408,
       "path": "agents/ntt-claim-extractor.md",
       "role": "behavior",
-      "sha256": "671df3a2d8a644dbf0b5297509af561ffec5e5cfb6ce2cc8a8b7b512f7a893e4"
+      "sha256": "41b20952dd3a06edb55927ee4fb8cff153d254ac58d352947436ab9f0c1f37bc"
     },
     {
       "bytes": 1461,
@@ -95,10 +95,10 @@
       "sha256": "a3b1861a1589c589d887fc6be72ace52364b49bb4febbc861b5d800009c81a8a"
     },
     {
-      "bytes": 4297,
+      "bytes": 5760,
       "path": "agents/ntt-gate-auditor.md",
       "role": "behavior",
-      "sha256": "6e97551b877145046d58e3508f1748bc7248342cdcb6ddc36b4bef2bcafd9522"
+      "sha256": "ad0478cf3770b4c731890183fb46785fbab3203bc6248e0c4027bc9c169d2374"
     },
     {
       "bytes": 1492,
@@ -161,10 +161,10 @@
       "sha256": "442b559b3766e4ec885dc91161c94f40f834b50d58a435043a57e9e77c3e842d"
     },
     {
-      "bytes": 1851,
+      "bytes": 2701,
       "path": "docs/pass-tracked-upgrade/README.md",
       "role": "behavior",
-      "sha256": "2cdb53be02fac26caf43175c1a178adf88ac7a0cab25fb535c5e50b012fc8475"
+      "sha256": "3e495137fa5bb69160c675fbc43024acde8fcd84cd4d8aa0ccd76970611c9388"
     },
     {
       "bytes": 1486,
@@ -173,10 +173,10 @@
       "sha256": "d01c6ae0b1ea1cc28d7fdf56c82457d2cd02787c0273cd73c644ef7981ba07ae"
     },
     {
-      "bytes": 1258,
+      "bytes": 2721,
       "path": "docs/release/README.md",
       "role": "behavior",
-      "sha256": "afd9e1cc67eb57e2c28f5508403dc386b9247fa6fed1ebdb00ed7b07e546da3e"
+      "sha256": "eb368c6e7e2ac81b0508fc61594fecf5cb33eb63aaae6a1b03544fec9592af4e"
     },
     {
       "bytes": 1492,
@@ -218,7 +218,7 @@
       "bytes": 989,
       "path": "self_validation/evidence/C-charter-caps__claim.json",
       "role": "self_validation",
-      "sha256": "689433af89004fbc37b80c8777de4e538b6998f7b46d52292aed93e330eb7714"
+      "sha256": "bb194951e992fac60369ffd40e9c5aea09bf6f5e3d8c0538ac439e51584913a6"
     },
     {
       "bytes": 1002,
@@ -686,7 +686,7 @@
       "bytes": 1049,
       "path": "self_validation/evidence/C-gate-hardening__claim.json",
       "role": "self_validation",
-      "sha256": "2eecaa31b7aa3ff07e7cbdbb31483e87415226b9c09c5d20fb0d3f71d06a8eab"
+      "sha256": "c41a798afefcbe50dbc67d9d75f74a4e154d0e6970e023b774ea3ff983a7f4f8"
     },
     {
       "bytes": 1079,
@@ -698,13 +698,13 @@
       "bytes": 762,
       "path": "self_validation/evidence/C-github-readme-documentation__FW-github-readmes-degraded.json",
       "role": "self_validation",
-      "sha256": "98ae65453fde6618345447dc452db6c13cd93cb787f8e7eae53df1a7d574462d"
+      "sha256": "e534999f157b0c9416d3f36ac3225a5763727a5f883667f2ae49e623091e97f0"
     },
     {
       "bytes": 822,
       "path": "self_validation/evidence/C-github-readme-documentation__TW-github-readmes-benign-doc-note.json",
       "role": "self_validation",
-      "sha256": "9876288aa6f96f1f9ddce443f0458552e01799a8eb94387072d34c7a57b2a639"
+      "sha256": "b81efc174317dfce3732a0a23e427982f2f7a3b14073e8da0b5e278f6dd6a776"
     },
     {
       "bytes": 765,
@@ -716,31 +716,31 @@
       "bytes": 767,
       "path": "self_validation/evidence/C-github-readme-documentation__validator.json",
       "role": "self_validation",
-      "sha256": "c6af8a66884b09f93da05922cbd3f190b6023f976bbff41c42f4056e2c1fb7a4"
+      "sha256": "da3a714f4e092cd3b7cb51d66fe93caa4600f1f3fbb97b261a2da1ede4add37a"
     },
     {
-      "bytes": 993,
+      "bytes": 1986,
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__certifier.json",
       "role": "self_validation",
-      "sha256": "6f2c67cad913f661a343588e78f6174acf13a62315d9a1227a37ebec8f8cb468"
+      "sha256": "e08a3500a274b444f4d7075ee86748984214851514ceae42e63ddd95c02c0687"
     },
     {
-      "bytes": 1118,
+      "bytes": 2088,
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
       "role": "self_validation",
-      "sha256": "e329648a94bc8e0c81165591ebf8b97e3d816201edfd553a6a0aafc99b5f6897"
+      "sha256": "62363ab47b3abd545282a0719f11ce6559a2bc02a178b2ba4801227240145c2f"
     },
     {
-      "bytes": 1140,
+      "bytes": 1908,
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
       "role": "self_validation",
-      "sha256": "b0a777ed5dde0048694f4386839ca3a37cff855d74e1cd299412154a292c91e9"
+      "sha256": "a66f9444f5327a2e06f670d459eacf58d7ed0baa945ec81b7bf33803cffc0c70"
     },
     {
-      "bytes": 878,
+      "bytes": 1443,
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__reference.json",
       "role": "self_validation",
-      "sha256": "4e01962e3752b593f2254b7e903b61c2bca6b0b0febb54967552f17d42a19978"
+      "sha256": "5536b717783f4c1aa436d99d68836064431ec008aaf74b29d3ef05996bb630a1"
     },
     {
       "bytes": 1088,
@@ -779,16 +779,22 @@
       "sha256": "51b859dfe7930c515f2c01ec6d3d8e58c678b305d9640a7a454a8d4cafe56fb6"
     },
     {
-      "bytes": 988,
+      "bytes": 1148,
       "path": "self_validation/evidence/C-structure__claim.json",
       "role": "self_validation",
-      "sha256": "3ca90fe15d64247d92de1009221c731f4dcd750dd8351080358fa5698e35bf1c"
+      "sha256": "27a57a637fe42c0514c5d028bf7a452397b05015d8ea03c1caf3fe1fbb36818b"
     },
     {
       "bytes": 966,
       "path": "self_validation/evidence/C-structure__gate.json",
       "role": "self_validation",
-      "sha256": "88ad7f62439e0580ab8ac5b7336ed09d7feb8d7271287cb0e4e4c60f402b0239"
+      "sha256": "1fd8a3f7cc95b72727f485b559bdb75db0c031ef7f7f43604eecdb23df2fbd96"
+    },
+    {
+      "bytes": 1017,
+      "path": "self_validation/evidence/C-validator-sensitivity__FW-historical-nested-cruft.json",
+      "role": "self_validation",
+      "sha256": "f1bb43ceed681397dcea31b8595a93695f1a27e748a69f68bebadcd0b780ad81"
     },
     {
       "bytes": 1139,
@@ -815,10 +821,10 @@
       "sha256": "1561bc01fbdf7250579d189c879a430c4dc570d99c850614ec30e7b2bb9c7acf"
     },
     {
-      "bytes": 1086,
+      "bytes": 1543,
       "path": "self_validation/evidence/C-validator-sensitivity__claim.json",
       "role": "self_validation",
-      "sha256": "fe234bd5a50b6e3092aa983eba26724d51984f5c7b8429ddb04a827f6e75e31d"
+      "sha256": "550356b118b02abd07d64cfbce836cfbaf9e4db3f8a07ed04ede0212097767a9"
     },
     {
       "bytes": 1064,
@@ -1337,28 +1343,28 @@
       "sha256": "53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3"
     },
     {
-      "bytes": 4970,
+      "bytes": 7291,
       "path": "self_validation/pass_tracked_certifier_empty_bundle_result.json",
       "role": "self_validation",
-      "sha256": "03ef4d5d6d969ea36ba2b497a0823235f950bf35289b848ab460d00edb9c6142"
+      "sha256": "b9ff493dbb04a7138cc6f154e4837562d826aa003d6f0d107f8b5ffaf5595047"
     },
     {
-      "bytes": 1684,
+      "bytes": 2808,
       "path": "self_validation/pass_tracked_certifier_empty_bundle_result.md",
       "role": "self_validation",
-      "sha256": "092e22441ff1f58778ae9f14fe62a50faaae6d0db175dbae04b7ab6e6ef405f3"
+      "sha256": "75e9877120a57726c3dba119a0195da7d676478349bb10eadcd7244c41c50e4b"
     },
     {
-      "bytes": 4971,
+      "bytes": 7291,
       "path": "self_validation/pass_tracked_certifier_empty_bundle_stdout.json",
       "role": "self_validation",
-      "sha256": "a0881aa028220e15892b80b33a74f2b8ee89c3a94f9e4baa8a049884e84de73c"
+      "sha256": "b9ff493dbb04a7138cc6f154e4837562d826aa003d6f0d107f8b5ffaf5595047"
     },
     {
-      "bytes": 117202,
+      "bytes": 151557,
       "path": "self_validation/self_certificate.json",
       "role": "self_validation",
-      "sha256": "6ae86736bbabd038455a8b49153dece6d880b923e2b088ae7827e49656939795"
+      "sha256": "3663c54c824f5b38486ba2619097ad1524978cdaa2cc2effb2aebbdfbdf0b692"
     },
     {
       "bytes": 4830,
@@ -1373,16 +1379,16 @@
       "sha256": "323da8ffaf457bce8c1a524834af908b5988fea7253645c250fd8aec740c4d0a"
     },
     {
-      "bytes": 16851,
+      "bytes": 17499,
       "path": "skills/nozickian-verify/SKILL.md",
       "role": "behavior",
-      "sha256": "703a9b33360f301fd60840a88c88c658c5bfd9c2e3018a1eb7feab85581338b1"
+      "sha256": "e2e91d0e2a9f65cdcaa850c6db7a1af6db992ea93934fd55ec223d4165d085b0"
     },
     {
-      "bytes": 4228,
+      "bytes": 5439,
       "path": "skills/nozickian-verify/assets/certificate-template.json",
       "role": "release-metadata",
-      "sha256": "81196094ccd4459ae50802aef738af097656f34cbd4bdb912a336b78640053a3"
+      "sha256": "55b03e008641176ab9955c4e041337cd70a98ed2d83afdd306bbd10602b21b1d"
     },
     {
       "bytes": 220,
@@ -1433,16 +1439,16 @@
       "sha256": "8bd3fad2c5f19dab59adfe79d566cf7b911cde9e8300affe40b1759aa238ded3"
     },
     {
-      "bytes": 4705,
+      "bytes": 9339,
       "path": "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
       "role": "behavior",
-      "sha256": "64f35237d93c27efaec7ae1ef839659e92c906180c8fe3aaab35d81fca74f5f2"
+      "sha256": "bb4485fc3ddb07043f61875373033e91a1ff064ec15b0cef72f0321f348974b8"
     },
     {
-      "bytes": 11045,
+      "bytes": 20911,
       "path": "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
       "role": "behavior",
-      "sha256": "4a280a90bd3d55fa90cbae526455b87c4632d8f0fd16f6de89edb3bbdc5f304d"
+      "sha256": "1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21"
     },
     {
       "bytes": 1868,
@@ -1457,22 +1463,22 @@
       "sha256": "3e5517ed7233420cf3c2b10f443e8bd7f893ff349d41875d1fa5f2092ad86566"
     },
     {
-      "bytes": 8163,
+      "bytes": 9743,
       "path": "skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md",
       "role": "behavior",
-      "sha256": "8a1223bba27c5230e50462bc4ece620c15a89297335ff1b712ba582b895084cb"
+      "sha256": "42e3bd1ec8584d2616cb6ef67ac871f6dfb66af9f81d48154ad4b57764089e42"
     },
     {
-      "bytes": 24026,
+      "bytes": 68060,
       "path": "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
       "role": "behavior",
-      "sha256": "b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a"
+      "sha256": "5d97289564d618e9e6cb3d95195f2c3e3a0949f2daf8dd1d45f10ca2ac419832"
     },
     {
-      "bytes": 38890,
+      "bytes": 39891,
       "path": "skills/nozickian-verify/scripts/ntt_gate.py",
       "role": "behavior",
-      "sha256": "76821143e6e911c0bd47e7ac2ecd0539901a5f2f5f8d77c67c5cd7f0925afe05"
+      "sha256": "3df08a56cf692e65ec7e8d82397905a152538b0dee8a4106c8c68c938b0caf76"
     },
     {
       "bytes": 45341,
@@ -1493,25 +1499,27 @@
       "sha256": "6480239b4685f61ff56cd93524cd191f63734d84631cf7f821140874f0d1940a"
     },
     {
-      "bytes": 9012,
+      "bytes": 29755,
       "path": "skills/nozickian-verify/scripts/run_live_skill_evals.py",
       "role": "behavior",
-      "sha256": "a20d34b945fd7fd502172b337dafe63f02e7743eb9e9ea55973b168cec702d5c"
+      "sha256": "7e65db2e76a2e6197230e35a568ed6ba28903608155c1d98bd327d44fdcc3916"
     },
     {
-      "bytes": 5902,
+      "bytes": 6751,
       "path": "skills/nozickian-verify/scripts/run_regression_evals.py",
       "role": "behavior",
-      "sha256": "b15369f0181e2ad311553c8ae1168238b0c94b2b3a803971801c2e95cd732dd0"
+      "sha256": "0b8f0c622ab3eee944c21f4b0d94c0f1b38ed98cc5e74bd5b0649428c071c23a"
     },
     {
-      "bytes": 102785,
+      "bytes": 255613,
       "path": "skills/nozickian-verify/scripts/validate_package.py",
       "role": "behavior",
-      "sha256": "01c9382f30b60e48e23a69a27aac2749164761186eb6c603ddae3503760cef98"
+      "sha256": "8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f"
     }
   ],
   "generated_utc": "2026-05-26T00:00:00Z",
+  "generated_utc_kind": "reproducible-build-epoch",
+  "generated_utc_semantics": "Reproducible-build epoch: stable deterministic release-manifest default, not wall-clock generation time.",
   "inventory_policy": "all stable package files except STABLE_RELEASE_MANIFEST.json and declared volatile/generated validation outputs; excludes __pycache__ and .pyc files",
   "package": "nozickian-truth-tracking-agentic",
   "plugin_version": "1.0.3",
@@ -1526,7 +1534,7 @@
   ],
   "self_exclusion": "file_inventory intentionally excludes STABLE_RELEASE_MANIFEST.json to avoid a self-referential hash cycle; self_hash_sha256 is computed over canonical JSON with self_hash_sha256 set to null.",
   "self_file": "STABLE_RELEASE_MANIFEST.json",
-  "self_hash_sha256": "74f3bc01324ee67ccff5f73fc101dc34c51fbeb8fbf877d6aabb570f13e2bb9b",
+  "self_hash_sha256": "28c0acdceea43579754e360d4b9a529d02f2eae2a5ef0b7d49c2b13986c692ab",
   "validation_commands": [
     "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test",
     "python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence",
@@ -1537,7 +1545,7 @@
     "optional: skills-ref validate skills/nozickian-verify",
     "optional: python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures",
     "python3 skills/nozickian-verify/scripts/validate_package.py .",
-    "python3 - <<'PY'\nfrom pathlib import Path\ntext = \"\\n\".join(p.read_text(encoding=\"utf-8\", errors=\"replace\") for p in Path(\"self_validation\").rglob(\"*\") if p.is_file())\ntokens = [\n    \"/\" + \"mnt\" + \"/\" + \"data\",\n    \"/\" + \"home\" + \"/\" + \"oai\",\n    \"ntt_v07\" + \"12_work\",\n    \"ntt_v07\" + \"11_work\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"12\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"11\",\n    \"v07\" + \"12_targeted_probe_results\",\n    \"v07\" + \"11_targeted_probe_results\",\n]\nfor token in tokens:\n    assert token not in text, token\nPY",
+    "python3 - <<'PY'\nfrom pathlib import Path\nroot = Path(\".\").resolve()\ntext = \"\\n\".join(p.read_text(encoding=\"utf-8\", errors=\"replace\") for p in Path(\"self_validation\").rglob(\"*\") if p.is_file())\ntokens = [\n    \"/\" + \"mnt\" + \"/\" + \"data\",\n    \"/\" + \"home\" + \"/\" + \"oai\",\n    \"ntt_v07\" + \"12_work\",\n    \"ntt_v07\" + \"11_work\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"12\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"11\",\n    \"v07\" + \"12_targeted_probe_results\",\n    \"v07\" + \"11_targeted_probe_results\",\n    str(root),\n]\nfor token in tokens:\n    assert token not in text, token\nPY",
     "python3 - <<'PY'\nimport json, pathlib\njson.loads(pathlib.Path(\"STABLE_RELEASE_MANIFEST.json\").read_text())\nPY",
     "promotion-only: python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json"
   ],

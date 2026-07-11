@@ -2,9 +2,20 @@
   "commands": [
     {
       "cmd": [
-        "/opt/homebrew/bin/claude",
+        "<claude-cli>",
         "--version"
       ],
+      "command_metadata": {
+        "normalized_fields": [
+          "cmd",
+          "stdout",
+          "stderr"
+        ],
+        "raw_external_transcript_policy": "Raw external Claude transcripts captured separately from this harness may retain literal resolved paths. Bundled and harness-written JSON summaries use normalized-display values.",
+        "representation": "normalized-display",
+        "resolution_strategy": "shutil.which",
+        "resolved_executable_path_recorded": false
+      },
       "duration_sec": 0.474,
       "returncode": 0,
       "stderr": "",
@@ -12,20 +23,71 @@
     },
     {
       "cmd": [
-        "/opt/homebrew/bin/claude",
+        "<claude-cli>",
         "plugin",
         "validate",
         "<package-root>"
       ],
+      "command_metadata": {
+        "normalized_fields": [
+          "cmd",
+          "stdout",
+          "stderr"
+        ],
+        "raw_external_transcript_policy": "Raw external Claude transcripts captured separately from this harness may retain literal resolved paths. Bundled and harness-written JSON summaries use normalized-display values.",
+        "representation": "normalized-display",
+        "resolution_strategy": "shutil.which",
+        "resolved_executable_path_recorded": false
+      },
       "duration_sec": 0.486,
       "returncode": 0,
       "stderr": "",
       "stdout": "Validating plugin manifest: <package-root>/.claude-plugin/plugin.json\n\n\u2714 Validation passed\n"
     }
   ],
+  "fixture_spec_sha256": null,
   "fixture_results": [],
+  "package_tree_algorithm": null,
+  "package_tree_sha256": null,
   "plugin_root": "<package-root>",
+  "provenance": {
+    "carried_forward": null,
+    "normalized_after_capture": true,
+    "normalized_fields": [
+      "cmd",
+      "plugin_root",
+      "stderr",
+      "stdout"
+    ],
+    "observed_at_utc": null,
+    "raw_external_transcript_policy": "Raw external Claude transcripts captured separately from this harness may retain literal resolved paths. Bundled and harness-written JSON summaries use normalized-display values.",
+    "representation": "normalized-display",
+    "provenance_schema_version": "1.0",
+    "resolved_executable_path_recorded": false,
+    "source_release": null,
+    "status": "legacy-producing-run-unknown"
+  },
   "reason": "Claude Code CLI present; plugin validate attempted. Fixture slash-command invocations not requested.",
+  "runtime_identity": {
+    "authentication_status": "unknown-legacy-producing-run",
+    "executable_sha256": null,
+    "executable_sha256_post": null,
+    "executable_sha256_pre": null,
+    "fingerprint_stable": null,
+    "resolved_executable_path_recorded": false,
+    "version_output": null,
+    "version_pattern": null,
+    "version_pattern_match": null
+  },
+  "run_config": {
+    "max_fixtures": null,
+    "max_turns": null,
+    "output_format": null,
+    "plugin_dir": null,
+    "print_mode": null,
+    "timeout_sec": null,
+    "working_directory": null
+  },
   "status": "UNVERIFIED_RUNTIME",
   "transcript_checks": []
 }

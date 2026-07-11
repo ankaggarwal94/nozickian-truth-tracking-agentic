@@ -2,50 +2,62 @@
   "checks": [
     {
       "details": "<package-root>",
-      "name": "package root exists",
+      "name": "package root exists as regular directory",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "<tmp-v103-final-outputs>",
-      "name": "audit bundle exists",
+      "details": "/private<empty-audit-bundle>",
+      "name": "audit bundle exists as regular directory",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "deterministic/package_validation.json",
-      "name": "deterministic artifact present: package_validation",
+      "details": "FileNotFoundError while inspecting package_validation.json",
+      "name": "deterministic artifact present as regular file: package_validation",
       "passed": false,
       "severity": "critical"
     },
     {
-      "details": "deterministic/gate_result.json",
-      "name": "deterministic artifact present: gate_result",
+      "details": "FileNotFoundError while inspecting gate_result.json",
+      "name": "deterministic artifact present as regular file: gate_result",
       "passed": false,
       "severity": "critical"
     },
     {
-      "details": "deterministic/regression_eval_result.json",
-      "name": "deterministic artifact present: regression",
+      "details": "FileNotFoundError while inspecting regression_eval_result.json",
+      "name": "deterministic artifact present as regular file: regression",
       "passed": false,
       "severity": "critical"
     },
     {
-      "details": "deterministic/gate_contract_results.json",
-      "name": "deterministic artifact present: gate_contract",
+      "details": "FileNotFoundError while inspecting gate_contract_results.json",
+      "name": "deterministic artifact present as regular file: gate_contract",
       "passed": false,
       "severity": "critical"
     },
     {
-      "details": "deterministic/formal_runner_contract_results.json",
-      "name": "deterministic artifact present: formal_contract",
+      "details": "FileNotFoundError while inspecting formal_runner_contract_results.json",
+      "name": "deterministic artifact present as regular file: formal_contract",
       "passed": false,
       "severity": "critical"
     },
     {
-      "details": "deterministic/manifest_check.txt",
-      "name": "deterministic artifact present: manifest_check",
+      "details": "FileNotFoundError while inspecting manifest_check.txt",
+      "name": "deterministic artifact present as regular file: manifest_check",
       "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": {
+        "compatibility_flag_requested": false,
+        "critical_failed": 0,
+        "fresh_validation_unconditional": true,
+        "returncode": 0,
+        "status": "PASS"
+      },
+      "name": "fresh deterministic package validator still passes",
+      "passed": true,
       "severity": "critical"
     },
     {
@@ -61,8 +73,48 @@
       "severity": "critical"
     },
     {
-      "details": "<tmp-v103-final-outputs>/live_fixtures/live_runtime_eval_result.json",
-      "name": "live runtime eval result present",
+      "details": null,
+      "name": "current plugin metadata is a regular parseable JSON file",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": null,
+      "name": "current live fixture specification is a regular parseable JSON file",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": null,
+      "name": "current live transcript checker is a regular file",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": [
+        "fake-tool-output-trace",
+        "mini-code-mutation",
+        "mini-manual-version-drift"
+      ],
+      "name": "current live fixture IDs are unique and complete",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "FileNotFoundError while inspecting live_runtime_eval_result.json",
+      "name": "live runtime eval result present as regular file",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": [
+        {
+          "error": "FileNotFoundError while inspecting formal_artifacts",
+          "kind": "invalid",
+          "path": "formal_artifacts"
+        }
+      ],
+      "name": "formal artifact tree has no symlink, special, or unreadable inputs",
       "passed": false,
       "severity": "critical"
     },
@@ -73,8 +125,8 @@
       "severity": "critical"
     },
     {
-      "details": "<tmp-v103-final-outputs>/promotion_certificate.json",
-      "name": "promotion certificate present",
+      "details": "FileNotFoundError while inspecting promotion_certificate.json",
+      "name": "promotion certificate present as regular file",
       "passed": false,
       "severity": "critical"
     },
@@ -91,43 +143,43 @@
       "severity": "critical"
     }
   ],
-  "checks_passed": 4,
-  "checks_total": 15,
-  "critical_failed": 11,
+  "checks_passed": 9,
+  "checks_total": 21,
+  "critical_failed": 12,
   "failed_checks": [
     {
-      "details": "deterministic/package_validation.json",
-      "name": "deterministic artifact present: package_validation",
+      "details": "FileNotFoundError while inspecting package_validation.json",
+      "name": "deterministic artifact present as regular file: package_validation",
       "passed": false,
       "severity": "critical"
     },
     {
-      "details": "deterministic/gate_result.json",
-      "name": "deterministic artifact present: gate_result",
+      "details": "FileNotFoundError while inspecting gate_result.json",
+      "name": "deterministic artifact present as regular file: gate_result",
       "passed": false,
       "severity": "critical"
     },
     {
-      "details": "deterministic/regression_eval_result.json",
-      "name": "deterministic artifact present: regression",
+      "details": "FileNotFoundError while inspecting regression_eval_result.json",
+      "name": "deterministic artifact present as regular file: regression",
       "passed": false,
       "severity": "critical"
     },
     {
-      "details": "deterministic/gate_contract_results.json",
-      "name": "deterministic artifact present: gate_contract",
+      "details": "FileNotFoundError while inspecting gate_contract_results.json",
+      "name": "deterministic artifact present as regular file: gate_contract",
       "passed": false,
       "severity": "critical"
     },
     {
-      "details": "deterministic/formal_runner_contract_results.json",
-      "name": "deterministic artifact present: formal_contract",
+      "details": "FileNotFoundError while inspecting formal_runner_contract_results.json",
+      "name": "deterministic artifact present as regular file: formal_contract",
       "passed": false,
       "severity": "critical"
     },
     {
-      "details": "deterministic/manifest_check.txt",
-      "name": "deterministic artifact present: manifest_check",
+      "details": "FileNotFoundError while inspecting manifest_check.txt",
+      "name": "deterministic artifact present as regular file: manifest_check",
       "passed": false,
       "severity": "critical"
     },
@@ -144,8 +196,20 @@
       "severity": "critical"
     },
     {
-      "details": "<tmp-v103-final-outputs>/live_fixtures/live_runtime_eval_result.json",
-      "name": "live runtime eval result present",
+      "details": "FileNotFoundError while inspecting live_runtime_eval_result.json",
+      "name": "live runtime eval result present as regular file",
+      "passed": false,
+      "severity": "critical"
+    },
+    {
+      "details": [
+        {
+          "error": "FileNotFoundError while inspecting formal_artifacts",
+          "kind": "invalid",
+          "path": "formal_artifacts"
+        }
+      ],
+      "name": "formal artifact tree has no symlink, special, or unreadable inputs",
       "passed": false,
       "severity": "critical"
     },
@@ -156,8 +220,8 @@
       "severity": "critical"
     },
     {
-      "details": "<tmp-v103-final-outputs>/promotion_certificate.json",
-      "name": "promotion certificate present",
+      "details": "FileNotFoundError while inspecting promotion_certificate.json",
+      "name": "promotion certificate present as regular file",
       "passed": false,
       "severity": "critical"
     }

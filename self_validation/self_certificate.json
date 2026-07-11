@@ -704,6 +704,19 @@
           "perturbation": "Add agents/evil/hidden.md and then update MANIFEST.sha256, simulating a plugin-loadable recursive nested agent false world.",
           "result": "pass",
           "target_claim": "C-validator-sensitivity"
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-validator-sensitivity__FW-historical-nested-cruft.json"
+          ],
+          "expected_behavior": "Verified worktree validation must reject tracked cruft from Git index paths even when physical traversal intentionally does not descend into __pycache__.",
+          "id": "FW-validator-historical-nested-cruft",
+          "kind": "false_world",
+          "observed_behavior": "The force-added exact historical nested bytecode path produced one ordinary critical failure at the named cruft check, and that check's details contained every tracked cruft index path.",
+          "outcome": "rejected_false_claim",
+          "perturbation": "In a freshly initialized disposable checkout, force-add skills/nozickian-verify/scripts/__pycache__/ntt_gate.cpython-312.pyc, the exact historical tracked-bytecode shape skipped by physical descent.",
+          "result": "pass",
+          "target_claim": "C-validator-sensitivity"
         }
       ],
       "id": "C-validator-sensitivity",
@@ -752,7 +765,7 @@
       "residual_risks": [
         "The self-test uses deterministic package copies rather than live task execution inside Claude Code."
       ],
-      "text": "The closed-surface validator rejects extra plugin-loadable behavior, semantic prompt poisoning, placeholder eval worlds, live-harness stubs, broad skill tool grants, malformed agents, and manifest/integrity failures while retaining benign true-world variations.",
+      "text": "The closed-surface validator rejects extra plugin-loadable behavior, semantic prompt poisoning, placeholder eval worlds, live-harness stubs, broad skill tool grants, malformed agents, manifest/integrity failures, and tracked cruft derived from every typed Git index path independently of physical traversal, while retaining benign true-world variations including ignored untracked checkout bytecode.",
       "true_world_tests": [
         {
           "evidence_refs": [
@@ -1376,6 +1389,22 @@
           "target_claim_ids": [
             "C-pass-tracked-upgrade-audit"
           ]
+        },
+        {
+          "evidence_refs": [
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json"
+          ],
+          "expected_behavior": "The method must reject promotion when live evidence is stale against current package/evals/artifact bytes even after manifest refresh, partial, shared, swapped, unhashed, external-only, invoked with incomplete or reordered argv, or not bound to the exact fixture/artifact prompt; when any success return code is not exact integer zero; when validator status or numeric text summaries contradict a pass marker; when manifest-authored exclusions hide inventory; when fresh current validation fails; when package/evidence identity is unbound; or when formal companions are external-only.",
+          "id": "FW-pass-tracked-unbound-promotion-evidence",
+          "kind": "false_world",
+          "observed_behavior": "Fixed offline Slice F/G/H/I certifier probes produced ordinary critical failures for stale source_release, carried-forward evidence, partial fixture IDs, missing/external/shared/swapped transcripts, wrong prompt/transcript hashes, wrong fixture/artifact prompts, fabricated checks, stale package/evals/artifact bytes after manifest refresh, prompt-only or malformed fixture argv, wrong preflight argv, boolean/float/string/null return codes across command and aggregate records, contradictory JSON status, pass text followed by anchored nonzero error/failure/failed summaries, manifest inventory/exclusion drift, fresh-validator failure, package-tree mismatch, unsafe evidence refs, external-only formal companions, and symlink/special inputs.",
+          "outcome": "blocked",
+          "perturbation": "A superficially passing promotion bundle substitutes stale package/evals/artifact bytes, prompt-only or malformed argv, shared or mismatched transcript/prompt evidence, non-integer-zero success return codes, contradictory numeric validator summaries, manifest-authored inventory omissions, stale or self-reported runtime evidence, an arbitrary package hash, unsafe evidence references, or producer-machine formal paths for current bundle-local evidence.",
+          "result": "pass",
+          "target_claim_ids": [
+            "C-pass-tracked-upgrade-audit"
+          ]
         }
       ],
       "id": "C-pass-tracked-upgrade-audit",
@@ -1387,20 +1416,20 @@
           "skills/nozickian-verify/references/STANDARD.md",
           "skills/nozickian-verify/assets/certificate-template.json"
         ],
-        "checker": "validate_package.py validates presence and hardening terms; ntt_gate.py validates this certificate with strict local evidence; mutation suite rejects degraded promotion instructions and pass-stub certifier worlds.",
+        "checker": "validate_package.py validates presence and hardening terms, runs fixed live/promotion false-world probes, and rejects degraded instructions/pass-stub certifier worlds; ntt_gate.py validates this certificate with strict local evidence.",
         "environment": [
           "local filesystem",
-          "Python 3.13",
+          "Python 3.10+",
           "external audit bundle path required for actual promotion"
         ],
-        "evidence_process": "Package-local structured evidence binds the new reference and certifier script to SHA-256 hashes; validator checks required terms; false-world mutations degrade the reference or certifier and require rejection.",
+        "evidence_process": "Package-local structured evidence binds the reference and certifier to SHA-256 hashes; validator checks required terms and fixed offline probes exercise the shared package-tree helper, current package/evals/artifact byte binding, exact ordered preflight and fixture argv, one-to-one prompt/transcript fixture binding, exact integer-zero return-code typing, nonzero numeric text-summary dominance, current-validator-derived inventory/exclusion parity, unconditional fresh validation, official status, package-tree/evidence refs, formal locality, and no-follow rejection.",
         "graders_or_tests": [
           "validate_package.py --self-test",
           "ntt_gate.py --strict-evidence",
           "certify_pass_tracked_upgrade.py for future external audit bundles",
           "release provenance hygiene scan"
         ],
-        "producer": "v1.0.3 package files include PASS_TRACKED_UPGRADE_AUDIT.md, certify_pass_tracked_upgrade.py, updated SKILL.md, updated STANDARD.md, and updated output templates.",
+        "producer": "v1.0.3 package files include PASS_TRACKED_UPGRADE_AUDIT.md, certify_pass_tracked_upgrade.py, updated output templates, and Slice F/G/H/I promotion, transcript, exact-byte, exact-argv, exact-returncode, numeric-summary, and independently derived inventory contracts.",
         "tools": [
           "Python",
           "Bash",
@@ -1410,7 +1439,8 @@
         "trace_or_logs": [
           "self_validation/package_validation_self_test_result.json",
           "self_validation/gate_result.json",
-          "self_validation/v101_targeted_probe_results.json"
+          "self_validation/v101_targeted_probe_results.json",
+          "self_validation/package_validation_result.json"
         ]
       },
       "residual_risks": [
@@ -1426,13 +1456,13 @@
           "expected_behavior": "The method should retain and certify the PASS-TRACKED upgrade when every required promotion condition is met and no scope limitation remains.",
           "id": "TW-pass-tracked-valid-bundle-retained",
           "kind": "true_world",
-          "observed_behavior": "The reference defines the valid bundle shape and the certifier returns PASS-TRACKED only when all critical checks pass without missing official validators, runtime gaps, trace-authentication gaps, stale tokens, or downstream pass inheritance.",
+          "observed_behavior": "The reference defines the valid bundle shape and the certifier's fixed valid three-fixture bundle, exact integer-zero return codes, pass text with explicit zero summaries, shared-helper package tree, current evals/artifact byte bindings, exact normalized argv, one-to-one prompt/transcript bindings, unconditional fresh validation, and five local evidence refs pass while every targeted nearby false world fails.",
           "outcome": "retained_true_claim",
           "result": "pass",
           "target_claim_ids": [
             "C-pass-tracked-upgrade-audit"
           ],
-          "variant": "A complete external audit bundle contains passing deterministic checks, official validator outputs, executed live fixture transcripts, a formal artifact result with strict-gate PASS-TRACKED, authenticated native stream-json lane events, and a promotion certificate with downstream non-closure records."
+          "variant": "A complete external audit bundle contains passing captured and fresh deterministic checks with exact integer-zero return codes, anchored noncontradictory official validator outputs with no nonzero numeric failure summaries, one shared-helper current package-tree digest, the exact current evals.json digest, each current artifact digest, exact ordered preflight and fixture argv, one distinct exact-byte-hashed transcript and canonical prompt/fixture/artifact binding for every current live fixture, a current-validator-derived package inventory and exclusion policy, stable executable fingerprint, self-contained formal artifacts, five-or-more unique bundle-local evidence refs, authenticated native stream-json lane events, and downstream non-closure records."
         }
       ],
       "truth_status": "confirmed",
@@ -1511,7 +1541,7 @@
       "unresolved_contradictions": []
     },
     {
-      "artifact_location": "skills/nozickian-verify/SKILL.md:46-47,55-56,60,74-75,88-89; skills/nozickian-verify/references/STANDARD.md:79-85; skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md:54,79; skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:41-64; skills/nozickian-verify/assets/certificate-template.json:10-16,61; agents/ntt-claim-extractor.md:3,20; agents/ntt-source-verifier.md:3,14; agents/ntt-gate-auditor.md:3,20-28",
+      "artifact_location": "skills/nozickian-verify/SKILL.md:46-47,55-56,60,74-75,88-89; skills/nozickian-verify/references/STANDARD.md:79-85; skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md:54-81; skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:41-67; skills/nozickian-verify/assets/certificate-template.json:10-46; agents/ntt-claim-extractor.md:20-30; agents/ntt-source-verifier.md:3,14; agents/ntt-gate-auditor.md:20-29",
       "evidence_refs": [
         "self_validation/evidence/C-charter-caps__claim.json",
         "self_validation/evidence/C-charter-caps__gate.json"
@@ -1524,7 +1554,7 @@
           "expected_behavior": "The deterministic package validator must reject, flag, block, downgrade, or refuse to certify a package copy whose consistency-sweep charter step was removed.",
           "id": "FW-charter-skill-step-removed",
           "kind": "false_world",
-          "observed_behavior": "validate_package.py returned status FAIL (returncode 2) with critical failures 'manifest hash matches: skills/nozickian-verify/SKILL.md' (expected=0c90aba64b96bd1502afdc5b5272249feb5c75987c896ac313855f5ff4264440 actual=63cfe4e11be1c91f8c56bc831bd13cc8286fd0de31a2e2a4bf3da8b1b533aa2e) plus stable-release-manifest hash and byte-count failures for the same file.",
+          "observed_behavior": "validate_package.py returned FAIL (returncode 2) for the SKILL.md charter-text-deleted package copy; the bound structured evidence records the substantive rejection outcome, and the current charter-caps probe ledger contains the exact bounded failed-check details.",
           "outcome": "rejected_false_claim",
           "perturbation": "Delete activation checklist step 9 (consistency sweep / stale-echo lane) from skills/nozickian-verify/SKILL.md in a package copy without updating manifests.",
           "result": "pass",
@@ -1537,7 +1567,7 @@
           "expected_behavior": "The deterministic package validator must reject, flag, block, downgrade, or refuse to certify a package copy whose Charter-level caps subsection was removed.",
           "id": "FW-charter-standard-caps-removed",
           "kind": "false_world",
-          "observed_behavior": "validate_package.py returned status FAIL (returncode 2) with critical failures 'manifest hash matches: skills/nozickian-verify/references/STANDARD.md' (expected=d9d83c6fba0c0dea89150db6a21d4822c06cd82d7302ae39d3eff6d7eb1c7d31 actual=494b99f882745ab1113d87aee1eae7e8c94874027bf6e955146289a579afb8d4) plus stable-release-manifest hash and byte-count failures for the same file.",
+          "observed_behavior": "validate_package.py returned FAIL (returncode 2) for the STANDARD.md charter-text-deleted package copy; the bound structured evidence records the substantive rejection outcome, and the current charter-caps probe ledger contains the exact bounded failed-check details.",
           "outcome": "rejected_false_claim",
           "perturbation": "Delete the 'Charter-level caps (parent-enforced; not checked by ntt_gate.py)' subsection from skills/nozickian-verify/references/STANDARD.md in a package copy without updating manifests.",
           "result": "pass",
@@ -1586,10 +1616,10 @@
         ]
       },
       "residual_risks": [
-        "The consistency-sweep and remote-escalation rules are prose charter rules enforced by the parent agent and audited by ntt-gate-auditor; ntt_gate.py does not mechanically check them. These probes show only that removing the charter text breaks deterministic package integrity, not that a live parent obeys the rules.",
+        "The consistency-sweep and remote-escalation rules are prose charter rules enforced by the parent agent and audited by ntt-gate-auditor; neither ntt_gate.py nor the formal runner mechanically checks them. These probes show only that removing the charter text breaks deterministic package integrity, not that a live parent obeys the rules.",
         "Live Claude Code runtime enforcement of the charter caps remains UNVERIFIED_RUNTIME in this environment."
       ],
-      "text": "The 2026-07-09 charter fixes are present and integrity-locked in this package: SKILL.md activation steps 9-10 (mandatory consistency sweep with an affirmative check before skipping; REMOTE_GROUND_TRUTH_REQUIRED escalation enforcement with UNKNOWN/LIMITED handling), two Nozickian-minimums charter-cap bullets, required-output items for sweep findings and remote escalations, three delegation clause extensions, the STANDARD.md 'Charter-level caps' subsection, SUBAGENT_PROTOCOLS.md echo-sweep and remote-escalation contracts, OUTPUT_TEMPLATES.md consistency-sweep and remote-escalations report sections with the gate-ignores note, certificate-template consistency_sweep and remote_escalations fields, and matching clauses in ntt-claim-extractor, ntt-source-verifier, and ntt-gate-auditor.",
+      "text": "The charter fixes are present and integrity-locked in this package: SKILL.md activation steps 9-10; the STANDARD.md parent-enforced Charter-level caps; complete consistency-sweep records with canonical affected_claim_ids, recommended_edit, exact locator arrays, and resolution-conditional evidence across SUBAGENT_PROTOCOLS.md, OUTPUT_TEMPLATES.md, certificate-template.json, ntt-claim-extractor, and ntt-gate-auditor; and the REMOTE_GROUND_TRUTH_REQUIRED escalation protocol. The contracts explicitly state that ntt_gate.py and the formal runner do not mechanically enforce these parent/auditor fields or caps.",
       "true_world_tests": [
         {
           "evidence_refs": [
@@ -1598,7 +1628,7 @@
           "expected_behavior": "The verifier should retain the true claim for the intact ported package.",
           "id": "TW-charter-intact-selftest",
           "kind": "true_world",
-          "observed_behavior": "The full self-test on an intact copy of the finalized v1.0.3 release tree returned PASS with 1369/1369 checks, 0 critical failures, 35/35 false-world mutations rejected, and 4/4 true-world variants retained (recorded from the v1.0.3 finalization fixed-point run at: branch charter-fixes-consistency-sweep-remote-escalation, base commit 1eed196, v1.0.3 finalization working tree; behavior-file state MANIFEST.sha256 sha256=6f3b100ce7fd482ad83c85ddefc23f9093a2fa961496a1e5f24b43da782be40a).",
+          "observed_behavior": "The dated 2026-07-09 charter-caps probe ledger records an intact-copy full self-test PASS with 1369/1369 checks, 0 critical failures, 35/35 false-world mutations rejected, and 4/4 true-world variants retained. This is explicitly historical evidence for that probe run, not the current release-wide self-test count.",
           "outcome": "retained_true_claim",
           "result": "pass",
           "target_claim": "C-charter-caps",
@@ -1610,71 +1640,530 @@
     }
   ],
   "consistency_sweep": {
-    "activation_reason": "This release tree is a revision of previously corrected material and claims were corrected during this verification (the activation predicate in SKILL.md activation checklist step 9): a second external ultrareview of PR #3 was adjudicated, and its validated findings drove self-contained defect fixes in this tree (a git-tracked build artifact removed, the generalized textual stale-semver provenance scanner removed while the field-aware certificate/plugin version equality check was kept, and historical version strings that had been obfuscated to satisfy that now-removed scanner restored to their true dotted spelling), so the recorded self-test counts and the affected provenance text were superseded and had to be re-swept.",
+    "activation_reason": "This release tree revises previously corrected material and the tracked-bytecode assurance claim was corrected during PR #3 Slice J redress. The mandatory whole-artifact sweep therefore covered all prior Slice F/G/H/I categories plus the physical-walker blind spot for tracked nested __pycache__ bytecode, complete tracked-cruft failure details, current totals, and final current-locator resolution.",
     "applies": true,
     "corrected_claims": [
       {
-        "claim_id": "C-validator-sensitivity",
-        "correction_location": "skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/scripts/run_regression_evals.py; .gitignore (new)",
-        "new_wording": "the generalized textual stale-semver scanners and their exclusive helpers and the coupled mutation were removed; the field-aware self-certificate-vs-plugin version equality check was kept (issue #2's real fix); a CRITICAL 'no git-tracked build cruft' check plus git_tracked_files/_is_cruft_relpath helpers were added, the .pyc was untracked (git rm --cached) and a top-level .gitignore added; run_regression_evals.py now serializes the target set deterministically via str(sorted(targets))",
-        "old_wording": "validate_package.py carried a generalized textual scan_stale_semver_provenance scanner (plus its self-certificate scan twin scan_active_self_certificate_package_versions and the SEMVER_TOKEN_RE / parse_semver_token / current_plugin_semver helpers) and a matching stale_semver_readme_provenance false-world mutation; a git-tracked skills/nozickian-verify/scripts/__pycache__/ntt_gate.cpython-312.pyc build artifact was carried in the tree"
+        "affected_claim_ids": [
+          "C-charter-caps"
+        ],
+        "correction_locations": [
+          "self_validation/self_certificate.json:1557",
+          "self_validation/self_certificate.json:1570"
+        ],
+        "new_wording": "The two charter-deletion observations state the substantive FAIL outcome and cite their bound structured evidence plus the current probe ledger; volatile exact digests are not duplicated in active prose.",
+        "old_wording": "The two charter-deletion observed_behavior fields duplicated stale expected and mutated-actual SHA-256 values."
       },
       {
-        "claim_id": "C-charter-caps",
-        "correction_location": "self_validation/self_certificate.json (TW-charter-intact-selftest.observed_behavior; method_manifest.port_2026_07_09.reran_2026_07_09[0]); self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json; self_validation/v102_charter_caps_probe_results.json",
-        "new_wording": "intact-copy full self-test PASS with 1369/1369 checks, 0 critical failures, 35/35 false-world mutations rejected, and 4/4 true-world variants retained (35 mutations after the coupled stale-semver mutation was removed with its scanner)",
-        "old_wording": "intact-copy full self-test PASS with 1371/1371 checks, 36/36 false-world mutations rejected, and 4/4 true-world variants"
+        "affected_claim_ids": [
+          "C-structure",
+          "C-gate-hardening",
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit",
+          "C-github-readme-documentation",
+          "C-charter-caps"
+        ],
+        "correction_locations": [
+          "AUDIT_REPORT.md:257",
+          "self_validation/self_certificate.json:1671"
+        ],
+        "new_wording": "Current-state prose cites self_validation/manifest_update_result.json and the integrity manifests instead of embedding an exact MANIFEST.sha256 digest that would create stale digest coupling and maintenance drift.",
+        "old_wording": "Current-state certificate and audit prose embedded an exact MANIFEST.sha256 digest as the identifier for the exact release tree."
       },
       {
-        "claim_id": "all claims (release provenance)",
-        "correction_location": "AUDIT_REPORT.md; self_validation/self_certificate.json; self_validation/evidence/*.json; self_validation/evidence_artifacts/*.txt; self_validation/v101_targeted_probe_results.json",
-        "new_wording": "with the generalized scanner removed, the historical version strings were restored to their true dotted spelling (for example v1.0.1 and v0.7.6) as verbatim historical record; the current prior-patch and older-patch markers guarded by the surviving fixed-pattern scan_release_provenance_hygiene are not present as live provenance, and that scanner returns zero hits on this tree",
-        "old_wording": "historical version strings were obfuscated to scan-inert spellings (v1.0.1 rewritten as a periphrasis or defanged token) so the removed generalized stale-semver scanner would not flag the historical record"
+        "affected_claim_ids": [
+          "C-structure",
+          "C-gate-hardening",
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit",
+          "C-github-readme-documentation",
+          "C-charter-caps"
+        ],
+        "correction_locations": [
+          "AUDIT_REPORT.md:231",
+          "RELEASE_LOCK.json:85",
+          "self_validation/manifest_update_result.json:3"
+        ],
+        "new_wording": "Current release-wide self-test evidence is 1564/1564 checks, 56/56 false-world mutations, and 10/10 true-world variants; dated 2026-07-09 charter-probe ledgers retain their earlier 1369/35/4 observations as explicit history.",
+        "old_wording": "Current-state release prose still used the pre-Slice-A 1369/1369 checks, 35/35 mutations, and 4/4 true-world counts."
+      },
+      {
+        "affected_claim_ids": [
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit"
+        ],
+        "correction_locations": [
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:138-697",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:196-1599",
+          "skills/nozickian-verify/scripts/validate_package.py:2562-3940",
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:9-236",
+          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-130",
+          "AUDIT_REPORT.md:208-257"
+        ],
+        "new_wording": "Slice F/G/I executes one resolved absolute regular Claude target for every subprocess and requires stable pre/post fingerprints; promotion requires current exact fixture IDs, distinct transcript paths and exact transcript-byte hashes, canonical prompt/fixture/artifact text and hash binding, exact integer-zero return codes, anchored noncontradictory official-validator success with nonzero numeric error/failure summaries dominating positives, a current-validator-derived canonical package_tree_sha256 with exact exclusion parity, unconditional fresh package validation, unique local evidence refs, self-contained formal companions, and regular no-follow inputs. Path normalization changes only exact roots and rooted children, preserving non-path suffixes.",
+        "old_wording": "Promotion could trust a different relative executable after cwd changes, shared or swapped transcripts, unbound prompts, boolean/float/string/null return codes as success, positive text followed by nonzero numeric failure summaries, manifest-authored inventory omissions, stale current validation, contradictory validator status, arbitrary package hashes and refs, external-only formal paths, symlink/special inputs, and over-broad root-prefix normalization."
+      },
+      {
+        "affected_claim_ids": [
+          "C-structure",
+          "C-validator-sensitivity"
+        ],
+        "correction_locations": [
+          "skills/nozickian-verify/scripts/validate_package.py:210-328",
+          "skills/nozickian-verify/scripts/validate_package.py:1450-1544",
+          "skills/nozickian-verify/scripts/validate_package.py:1913-1970",
+          "AUDIT_REPORT.md:195-238",
+          ".github/workflows/nozickian-team-ci.yml:20-28"
+        ],
+        "new_wording": "Release validation preserves every typed Git path/mode/object/stage entry; rejects nonzero stages and all non-regular modes; derives tracked __pycache__/.pyc/.DS_Store cruft directly from every index path with _is_cruft_relpath independently of physical traversal; rejects every physical symlink and unsupported special entry before later reads; retains only ignored untracked checkout bytecode; and validates an unpacked Git archive. Source status snapshots remain observational with GIT_OPTIONAL_LOCKS=0 and before/after index hashes.",
+        "old_wording": "Current audit prose described only a tracked-build-cruft check and conflated Git absence or Git command failure with a passing not-applicable state."
+      },
+      {
+        "affected_claim_ids": [
+          "C-structure",
+          "C-validator-sensitivity"
+        ],
+        "correction_locations": [
+          "skills/nozickian-verify/scripts/validate_package.py:395-442",
+          "skills/nozickian-verify/scripts/validate_package.py:597-659",
+          "skills/nozickian-verify/scripts/validate_package.py:913-974",
+          "skills/nozickian-verify/scripts/validate_package.py:1160-1178",
+          "skills/nozickian-verify/scripts/validate_package.py:1261-1323",
+          "skills/nozickian-verify/scripts/validate_package.py:1840-1873",
+          "skills/nozickian-verify/scripts/validate_package.py:2096-2169",
+          "skills/nozickian-verify/scripts/validate_package.py:2171-2250",
+          "docs/release/README.md:11",
+          "TEAM_INTERNAL_USE.md:32-34"
+        ],
+        "new_wording": "Update mode completes no-follow and typed-Git preflight before any write; fixed manifest destinations use fresh same-directory temporary files and atomic replacement. Non-UTF-8 provenance is a named critical hit, copy-validator exceptions are HARNESS_ERROR, PACKAGE_SURFACE requires an object and unique-string allowed_agents, normalization is exact-root/path-prefix aware, and generated_utc has a fixed kind/value/semantics contract with no caller override.",
+        "old_wording": "Reachable validator paths directly wrote MANIFEST.sha256, silently skipped UnicodeDecodeError, treated copy-validator exceptions as ordinary FAIL evidence, accepted PACKAGE_SURFACE type holes, normalized by substring replacement, and exposed a generated_utc override."
+      },
+      {
+        "affected_claim_ids": [
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit"
+        ],
+        "correction_locations": [
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:138-697",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:430-1151",
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:85",
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:97-177",
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:179-194"
+        ],
+        "new_wording": "Live fixture PASS-SCOPED executes one resolved absolute regular target, requires successful version/plugin preflight and equal pre/post fingerprints, and accepts only a substantive non-error structured report. Promotion additionally requires exact current-run provenance, every current fixture ID once, and bundle-local transcript stdout replay matching self-reported checks. Identity remains explicitly observed-not-cryptographically-authenticated; no official-binary proof is claimed.",
+        "old_wording": "The live harness could accept fixture keywords recursively from arbitrary JSON or stderr and could return PASS-SCOPED despite failed version/plugin preflight; promotion checks did not require structured report envelopes or observational runtime identity."
+      },
+      {
+        "affected_claim_ids": [
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit"
+        ],
+        "correction_locations": [
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:138-697",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:196-1599",
+          "skills/nozickian-verify/scripts/validate_package.py:2562-3940",
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:9-236",
+          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-130",
+          "AUDIT_REPORT.md:208-257"
+        ],
+        "new_wording": "Every promotion input is bound to the current package and bundle: exact resolved executable plus stable fingerprints, current transcript replay, anchored validator status, verified package tree, unique local refs, self-contained formal companions, no-follow reads, and separator-only root boundaries.",
+        "old_wording": "Promotion could accept cwd-relative executable drift, stale or fabricated live checks, contradictory validator status, arbitrary package hashes/refs, external formal pointers, nonregular inputs, and broad root-prefix rewriting."
+      },
+      {
+        "affected_claim_ids": [
+          "C-validator-sensitivity"
+        ],
+        "correction_locations": [
+          "skills/nozickian-verify/scripts/validate_package.py:445-454",
+          "AUDIT_REPORT.md:201"
+        ],
+        "new_wording": "The two context-free bare-version patterns are removed; context-bearing stale path/root markers and the field-aware certificate/plugin version check remain, and explicit historical version prose is a retained true world.",
+        "old_wording": "The fixed-pattern hygiene scanner still contained context-free bare-version patterns that rejected legitimate history and were brittle across future releases."
+      },
+      {
+        "affected_claim_ids": [
+          "C-charter-caps"
+        ],
+        "correction_locations": [
+          "skills/nozickian-verify/assets/certificate-template.json:10-47",
+          "skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md:54-79",
+          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:41-50",
+          "agents/ntt-claim-extractor.md:20-30",
+          "agents/ntt-gate-auditor.md:22-29"
+        ],
+        "new_wording": "Each consistency-sweep record requires duplicate-free canonical affected_claim_ids, unique locations/edited_locations, recommended_edit, classification/resolution pairings, and resolution-conditional completion evidence. The example-bearing certificate template consistently sets applies=true and sweep_ran=true. The contract explicitly remains parent/auditor-enforced rather than mechanically gated.",
+        "old_wording": "Echo records lacked affected-claim linkage and recommended_edit and used vague scalar location values."
+      },
+      {
+        "affected_claim_ids": [
+          "C-validator-sensitivity",
+          "C-formal-invocation"
+        ],
+        "correction_locations": [
+          "self_validation/live_runtime_eval_result.json:49-80",
+          "self_validation/live_runtime_eval_stdout.json:49-80",
+          "self_validation/self_certificate.json:2250"
+        ],
+        "new_wording": "Bundled runtime summaries use an explicit normalized executable display; the legacy producing run's source release and observation time remain unknown, carried_forward is null, runtime identity is unavailable, and runtime status remains UNVERIFIED_RUNTIME.",
+        "old_wording": "The active method manifest said the current live-runtime bytes were carried from a prior release even though their original producing-run lineage was not bound."
+      },
+      {
+        "affected_claim_ids": [
+          "C-structure",
+          "C-validator-sensitivity"
+        ],
+        "correction_locations": [
+          ".gitignore:1-3",
+          "skills/nozickian-verify/scripts/validate_package.py:169-207",
+          "skills/nozickian-verify/scripts/validate_package.py:1450-1538",
+          "skills/nozickian-verify/scripts/validate_package.py:4138-4410",
+          "skills/nozickian-verify/scripts/validate_package.py:4526-4548"
+        ],
+        "new_wording": "The historical binary remains absent. Verified worktrees now classify every typed Git index path with _is_cruft_relpath independently of physical traversal. A checkout false world force-adds the exact historical nested path, requires one ordinary critical failure at the named cruft check, and directly requires every tracked cruft index path in failure details; direct tracked .pyc rejection and ignored untracked bytecode acceptance remain.",
+        "old_wording": "A tracked ntt_gate.cpython-312.pyc binary was present in an earlier revision, and the post-redress physical cruft classification was assumed to reject that exact nested index path even though traversal stops at __pycache__."
+      },
+      {
+        "affected_claim_ids": [
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit"
+        ],
+        "correction_locations": [
+          "skills/nozickian-verify/scripts/validate_package.py:683-911",
+          "skills/nozickian-verify/scripts/validate_package.py:2562-3302",
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:196-697",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:430-1151",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:1326-1373",
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:9-236",
+          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-130",
+          "AUDIT_REPORT.md:217-257"
+        ],
+        "new_wording": "Slice H uses validate_package.compute_stable_release_tree as the single ntt-stable-release-tree-v1 implementation for live capture and certification; live results bind exact current package, evals.json, and artifact bytes plus run_config.max_turns, and promotion requires exact ordered normalized preflight and fixture argv while independently retaining prompt, transcript, fixture, artifact, and report checks.",
+        "old_wording": "Slice G live evidence bound transcript and prompt bytes inside the bundle but did not bind a captured run to current package/evals/artifact bytes and accepted any transcript argv whose last argument was the expected prompt."
       }
     ],
-    "correction_evidence_checked": "Affirmatively checked: the validated PR #3 ultrareview findings, the git status/diff of the working tree against base commit 1eed196, git ls-files for tracked build cruft (the __pycache__ .pyc is now untracked and gitignored), a full-tree grep for the obfuscated version spellings and for references to the removed scanner symbols, the retained field-aware equality check (self certificate artifact version matches plugin), and the two stale self-test count records previously carried in this certificate.",
+    "correction_evidence_checked": "Affirmatively checked the PR #3 Slice J index-derived tracked-cruft implementation, the exact force-added historical nested bytecode false world, the named ordinary critical failure, complete tracked-cruft failure details, the retained direct-.pyc false world and ignored-untracked-bytecode true world, every prior Slice F/G/H/I control, citation-only MANIFEST prose, and final current-state totals. Preserved every resolved original fragment in its immutable git:f5d0e984c624da1b3e98ed92392b919a7634b590:<path> object (plus the retained 738c historical .pyc locator), then iteratively re-resolved and semantically verified all 62 current correction_locations and 56 current edited_locations entries after final JSON serialization until the 118-locator set reached a fixed point.",
     "echo_findings": [
       {
+        "affected_claim_ids": [
+          "C-charter-caps"
+        ],
         "classification": "live-claim",
-        "edited_location": "self_validation/self_certificate.json (both records)",
+        "edited_locations": [
+          "self_validation/self_certificate.json:1557",
+          "self_validation/self_certificate.json:1570"
+        ],
         "embedded_in_true_sentence": "yes",
-        "fragment": "1371/1371 checks, 36/36 false-world mutations",
-        "location": "self_validation/self_certificate.json (TW-charter-intact-selftest.observed_behavior and method_manifest.port_2026_07_09.reran_2026_07_09[0])",
-        "replacement_evidence": "Full self-test rerun at the v1.0.3 finalization fixed point: PASS with 1369/1369 checks, 0 critical failures, 35/35 false-world mutations rejected, and 4/4 true-world variants retained (branch charter-fixes-consistency-sweep-remote-escalation, base commit 1eed196, v1.0.3 finalization working tree; behavior-file state MANIFEST.sha256 sha256=6f3b100ce7fd482ad83c85ddefc23f9093a2fa961496a1e5f24b43da782be40a).",
+        "fragment": "duplicated stale expected and mutated-actual SHA-256 values in charter observed_behavior prose",
+        "locations": [
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:self_validation/self_certificate.json"
+        ],
+        "recommended_edit": "State the substantive rejection outcome and delegate exact volatile check details to the bound structured evidence and current probe ledger.",
+        "replacement_evidence": "Both observed_behavior fields now contain citation-only outcome prose and retain their existing structured evidence_refs.",
         "resolution": "resolved"
       },
       {
+        "affected_claim_ids": [
+          "C-structure",
+          "C-gate-hardening",
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit",
+          "C-github-readme-documentation",
+          "C-charter-caps"
+        ],
         "classification": "live-claim",
-        "edited_location": "self_validation/v102_charter_caps_probe_results.json; self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json",
+        "edited_locations": [
+          "AUDIT_REPORT.md:257",
+          "self_validation/self_certificate.json:1671"
+        ],
         "embedded_in_true_sentence": "yes",
-        "fragment": "checks 1353/1353 passed; mutation_tests 34/34",
-        "location": "self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json; self_validation/v102_charter_caps_probe_results.json",
-        "replacement_evidence": "Charter-caps probes rerun at the v1.0.3 finalization fixed point; observed statuses and failing checks recorded verbatim in the regenerated files (intact-copy self-test PASS 1369/1369, 35/35 mutations, 4/4 true-world).",
+        "fragment": "exact MANIFEST.sha256 digest embedded in current-state certificate and audit prose",
+        "locations": [
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:AUDIT_REPORT.md",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:self_validation/self_certificate.json"
+        ],
+        "recommended_edit": "Remove the stale digest echo and cite self_validation/manifest_update_result.json or the integrity manifests.",
+        "replacement_evidence": "Current-state prose now uses citation-only references to manifest_update_result.json, MANIFEST.sha256, and STABLE_RELEASE_MANIFEST.json.",
         "resolution": "resolved"
       },
       {
-        "classification": "intentional-reference",
-        "edited_location": "AUDIT_REPORT.md (historical first-patch audit record, retitled, with a dated v1.0.3 addendum); self_validation provenance files",
+        "affected_claim_ids": [
+          "C-structure",
+          "C-gate-hardening",
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit",
+          "C-github-readme-documentation",
+          "C-charter-caps"
+        ],
+        "classification": "live-claim",
+        "edited_locations": [
+          "AUDIT_REPORT.md:231",
+          "RELEASE_LOCK.json:85",
+          "self_validation/manifest_update_result.json:3"
+        ],
         "embedded_in_true_sentence": "yes",
-        "fragment": "v1.0.1",
-        "location": "AUDIT_REPORT.md; self_validation/self_certificate.json; self_validation/evidence/*.json; self_validation/evidence_artifacts/*.txt",
-        "replacement_evidence": "Historical results preserved verbatim; the true dotted token v1.0.1 was restored now that the generalized stale-semver scanner is gone; the surviving fixed-pattern scan_release_provenance_hygiene (which guards the current prior-patch and older-patch version markers, not v1.0.1) returns zero hits on this tree.",
-        "resolution": "accepted-intentional-reference"
+        "fragment": "1369/1369 checks, 35/35 mutations, 4/4 true-world variants used as current release counts",
+        "locations": [
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:AUDIT_REPORT.md",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:RELEASE_LOCK.json",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:self_validation/manifest_update_result.json"
+        ],
+        "recommended_edit": "Replace current-state totals with 1564/1564 checks, 56/56 mutations, and 10/10 true worlds while preserving dated earlier ledgers as history.",
+        "replacement_evidence": "The current audit, release metadata, and manifest regeneration note use 1564/1564, 56/56, and 10/10; the dated v102 ledger retains its historical 1369/35/4 observation.",
+        "resolution": "resolved"
       },
       {
+        "affected_claim_ids": [
+          "C-structure",
+          "C-validator-sensitivity"
+        ],
+        "classification": "live-claim",
+        "edited_locations": [
+          "skills/nozickian-verify/scripts/validate_package.py:210-328",
+          "skills/nozickian-verify/scripts/validate_package.py:1450-1544",
+          "skills/nozickian-verify/scripts/validate_package.py:1913-1970",
+          "AUDIT_REPORT.md:195-238",
+          ".github/workflows/nozickian-team-ci.yml:20-28"
+        ],
+        "embedded_in_true_sentence": "yes",
+        "fragment": "tracked-only cruft wording and Git absence/error conflation",
+        "locations": [
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:AUDIT_REPORT.md",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:skills/nozickian-verify/scripts/validate_package.py"
+        ],
+        "recommended_edit": "Describe the three Git evidence states, preserve typed index mode/stage/object data, derive tracked cruft from every index path independently of physical traversal, reject all non-regular index modes and physical special entries before reads, keep source status observational, and retain only ignored untracked bytecode.",
+        "replacement_evidence": "Named self-test results reject direct force-tracked .pyc and the exact historical nested __pycache__ bytecode path, with the latter failing only the named critical cruft check and listing every tracked cruft index path in details; tracked/Git-free/untracked links, Git-free/untracked FIFOs, untracked non-bytecode cruft, Git evidence failure, and index-only gitlink mode 160000 also fail, while clean export and ignored untracked bytecode pass.",
+        "resolution": "resolved"
+      },
+      {
+        "affected_claim_ids": [
+          "C-structure",
+          "C-validator-sensitivity"
+        ],
+        "classification": "live-claim",
+        "edited_locations": [
+          "skills/nozickian-verify/scripts/validate_package.py:395-442",
+          "skills/nozickian-verify/scripts/validate_package.py:597-659",
+          "skills/nozickian-verify/scripts/validate_package.py:913-974",
+          "skills/nozickian-verify/scripts/validate_package.py:1160-1178",
+          "skills/nozickian-verify/scripts/validate_package.py:1261-1323",
+          "skills/nozickian-verify/scripts/validate_package.py:1840-1873",
+          "skills/nozickian-verify/scripts/validate_package.py:2096-2169",
+          "skills/nozickian-verify/scripts/validate_package.py:2171-2250",
+          "docs/release/README.md:11",
+          "TEAM_INTERNAL_USE.md:32-34"
+        ],
+        "embedded_in_true_sentence": "yes",
+        "fragment": "direct manifest write, UnicodeDecodeError skip, ordinary-FAIL exception mapping, reachable schema holes, and substring-only display normalization",
+        "locations": [
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:skills/nozickian-verify/scripts/validate_package.py"
+        ],
+        "recommended_edit": "Preflight update mode, atomically replace fixed manifest paths, report decoding and harness failures distinctly, validate reachable JSON types, normalize only exact roots/rooted children, and validate a non-overridable reproducible epoch contract.",
+        "replacement_evidence": "The manifest-symlink sentinel and atomic replacement probes pass; non-UTF-8 provenance and HARNESS_ERROR controls are named; PACKAGE_SURFACE root/allowed_agents mutations fail; root@sibling, root-space, Unicode, and root-old suffixes are retained while rooted children normalize; and stable manifest kind/value/semantics checks pass.",
+        "resolution": "resolved"
+      },
+      {
+        "affected_claim_ids": [
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit"
+        ],
+        "classification": "live-claim",
+        "edited_locations": [
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:138-697",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:430-1151",
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:85",
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:97-177",
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:179-194"
+        ],
+        "embedded_in_true_sentence": "yes",
+        "fragment": "recursive JSON/stderr keyword acceptance and fixture PASS despite failed live preflight",
+        "locations": [
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:skills/nozickian-verify/scripts/run_live_skill_evals.py",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py"
+        ],
+        "recommended_edit": "Pin all subprocesses to one resolved target, require stable pre/post fingerprints and successful preflight, inspect a substantive structured report, retain the authentication limitation, and replay exact current fixture transcripts before promotion.",
+        "replacement_evidence": "Offline controls accept one valid structured report, reject recursive metadata/non-object output and failed preflight, prove a relative-PATH alternate under fixture cwd is never executed, and fail stale/carried/partial/absent/external/fabricated live promotion worlds. The certifier requires exact current-run provenance, stable fingerprints, exact fixture IDs, and bundle-local transcript replay.",
+        "resolution": "resolved"
+      },
+      {
+        "affected_claim_ids": [
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit"
+        ],
+        "classification": "live-claim",
+        "edited_locations": [
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:138-697",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:196-1599",
+          "skills/nozickian-verify/scripts/validate_package.py:2562-3940",
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:9-236",
+          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-130",
+          "AUDIT_REPORT.md:208-257"
+        ],
+        "embedded_in_true_sentence": "yes",
+        "fragment": "unbound promotion evidence: permissive scalar return codes, contradictory numeric validator summaries, arbitrary package hashes/refs, external formal pointers, nonregular inputs, and broad root-prefix rewriting",
+        "locations": [
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:skills/nozickian-verify/scripts/run_live_skill_evals.py",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md"
+        ],
+        "recommended_edit": "Bind every promotion input to current package and bundle evidence with exact integer-zero return-code typing, numeric failure-summary dominance, one-to-one transcript/prompt identity, current-validator-derived inventory policy, unconditional fresh validation, anchored status, self-contained companions, no-follow reads, and path boundaries.",
+        "replacement_evidence": "The Slice F/G/H/I offline control set rejects false, true, 0.0, string-zero, and null return codes across command and aggregate records; pass text followed by 1 error, 2 errors, 1 failure, or 3 failed; shared/swapped transcripts; wrong prompt or transcript hashes; wrong fixture/artifact prompts; stale package/evals/artifact bytes; malformed argv; manifest exclusion and inventory drift; stale current validation; and every earlier promotion false world. It retains integer zero, pass text with zero summaries, and the valid three-fixture bundle without claiming official-binary cryptographic identity.",
+        "resolution": "resolved"
+      },
+      {
+        "affected_claim_ids": [
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit"
+        ],
+        "classification": "live-claim",
+        "edited_locations": [
+          "skills/nozickian-verify/scripts/validate_package.py:683-911",
+          "skills/nozickian-verify/scripts/validate_package.py:2562-3302",
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:196-697",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:430-1151",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:1326-1373",
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:9-236",
+          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-130",
+          "AUDIT_REPORT.md:217-257"
+        ],
+        "embedded_in_true_sentence": "no",
+        "fragment": "live evidence bound transcript prompt bytes but not current package, fixture-spec, artifact bytes, or the complete normalized argv",
+        "locations": [
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:skills/nozickian-verify/scripts/validate_package.py",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:skills/nozickian-verify/scripts/run_live_skill_evals.py",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md"
+        ],
+        "recommended_edit": "Use one shared stable-tree computation, record and recompute exact package/evals/artifact bytes, record max_turns, and require exact ordered normalized preflight and fixture argv without weakening independent prompt, transcript, fixture, artifact, and report checks.",
+        "replacement_evidence": "Slice H focused controls reject refreshed-manifest stale artifact/evals/non-artifact source evidence plus prompt-only, missing-plugin-dir, wrong-format, wrong-max-turns, extra-arg, swapped-order, and wrong-preflight argv; the valid exact-argv current-byte bundle passes its lane.",
+        "resolution": "resolved"
+      },
+      {
+        "affected_claim_ids": [
+          "C-validator-sensitivity"
+        ],
         "classification": "stale-echo",
-        "edited_location": "git index (git rm --cached) + new top-level .gitignore",
+        "edited_locations": [
+          "skills/nozickian-verify/scripts/validate_package.py:445-454",
+          "AUDIT_REPORT.md:201"
+        ],
+        "embedded_in_true_sentence": "yes",
+        "fragment": "context-free bare-version provenance patterns",
+        "locations": [
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:skills/nozickian-verify/scripts/validate_package.py",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:AUDIT_REPORT.md"
+        ],
+        "recommended_edit": "Remove only the two bare-version patterns, retain context-bearing and field-aware checks, and record an explicit-history adherence case.",
+        "replacement_evidence": "The current pattern table omits the bare versions and the true-world suite retains explicit historical prose for both prior versions.",
+        "resolution": "resolved"
+      },
+      {
+        "affected_claim_ids": [
+          "C-charter-caps"
+        ],
+        "classification": "stale-echo",
+        "edited_locations": [
+          "skills/nozickian-verify/assets/certificate-template.json:10-47",
+          "skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md:54-79",
+          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:41-50",
+          "agents/ntt-claim-extractor.md:20-30",
+          "agents/ntt-gate-auditor.md:22-29"
+        ],
+        "embedded_in_true_sentence": "no",
+        "fragment": "echo records without uniqueness/pairing requirements plus an example-bearing template that said applies=false and sweep_ran=false",
+        "locations": [
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:skills/nozickian-verify/assets/certificate-template.json",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:agents/ntt-claim-extractor.md",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:agents/ntt-gate-auditor.md"
+        ],
+        "recommended_edit": "Use duplicate-free affected-ID and locator arrays, enforce classification/resolution pairings, make the example-bearing template applicable/swept, and preserve parent/auditor-only enforcement.",
+        "replacement_evidence": "The template sets applies=true and sweep_ran=true; protocols, output contract, extractor, auditor, and active certificate require unique canonical IDs/locators, classification/resolution pairings, and resolution-conditional evidence while preserving the issue #5 mechanical-enforcement deferral.",
+        "resolution": "resolved"
+      },
+      {
+        "affected_claim_ids": [
+          "C-validator-sensitivity",
+          "C-formal-invocation"
+        ],
+        "classification": "live-claim",
+        "edited_locations": [
+          "self_validation/live_runtime_eval_result.json:49-80",
+          "self_validation/live_runtime_eval_stdout.json:49-80",
+          "self_validation/self_certificate.json:2250"
+        ],
+        "embedded_in_true_sentence": "yes",
+        "fragment": "live runtime result carried as bundled evidence from the prior release",
+        "locations": [
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:self_validation/live_runtime_eval_result.json",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:self_validation/live_runtime_eval_stdout.json",
+          "git:f5d0e984c624da1b3e98ed92392b919a7634b590:self_validation/self_certificate.json"
+        ],
+        "recommended_edit": "Mark the legacy producing run unknown, preserve null release/time, normalize bundled display paths with explicit metadata and raw-external-transcript policy, and retain UNVERIFIED_RUNTIME.",
+        "replacement_evidence": "Both runtime JSON summaries carry provenance_schema_version=1.0 and provenance.status=legacy-producing-run-unknown with null source_release/observed_at_utc/carried_forward, normalized_after_capture=true, representation=normalized-display, normalized_fields, an explicit raw_external_transcript_policy, resolved_executable_path_recorded=false, and unavailable/unknown runtime_identity fields; the method manifest no longer claims prior-release lineage.",
+        "resolution": "resolved"
+      },
+      {
+        "affected_claim_ids": [
+          "C-structure",
+          "C-validator-sensitivity"
+        ],
+        "classification": "stale-echo",
+        "edited_locations": [
+          ".gitignore:1-3",
+          "skills/nozickian-verify/scripts/validate_package.py:169-207",
+          "skills/nozickian-verify/scripts/validate_package.py:1450-1538",
+          "skills/nozickian-verify/scripts/validate_package.py:4138-4410",
+          "skills/nozickian-verify/scripts/validate_package.py:4526-4548"
+        ],
         "embedded_in_true_sentence": "no",
         "fragment": "ntt_gate.cpython-312.pyc",
-        "location": "skills/nozickian-verify/scripts/__pycache__/ntt_gate.cpython-312.pyc",
-        "replacement_evidence": "git ls-files shows no __pycache__/.pyc entries; the new CRITICAL 'no git-tracked build cruft' validator check passes on this tree (the .pyc remains on disk only as untracked, gitignored dev cruft).",
+        "locations": [
+          "git:738c8e87ec512c27837c2a5e42e7aa2bf7da1d76:skills/nozickian-verify/scripts/__pycache__/ntt_gate.cpython-312.pyc"
+        ],
+        "recommended_edit": "Keep the binary absent, derive verified-worktree tracked cruft from all typed index paths independently of the physical walker, and retain the ignored-untracked-bytecode development tolerance.",
+        "replacement_evidence": "The historical binary is identified without a fabricated line number. The exact historical nested checkout false world is force-added and fails normally at the named critical cruft check with every tracked index cruft path in details; the ignored untracked checkout bytecode true world still passes.",
         "resolution": "resolved"
+      },
+      {
+        "affected_claim_ids": [
+          "C-structure",
+          "C-gate-hardening",
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit",
+          "C-github-readme-documentation",
+          "C-charter-caps"
+        ],
+        "classification": "intentional-reference",
+        "edited_locations": [],
+        "embedded_in_true_sentence": "yes",
+        "fragment": "dated v1.0.1 and 2026-07-09 validation observations",
+        "locations": [
+          "AUDIT_REPORT.md:5",
+          "self_validation/v102_charter_caps_probe_results.json:30-46",
+          "self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json:7-8"
+        ],
+        "recommended_edit": "Retain these explicitly dated historical observations and do not reinterpret them as current release counts or provenance.",
+        "replacement_evidence": "none",
+        "resolution": "accepted-intentional-reference"
       }
     ],
     "none_found": false,
     "not_applicable_reason": "none",
     "sweep_ran": true,
-    "swept_at": "2026-07-09 (v1.0.3 finalization, PR #3 ultrareview redress)"
+    "swept_at": "2026-07-10 (PR #3 Slice A through Slice J final original-scope redress)"
   },
   "derived_or_downstream_claims": [
     {
@@ -1747,15 +2236,18 @@
     "port_2026_07_09": {
       "carried_with_existing_evidence": [
         "C-formal-invocation, C-pass-tracked-upgrade-audit, C-github-readme-documentation, C-structure, C-gate-hardening, and C-validator-sensitivity keep their existing structured evidence under self_validation/evidence/ and self_validation/v101_targeted_probe_results.json; their false-world package-mutation suites are re-exercised indirectly by the rerun full self-test, but the original targeted probe ledgers were not regenerated.",
-        "self_validation/live_runtime_eval_result.json, trace_auth_smoke_result.json, and the pass_tracked_certifier_empty_bundle_* artifacts are carried as bundled evidence from the prior release."
+        "trace_auth_smoke_result.json and the pass_tracked_certifier_empty_bundle_* artifacts are retained as bundled evidence from the prior release."
       ],
       "date_utc": "2026-07-09",
       "description": "Charter fixes (consistency sweep / stale-echo lane, REMOTE_GROUND_TRUTH_REQUIRED escalation protocol, three loophole repairs) were ported onto this repository lineage from the team-internal sibling package. Repository-side formal-verification content (PASS-TRACKED upgrade audit, formal invocation mode, derived/downstream non-closure) was preserved unchanged.",
       "reran_2026_07_09": [
-        "validate_package.py --self-test on an intact copy (PASS, 1369/1369 checks, 35/35 mutations, 4/4 true-world variants; re-recorded at the v1.0.3 finalization fixed point - branch charter-fixes-consistency-sweep-remote-escalation, base commit 1eed196, v1.0.3 finalization working tree; behavior-file state MANIFEST.sha256 sha256=6f3b100ce7fd482ad83c85ddefc23f9093a2fa961496a1e5f24b43da782be40a)",
+        "validate_package.py --self-test on an intact copy (PASS, 1369/1369 checks, 35/35 mutations, 4/4 true-world variants; retained as the dated 2026-07-09 v1.0.3 charter-port observation, not the current release-wide count)",
         "validate_package.py on two charter-text-deleted false-world copies (both FAIL on manifest hash, recorded verbatim in self_validation/v102_charter_caps_probe_results.json)",
         "ntt_gate.py on this certificate with --evidence-root . --strict-evidence",
         "run_gate_contract_tests.py, run_formal_runner_contract_tests.py, run_regression_evals.py, and the formal runner dry run (regenerated bundled outputs)"
+      ],
+      "runtime_evidence_lineage": [
+        "The producing-run lineage for self_validation/live_runtime_eval_result.json and self_validation/live_runtime_eval_stdout.json is unresolved. Their bundled command displays were normalized after capture; source_release, observed_at_utc, and carried_forward are null; runtime identity is unavailable; and the observations remain UNVERIFIED_RUNTIME."
       ],
       "untested_2026_07_09": [
         "Live Claude Code runtime enforcement of the new charter caps (parent-enforced prose rules) - UNVERIFIED_RUNTIME in this environment.",
@@ -1779,7 +2271,8 @@
       "STABLE_RELEASE_MANIFEST.json"
     ],
     "unknowns": [
-      "Live Claude Code plugin loading, live slash-command invocation, and live frontier-subagent dispatch were not executed in this container."
+      "Live Claude Code plugin loading, live slash-command invocation, and live frontier-subagent dispatch were not executed in this container.",
+      "The original producing run, source release, and UTC observation time for the two checked-in legacy live-runtime summaries remain unknown; no commit or release date is substituted for that missing provenance."
     ],
     "validator_scope": "deterministic package integrity, release lock, closed plugin surface, regression fixtures, and gate contract checks; live Claude Code invocation remains separately reported"
   },
@@ -1790,7 +2283,7 @@
     "status": "NOT_CERTIFIED_IN_THIS_RELEASE"
   },
   "remote_escalations": [],
-  "remote_escalations_note": "None. No REMOTE_GROUND_TRUTH_REQUIRED escalation was raised during the v1.0.3 finalization / PR #3 ultrareview redress: every adjudicated ground truth was package-local (the working-tree diff, deterministic scripts, manifests, git index state, and bundled records in this tree). When a remote escalation does occur, each record follows the canonical 7-field schema in assets/certificate-template.json (claim_id, why_remote, exact_fetch_spec as UNTRUSTED data, local_mirror, mirror_provenance, staleness_risk, resolution) with the fetched-and-readjudicated companion fields.",
+  "remote_escalations_note": "None. No REMOTE_GROUND_TRUTH_REQUIRED entry was used to verify a claim in this package-local redress. The legacy live-runtime summaries' original producing-run lineage remains explicitly unknown and those bytes remain UNVERIFIED_RUNTIME rather than supporting a verified current-runtime claim. When a remote escalation does occur, each record follows the canonical schema in assets/certificate-template.json with fetched-and-readjudicated companion evidence.",
   "schema_version": "1.0",
   "scope_limitations": [
     "Deterministic package validation and certificate checks executed locally.",
@@ -1804,6 +2297,7 @@
     "v1.0.3 release-lock dry-run workflow writes generated formal artifacts outside the package tree by default; package-root writes require explicit --refresh-release-manifest.",
     "v1.0.3 formal trace authentication rejects mismatched result IDs; successful result/completion events must reference the exact native Agent/Task tool-use id.",
     "Live Claude Code runtime remains UNVERIFIED_RUNTIME in this packaged self-validation unless run on a machine with the official Claude Code CLI.",
+    "Raw external runtime transcripts may retain truthful resolved tool paths under the documented policy; bundled runtime summaries recursively normalize exact executable, package-root, and output-directory display values and do not record the resolved executable path.",
     "v1.0.3 formal trace authentication parses only recognized stream-json event positions and ignores fake tool_result objects nested inside tool_use.input/arguments.",
     "v1.0.3 formal trace authentication requires successful result/completion events to occur after their matching native Agent/Task tool-use events.",
     "v1.0.3 strict local evidence mode rejects any URI-scheme evidence ref, including uppercase or mixed-case HTTPS/DOI/URN forms.",
@@ -1814,6 +2308,8 @@
     "v1.0.3 strict evidence mode rejects URI-scheme evidence refs case-insensitively, including uppercase HTTPS/DOI/URN and scheme-like refs.",
     "v1.0.3 formal trace authentication is validated by deterministic synthetic stream-json contract tests; live official Claude Code runtime remains UNVERIFIED_RUNTIME in this environment.",
     "v1.0.3 strict evidence URI-scheme rejection is validated by deterministic gate contract tests for uppercase, mixed-case, DOI/URN, and scheme-like refs.",
+    "v1.0.3 Slice G prompt and transcript hashes bind exact bytes and one-to-one fixture consistency within a promotion bundle; they do not cryptographically authenticate the transcript producer or an official Claude binary.",
+    "v1.0.3 Slice H package/evals/artifact byte hashes and exact normalized argv bind current live evidence to the captured package invocation; legacy bundled runtime fields remain null and UNVERIFIED_RUNTIME rather than being backfilled.",
     "v1.0.3 formal trace authentication rejects metadata-only text/document/image result blocks and requires payload-bearing completion evidence.",
     "v1.0.3 strict evidence mode counts unique canonical evidence files and unique underlying artifact/hash identities for critical evidence sufficiency.",
     "v1.0.3 still remains PASS-SCOPED because live official Claude Code runtime traces were not captured in this environment.",
@@ -1824,6 +2320,6 @@
     "v1.0.3 formal trace authentication treats tool_use/tool_result nodes as hard event boundaries; data/payload/delta/message/content children of a tool event are payload, not runtime events.",
     "v1.0.3 formal trace authentication tracks assistant/user role context when available and rejects user-origin tool_use or assistant-origin tool_result blocks for PASS-TRACKED promotion.",
     "v1.0.3 strict gate modal tests must have stable nonempty IDs and must target the evaluated claim; wildcard evidence applicability cannot substitute for a test ID.",
-    "v1.0.3 charter-cap rules (consistency sweep / stale-echo lane and REMOTE_GROUND_TRUTH_REQUIRED escalation handling) are parent-enforced prose rules audited by ntt-gate-auditor; ntt_gate.py does not mechanically check them."
+    "v1.0.3 charter-cap rules (consistency sweep / stale-echo lane and REMOTE_GROUND_TRUTH_REQUIRED escalation handling) are parent-enforced prose rules audited by ntt-gate-auditor; neither ntt_gate.py nor the formal runner mechanically checks them."
   ]
 }

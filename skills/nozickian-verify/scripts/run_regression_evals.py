@@ -6,9 +6,9 @@ fixture definitions still exercise claim decomposition, method identification,
 nearby false-world rejection, nearby true-world retention, and gate evidence.
 """
 from __future__ import annotations
-import argparse, json, sys
+import argparse, json, re, sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Mapping
 
 REQUIRED_FIXTURE_FIELDS = ["id", "artifact", "task", "expected_claims", "false_worlds", "true_worlds", "expected_gate"]
 REQUIRED_CLAIM_FIELDS = ["id", "text", "importance"]
@@ -19,6 +19,27 @@ ACCEPTABLE_GATE_STATUSES = {"PASS-SCOPED", "PASS-TRACKED", "LIMITED", "FAIL", "U
 
 def add(checks: List[Dict[str, Any]], name: str, passed: bool, details: str = "") -> None:
     checks.append({"name": name, "passed": bool(passed), "details": details})
+
+
+def normalize_cli_display(value: Any, package_root: Path) -> Any:
+    """Normalize only the exact package root or a rooted child path."""
+    root_text = str(package_root.resolve())
+    if isinstance(value, str):
+        return re.sub(
+            re.escape(root_text) + r"(?=$|[\\/])",
+            lambda _match: "<package-root>",
+            value,
+        )
+    if isinstance(value, list):
+        return [normalize_cli_display(item, package_root) for item in value]
+    if isinstance(value, tuple):
+        return [normalize_cli_display(item, package_root) for item in value]
+    if isinstance(value, Mapping):
+        return {
+            key: normalize_cli_display(item, package_root)
+            for key, item in value.items()
+        }
+    return value
 
 
 def validate_fixture(root: Path, fixture: Dict[str, Any], checks: List[Dict[str, Any]]) -> None:
@@ -91,10 +112,11 @@ def main(argv=None) -> int:
     passed = sum(1 for c in checks if c["passed"])
     failed = len(checks) - passed
     result = {"status": "PASS" if failed == 0 else "FAIL", "checks_total": len(checks), "checks_passed": passed, "checks_failed": failed, "checks": checks}
+    display_result = normalize_cli_display(result, root)
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
-        args.json.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
-    print(json.dumps(result, indent=2, sort_keys=True))
+        args.json.write_text(json.dumps(display_result, indent=2, sort_keys=True), encoding="utf-8")
+    print(json.dumps(display_result, indent=2, sort_keys=True))
     return 0 if failed == 0 else 2
 
 

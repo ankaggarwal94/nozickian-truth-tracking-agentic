@@ -53,11 +53,11 @@ When validating this package or another skill, mutate the package in temporary c
 
 ## Echo-sweep mode (ntt-claim-extractor)
 
-Run this mode after per-claim adjudication - it is mandatory whenever the artifact is a revision of previously corrected material, or any claim was corrected or refuted during this verification (the activation predicate in SKILL.md activation checklist step 9). It targets consistency-class defects - stale echoes of superseded wording - that per-claim truth-testing does not surface. Enforcement is parent-owned and audited by the gate auditor; `ntt_gate.py` does not mechanically check that the sweep ran.
+Run this mode after per-claim adjudication - it is mandatory whenever the artifact is a revision of previously corrected material, or any claim was corrected or refuted during this verification (the activation predicate in SKILL.md activation checklist step 9). It targets consistency-class defects - stale echoes of superseded wording - that per-claim truth-testing does not surface. Enforcement is parent-owned and audited by the gate auditor; neither `ntt_gate.py` nor `run_formal_artifact_verification.py` mechanically checks that the sweep ran or validates its record fields.
 
 Input from the parent:
 
-- Corrected-claims list: for each correction, the claim id, old wording/value, new wording/value, and correction location.
+- Corrected-claims list: for each correction, a nonempty, duplicate-free `affected_claim_ids` array containing only canonical IDs from the certificate's current `claims[]`, the old wording/value, the new wording/value, and exact correction locators.
 - Artifact paths to sweep.
 
 Method: Grep the whole artifact for old-wording fragments - verbatim strings, quoted forms, case and format variants, and key identifiers/enums/numbers from the superseded wording. Classify each hit as:
@@ -68,14 +68,15 @@ Method: Grep the whole artifact for old-wording fragments - verbatim strings, qu
 
 Output per echo:
 
-- Location (file:line).
+- `affected_claim_ids`: a nonempty, duplicate-free array containing only canonical IDs from the certificate's current `claims[]`. Use the plural form because one correction can affect multiple claims. An artifact-global intentional reference may enumerate all current claim IDs; do not invent an `"all claims"` pseudo-ID.
+- `locations`: a nonempty, duplicate-free array of exact canonical locators. Current text uses `path:line` or `path:start-end`. A deleted or binary historical entry uses `git:<40-hex-commit>:<path>` without a fabricated line number. Split multiple locations into separate array entries; wildcard paths, parenthetical selectors, semicolon-joined paths, duplicate locators, and unversioned deleted paths are not exact locators.
 - The matched fragment.
 - Embedded-in-true-sentence: yes/no.
 - Classification (`live-claim` / `stale-echo` / `intentional-reference`).
-- Recommended edit.
-- `resolution`: `resolved` (must include the edited location and the replacement evidence) / `unresolved` / `accepted-intentional-reference`. Emit new findings as `unresolved` (or `accepted-intentional-reference` for intentional references); only the parent upgrades a record to `resolved`, after the edit lands.
+- `recommended_edit`: a specific edit, or an explicit retain/no-op instruction for an intentional historical reference.
+- `resolution`: `resolved` / `unresolved` / `accepted-intentional-reference`. Classification and resolution are paired: `live-claim` and `stale-echo` may be `resolved` or `unresolved`, never `accepted-intentional-reference`; `intentional-reference` must be `accepted-intentional-reference`. A resolved record must include a nonempty, duplicate-free `edited_locations` array using the same locator grammar and substantive `replacement_evidence`. An unresolved or accepted-intentional-reference record must not fabricate completion evidence; keep `edited_locations` empty and `replacement_evidence` empty or `none`. Emit new findings as `unresolved` (or `accepted-intentional-reference` for intentional references); only the parent upgrades a record to `resolved`, after the edit lands.
 
-Swept is not resolved: an unresolved `stale-echo` record caps the artifact at `PASS-SCOPED`, and an unresolved `live-claim` record returns the affected claim to adjudication - it cannot pass while unresolved. Parent-enforced and audited by the gate auditor; `ntt_gate.py` does not mechanically check it.
+Swept is not resolved: an unresolved `stale-echo` record caps the artifact at `PASS-SCOPED`, and an unresolved `live-claim` record returns every affected claim to adjudication - it cannot pass while unresolved. Parent-enforced and audited by the gate auditor; neither `ntt_gate.py` nor the formal runner mechanically checks these fields or applies these caps (issue #5 remains deferred).
 
 An explicit `none found` statement is required when the sweep finds nothing. Never omit the output section because it is empty.
 

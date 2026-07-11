@@ -11,8 +11,8 @@ Status: **PASS-SCOPED**
 | failed_claims | 0 |
 | critical_failed | 0 |
 | major_failed | 0 |
-| scope_limitations | 32 |
-| certificate_method_unknowns | 1 |
+| scope_limitations | 35 |
+| certificate_method_unknowns | 2 |
 | certificate_method_completeness | 1.0 |
 | evidence_root_checked | True |
 | strict_evidence | True |
@@ -26,9 +26,9 @@ Status: **PASS-SCOPED**
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---|
 | C-structure | critical | PASS | 1.00 | 1.00 | 1.00 | 2 | 2 | 5 | 1 | — |
 | C-gate-hardening | critical | PASS | 1.00 | 1.00 | 1.00 | 2 | 2 | 32 | 3 | — |
-| C-validator-sensitivity | critical | PASS | 1.00 | 1.00 | 1.00 | 2 | 2 | 3 | 1 | — |
+| C-validator-sensitivity | critical | PASS | 1.00 | 1.00 | 1.00 | 2 | 2 | 4 | 1 | — |
 | C-formal-invocation | critical | PASS | 1.00 | 1.00 | 1.00 | 2 | 2 | 36 | 3 | — |
-| C-pass-tracked-upgrade-audit | critical | PASS | 1.00 | 1.00 | 1.00 | 2 | 2 | 3 | 1 | — |
+| C-pass-tracked-upgrade-audit | critical | PASS | 1.00 | 1.00 | 1.00 | 2 | 2 | 4 | 1 | — |
 | C-github-readme-documentation | major | PASS | 1.00 | 1.00 | 1.00 | 2 | 2 | 1 | 1 | — |
 | C-charter-caps | critical | PASS | 1.00 | 1.00 | 1.00 | 2 | 2 | 2 | 1 | — |
 

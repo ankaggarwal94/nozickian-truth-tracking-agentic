@@ -1,7 +1,7 @@
 # Team/internal package validation report
 
 **Status:** PASS
-**Checks:** 1369 / 1369 passed
+**Checks:** 1564 / 1564 passed
 **Critical failures:** 0
 
 ## Gate contract tests
@@ -68,20 +68,20 @@ Passed 57 / 57
 - PASS: rejects degraded STANDARD.md even with updated manifest observed=FAIL critical_failed=16
 - PASS: rejects degraded PASS-TRACKED upgrade audit observed=FAIL critical_failed=14
 - PASS: rejects degraded GitHub README documentation observed=FAIL critical_failed=7
-- PASS: rejects PASS-TRACKED upgrade certifier pass stub observed=FAIL critical_failed=16
+- PASS: rejects PASS-TRACKED upgrade certifier pass stub observed=FAIL critical_failed=41
 - PASS: rejects broad skill allowed-tools Bash even with updated manifest observed=FAIL critical_failed=5
-- PASS: rejects unmanifested extra plugin agent observed=FAIL critical_failed=5
+- PASS: rejects unmanifested extra plugin agent observed=FAIL critical_failed=1
 - PASS: rejects recursive nested plugin agent after manifest update observed=FAIL critical_failed=1
-- PASS: rejects plugin settings.json activation surface observed=FAIL critical_failed=3
-- PASS: rejects plugin command hook surface observed=FAIL critical_failed=3
+- PASS: rejects plugin settings.json activation surface observed=FAIL critical_failed=1
+- PASS: rejects plugin command hook surface observed=FAIL critical_failed=1
 - PASS: rejects semantic prompt poisoning after manifest update observed=FAIL critical_failed=12
 - PASS: rejects placeholder eval worlds after manifest update observed=FAIL critical_failed=2
-- PASS: rejects live harness pass stub after manifest update observed=FAIL critical_failed=12
+- PASS: rejects live harness pass stub after manifest update observed=FAIL critical_failed=33
 - PASS: rejects always-pass gate stub after manifest update observed=FAIL critical_failed=31
 - PASS: rejects nonexistent eval fixture after manifest update observed=FAIL critical_failed=1
 - PASS: rejects Bash agent without worktree isolation observed=FAIL critical_failed=1
 - PASS: rejects missing behavior manifest observed=FAIL critical_failed=2
-- PASS: rejects MCP plugin surface observed=FAIL critical_failed=3
+- PASS: rejects MCP plugin surface observed=FAIL critical_failed=1
 - PASS: rejects inline plugin manifest hooks after manifest update observed=FAIL critical_failed=1
 - PASS: rejects inline plugin manifest MCP after manifest update observed=FAIL critical_failed=1
 - PASS: rejects manifest agent path override after manifest update observed=FAIL critical_failed=1
@@ -90,8 +90,10 @@ Passed 57 / 57
 - PASS: rejects skill-level hooks frontmatter after manifest update observed=FAIL critical_failed=2
 - PASS: rejects skill shell frontmatter after manifest update observed=FAIL critical_failed=2
 - PASS: rejects omitted subagent tools field observed=FAIL critical_failed=1
-- PASS: rejects degraded PACKAGE_SURFACE.json observed=FAIL critical_failed=8
-- PASS: rejects no-op CI workflow after manifest update observed=FAIL critical_failed=5
+- PASS: rejects degraded PACKAGE_SURFACE.json observed=FAIL critical_failed=23
+- PASS: rejects non-object PACKAGE_SURFACE.json root observed=FAIL critical_failed=1
+- PASS: rejects duplicate PACKAGE_SURFACE allowed_agents observed=FAIL critical_failed=2
+- PASS: rejects no-op CI workflow after manifest update observed=FAIL critical_failed=7
 - PASS: rejects formal runner pass stub after manifest update observed=FAIL critical_failed=43
 - PASS: rejects formal coordinator general-purpose fallback observed=FAIL critical_failed=1
 - PASS: rejects formal runner LIMITED as pass status observed=FAIL critical_failed=1
@@ -99,16 +101,72 @@ Passed 57 / 57
 - PASS: rejects active self-certificate stale package-version provenance observed=FAIL critical_failed=2
 - PASS: rejects downstream auto-pass epistemic closure observed=FAIL critical_failed=3
 - PASS: rejects stale generated self-validation artifact provenance observed=FAIL critical_failed=3
+- PASS: rejects non-UTF-8 release provenance file observed=FAIL critical_failed=1
+- PASS: rejects exact current package-root provenance leak observed=FAIL critical_failed=1
 - PASS: rejects self-certificate artifact version mismatching plugin version observed=FAIL critical_failed=2
+- PASS: rejects Git-free exported-package .pyc observed=FAIL critical_failed=1
+- PASS: rejects .git marker with Git evidence failure observed=FAIL critical_failed=2
+- PASS: rejects declared top-level allowlist drift observed=FAIL critical_failed=1
+- PASS: rejects omitted package-surface parity declaration observed=FAIL critical_failed=2
+- PASS: rejects contradictory allowed and forbidden package-surface declaration observed=FAIL critical_failed=2
+- PASS: rejects unknown package-surface top-level key observed=FAIL critical_failed=1
+- PASS: rejects opaque undeclared experimental plugin field observed=FAIL critical_failed=1
+- PASS: rejects stale active path despite ordinary historical wording observed=FAIL critical_failed=1
+- PASS: rejects Git-free symlink before target read observed=FAIL critical_failed=1
+- PASS: rejects Git-free FIFO unsupported entry type observed=FAIL critical_failed=1
+- PASS: rejects force-tracked checkout .pyc observed=FAIL critical_failed=1
+- PASS: rejects exact historical tracked __pycache__ bytecode observed=FAIL critical_failed=1
+- PASS: rejects tracked symlink before hashing observed=FAIL critical_failed=2
+- PASS: rejects untracked checkout symlink before reads observed=FAIL critical_failed=1
+- PASS: rejects untracked checkout FIFO before copies observed=FAIL critical_failed=1
+- PASS: rejects untracked checkout non-bytecode cruft observed=FAIL critical_failed=1
+- PASS: rejects index-only gitlink mode 160000 observed=FAIL critical_failed=1
 
 ## True-world benign variations
+- PASS: retains non-path root suffixes during display normalization observed=PASS
 - PASS: retains pass after README note observed=PASS
 - PASS: retains pass after benign GitHub docs note observed=PASS
 - PASS: retains pass after unused inert asset observed=PASS
 - PASS: retains pass after benign SOURCES whitespace with updated manifest observed=PASS
+- PASS: retains pass for clean Git-free copy/export observed=PASS
+- PASS: retains pass for reordered equivalent package-surface sets observed=PASS
+- PASS: retains pass for reordered equivalent plugin keys observed=PASS
+- PASS: retains explicit historical prose for both prior versions observed=PASS
+- PASS: retains ignored untracked checkout .pyc observed=PASS
 
 ## All checks
-- PASS: plugin manifest exists
+- PASS: package Git evidence is verified or genuinely absent
+- PASS: Git index has only stage-zero entries
+- PASS: Git index has only regular blob modes 100644/100755
+- PASS: no shippable build cruft (__pycache__/.pyc/.DS_Store)
+- PASS: no shippable symlink package entries
+- PASS: no shippable unsupported package entry types
+- PASS: no unexpected top-level files
+- PASS: no unexpected top-level directories
+- PASS: only expected team CI workflow present
+- PASS: CI workflow includes validate_package.py . --self-test
+- PASS: CI workflow includes git archive --format=tar --output=/tmp/nozickian_git_archive.tar HEAD
+- PASS: CI workflow includes validate_package.py /tmp/nozickian_git_archive_tree
+- PASS: CI workflow includes ntt_gate.py self_validation/self_certificate.json --evidence-root .
+- PASS: CI workflow includes run_regression_evals.py .
+- PASS: CI workflow includes run_formal_runner_contract_tests.py .
+- PASS: CI workflow includes run_formal_artifact_verification.py . README.md --dry-run
+- PASS: forbidden root file absent: .lsp.json
+- PASS: forbidden root file absent: .mcp.json
+- PASS: forbidden root file absent: settings.json
+- PASS: forbidden plugin surface absent: bin/
+- PASS: forbidden plugin surface absent: commands/
+- PASS: forbidden plugin surface absent: hooks/
+- PASS: forbidden plugin surface absent: monitors/
+- PASS: .claude-plugin contains only plugin.json
+- PASS: only expected skill directory present
+- PASS: no extra plugin agents, including recursive subdirectory agents
+- PASS: all expected plugin agents present
+- PASS: plugin agents directory contains only markdown agent files
+- PASS: skill directory contains only expected children
+- PASS: scripts directory contains only expected scripts
+- PASS: references directory contains only expected files
+- PASS: plugin manifest exists as a regular file
 - PASS: plugin manifest parses
 - PASS: plugin name is expected
 - PASS: plugin description substantive
@@ -153,9 +211,12 @@ Passed 57 / 57
 - PASS: stable release manifest exists
 - PASS: stable release manifest parses
 - PASS: stable release manifest schema recognized
+- PASS: stable release manifest generated_utc is the reproducible-build epoch
+- PASS: stable release manifest generated_utc kind is reproducible-build-epoch
+- PASS: stable release manifest explains generated_utc reproducible-build semantics
 - PASS: stable release manifest version matches plugin
 - PASS: stable release manifest status is scoped
-- PASS: stable release manifest documents volatile generated exclusions
+- PASS: stable release manifest volatile generated exclusions exactly match executable policy
 - PASS: stable release manifest self-hash matches canonical content
 - PASS: stable release manifest inventory is list
 - PASS: stable release manifest has no duplicate paths
@@ -423,6 +484,8 @@ Passed 57 / 57
 - PASS: stable release manifest bytes match: self_validation/evidence/C-structure__claim.json
 - PASS: stable release manifest hash matches: self_validation/evidence/C-structure__gate.json
 - PASS: stable release manifest bytes match: self_validation/evidence/C-structure__gate.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__FW-historical-nested-cruft.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-validator-sensitivity__FW-historical-nested-cruft.json
 - PASS: stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__FW-recursive-agent-after-manifest.json
 - PASS: stable release manifest bytes match: self_validation/evidence/C-validator-sensitivity__FW-recursive-agent-after-manifest.json
 - PASS: stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__FW-validator-1.json
@@ -669,12 +732,30 @@ Passed 57 / 57
 - PASS: self certificate declares downstream non-closure records
 - PASS: package surface policy exists
 - PASS: package surface policy parses
+- PASS: package surface policy root is a JSON object
+- PASS: package surface policy has no unknown top-level keys
 - PASS: package surface tier is team-internal
 - PASS: package surface closed
 - PASS: package surface allowed skills match
+- PASS: package surface allowed_agents is a unique string array
 - PASS: package surface agents match expected
-- PASS: package surface forbids runtime plugin fields
-- PASS: package surface forbids plugin surfaces
+- PASS: package surface allowed_top_level_files is a unique string array
+- PASS: package surface allowed_top_level_dirs is a unique string array
+- PASS: package surface allowed_ci_files is a unique string array
+- PASS: package surface allowed_plugin_manifest_files is a unique string array
+- PASS: package surface plugin manifest fields are a unique string array
+- PASS: package surface allowed_skill_runtime_dirs is a unique string array
+- PASS: package surface forbidden runtime fields are a unique string array
+- PASS: package surface forbidden surfaces are a unique string array
+- PASS: package surface top-level file allowlist matches executable policy
+- PASS: package surface top-level directory allowlist matches executable policy
+- PASS: package surface CI file allowlist matches executable policy
+- PASS: package surface plugin manifest file allowlist matches executable policy
+- PASS: package surface plugin manifest field allowlist matches executable policy
+- PASS: package surface skill runtime directory allowlist matches executable policy
+- PASS: package surface forbidden runtime plugin fields match executable policy
+- PASS: package surface forbidden plugin surfaces match executable policy
+- PASS: package surface has no allowed/forbidden contradictions
 - PASS: package surface documents formal invocation
 - PASS: package surface declares non-runtime GitHub docs
 - PASS: root GitHub README exists
@@ -784,30 +865,6 @@ Passed 57 / 57
 - PASS: self_validation GitHub README contains term: evidence
 - PASS: self_validation GitHub README contains term: UNVERIFIED_RUNTIME
 - PASS: GitHub README docs avoid plugin-loadable runtime component paths
-- PASS: no git-tracked build cruft (__pycache__/.pyc/.DS_Store)
-- PASS: no unexpected top-level files
-- PASS: no unexpected top-level directories
-- PASS: only expected team CI workflow present
-- PASS: CI workflow includes validate_package.py . --self-test
-- PASS: CI workflow includes ntt_gate.py self_validation/self_certificate.json --evidence-root .
-- PASS: CI workflow includes run_regression_evals.py .
-- PASS: CI workflow includes run_formal_runner_contract_tests.py .
-- PASS: CI workflow includes run_formal_artifact_verification.py . README.md --dry-run
-- PASS: forbidden root file absent: .lsp.json
-- PASS: forbidden root file absent: .mcp.json
-- PASS: forbidden root file absent: settings.json
-- PASS: forbidden plugin surface absent: bin/
-- PASS: forbidden plugin surface absent: commands/
-- PASS: forbidden plugin surface absent: hooks/
-- PASS: forbidden plugin surface absent: monitors/
-- PASS: .claude-plugin contains only plugin.json
-- PASS: only expected skill directory present
-- PASS: no extra plugin agents, including recursive subdirectory agents
-- PASS: all expected plugin agents present
-- PASS: plugin agents directory contains only markdown agent files
-- PASS: skill directory contains only expected children
-- PASS: scripts directory contains only expected scripts
-- PASS: references directory contains only expected files
 - PASS: behavior manifest exists
 - PASS: manifest lines parse
 - PASS: manifest covers all behavior files
@@ -1258,6 +1315,12 @@ Passed 57 / 57
 - PASS: script exists: validate_package.py
 - PASS: script substantive length: validate_package.py
 - PASS: script contains hardening token validate_package.py: check_closed_surface
+- PASS: script contains hardening token validate_package.py: GitEntry
+- PASS: script contains hardening token validate_package.py: ls-files", "--stage
+- PASS: script contains hardening token validate_package.py: regular blob modes 100644/100755
+- PASS: script contains hardening token validate_package.py: atomic_write_fixed_text
+- PASS: script contains hardening token validate_package.py: HARNESS_ERROR
+- PASS: script contains hardening token validate_package.py: GIT_OPTIONAL_LOCKS
 - PASS: script contains hardening token validate_package.py: check_self_certificate_nonclosure
 - PASS: script contains hardening token validate_package.py: self certificate artifact version matches plugin
 - PASS: script contains hardening token validate_package.py: downstream non-closure
@@ -1278,7 +1341,26 @@ Passed 57 / 57
 - PASS: script contains hardening token validate_package.py: absolute build path
 - PASS: script contains hardening token validate_package.py: provenance hygiene
 - PASS: script contains hardening token validate_package.py: stable release manifest self-hash
+- PASS: script contains hardening token validate_package.py: compute_stable_release_tree
 - PASS: script contains hardening token validate_package.py: run_release_lock_idempotence_test
+- PASS: script contains hardening token validate_package.py: run_promotion_certifier_contract_probes
+- PASS: script contains hardening token validate_package.py: mismatched-package-tree-sha256
+- PASS: script contains hardening token validate_package.py: external-only formal companion paths
+- PASS: script contains hardening token validate_package.py: shared-transcript-across-fixtures
+- PASS: script contains hardening token validate_package.py: prompt-only-argv
+- PASS: script contains hardening token validate_package.py: missing-plugin-dir-argv
+- PASS: script contains hardening token validate_package.py: wrong-output-format-argv
+- PASS: script contains hardening token validate_package.py: wrong-max-turns-argv
+- PASS: script contains hardening token validate_package.py: extra-fixture-arg
+- PASS: script contains hardening token validate_package.py: swapped-fixture-arg-order
+- PASS: script contains hardening token validate_package.py: wrong-preflight-argv
+- PASS: script contains hardening token validate_package.py: returncode-bool-false-version-preflight
+- PASS: script contains hardening token validate_package.py: validator text nonzero 1-error summary dominates pass
+- PASS: script contains hardening token validate_package.py: artifact-bytes-refreshed-manifests-stale-live
+- PASS: script contains hardening token validate_package.py: fixture-spec-refreshed-manifests-stale-live
+- PASS: script contains hardening token validate_package.py: nonartifact-source-refreshed-manifests-stale-live
+- PASS: script contains hardening token validate_package.py: manifest exclusion cannot hide behavior file
+- PASS: script contains hardening token validate_package.py: fresh validator is unconditional
 - PASS: script contains hardening token validate_package.py: --skip-release-idempotence
 - PASS: script contains hardening token validate_package.py: volatile generated exclusions
 - PASS: script contains hardening token validate_package.py: TemporaryDirectory
@@ -1321,7 +1403,28 @@ Passed 57 / 57
 - PASS: script contains hardening token run_live_skill_evals.py: --output-format
 - PASS: script contains hardening token run_live_skill_evals.py: --max-turns
 - PASS: script contains hardening token run_live_skill_evals.py: build_fixture_prompt
+- PASS: script contains hardening token run_live_skill_evals.py: package_tree_algorithm
+- PASS: script contains hardening token run_live_skill_evals.py: package_tree_sha256
+- PASS: script contains hardening token run_live_skill_evals.py: fixture_spec_sha256
+- PASS: script contains hardening token run_live_skill_evals.py: artifact_sha256
+- PASS: script contains hardening token run_live_skill_evals.py: run_config
+- PASS: script contains hardening token run_live_skill_evals.py: compute_stable_release_tree
+- PASS: script contains hardening token run_live_skill_evals.py: prompt_sha256
+- PASS: script contains hardening token run_live_skill_evals.py: transcript_sha256
+- PASS: script contains hardening token run_live_skill_evals.py: sha256_text
 - PASS: script contains hardening token run_live_skill_evals.py: transcript_checks
+- PASS: script contains hardening token run_live_skill_evals.py: structured_json_envelope
+- PASS: script contains hardening token run_live_skill_evals.py: report_field
+- PASS: script contains hardening token run_live_skill_evals.py: runtime_identity
+- PASS: script contains hardening token run_live_skill_evals.py: provenance_schema_version
+- PASS: script contains hardening token run_live_skill_evals.py: observed-not-cryptographically-authenticated
+- PASS: script contains hardening token run_live_skill_evals.py: runtime_preflight_succeeded
+- PASS: script contains hardening token run_live_skill_evals.py: resolve_claude_executable
+- PASS: script contains hardening token run_live_skill_evals.py: load_regular_json
+- PASS: script contains hardening token run_live_skill_evals.py: executable_sha256_pre
+- PASS: script contains hardening token run_live_skill_evals.py: executable_sha256_post
+- PASS: script contains hardening token run_live_skill_evals.py: fingerprint_stable
+- PASS: script contains hardening token run_live_skill_evals.py: regular non-symlink
 - PASS: script contains hardening token run_live_skill_evals.py: UNVERIFIED_RUNTIME
 - PASS: script contains hardening token run_live_skill_evals.py: --run-fixtures
 - PASS: script contains hardening token run_live_skill_evals.py: ACCEPTABLE_PASS_STATUSES
@@ -1385,8 +1488,33 @@ Passed 57 / 57
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: promotion_certificate.json
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: official validators
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: live runtime eval
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: live provenance schema is 1.0
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: live runtime executable fingerprints are valid and stable
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: live plugin validation preflight exact normalized argv succeeded
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: live fixture IDs exactly match the current package once each
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: live fixture specification SHA-256 matches current evals bytes
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: live fixture bundle-local transcript paths are unique and complete
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: artifact SHA-256 matches current exact bytes
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: transcript SHA-256 matches fixture record
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: transcript command exactly matches normalized argv
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: transcript command prompt binds exact fixture and artifact
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: self-reported checks match transcript replay
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: structured JSON envelope
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: observed-not-cryptographically-authenticated
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: formal result
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: trace authenticated
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: self-contained regular file
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: package_tree_sha256
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: compute_stable_release_tree
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: current package tree verifies through shared validator helper
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: fresh deterministic package validator still passes
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: fresh_validation_unconditional
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: evidence refs are unique bundle-local regular files
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: returncode_is_integer_zero
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: TEXT_NONZERO_FAILURE_SUMMARY_RE
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: anchored negative status
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: stale-token input is readable regular file
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: regular_file_error
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: PASS-TRACKED
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: UNVERIFIED_RUNTIME
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: derived_or_downstream_claims
@@ -1436,6 +1564,73 @@ Passed 57 / 57
 - PASS: script contains hardening token run_formal_runner_contract_tests.py: valid_assistant_tool_use_user_tool_result_still_authenticates
 - PASS: formal runner contract test is substantive
 - PASS: release-lock command chain is idempotent with stable manifest
+- PASS: checkout fixture Git top level is the disposable destination
+- PASS: checkout fixture index resolves inside the disposable destination
+- PASS: checkout fixture mutation-specific add uses the disposable index
+- PASS: checkout fixture leaves source index and status unchanged
+- PASS: update-manifest rejects a symlinked behavior manifest
+- PASS: update-manifest symlink probe preserves external sentinel bytes
+- PASS: atomic manifest writer replaces a link without following its target
+- PASS: update-manifest symlink probe leaves source checkout unchanged
+- PASS: display path normalization is boundary-aware across all harnesses
+- PASS: live harness true world accepts a structured substantive report envelope
+- PASS: live harness false world rejects recursive keyword echoes outside report field
+- PASS: live harness false world rejects non-object JSON output
+- PASS: live harness false world reports plugin-preflight failure normally
+- PASS: live harness executes the fingerprinted absolute binary across fixture cwd changes
+- PASS: live harness persists package, fixture, artifact, prompt, config, and transcript byte bindings
+- PASS: live harness rejects symlink and FIFO plugin manifests without following them
+- PASS: promotion true world: valid three-fixture transcript-bound bundle passes its lane
+- PASS: promotion false world: stale-source-release
+- PASS: promotion false world: carried-forward-result
+- PASS: promotion false world: partial-fixture-set
+- PASS: promotion false world: absent-transcript
+- PASS: promotion false world: external-only-transcript
+- PASS: promotion false world: fabricated-self-reported-checks
+- PASS: promotion false world: shared-transcript-across-fixtures
+- PASS: promotion false world: swapped-fixture-transcripts
+- PASS: promotion false world: wrong-recorded-prompt-hash
+- PASS: promotion false world: wrong-artifact-fixture-command-prompt
+- PASS: promotion false world: prompt-only-argv
+- PASS: promotion false world: missing-plugin-dir-argv
+- PASS: promotion false world: wrong-output-format-argv
+- PASS: promotion false world: wrong-max-turns-argv
+- PASS: promotion false world: extra-fixture-arg
+- PASS: promotion false world: swapped-fixture-arg-order
+- PASS: promotion false world: wrong-preflight-argv
+- PASS: promotion false world: returncode-bool-false-version-preflight
+- PASS: promotion false world: returncode-bool-true-aggregate-preflight
+- PASS: promotion false world: returncode-float-zero-fixture-result
+- PASS: promotion false world: returncode-string-zero-transcript
+- PASS: promotion false world: artifact-bytes-refreshed-manifests-stale-live
+- PASS: promotion false world: fixture-spec-refreshed-manifests-stale-live
+- PASS: promotion false world: nonartifact-source-refreshed-manifests-stale-live
+- PASS: promotion false world: contradictory official-validator JSON statuses
+- PASS: promotion false world: invalid validator text cannot match valid
+- PASS: promotion false world: validator text nonzero 1-error summary dominates pass
+- PASS: promotion false world: validator text nonzero 2-errors-punctuation-case summary dominates pass
+- PASS: promotion false world: validator text nonzero 1-failure-punctuation-case summary dominates pass
+- PASS: promotion false world: validator text nonzero 3-failed-punctuation-case summary dominates pass
+- PASS: promotion false world: official validator returncode false is not integer zero
+- PASS: promotion false world: official validator returncode true is not integer zero
+- PASS: promotion false world: official validator returncode float-zero is not integer zero
+- PASS: promotion false world: official validator returncode string-zero is not integer zero
+- PASS: promotion false world: official validator returncode null is not integer zero
+- PASS: promotion true world: validator text zero-errors-plus-pass is retained
+- PASS: promotion true world: validator text zero-failed-plus-pass is retained
+- PASS: promotion true world: integer-zero anchored official-validator success is retained
+- PASS: promotion true world: package tree and five local evidence refs bind
+- PASS: promotion false world: mismatched-package-tree-sha256
+- PASS: promotion false world: missing-evidence-ref
+- PASS: promotion false world: outside-evidence-ref
+- PASS: promotion false world: duplicate-evidence-ref
+- PASS: promotion false world: manifest exclusion cannot hide behavior file
+- PASS: promotion false world: tampered manifest exclusion arrays fail current policy
+- PASS: promotion false world: missing independently derived inventory path fails
+- PASS: promotion false world: fresh validator is unconditional and rejects stale package
+- PASS: promotion false world: external-only formal companion paths
+- PASS: promotion no-follow probes reject symlink and special inputs without external reads
+- PASS: mutation harness classifies validator exceptions as HARNESS_ERROR
 - PASS: false-world mutation: rejects degraded STANDARD.md even with updated manifest
 - PASS: false-world mutation: rejects degraded PASS-TRACKED upgrade audit
 - PASS: false-world mutation: rejects degraded GitHub README documentation
@@ -1462,6 +1657,8 @@ Passed 57 / 57
 - PASS: false-world mutation: rejects skill shell frontmatter after manifest update
 - PASS: false-world mutation: rejects omitted subagent tools field
 - PASS: false-world mutation: rejects degraded PACKAGE_SURFACE.json
+- PASS: false-world mutation: rejects non-object PACKAGE_SURFACE.json root
+- PASS: false-world mutation: rejects duplicate PACKAGE_SURFACE allowed_agents
 - PASS: false-world mutation: rejects no-op CI workflow after manifest update
 - PASS: false-world mutation: rejects formal runner pass stub after manifest update
 - PASS: false-world mutation: rejects formal coordinator general-purpose fallback
@@ -1470,10 +1667,35 @@ Passed 57 / 57
 - PASS: false-world mutation: rejects active self-certificate stale package-version provenance
 - PASS: false-world mutation: rejects downstream auto-pass epistemic closure
 - PASS: false-world mutation: rejects stale generated self-validation artifact provenance
+- PASS: false-world mutation: rejects non-UTF-8 release provenance file
+- PASS: false-world mutation: rejects exact current package-root provenance leak
 - PASS: false-world mutation: rejects self-certificate artifact version mismatching plugin version
+- PASS: false-world mutation: rejects Git-free exported-package .pyc
+- PASS: false-world mutation: rejects .git marker with Git evidence failure
+- PASS: false-world mutation: rejects declared top-level allowlist drift
+- PASS: false-world mutation: rejects omitted package-surface parity declaration
+- PASS: false-world mutation: rejects contradictory allowed and forbidden package-surface declaration
+- PASS: false-world mutation: rejects unknown package-surface top-level key
+- PASS: false-world mutation: rejects opaque undeclared experimental plugin field
+- PASS: false-world mutation: rejects stale active path despite ordinary historical wording
+- PASS: false-world mutation: rejects Git-free symlink before target read
+- PASS: false-world mutation: rejects Git-free FIFO unsupported entry type
+- PASS: false-world mutation: rejects force-tracked checkout .pyc
+- PASS: false-world mutation: rejects exact historical tracked __pycache__ bytecode
+- PASS: false-world mutation: rejects tracked symlink before hashing
+- PASS: false-world mutation: rejects untracked checkout symlink before reads
+- PASS: false-world mutation: rejects untracked checkout FIFO before copies
+- PASS: false-world mutation: rejects untracked checkout non-bytecode cruft
+- PASS: false-world mutation: rejects index-only gitlink mode 160000
+- PASS: true-world benign variation: retains non-path root suffixes during display normalization
 - PASS: true-world benign variation: retains pass after README note
 - PASS: true-world benign variation: retains pass after benign GitHub docs note
 - PASS: true-world benign variation: retains pass after unused inert asset
 - PASS: true-world benign variation: retains pass after benign SOURCES whitespace with updated manifest
+- PASS: true-world benign variation: retains pass for clean Git-free copy/export
+- PASS: true-world benign variation: retains pass for reordered equivalent package-surface sets
+- PASS: true-world benign variation: retains pass for reordered equivalent plugin keys
+- PASS: true-world benign variation: retains explicit historical prose for both prior versions
+- PASS: true-world benign variation: retains ignored untracked checkout .pyc
 - PASS: gate contract tests pass
 - PASS: formal runner contract tests pass

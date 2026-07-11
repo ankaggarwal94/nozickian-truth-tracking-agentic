@@ -8,12 +8,16 @@
   "certificate_version": "2.0",
   "claims": [],
   "consistency_sweep": {
-    "activation_reason": "WHY_THE_SWEEP_WAS_MANDATORY_OR_EMPTY_IF_NOT_APPLICABLE",
-    "applies": false,
+    "activation_reason": "EXAMPLE_CORRECTED_CLAIMS_ARE_PRESENT_SO_THE_SWEEP_IS_MANDATORY",
+    "applies": true,
     "corrected_claims": [
       {
-        "claim_id": "C-001",
-        "correction_location": "PATH_OR_FILE_WHERE_THE_CORRECTION_LANDED",
+        "affected_claim_ids": [
+          "C-001"
+        ],
+        "correction_locations": [
+          "PATH:LINE_OR_PATH:START-END"
+        ],
         "new_wording": "CORRECTED_WORDING_OR_VALUE",
         "old_wording": "SUPERSEDED_WORDING_OR_VALUE"
       }
@@ -21,18 +25,26 @@
     "correction_evidence_checked": "WHAT_CORRECTION_EVIDENCE_WAS_AFFIRMATIVELY_CHECKED_BEFORE_RULING_ON_APPLICABILITY",
     "echo_findings": [
       {
-        "classification": "live-claim|stale-echo|intentional-reference",
-        "edited_location": "FILE_LINE_WHERE_THE_ECHO_WAS_EDITED_OR_none",
+        "affected_claim_ids": [
+          "C-001"
+        ],
+        "classification": "live-claim",
+        "edited_locations": [
+          "PATH:LINE_OR_PATH:START-END_REQUIRED_WHEN_RESOLVED_ELSE_EMPTY"
+        ],
         "embedded_in_true_sentence": "yes|no",
         "fragment": "VERBATIM_MATCHED_FRAGMENT",
-        "location": "FILE:LINE",
+        "locations": [
+          "PATH:LINE_OR_PATH:START-END_OR_git:40_HEX_COMMIT:PATH"
+        ],
+        "recommended_edit": "SPECIFIC_EDIT_OR_RETAIN_AS_INTENTIONAL_HISTORY",
         "replacement_evidence": "EVIDENCE_THAT_THE_EDIT_LANDED_REQUIRED_WHEN_RESOLUTION_IS_RESOLVED",
-        "resolution": "resolved|unresolved|accepted-intentional-reference"
+        "resolution": "resolved"
       }
     ],
     "none_found": false,
-    "not_applicable_reason": "REASON_IF_APPLIES_FALSE",
-    "sweep_ran": false,
+    "not_applicable_reason": "",
+    "sweep_ran": true,
     "swept_at": "YYYY-MM-DD_OR_RELEASE_LABEL"
   },
   "derived_or_downstream_claims": [
@@ -78,6 +90,43 @@
       "strict gate PASS-TRACKED on generated certificate",
       "downstream non-closure review"
     ],
+    "live_result_bindings": {
+      "artifact_sha256_by_fixture": {
+        "FIXTURE_ID": "LOWERCASE_SHA256_OVER_EXACT_ARTIFACT_BYTES"
+      },
+      "fixture_argv_shape": [
+        "<claude-cli>",
+        "--plugin-dir",
+        "<package-root>",
+        "-p",
+        "--output-format",
+        "json",
+        "--max-turns",
+        "<recorded positive integer>",
+        "<canonical normalized prompt>"
+      ],
+      "fixture_spec_sha256": "LOWERCASE_SHA256_OVER_EXACT_EVALS_JSON_BYTES",
+      "package_tree_algorithm": "ntt-stable-release-tree-v1",
+      "package_tree_sha256": "LOWERCASE_SHA256_FROM_SHARED_VALIDATOR_HELPER",
+      "preflight_argv": [
+        [
+          "<claude-cli>",
+          "--version"
+        ],
+        [
+          "<claude-cli>",
+          "plugin",
+          "validate",
+          "<package-root>"
+        ]
+      ],
+      "run_config": {
+        "max_turns": 20,
+        "output_format": "json",
+        "plugin_dir": "<package-root>",
+        "print_mode": true
+      }
+    },
     "upgrade_from_status": "PASS-SCOPED"
   },
   "remote_escalations": [

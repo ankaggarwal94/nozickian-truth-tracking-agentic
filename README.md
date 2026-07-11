@@ -93,7 +93,7 @@ python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py \
   --markdown pass_tracked_audit_bundle/pass_tracked_certification_result.md
 ```
 
-The certifier requires an external audit bundle with deterministic checks, official-validator evidence or scoped exclusions, live fixture transcripts, formal artifact traces, strict-gate PASS-TRACKED output, stale-token scans, and downstream non-closure records.
+The certifier requires an external audit bundle with deterministic checks, official-validator evidence or scoped exclusions, live fixture transcripts bound to current package/evals/artifact bytes and exact normalized argv, formal artifact traces, strict-gate PASS-TRACKED output, stale-token scans, and downstream non-closure records.
 
 ## GitHub README policy
 

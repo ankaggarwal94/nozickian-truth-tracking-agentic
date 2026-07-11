@@ -96,6 +96,29 @@ def _lower(v: Any) -> str:
     return str(v or "").strip().lower()
 
 
+def normalize_cli_display(value: Any, package_root: Optional[Path]) -> Any:
+    """Normalize only serialized CLI/report values, not gate evaluation state."""
+    if package_root is None:
+        return value
+    root_text = str(package_root.resolve())
+    if isinstance(value, str):
+        return re.sub(
+            re.escape(root_text) + r"(?=$|[\\/])",
+            lambda _match: "<package-root>",
+            value,
+        )
+    if isinstance(value, list):
+        return [normalize_cli_display(item, package_root) for item in value]
+    if isinstance(value, tuple):
+        return [normalize_cli_display(item, package_root) for item in value]
+    if isinstance(value, Mapping):
+        return {
+            key: normalize_cli_display(item, package_root)
+            for key, item in value.items()
+        }
+    return value
+
+
 def _unknown_item(v: Any) -> bool:
     if isinstance(v, bool): return False
     if isinstance(v, (int, float)): return False
@@ -685,9 +708,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = ap.parse_args(argv)
     evidence_root = args.evidence_root.resolve() if args.evidence_root else None
     result = evaluate_certificate(load_json(args.certificate), evidence_root=evidence_root, strict_evidence=(args.strict_evidence or evidence_root is not None), max_unknown_depth=args.max_unknown_depth)
-    print(json.dumps(result, indent=2, sort_keys=True))
+    display_result = normalize_cli_display(result, evidence_root)
+    print(json.dumps(display_result, indent=2, sort_keys=True))
     if args.markdown:
-        args.markdown.parent.mkdir(parents=True, exist_ok=True); args.markdown.write_text(to_markdown(result, args.certificate), encoding="utf-8")
+        report = to_markdown(display_result, args.certificate)
+        report = normalize_cli_display(report, evidence_root)
+        args.markdown.parent.mkdir(parents=True, exist_ok=True); args.markdown.write_text(report, encoding="utf-8")
     return 0 if result["status"] in {"PASS-TRACKED", "PASS-SCOPED"} else 2
 
 if __name__ == "__main__":

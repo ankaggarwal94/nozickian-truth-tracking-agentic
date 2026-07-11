@@ -1,8 +1,194 @@
 {
   "checks": [
     {
+      "details": "state=verified-worktree; verified root worktree with 272 staged index entries",
+      "name": "package Git evidence is verified or genuinely absent",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "Git index has only stage-zero entries",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "Git index has only regular blob modes 100644/100755",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "tracked index cruft: ; rejected physical/tracked cruft: ; tolerated untracked bytecode: ",
+      "name": "no shippable build cruft (__pycache__/.pyc/.DS_Store)",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "physical worktree symlinks: ",
+      "name": "no shippable symlink package entries",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "physical worktree unsupported entries: ",
+      "name": "no shippable unsupported package entry types",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "no unexpected top-level files",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "no unexpected top-level directories",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": ".github/workflows/nozickian-team-ci.yml",
+      "name": "only expected team CI workflow present",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "validate_package.py . --self-test",
+      "name": "CI workflow includes validate_package.py . --self-test",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "git archive --format=tar --output=/tmp/nozickian_git_archive.tar HEAD",
+      "name": "CI workflow includes git archive --format=tar --output=/tmp/nozickian_git_archive.tar HEAD",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "validate_package.py /tmp/nozickian_git_archive_tree",
+      "name": "CI workflow includes validate_package.py /tmp/nozickian_git_archive_tree",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "ntt_gate.py self_validation/self_certificate.json --evidence-root .",
+      "name": "CI workflow includes ntt_gate.py self_validation/self_certificate.json --evidence-root .",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "run_regression_evals.py .",
+      "name": "CI workflow includes run_regression_evals.py .",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "run_formal_runner_contract_tests.py .",
+      "name": "CI workflow includes run_formal_runner_contract_tests.py .",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "run_formal_artifact_verification.py . README.md --dry-run",
+      "name": "CI workflow includes run_formal_artifact_verification.py . README.md --dry-run",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": ".lsp.json",
+      "name": "forbidden root file absent: .lsp.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": ".mcp.json",
+      "name": "forbidden root file absent: .mcp.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "settings.json",
+      "name": "forbidden root file absent: settings.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "bin",
+      "name": "forbidden plugin surface absent: bin/",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "commands",
+      "name": "forbidden plugin surface absent: commands/",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "hooks",
+      "name": "forbidden plugin surface absent: hooks/",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "monitors",
+      "name": "forbidden plugin surface absent: monitors/",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": ".claude-plugin/plugin.json",
+      "name": ".claude-plugin contains only plugin.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "skills/nozickian-verify",
+      "name": "only expected skill directory present",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "no extra plugin agents, including recursive subdirectory agents",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "all expected plugin agents present",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "plugin agents directory contains only markdown agent files",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "skill directory contains only expected children",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "certify_pass_tracked_upgrade.py, ntt_gate.py, run_formal_artifact_verification.py, run_formal_runner_contract_tests.py, run_gate_contract_tests.py, run_live_skill_evals.py, run_regression_evals.py, validate_package.py",
+      "name": "scripts directory contains only expected scripts",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "ARTIFACT_GUIDE.md, EVAL_BEST_PRACTICES.md, EVIDENCE_SCHEMA.md, OUTPUT_TEMPLATES.md, PASS_TRACKED_UPGRADE_AUDIT.md, SOURCES.md, STANDARD.md, SUBAGENT_PROTOCOLS.md",
+      "name": "references directory contains only expected files",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
       "details": "<package-root>/.claude-plugin/plugin.json",
-      "name": "plugin manifest exists",
+      "name": "plugin manifest exists as a regular file",
       "passed": true,
       "severity": "critical"
     },
@@ -145,7 +331,7 @@
       "severity": "critical"
     },
     {
-      "details": "['python3 skills/nozickian-verify/scripts/validate_package.py . --self-test', 'python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence', 'python3 skills/nozickian-verify/scripts/run_regression_evals.py .', 'python3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . <target-artifact> --dry-run --skip-prechecks --output-dir ../ntt_release_formal_invocation_dry_run --json ../ntt_release_formal_invocation_dry_run.json', 'python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json ../ntt_release_formal_runner_contract_results.json', 'optional: claude plugin validate . --strict', 'optional: skills-ref validate skills/nozickian-verify', 'optional: python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures', 'python3 skills/nozickian-verify/scripts/validate_package.py .', 'python3 - <<\\'PY\\'\\nfrom pathlib import Path\\ntext = \"\\\\n\".join(p.read_text(encoding=\"utf-8\", errors=\"replace\") for p in Path(\"self_validation\").rglob(\"*\") if p.is_file())\\ntokens = [\\n    \"/\" + \"mnt\" + \"/\" + \"data\",\\n    \"/\" + \"home\" + \"/\" + \"oai\",\\n    \"ntt_v07\" + \"12_work\",\\n    \"ntt_v07\" + \"11_work\",\\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"12\",\\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"11\",\\n    \"v07\" + \"12_targeted_probe_results\",\\n    \"v07\" + \"11_targeted_probe_results\",\\n]\\nfor token in tokens:\\n    assert token not in text, token\\nPY', 'python3 - <<\\'PY\\'\\nimport json, pathlib\\njson.loads(pathlib.Path(\"STABLE_RELEASE_MANIFEST.json\").read_text())\\nPY', 'promotion-only: python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json']",
+      "details": "['python3 skills/nozickian-verify/scripts/validate_package.py . --self-test', 'python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence', 'python3 skills/nozickian-verify/scripts/run_regression_evals.py .', 'python3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . <target-artifact> --dry-run --skip-prechecks --output-dir ../ntt_release_formal_invocation_dry_run --json ../ntt_release_formal_invocation_dry_run.json', 'python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json ../ntt_release_formal_runner_contract_results.json', 'optional: claude plugin validate . --strict', 'optional: skills-ref validate skills/nozickian-verify', 'optional: python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures', 'python3 skills/nozickian-verify/scripts/validate_package.py .', 'python3 - <<\\'PY\\'\\nfrom pathlib import Path\\nroot = Path(\".\").resolve()\\ntext = \"\\\\n\".join(p.read_text(encoding=\"utf-8\", errors=\"replace\") for p in Path(\"self_validation\").rglob(\"*\") if p.is_file())\\ntokens = [\\n    \"/\" + \"mnt\" + \"/\" + \"data\",\\n    \"/\" + \"home\" + \"/\" + \"oai\",\\n    \"ntt_v07\" + \"12_work\",\\n    \"ntt_v07\" + \"11_work\",\\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"12\",\\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"11\",\\n    \"v07\" + \"12_targeted_probe_results\",\\n    \"v07\" + \"11_targeted_probe_results\",\\n    str(root),\\n]\\nfor token in tokens:\\n    assert token not in text, token\\nPY', 'python3 - <<\\'PY\\'\\nimport json, pathlib\\njson.loads(pathlib.Path(\"STABLE_RELEASE_MANIFEST.json\").read_text())\\nPY', 'promotion-only: python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json']",
       "name": "release lock commands listed",
       "passed": true,
       "severity": "critical"
@@ -181,13 +367,13 @@
       "severity": "critical"
     },
     {
-      "details": "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test\npython3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence\npython3 skills/nozickian-verify/scripts/run_regression_evals.py .\npython3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . <target-artifact> --dry-run --skip-prechecks --output-dir ../ntt_release_formal_invocation_dry_run --json ../ntt_release_formal_invocation_dry_run.json\npython3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json ../ntt_release_formal_runner_contract_results.json\noptional: claude plugin validate . --strict\noptional: skills-ref validate skills/nozickian-verify\noptional: python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures\npython3 skills/nozickian-verify/scripts/validate_package.py .\npython3 - <<'PY'\nfrom pathlib import Path\ntext = \"\\n\".join(p.read_text(encoding=\"utf-8\", errors=\"replace\") for p in Path(\"self_validation\").rglob(\"*\") if p.is_file())\ntokens = [\n    \"/\" + \"mnt\" + \"/\" + \"data\",\n    \"/\" + \"home\" + \"/\" + \"oai\",\n    \"ntt_v07\" + \"12_work\",\n    \"ntt_v07\" + \"11_work\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"12\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"11\",\n    \"v07\" + \"12_targeted_probe_results\",\n    \"v07\" + \"11_targeted_probe_results\",\n]\nfor token in tokens:\n    assert token not in text, token\nPY\npython3 - <<'PY'\nimport json, pathlib\njson.loads(pathlib.Path(\"STABLE_RELEASE_MANIFEST.json\").read_text())\nPY\npromotion-only: python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json",
+      "details": "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test\npython3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence\npython3 skills/nozickian-verify/scripts/run_regression_evals.py .\npython3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . <target-artifact> --dry-run --skip-prechecks --output-dir ../ntt_release_formal_invocation_dry_run --json ../ntt_release_formal_invocation_dry_run.json\npython3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json ../ntt_release_formal_runner_contract_results.json\noptional: claude plugin validate . --strict\noptional: skills-ref validate skills/nozickian-verify\noptional: python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures\npython3 skills/nozickian-verify/scripts/validate_package.py .\npython3 - <<'PY'\nfrom pathlib import Path\nroot = Path(\".\").resolve()\ntext = \"\\n\".join(p.read_text(encoding=\"utf-8\", errors=\"replace\") for p in Path(\"self_validation\").rglob(\"*\") if p.is_file())\ntokens = [\n    \"/\" + \"mnt\" + \"/\" + \"data\",\n    \"/\" + \"home\" + \"/\" + \"oai\",\n    \"ntt_v07\" + \"12_work\",\n    \"ntt_v07\" + \"11_work\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"12\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"11\",\n    \"v07\" + \"12_targeted_probe_results\",\n    \"v07\" + \"11_targeted_probe_results\",\n    str(root),\n]\nfor token in tokens:\n    assert token not in text, token\nPY\npython3 - <<'PY'\nimport json, pathlib\njson.loads(pathlib.Path(\"STABLE_RELEASE_MANIFEST.json\").read_text())\nPY\npromotion-only: python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json",
       "name": "release lock formal dry-run avoids package-tree output",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test\npython3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence\npython3 skills/nozickian-verify/scripts/run_regression_evals.py .\npython3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . <target-artifact> --dry-run --skip-prechecks --output-dir ../ntt_release_formal_invocation_dry_run --json ../ntt_release_formal_invocation_dry_run.json\npython3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json ../ntt_release_formal_runner_contract_results.json\noptional: claude plugin validate . --strict\noptional: skills-ref validate skills/nozickian-verify\noptional: python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures\npython3 skills/nozickian-verify/scripts/validate_package.py .\npython3 - <<'PY'\nfrom pathlib import Path\ntext = \"\\n\".join(p.read_text(encoding=\"utf-8\", errors=\"replace\") for p in Path(\"self_validation\").rglob(\"*\") if p.is_file())\ntokens = [\n    \"/\" + \"mnt\" + \"/\" + \"data\",\n    \"/\" + \"home\" + \"/\" + \"oai\",\n    \"ntt_v07\" + \"12_work\",\n    \"ntt_v07\" + \"11_work\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"12\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"11\",\n    \"v07\" + \"12_targeted_probe_results\",\n    \"v07\" + \"11_targeted_probe_results\",\n]\nfor token in tokens:\n    assert token not in text, token\nPY\npython3 - <<'PY'\nimport json, pathlib\njson.loads(pathlib.Path(\"STABLE_RELEASE_MANIFEST.json\").read_text())\nPY\npromotion-only: python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json",
+      "details": "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test\npython3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence\npython3 skills/nozickian-verify/scripts/run_regression_evals.py .\npython3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . <target-artifact> --dry-run --skip-prechecks --output-dir ../ntt_release_formal_invocation_dry_run --json ../ntt_release_formal_invocation_dry_run.json\npython3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json ../ntt_release_formal_runner_contract_results.json\noptional: claude plugin validate . --strict\noptional: skills-ref validate skills/nozickian-verify\noptional: python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures\npython3 skills/nozickian-verify/scripts/validate_package.py .\npython3 - <<'PY'\nfrom pathlib import Path\nroot = Path(\".\").resolve()\ntext = \"\\n\".join(p.read_text(encoding=\"utf-8\", errors=\"replace\") for p in Path(\"self_validation\").rglob(\"*\") if p.is_file())\ntokens = [\n    \"/\" + \"mnt\" + \"/\" + \"data\",\n    \"/\" + \"home\" + \"/\" + \"oai\",\n    \"ntt_v07\" + \"12_work\",\n    \"ntt_v07\" + \"11_work\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"12\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"11\",\n    \"v07\" + \"12_targeted_probe_results\",\n    \"v07\" + \"11_targeted_probe_results\",\n    str(root),\n]\nfor token in tokens:\n    assert token not in text, token\nPY\npython3 - <<'PY'\nimport json, pathlib\njson.loads(pathlib.Path(\"STABLE_RELEASE_MANIFEST.json\").read_text())\nPY\npromotion-only: python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json",
       "name": "release lock records external generated-output path",
       "passed": true,
       "severity": "critical"
@@ -199,7 +385,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=19943",
+      "details": "chars=34180",
       "name": "audit report is substantive",
       "passed": true,
       "severity": "critical"
@@ -241,7 +427,7 @@
       "severity": "critical"
     },
     {
-      "details": "table_rows=137",
+      "details": "table_rows=177",
       "name": "audit report is tabulated",
       "passed": true,
       "severity": "critical"
@@ -271,6 +457,24 @@
       "severity": "critical"
     },
     {
+      "details": "2026-05-26T00:00:00Z",
+      "name": "stable release manifest generated_utc is the reproducible-build epoch",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "reproducible-build-epoch",
+      "name": "stable release manifest generated_utc kind is reproducible-build-epoch",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "Reproducible-build epoch: stable deterministic release-manifest default, not wall-clock generation time.",
+      "name": "stable release manifest explains generated_utc reproducible-build semantics",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
       "details": "manifest=1.0.3 plugin=1.0.3",
       "name": "stable release manifest version matches plugin",
       "passed": true,
@@ -284,18 +488,18 @@
     },
     {
       "details": "{'files': ['self_validation/GATE_RESULT.md', 'self_validation/SELF_VALIDATION_REPORT.md', 'self_validation/formal_dry_stdout.json', 'self_validation/formal_invocation_dry_run.json', 'self_validation/formal_runner_contract_results.json', 'self_validation/formal_runner_contract_stdout.json', 'self_validation/gate_contract_results.json', 'self_validation/gate_contract_stdout.json', 'self_validation/gate_result.json', 'self_validation/gate_stdout.json', 'self_validation/live_runtime_eval_result.json', 'self_validation/live_runtime_eval_stdout.json', 'self_validation/manifest_update_result.json', 'self_validation/package_validation_report_basic.md', 'self_validation/package_validation_result.json', 'self_validation/package_validation_self_test_result.json', 'self_validation/regression_eval_result.json', 'self_validation/regression_stdout.json', 'self_validation/trace_auth_smoke_result.json'], 'prefixes': ['self_validation/formal_invocation_dry_run/'], 'rationale': 'validation and formal dry-run outputs are regenerated by release commands and may contain absolute paths, durations, stdout copies, or environment-specific precheck data; release-lock commands write new volatile outputs outside the package by default'}",
-      "name": "stable release manifest documents volatile generated exclusions",
+      "name": "stable release manifest volatile generated exclusions exactly match executable policy",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=74f3bc01324ee67ccff5f73fc101dc34c51fbeb8fbf877d6aabb570f13e2bb9b actual=74f3bc01324ee67ccff5f73fc101dc34c51fbeb8fbf877d6aabb570f13e2bb9b",
+      "details": "claimed=28c0acdceea43579754e360d4b9a529d02f2eae2a5ef0b7d49c2b13986c692ab actual=28c0acdceea43579754e360d4b9a529d02f2eae2a5ef0b7d49c2b13986c692ab",
       "name": "stable release manifest self-hash matches canonical content",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "items=251",
+      "details": "items=252",
       "name": "stable release manifest inventory is list",
       "passed": true,
       "severity": "critical"
@@ -331,13 +535,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=9c6cf9f204a34656660b870d512c7a419169464890e1e0081eb86c157831cd45 actual=9c6cf9f204a34656660b870d512c7a419169464890e1e0081eb86c157831cd45",
+      "details": "claimed=95035309a4c9c5bb88a847455d92772f8266b235ac0f461a9175df9dc2348cf5 actual=95035309a4c9c5bb88a847455d92772f8266b235ac0f461a9175df9dc2348cf5",
       "name": "stable release manifest hash matches: .github/workflows/nozickian-team-ci.yml",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1760 actual=1760",
+      "details": "claimed=2355 actual=2355",
       "name": "stable release manifest bytes match: .github/workflows/nozickian-team-ci.yml",
       "passed": true,
       "severity": "critical"
@@ -355,13 +559,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=3f99d685a83d316d81000f2f1c7c1f7f44d581ce67cb8ca5f09b75535c24d7f2 actual=3f99d685a83d316d81000f2f1c7c1f7f44d581ce67cb8ca5f09b75535c24d7f2",
+      "details": "claimed=6a7f0cb9f96754b300cbeed67b2b631eae2bd47368d908aa4f9b63319a213999 actual=6a7f0cb9f96754b300cbeed67b2b631eae2bd47368d908aa4f9b63319a213999",
       "name": "stable release manifest hash matches: AUDIT_REPORT.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=19949 actual=19949",
+      "details": "claimed=34186 actual=34186",
       "name": "stable release manifest bytes match: AUDIT_REPORT.md",
       "passed": true,
       "severity": "critical"
@@ -379,7 +583,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=6f3b100ce7fd482ad83c85ddefc23f9093a2fa961496a1e5f24b43da782be40a actual=6f3b100ce7fd482ad83c85ddefc23f9093a2fa961496a1e5f24b43da782be40a",
+      "details": "claimed=cefcdada160cb45e532691d5676d072870cfcf6f3e13d88de5742de454fec0d6 actual=cefcdada160cb45e532691d5676d072870cfcf6f3e13d88de5742de454fec0d6",
       "name": "stable release manifest hash matches: MANIFEST.sha256",
       "passed": true,
       "severity": "critical"
@@ -391,37 +595,37 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=f474a376e02f29b4160fba91dca900e62cfacb07e7484abf54eecbd0722cae9b actual=f474a376e02f29b4160fba91dca900e62cfacb07e7484abf54eecbd0722cae9b",
+      "details": "claimed=399b9e0243b00fb635333b66ffe79d947ea33600dca80c658f148241ab845065 actual=399b9e0243b00fb635333b66ffe79d947ea33600dca80c658f148241ab845065",
       "name": "stable release manifest hash matches: PACKAGE_SURFACE.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=10262 actual=10262",
+      "details": "claimed=13510 actual=13510",
       "name": "stable release manifest bytes match: PACKAGE_SURFACE.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=06072951107cb0738ac2a8a5db9216886d9f52d180b78bbd5fe8cc6064d0aa36 actual=06072951107cb0738ac2a8a5db9216886d9f52d180b78bbd5fe8cc6064d0aa36",
+      "details": "claimed=dad025667482f14f737fa4324dcbc485de3696f9dde8affa50b7e758eedab11e actual=dad025667482f14f737fa4324dcbc485de3696f9dde8affa50b7e758eedab11e",
       "name": "stable release manifest hash matches: README.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=5765 actual=5765",
+      "details": "claimed=5837 actual=5837",
       "name": "stable release manifest bytes match: README.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=57022c38c39be576813023ad67be9a036b1d7fbde8fb91ccbfaabcc5519b49f4 actual=57022c38c39be576813023ad67be9a036b1d7fbde8fb91ccbfaabcc5519b49f4",
+      "details": "claimed=7c47d5d43828643a043568e1ece0c7e7099fb7da8be9105de6c924cdae4c537e actual=7c47d5d43828643a043568e1ece0c7e7099fb7da8be9105de6c924cdae4c537e",
       "name": "stable release manifest hash matches: RELEASE_LOCK.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=13436 actual=13436",
+      "details": "claimed=20802 actual=20802",
       "name": "stable release manifest bytes match: RELEASE_LOCK.json",
       "passed": true,
       "severity": "critical"
@@ -439,25 +643,25 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=ddd05e452adcade0a5f20f8e1cfaead7cc0cdd8c4d63a1edfb4f819ab4411315 actual=ddd05e452adcade0a5f20f8e1cfaead7cc0cdd8c4d63a1edfb4f819ab4411315",
+      "details": "claimed=e8d0d299897abca7deb6df2780a64bc354730b25dcca03c863ab584815c5e1ed actual=e8d0d299897abca7deb6df2780a64bc354730b25dcca03c863ab584815c5e1ed",
       "name": "stable release manifest hash matches: TEAM_INTERNAL_USE.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=8373 actual=8373",
+      "details": "claimed=11696 actual=11696",
       "name": "stable release manifest bytes match: TEAM_INTERNAL_USE.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=671df3a2d8a644dbf0b5297509af561ffec5e5cfb6ce2cc8a8b7b512f7a893e4 actual=671df3a2d8a644dbf0b5297509af561ffec5e5cfb6ce2cc8a8b7b512f7a893e4",
+      "details": "claimed=41b20952dd3a06edb55927ee4fb8cff153d254ac58d352947436ab9f0c1f37bc actual=41b20952dd3a06edb55927ee4fb8cff153d254ac58d352947436ab9f0c1f37bc",
       "name": "stable release manifest hash matches: agents/ntt-claim-extractor.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=3418 actual=3418",
+      "details": "claimed=4408 actual=4408",
       "name": "stable release manifest bytes match: agents/ntt-claim-extractor.md",
       "passed": true,
       "severity": "critical"
@@ -499,13 +703,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=6e97551b877145046d58e3508f1748bc7248342cdcb6ddc36b4bef2bcafd9522 actual=6e97551b877145046d58e3508f1748bc7248342cdcb6ddc36b4bef2bcafd9522",
+      "details": "claimed=ad0478cf3770b4c731890183fb46785fbab3203bc6248e0c4027bc9c169d2374 actual=ad0478cf3770b4c731890183fb46785fbab3203bc6248e0c4027bc9c169d2374",
       "name": "stable release manifest hash matches: agents/ntt-gate-auditor.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=4297 actual=4297",
+      "details": "claimed=5760 actual=5760",
       "name": "stable release manifest bytes match: agents/ntt-gate-auditor.md",
       "passed": true,
       "severity": "critical"
@@ -631,13 +835,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=2cdb53be02fac26caf43175c1a178adf88ac7a0cab25fb535c5e50b012fc8475 actual=2cdb53be02fac26caf43175c1a178adf88ac7a0cab25fb535c5e50b012fc8475",
+      "details": "claimed=3e495137fa5bb69160c675fbc43024acde8fcd84cd4d8aa0ccd76970611c9388 actual=3e495137fa5bb69160c675fbc43024acde8fcd84cd4d8aa0ccd76970611c9388",
       "name": "stable release manifest hash matches: docs/pass-tracked-upgrade/README.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1851 actual=1851",
+      "details": "claimed=2701 actual=2701",
       "name": "stable release manifest bytes match: docs/pass-tracked-upgrade/README.md",
       "passed": true,
       "severity": "critical"
@@ -655,13 +859,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=afd9e1cc67eb57e2c28f5508403dc386b9247fa6fed1ebdb00ed7b07e546da3e actual=afd9e1cc67eb57e2c28f5508403dc386b9247fa6fed1ebdb00ed7b07e546da3e",
+      "details": "claimed=eb368c6e7e2ac81b0508fc61594fecf5cb33eb63aaae6a1b03544fec9592af4e actual=eb368c6e7e2ac81b0508fc61594fecf5cb33eb63aaae6a1b03544fec9592af4e",
       "name": "stable release manifest hash matches: docs/release/README.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1258 actual=1258",
+      "details": "claimed=2721 actual=2721",
       "name": "stable release manifest bytes match: docs/release/README.md",
       "passed": true,
       "severity": "critical"
@@ -739,7 +943,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=689433af89004fbc37b80c8777de4e538b6998f7b46d52292aed93e330eb7714 actual=689433af89004fbc37b80c8777de4e538b6998f7b46d52292aed93e330eb7714",
+      "details": "claimed=bb194951e992fac60369ffd40e9c5aea09bf6f5e3d8c0538ac439e51584913a6 actual=bb194951e992fac60369ffd40e9c5aea09bf6f5e3d8c0538ac439e51584913a6",
       "name": "stable release manifest hash matches: self_validation/evidence/C-charter-caps__claim.json",
       "passed": true,
       "severity": "critical"
@@ -1675,7 +1879,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=2eecaa31b7aa3ff07e7cbdbb31483e87415226b9c09c5d20fb0d3f71d06a8eab actual=2eecaa31b7aa3ff07e7cbdbb31483e87415226b9c09c5d20fb0d3f71d06a8eab",
+      "details": "claimed=c41a798afefcbe50dbc67d9d75f74a4e154d0e6970e023b774ea3ff983a7f4f8 actual=c41a798afefcbe50dbc67d9d75f74a4e154d0e6970e023b774ea3ff983a7f4f8",
       "name": "stable release manifest hash matches: self_validation/evidence/C-gate-hardening__claim.json",
       "passed": true,
       "severity": "critical"
@@ -1699,7 +1903,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=98ae65453fde6618345447dc452db6c13cd93cb787f8e7eae53df1a7d574462d actual=98ae65453fde6618345447dc452db6c13cd93cb787f8e7eae53df1a7d574462d",
+      "details": "claimed=e534999f157b0c9416d3f36ac3225a5763727a5f883667f2ae49e623091e97f0 actual=e534999f157b0c9416d3f36ac3225a5763727a5f883667f2ae49e623091e97f0",
       "name": "stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__FW-github-readmes-degraded.json",
       "passed": true,
       "severity": "critical"
@@ -1711,7 +1915,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=9876288aa6f96f1f9ddce443f0458552e01799a8eb94387072d34c7a57b2a639 actual=9876288aa6f96f1f9ddce443f0458552e01799a8eb94387072d34c7a57b2a639",
+      "details": "claimed=b81efc174317dfce3732a0a23e427982f2f7a3b14073e8da0b5e278f6dd6a776 actual=b81efc174317dfce3732a0a23e427982f2f7a3b14073e8da0b5e278f6dd6a776",
       "name": "stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__TW-github-readmes-benign-doc-note.json",
       "passed": true,
       "severity": "critical"
@@ -1735,7 +1939,7 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=c6af8a66884b09f93da05922cbd3f190b6023f976bbff41c42f4056e2c1fb7a4 actual=c6af8a66884b09f93da05922cbd3f190b6023f976bbff41c42f4056e2c1fb7a4",
+      "details": "claimed=da3a714f4e092cd3b7cb51d66fe93caa4600f1f3fbb97b261a2da1ede4add37a actual=da3a714f4e092cd3b7cb51d66fe93caa4600f1f3fbb97b261a2da1ede4add37a",
       "name": "stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__validator.json",
       "passed": true,
       "severity": "critical"
@@ -1747,49 +1951,49 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=6f2c67cad913f661a343588e78f6174acf13a62315d9a1227a37ebec8f8cb468 actual=6f2c67cad913f661a343588e78f6174acf13a62315d9a1227a37ebec8f8cb468",
+      "details": "claimed=e08a3500a274b444f4d7075ee86748984214851514ceae42e63ddd95c02c0687 actual=e08a3500a274b444f4d7075ee86748984214851514ceae42e63ddd95c02c0687",
       "name": "stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__certifier.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=993 actual=993",
+      "details": "claimed=1986 actual=1986",
       "name": "stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__certifier.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=e329648a94bc8e0c81165591ebf8b97e3d816201edfd553a6a0aafc99b5f6897 actual=e329648a94bc8e0c81165591ebf8b97e3d816201edfd553a6a0aafc99b5f6897",
+      "details": "claimed=62363ab47b3abd545282a0719f11ce6559a2bc02a178b2ba4801227240145c2f actual=62363ab47b3abd545282a0719f11ce6559a2bc02a178b2ba4801227240145c2f",
       "name": "stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1118 actual=1118",
+      "details": "claimed=2088 actual=2088",
       "name": "stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=b0a777ed5dde0048694f4386839ca3a37cff855d74e1cd299412154a292c91e9 actual=b0a777ed5dde0048694f4386839ca3a37cff855d74e1cd299412154a292c91e9",
+      "details": "claimed=a66f9444f5327a2e06f670d459eacf58d7ed0baa945ec81b7bf33803cffc0c70 actual=a66f9444f5327a2e06f670d459eacf58d7ed0baa945ec81b7bf33803cffc0c70",
       "name": "stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1140 actual=1140",
+      "details": "claimed=1908 actual=1908",
       "name": "stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=4e01962e3752b593f2254b7e903b61c2bca6b0b0febb54967552f17d42a19978 actual=4e01962e3752b593f2254b7e903b61c2bca6b0b0febb54967552f17d42a19978",
+      "details": "claimed=5536b717783f4c1aa436d99d68836064431ec008aaf74b29d3ef05996bb630a1 actual=5536b717783f4c1aa436d99d68836064431ec008aaf74b29d3ef05996bb630a1",
       "name": "stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__reference.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=878 actual=878",
+      "details": "claimed=1443 actual=1443",
       "name": "stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__reference.json",
       "passed": true,
       "severity": "critical"
@@ -1867,19 +2071,19 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=3ca90fe15d64247d92de1009221c731f4dcd750dd8351080358fa5698e35bf1c actual=3ca90fe15d64247d92de1009221c731f4dcd750dd8351080358fa5698e35bf1c",
+      "details": "claimed=27a57a637fe42c0514c5d028bf7a452397b05015d8ea03c1caf3fe1fbb36818b actual=27a57a637fe42c0514c5d028bf7a452397b05015d8ea03c1caf3fe1fbb36818b",
       "name": "stable release manifest hash matches: self_validation/evidence/C-structure__claim.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=988 actual=988",
+      "details": "claimed=1148 actual=1148",
       "name": "stable release manifest bytes match: self_validation/evidence/C-structure__claim.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=88ad7f62439e0580ab8ac5b7336ed09d7feb8d7271287cb0e4e4c60f402b0239 actual=88ad7f62439e0580ab8ac5b7336ed09d7feb8d7271287cb0e4e4c60f402b0239",
+      "details": "claimed=1fd8a3f7cc95b72727f485b559bdb75db0c031ef7f7f43604eecdb23df2fbd96 actual=1fd8a3f7cc95b72727f485b559bdb75db0c031ef7f7f43604eecdb23df2fbd96",
       "name": "stable release manifest hash matches: self_validation/evidence/C-structure__gate.json",
       "passed": true,
       "severity": "critical"
@@ -1887,6 +2091,18 @@
     {
       "details": "claimed=966 actual=966",
       "name": "stable release manifest bytes match: self_validation/evidence/C-structure__gate.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=f1bb43ceed681397dcea31b8595a93695f1a27e748a69f68bebadcd0b780ad81 actual=f1bb43ceed681397dcea31b8595a93695f1a27e748a69f68bebadcd0b780ad81",
+      "name": "stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__FW-historical-nested-cruft.json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "claimed=1017 actual=1017",
+      "name": "stable release manifest bytes match: self_validation/evidence/C-validator-sensitivity__FW-historical-nested-cruft.json",
       "passed": true,
       "severity": "critical"
     },
@@ -1939,13 +2155,13 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=fe234bd5a50b6e3092aa983eba26724d51984f5c7b8429ddb04a827f6e75e31d actual=fe234bd5a50b6e3092aa983eba26724d51984f5c7b8429ddb04a827f6e75e31d",
+      "details": "claimed=550356b118b02abd07d64cfbce836cfbaf9e4db3f8a07ed04ede0212097767a9 actual=550356b118b02abd07d64cfbce836cfbaf9e4db3f8a07ed04ede0212097767a9",
       "name": "stable release manifest hash matches: self_validation/evidence/C-validator-sensitivity__claim.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1086 actual=1086",
+      "details": "claimed=1543 actual=1543",
       "name": "stable release manifest bytes match: self_validation/evidence/C-validator-sensitivity__claim.json",
       "passed": true,
       "severity": "critical"
@@ -2983,49 +3199,49 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=03ef4d5d6d969ea36ba2b497a0823235f950bf35289b848ab460d00edb9c6142 actual=03ef4d5d6d969ea36ba2b497a0823235f950bf35289b848ab460d00edb9c6142",
+      "details": "claimed=b9ff493dbb04a7138cc6f154e4837562d826aa003d6f0d107f8b5ffaf5595047 actual=b9ff493dbb04a7138cc6f154e4837562d826aa003d6f0d107f8b5ffaf5595047",
       "name": "stable release manifest hash matches: self_validation/pass_tracked_certifier_empty_bundle_result.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=4970 actual=4970",
+      "details": "claimed=7291 actual=7291",
       "name": "stable release manifest bytes match: self_validation/pass_tracked_certifier_empty_bundle_result.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=092e22441ff1f58778ae9f14fe62a50faaae6d0db175dbae04b7ab6e6ef405f3 actual=092e22441ff1f58778ae9f14fe62a50faaae6d0db175dbae04b7ab6e6ef405f3",
+      "details": "claimed=75e9877120a57726c3dba119a0195da7d676478349bb10eadcd7244c41c50e4b actual=75e9877120a57726c3dba119a0195da7d676478349bb10eadcd7244c41c50e4b",
       "name": "stable release manifest hash matches: self_validation/pass_tracked_certifier_empty_bundle_result.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=1684 actual=1684",
+      "details": "claimed=2808 actual=2808",
       "name": "stable release manifest bytes match: self_validation/pass_tracked_certifier_empty_bundle_result.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=a0881aa028220e15892b80b33a74f2b8ee89c3a94f9e4baa8a049884e84de73c actual=a0881aa028220e15892b80b33a74f2b8ee89c3a94f9e4baa8a049884e84de73c",
+      "details": "claimed=b9ff493dbb04a7138cc6f154e4837562d826aa003d6f0d107f8b5ffaf5595047 actual=b9ff493dbb04a7138cc6f154e4837562d826aa003d6f0d107f8b5ffaf5595047",
       "name": "stable release manifest hash matches: self_validation/pass_tracked_certifier_empty_bundle_stdout.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=4971 actual=4971",
+      "details": "claimed=7291 actual=7291",
       "name": "stable release manifest bytes match: self_validation/pass_tracked_certifier_empty_bundle_stdout.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=6ae86736bbabd038455a8b49153dece6d880b923e2b088ae7827e49656939795 actual=6ae86736bbabd038455a8b49153dece6d880b923e2b088ae7827e49656939795",
+      "details": "claimed=3663c54c824f5b38486ba2619097ad1524978cdaa2cc2effb2aebbdfbdf0b692 actual=3663c54c824f5b38486ba2619097ad1524978cdaa2cc2effb2aebbdfbdf0b692",
       "name": "stable release manifest hash matches: self_validation/self_certificate.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=117202 actual=117202",
+      "details": "claimed=151557 actual=151557",
       "name": "stable release manifest bytes match: self_validation/self_certificate.json",
       "passed": true,
       "severity": "critical"
@@ -3055,25 +3271,25 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=703a9b33360f301fd60840a88c88c658c5bfd9c2e3018a1eb7feab85581338b1 actual=703a9b33360f301fd60840a88c88c658c5bfd9c2e3018a1eb7feab85581338b1",
+      "details": "claimed=e2e91d0e2a9f65cdcaa850c6db7a1af6db992ea93934fd55ec223d4165d085b0 actual=e2e91d0e2a9f65cdcaa850c6db7a1af6db992ea93934fd55ec223d4165d085b0",
       "name": "stable release manifest hash matches: skills/nozickian-verify/SKILL.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=16851 actual=16851",
+      "details": "claimed=17499 actual=17499",
       "name": "stable release manifest bytes match: skills/nozickian-verify/SKILL.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=81196094ccd4459ae50802aef738af097656f34cbd4bdb912a336b78640053a3 actual=81196094ccd4459ae50802aef738af097656f34cbd4bdb912a336b78640053a3",
+      "details": "claimed=55b03e008641176ab9955c4e041337cd70a98ed2d83afdd306bbd10602b21b1d actual=55b03e008641176ab9955c4e041337cd70a98ed2d83afdd306bbd10602b21b1d",
       "name": "stable release manifest hash matches: skills/nozickian-verify/assets/certificate-template.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=4228 actual=4228",
+      "details": "claimed=5439 actual=5439",
       "name": "stable release manifest bytes match: skills/nozickian-verify/assets/certificate-template.json",
       "passed": true,
       "severity": "critical"
@@ -3175,25 +3391,25 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=64f35237d93c27efaec7ae1ef839659e92c906180c8fe3aaab35d81fca74f5f2 actual=64f35237d93c27efaec7ae1ef839659e92c906180c8fe3aaab35d81fca74f5f2",
+      "details": "claimed=bb4485fc3ddb07043f61875373033e91a1ff064ec15b0cef72f0321f348974b8 actual=bb4485fc3ddb07043f61875373033e91a1ff064ec15b0cef72f0321f348974b8",
       "name": "stable release manifest hash matches: skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=4705 actual=4705",
+      "details": "claimed=9339 actual=9339",
       "name": "stable release manifest bytes match: skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=4a280a90bd3d55fa90cbae526455b87c4632d8f0fd16f6de89edb3bbdc5f304d actual=4a280a90bd3d55fa90cbae526455b87c4632d8f0fd16f6de89edb3bbdc5f304d",
+      "details": "claimed=1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21 actual=1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21",
       "name": "stable release manifest hash matches: skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=11045 actual=11045",
+      "details": "claimed=20911 actual=20911",
       "name": "stable release manifest bytes match: skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
       "passed": true,
       "severity": "critical"
@@ -3223,37 +3439,37 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=8a1223bba27c5230e50462bc4ece620c15a89297335ff1b712ba582b895084cb actual=8a1223bba27c5230e50462bc4ece620c15a89297335ff1b712ba582b895084cb",
+      "details": "claimed=42e3bd1ec8584d2616cb6ef67ac871f6dfb66af9f81d48154ad4b57764089e42 actual=42e3bd1ec8584d2616cb6ef67ac871f6dfb66af9f81d48154ad4b57764089e42",
       "name": "stable release manifest hash matches: skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=8163 actual=8163",
+      "details": "claimed=9743 actual=9743",
       "name": "stable release manifest bytes match: skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a actual=b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a",
+      "details": "claimed=5d97289564d618e9e6cb3d95195f2c3e3a0949f2daf8dd1d45f10ca2ac419832 actual=5d97289564d618e9e6cb3d95195f2c3e3a0949f2daf8dd1d45f10ca2ac419832",
       "name": "stable release manifest hash matches: skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=24026 actual=24026",
+      "details": "claimed=68060 actual=68060",
       "name": "stable release manifest bytes match: skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=76821143e6e911c0bd47e7ac2ecd0539901a5f2f5f8d77c67c5cd7f0925afe05 actual=76821143e6e911c0bd47e7ac2ecd0539901a5f2f5f8d77c67c5cd7f0925afe05",
+      "details": "claimed=3df08a56cf692e65ec7e8d82397905a152538b0dee8a4106c8c68c938b0caf76 actual=3df08a56cf692e65ec7e8d82397905a152538b0dee8a4106c8c68c938b0caf76",
       "name": "stable release manifest hash matches: skills/nozickian-verify/scripts/ntt_gate.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=38890 actual=38890",
+      "details": "claimed=39891 actual=39891",
       "name": "stable release manifest bytes match: skills/nozickian-verify/scripts/ntt_gate.py",
       "passed": true,
       "severity": "critical"
@@ -3295,37 +3511,37 @@
       "severity": "critical"
     },
     {
-      "details": "claimed=a20d34b945fd7fd502172b337dafe63f02e7743eb9e9ea55973b168cec702d5c actual=a20d34b945fd7fd502172b337dafe63f02e7743eb9e9ea55973b168cec702d5c",
+      "details": "claimed=7e65db2e76a2e6197230e35a568ed6ba28903608155c1d98bd327d44fdcc3916 actual=7e65db2e76a2e6197230e35a568ed6ba28903608155c1d98bd327d44fdcc3916",
       "name": "stable release manifest hash matches: skills/nozickian-verify/scripts/run_live_skill_evals.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=9012 actual=9012",
+      "details": "claimed=29755 actual=29755",
       "name": "stable release manifest bytes match: skills/nozickian-verify/scripts/run_live_skill_evals.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=b15369f0181e2ad311553c8ae1168238b0c94b2b3a803971801c2e95cd732dd0 actual=b15369f0181e2ad311553c8ae1168238b0c94b2b3a803971801c2e95cd732dd0",
+      "details": "claimed=0b8f0c622ab3eee944c21f4b0d94c0f1b38ed98cc5e74bd5b0649428c071c23a actual=0b8f0c622ab3eee944c21f4b0d94c0f1b38ed98cc5e74bd5b0649428c071c23a",
       "name": "stable release manifest hash matches: skills/nozickian-verify/scripts/run_regression_evals.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=5902 actual=5902",
+      "details": "claimed=6751 actual=6751",
       "name": "stable release manifest bytes match: skills/nozickian-verify/scripts/run_regression_evals.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=01c9382f30b60e48e23a69a27aac2749164761186eb6c603ddae3503760cef98 actual=01c9382f30b60e48e23a69a27aac2749164761186eb6c603ddae3503760cef98",
+      "details": "claimed=8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f actual=8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f",
       "name": "stable release manifest hash matches: skills/nozickian-verify/scripts/validate_package.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "claimed=102785 actual=102785",
+      "details": "claimed=255613 actual=255613",
       "name": "stable release manifest bytes match: skills/nozickian-verify/scripts/validate_package.py",
       "passed": true,
       "severity": "critical"
@@ -3367,6 +3583,18 @@
       "severity": "critical"
     },
     {
+      "details": "dict",
+      "name": "package surface policy root is a JSON object",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "package surface policy has no unknown top-level keys",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
       "details": "team-internal-reuse",
       "name": "package surface tier is team-internal",
       "passed": true,
@@ -3386,19 +3614,115 @@
     },
     {
       "details": "['agents/ntt-formal-coordinator.md', 'agents/ntt-method-cartographer.md', 'agents/ntt-claim-extractor.md', 'agents/ntt-source-verifier.md', 'agents/ntt-code-verifier.md', 'agents/ntt-false-world-adversary.md', 'agents/ntt-true-world-adherence.md', 'agents/ntt-gate-auditor.md', 'agents/ntt-skill-self-auditor.md']",
+      "name": "package surface allowed_agents is a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "['agents/ntt-formal-coordinator.md', 'agents/ntt-method-cartographer.md', 'agents/ntt-claim-extractor.md', 'agents/ntt-source-verifier.md', 'agents/ntt-code-verifier.md', 'agents/ntt-false-world-adversary.md', 'agents/ntt-true-world-adherence.md', 'agents/ntt-gate-auditor.md', 'agents/ntt-skill-self-auditor.md']",
       "name": "package surface agents match expected",
       "passed": true,
       "severity": "critical"
     },
     {
+      "details": "['.gitignore', 'AUDIT_REPORT.md', 'LICENSE', 'MANIFEST.sha256', 'PACKAGE_SURFACE.json', 'README.md', 'RELEASE_LOCK.json', 'SECURITY.md', 'STABLE_RELEASE_MANIFEST.json', 'TEAM_INTERNAL_USE.md']",
+      "name": "package surface allowed_top_level_files is a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "['.claude-plugin', '.github', 'agents', 'docs', 'self_validation', 'skills']",
+      "name": "package surface allowed_top_level_dirs is a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "['.github/workflows/nozickian-team-ci.yml']",
+      "name": "package surface allowed_ci_files is a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "['.claude-plugin/plugin.json']",
+      "name": "package surface allowed_plugin_manifest_files is a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "['name', 'displayName', 'version', 'description', 'author', 'homepage', 'repository', 'license', 'keywords']",
+      "name": "package surface plugin manifest fields are a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "['assets', 'evals', 'references', 'scripts']",
+      "name": "package surface allowed_skill_runtime_dirs is a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
       "details": "['skills', 'commands', 'agents', 'hooks', 'mcpServers', 'outputStyles', 'lspServers', 'experimental.monitors', 'experimental.themes', 'userConfig', 'channels', 'dependencies']",
-      "name": "package surface forbids runtime plugin fields",
+      "name": "package surface forbidden runtime fields are a unique string array",
       "passed": true,
       "severity": "critical"
     },
     {
       "details": "['commands', 'hooks', 'monitors', 'bin', 'settings.json', '.mcp.json', '.lsp.json']",
-      "name": "package surface forbids plugin surfaces",
+      "name": "package surface forbidden surfaces are a unique string array",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['.gitignore', 'AUDIT_REPORT.md', 'LICENSE', 'MANIFEST.sha256', 'PACKAGE_SURFACE.json', 'README.md', 'RELEASE_LOCK.json', 'SECURITY.md', 'STABLE_RELEASE_MANIFEST.json', 'TEAM_INTERNAL_USE.md'] executable=['.gitignore', 'AUDIT_REPORT.md', 'LICENSE', 'MANIFEST.sha256', 'PACKAGE_SURFACE.json', 'README.md', 'RELEASE_LOCK.json', 'SECURITY.md', 'STABLE_RELEASE_MANIFEST.json', 'TEAM_INTERNAL_USE.md']",
+      "name": "package surface top-level file allowlist matches executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['.claude-plugin', '.github', 'agents', 'docs', 'self_validation', 'skills'] executable=['.claude-plugin', '.github', 'agents', 'docs', 'self_validation', 'skills']",
+      "name": "package surface top-level directory allowlist matches executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['.github/workflows/nozickian-team-ci.yml'] executable=['.github/workflows/nozickian-team-ci.yml']",
+      "name": "package surface CI file allowlist matches executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['.claude-plugin/plugin.json'] executable=['.claude-plugin/plugin.json']",
+      "name": "package surface plugin manifest file allowlist matches executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['author', 'description', 'displayName', 'homepage', 'keywords', 'license', 'name', 'repository', 'version'] executable=['author', 'description', 'displayName', 'homepage', 'keywords', 'license', 'name', 'repository', 'version']",
+      "name": "package surface plugin manifest field allowlist matches executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['assets', 'evals', 'references', 'scripts'] executable=['assets', 'evals', 'references', 'scripts']",
+      "name": "package surface skill runtime directory allowlist matches executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['agents', 'channels', 'commands', 'dependencies', 'experimental.monitors', 'experimental.themes', 'hooks', 'lspServers', 'mcpServers', 'outputStyles', 'skills', 'userConfig'] executable=['agents', 'channels', 'commands', 'dependencies', 'experimental.monitors', 'experimental.themes', 'hooks', 'lspServers', 'mcpServers', 'outputStyles', 'skills', 'userConfig']",
+      "name": "package surface forbidden runtime plugin fields match executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "declared=['.lsp.json', '.mcp.json', 'bin', 'commands', 'hooks', 'monitors', 'settings.json'] executable=['.lsp.json', '.mcp.json', 'bin', 'commands', 'hooks', 'monitors', 'settings.json']",
+      "name": "package surface forbidden plugin surfaces match executable policy",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "",
+      "name": "package surface has no allowed/forbidden contradictions",
       "passed": true,
       "severity": "critical"
     },
@@ -3421,7 +3745,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=5763",
+      "details": "chars=5835",
       "name": "root GitHub README is substantive",
       "passed": true,
       "severity": "critical"
@@ -3685,7 +4009,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=1851",
+      "details": "chars=2701",
       "name": "GitHub README substantive: docs/pass-tracked-upgrade/README.md",
       "passed": true,
       "severity": "critical"
@@ -3877,7 +4201,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=1258",
+      "details": "chars=2721",
       "name": "GitHub README substantive: docs/release/README.md",
       "passed": true,
       "severity": "critical"
@@ -4057,150 +4381,6 @@
       "severity": "critical"
     },
     {
-      "details": "",
-      "name": "no git-tracked build cruft (__pycache__/.pyc/.DS_Store)",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "",
-      "name": "no unexpected top-level files",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "",
-      "name": "no unexpected top-level directories",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": ".github/workflows/nozickian-team-ci.yml",
-      "name": "only expected team CI workflow present",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "validate_package.py . --self-test",
-      "name": "CI workflow includes validate_package.py . --self-test",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "ntt_gate.py self_validation/self_certificate.json --evidence-root .",
-      "name": "CI workflow includes ntt_gate.py self_validation/self_certificate.json --evidence-root .",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "run_regression_evals.py .",
-      "name": "CI workflow includes run_regression_evals.py .",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "run_formal_runner_contract_tests.py .",
-      "name": "CI workflow includes run_formal_runner_contract_tests.py .",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "run_formal_artifact_verification.py . README.md --dry-run",
-      "name": "CI workflow includes run_formal_artifact_verification.py . README.md --dry-run",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": ".lsp.json",
-      "name": "forbidden root file absent: .lsp.json",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": ".mcp.json",
-      "name": "forbidden root file absent: .mcp.json",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "settings.json",
-      "name": "forbidden root file absent: settings.json",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "bin",
-      "name": "forbidden plugin surface absent: bin/",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "commands",
-      "name": "forbidden plugin surface absent: commands/",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "hooks",
-      "name": "forbidden plugin surface absent: hooks/",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "monitors",
-      "name": "forbidden plugin surface absent: monitors/",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": ".claude-plugin/plugin.json",
-      "name": ".claude-plugin contains only plugin.json",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "skills/nozickian-verify",
-      "name": "only expected skill directory present",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "",
-      "name": "no extra plugin agents, including recursive subdirectory agents",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "",
-      "name": "all expected plugin agents present",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "",
-      "name": "plugin agents directory contains only markdown agent files",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "",
-      "name": "skill directory contains only expected children",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "certify_pass_tracked_upgrade.py, ntt_gate.py, run_formal_artifact_verification.py, run_formal_runner_contract_tests.py, run_gate_contract_tests.py, run_live_skill_evals.py, run_regression_evals.py, validate_package.py",
-      "name": "scripts directory contains only expected scripts",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
-      "details": "ARTIFACT_GUIDE.md, EVAL_BEST_PRACTICES.md, EVIDENCE_SCHEMA.md, OUTPUT_TEMPLATES.md, PASS_TRACKED_UPGRADE_AUDIT.md, SOURCES.md, STANDARD.md, SUBAGENT_PROTOCOLS.md",
-      "name": "references directory contains only expected files",
-      "passed": true,
-      "severity": "critical"
-    },
-    {
       "details": "<package-root>/MANIFEST.sha256",
       "name": "behavior manifest exists",
       "passed": true,
@@ -4231,25 +4411,25 @@
       "severity": "critical"
     },
     {
-      "details": "expected=9c6cf9f204a34656660b870d512c7a419169464890e1e0081eb86c157831cd45 actual=9c6cf9f204a34656660b870d512c7a419169464890e1e0081eb86c157831cd45",
+      "details": "expected=95035309a4c9c5bb88a847455d92772f8266b235ac0f461a9175df9dc2348cf5 actual=95035309a4c9c5bb88a847455d92772f8266b235ac0f461a9175df9dc2348cf5",
       "name": "manifest hash matches: .github/workflows/nozickian-team-ci.yml",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=f474a376e02f29b4160fba91dca900e62cfacb07e7484abf54eecbd0722cae9b actual=f474a376e02f29b4160fba91dca900e62cfacb07e7484abf54eecbd0722cae9b",
+      "details": "expected=399b9e0243b00fb635333b66ffe79d947ea33600dca80c658f148241ab845065 actual=399b9e0243b00fb635333b66ffe79d947ea33600dca80c658f148241ab845065",
       "name": "manifest hash matches: PACKAGE_SURFACE.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=57022c38c39be576813023ad67be9a036b1d7fbde8fb91ccbfaabcc5519b49f4 actual=57022c38c39be576813023ad67be9a036b1d7fbde8fb91ccbfaabcc5519b49f4",
+      "details": "expected=7c47d5d43828643a043568e1ece0c7e7099fb7da8be9105de6c924cdae4c537e actual=7c47d5d43828643a043568e1ece0c7e7099fb7da8be9105de6c924cdae4c537e",
       "name": "manifest hash matches: RELEASE_LOCK.json",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=671df3a2d8a644dbf0b5297509af561ffec5e5cfb6ce2cc8a8b7b512f7a893e4 actual=671df3a2d8a644dbf0b5297509af561ffec5e5cfb6ce2cc8a8b7b512f7a893e4",
+      "details": "expected=41b20952dd3a06edb55927ee4fb8cff153d254ac58d352947436ab9f0c1f37bc actual=41b20952dd3a06edb55927ee4fb8cff153d254ac58d352947436ab9f0c1f37bc",
       "name": "manifest hash matches: agents/ntt-claim-extractor.md",
       "passed": true,
       "severity": "critical"
@@ -4273,7 +4453,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=6e97551b877145046d58e3508f1748bc7248342cdcb6ddc36b4bef2bcafd9522 actual=6e97551b877145046d58e3508f1748bc7248342cdcb6ddc36b4bef2bcafd9522",
+      "details": "expected=ad0478cf3770b4c731890183fb46785fbab3203bc6248e0c4027bc9c169d2374 actual=ad0478cf3770b4c731890183fb46785fbab3203bc6248e0c4027bc9c169d2374",
       "name": "manifest hash matches: agents/ntt-gate-auditor.md",
       "passed": true,
       "severity": "critical"
@@ -4339,7 +4519,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=2cdb53be02fac26caf43175c1a178adf88ac7a0cab25fb535c5e50b012fc8475 actual=2cdb53be02fac26caf43175c1a178adf88ac7a0cab25fb535c5e50b012fc8475",
+      "details": "expected=3e495137fa5bb69160c675fbc43024acde8fcd84cd4d8aa0ccd76970611c9388 actual=3e495137fa5bb69160c675fbc43024acde8fcd84cd4d8aa0ccd76970611c9388",
       "name": "manifest hash matches: docs/pass-tracked-upgrade/README.md",
       "passed": true,
       "severity": "critical"
@@ -4351,7 +4531,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=afd9e1cc67eb57e2c28f5508403dc386b9247fa6fed1ebdb00ed7b07e546da3e actual=afd9e1cc67eb57e2c28f5508403dc386b9247fa6fed1ebdb00ed7b07e546da3e",
+      "details": "expected=eb368c6e7e2ac81b0508fc61594fecf5cb33eb63aaae6a1b03544fec9592af4e actual=eb368c6e7e2ac81b0508fc61594fecf5cb33eb63aaae6a1b03544fec9592af4e",
       "name": "manifest hash matches: docs/release/README.md",
       "passed": true,
       "severity": "critical"
@@ -4369,7 +4549,7 @@
       "severity": "critical"
     },
     {
-      "details": "expected=703a9b33360f301fd60840a88c88c658c5bfd9c2e3018a1eb7feab85581338b1 actual=703a9b33360f301fd60840a88c88c658c5bfd9c2e3018a1eb7feab85581338b1",
+      "details": "expected=e2e91d0e2a9f65cdcaa850c6db7a1af6db992ea93934fd55ec223d4165d085b0 actual=e2e91d0e2a9f65cdcaa850c6db7a1af6db992ea93934fd55ec223d4165d085b0",
       "name": "manifest hash matches: skills/nozickian-verify/SKILL.md",
       "passed": true,
       "severity": "critical"
@@ -4417,13 +4597,13 @@
       "severity": "critical"
     },
     {
-      "details": "expected=64f35237d93c27efaec7ae1ef839659e92c906180c8fe3aaab35d81fca74f5f2 actual=64f35237d93c27efaec7ae1ef839659e92c906180c8fe3aaab35d81fca74f5f2",
+      "details": "expected=bb4485fc3ddb07043f61875373033e91a1ff064ec15b0cef72f0321f348974b8 actual=bb4485fc3ddb07043f61875373033e91a1ff064ec15b0cef72f0321f348974b8",
       "name": "manifest hash matches: skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=4a280a90bd3d55fa90cbae526455b87c4632d8f0fd16f6de89edb3bbdc5f304d actual=4a280a90bd3d55fa90cbae526455b87c4632d8f0fd16f6de89edb3bbdc5f304d",
+      "details": "expected=1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21 actual=1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21",
       "name": "manifest hash matches: skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
       "passed": true,
       "severity": "critical"
@@ -4441,19 +4621,19 @@
       "severity": "critical"
     },
     {
-      "details": "expected=8a1223bba27c5230e50462bc4ece620c15a89297335ff1b712ba582b895084cb actual=8a1223bba27c5230e50462bc4ece620c15a89297335ff1b712ba582b895084cb",
+      "details": "expected=42e3bd1ec8584d2616cb6ef67ac871f6dfb66af9f81d48154ad4b57764089e42 actual=42e3bd1ec8584d2616cb6ef67ac871f6dfb66af9f81d48154ad4b57764089e42",
       "name": "manifest hash matches: skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a actual=b2b974344e3247fee08e0f8e16c3544eb692c61d8023f9204ad8ecf7516a0f0a",
+      "details": "expected=5d97289564d618e9e6cb3d95195f2c3e3a0949f2daf8dd1d45f10ca2ac419832 actual=5d97289564d618e9e6cb3d95195f2c3e3a0949f2daf8dd1d45f10ca2ac419832",
       "name": "manifest hash matches: skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=76821143e6e911c0bd47e7ac2ecd0539901a5f2f5f8d77c67c5cd7f0925afe05 actual=76821143e6e911c0bd47e7ac2ecd0539901a5f2f5f8d77c67c5cd7f0925afe05",
+      "details": "expected=3df08a56cf692e65ec7e8d82397905a152538b0dee8a4106c8c68c938b0caf76 actual=3df08a56cf692e65ec7e8d82397905a152538b0dee8a4106c8c68c938b0caf76",
       "name": "manifest hash matches: skills/nozickian-verify/scripts/ntt_gate.py",
       "passed": true,
       "severity": "critical"
@@ -4477,19 +4657,19 @@
       "severity": "critical"
     },
     {
-      "details": "expected=a20d34b945fd7fd502172b337dafe63f02e7743eb9e9ea55973b168cec702d5c actual=a20d34b945fd7fd502172b337dafe63f02e7743eb9e9ea55973b168cec702d5c",
+      "details": "expected=7e65db2e76a2e6197230e35a568ed6ba28903608155c1d98bd327d44fdcc3916 actual=7e65db2e76a2e6197230e35a568ed6ba28903608155c1d98bd327d44fdcc3916",
       "name": "manifest hash matches: skills/nozickian-verify/scripts/run_live_skill_evals.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=b15369f0181e2ad311553c8ae1168238b0c94b2b3a803971801c2e95cd732dd0 actual=b15369f0181e2ad311553c8ae1168238b0c94b2b3a803971801c2e95cd732dd0",
+      "details": "expected=0b8f0c622ab3eee944c21f4b0d94c0f1b38ed98cc5e74bd5b0649428c071c23a actual=0b8f0c622ab3eee944c21f4b0d94c0f1b38ed98cc5e74bd5b0649428c071c23a",
       "name": "manifest hash matches: skills/nozickian-verify/scripts/run_regression_evals.py",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "expected=01c9382f30b60e48e23a69a27aac2749164761186eb6c603ddae3503760cef98 actual=01c9382f30b60e48e23a69a27aac2749164761186eb6c603ddae3503760cef98",
+      "details": "expected=8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f actual=8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f",
       "name": "manifest hash matches: skills/nozickian-verify/scripts/validate_package.py",
       "passed": true,
       "severity": "critical"
@@ -5275,7 +5455,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=3112",
+      "details": "chars=4102",
       "name": "agent body substantive: ntt-claim-extractor",
       "passed": true,
       "severity": "critical"
@@ -5995,7 +6175,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=3968",
+      "details": "chars=5431",
       "name": "agent body substantive: ntt-gate-auditor",
       "passed": true,
       "severity": "critical"
@@ -6697,7 +6877,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=38888",
+      "details": "chars=39889",
       "name": "script substantive length: ntt_gate.py",
       "passed": true,
       "severity": "critical"
@@ -6889,7 +7069,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=102785",
+      "details": "chars=255613",
       "name": "script substantive length: validate_package.py",
       "passed": true,
       "severity": "critical"
@@ -6897,6 +7077,42 @@
     {
       "details": "check_closed_surface",
       "name": "script contains hardening token validate_package.py: check_closed_surface",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "GitEntry",
+      "name": "script contains hardening token validate_package.py: GitEntry",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "ls-files\", \"--stage",
+      "name": "script contains hardening token validate_package.py: ls-files\", \"--stage",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "regular blob modes 100644/100755",
+      "name": "script contains hardening token validate_package.py: regular blob modes 100644/100755",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "atomic_write_fixed_text",
+      "name": "script contains hardening token validate_package.py: atomic_write_fixed_text",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "HARNESS_ERROR",
+      "name": "script contains hardening token validate_package.py: HARNESS_ERROR",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "GIT_OPTIONAL_LOCKS",
+      "name": "script contains hardening token validate_package.py: GIT_OPTIONAL_LOCKS",
       "passed": true,
       "severity": "critical"
     },
@@ -7021,8 +7237,122 @@
       "severity": "critical"
     },
     {
+      "details": "compute_stable_release_tree",
+      "name": "script contains hardening token validate_package.py: compute_stable_release_tree",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
       "details": "run_release_lock_idempotence_test",
       "name": "script contains hardening token validate_package.py: run_release_lock_idempotence_test",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "run_promotion_certifier_contract_probes",
+      "name": "script contains hardening token validate_package.py: run_promotion_certifier_contract_probes",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "mismatched-package-tree-sha256",
+      "name": "script contains hardening token validate_package.py: mismatched-package-tree-sha256",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "external-only formal companion paths",
+      "name": "script contains hardening token validate_package.py: external-only formal companion paths",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "shared-transcript-across-fixtures",
+      "name": "script contains hardening token validate_package.py: shared-transcript-across-fixtures",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "prompt-only-argv",
+      "name": "script contains hardening token validate_package.py: prompt-only-argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "missing-plugin-dir-argv",
+      "name": "script contains hardening token validate_package.py: missing-plugin-dir-argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "wrong-output-format-argv",
+      "name": "script contains hardening token validate_package.py: wrong-output-format-argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "wrong-max-turns-argv",
+      "name": "script contains hardening token validate_package.py: wrong-max-turns-argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "extra-fixture-arg",
+      "name": "script contains hardening token validate_package.py: extra-fixture-arg",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "swapped-fixture-arg-order",
+      "name": "script contains hardening token validate_package.py: swapped-fixture-arg-order",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "wrong-preflight-argv",
+      "name": "script contains hardening token validate_package.py: wrong-preflight-argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "returncode-bool-false-version-preflight",
+      "name": "script contains hardening token validate_package.py: returncode-bool-false-version-preflight",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "validator text nonzero 1-error summary dominates pass",
+      "name": "script contains hardening token validate_package.py: validator text nonzero 1-error summary dominates pass",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "artifact-bytes-refreshed-manifests-stale-live",
+      "name": "script contains hardening token validate_package.py: artifact-bytes-refreshed-manifests-stale-live",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "fixture-spec-refreshed-manifests-stale-live",
+      "name": "script contains hardening token validate_package.py: fixture-spec-refreshed-manifests-stale-live",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "nonartifact-source-refreshed-manifests-stale-live",
+      "name": "script contains hardening token validate_package.py: nonartifact-source-refreshed-manifests-stale-live",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "manifest exclusion cannot hide behavior file",
+      "name": "script contains hardening token validate_package.py: manifest exclusion cannot hide behavior file",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "fresh validator is unconditional",
+      "name": "script contains hardening token validate_package.py: fresh validator is unconditional",
       "passed": true,
       "severity": "critical"
     },
@@ -7243,7 +7573,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=9012",
+      "details": "chars=29755",
       "name": "script substantive length: run_live_skill_evals.py",
       "passed": true,
       "severity": "critical"
@@ -7279,8 +7609,134 @@
       "severity": "critical"
     },
     {
+      "details": "package_tree_algorithm",
+      "name": "script contains hardening token run_live_skill_evals.py: package_tree_algorithm",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "package_tree_sha256",
+      "name": "script contains hardening token run_live_skill_evals.py: package_tree_sha256",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "fixture_spec_sha256",
+      "name": "script contains hardening token run_live_skill_evals.py: fixture_spec_sha256",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "artifact_sha256",
+      "name": "script contains hardening token run_live_skill_evals.py: artifact_sha256",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "run_config",
+      "name": "script contains hardening token run_live_skill_evals.py: run_config",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "compute_stable_release_tree",
+      "name": "script contains hardening token run_live_skill_evals.py: compute_stable_release_tree",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "prompt_sha256",
+      "name": "script contains hardening token run_live_skill_evals.py: prompt_sha256",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "transcript_sha256",
+      "name": "script contains hardening token run_live_skill_evals.py: transcript_sha256",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "sha256_text",
+      "name": "script contains hardening token run_live_skill_evals.py: sha256_text",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
       "details": "transcript_checks",
       "name": "script contains hardening token run_live_skill_evals.py: transcript_checks",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "structured_json_envelope",
+      "name": "script contains hardening token run_live_skill_evals.py: structured_json_envelope",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "report_field",
+      "name": "script contains hardening token run_live_skill_evals.py: report_field",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "runtime_identity",
+      "name": "script contains hardening token run_live_skill_evals.py: runtime_identity",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "provenance_schema_version",
+      "name": "script contains hardening token run_live_skill_evals.py: provenance_schema_version",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "observed-not-cryptographically-authenticated",
+      "name": "script contains hardening token run_live_skill_evals.py: observed-not-cryptographically-authenticated",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "runtime_preflight_succeeded",
+      "name": "script contains hardening token run_live_skill_evals.py: runtime_preflight_succeeded",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "resolve_claude_executable",
+      "name": "script contains hardening token run_live_skill_evals.py: resolve_claude_executable",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "load_regular_json",
+      "name": "script contains hardening token run_live_skill_evals.py: load_regular_json",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "executable_sha256_pre",
+      "name": "script contains hardening token run_live_skill_evals.py: executable_sha256_pre",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "executable_sha256_post",
+      "name": "script contains hardening token run_live_skill_evals.py: executable_sha256_post",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "fingerprint_stable",
+      "name": "script contains hardening token run_live_skill_evals.py: fingerprint_stable",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "regular non-symlink",
+      "name": "script contains hardening token run_live_skill_evals.py: regular non-symlink",
       "passed": true,
       "severity": "critical"
     },
@@ -7321,7 +7777,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=5902",
+      "details": "chars=6751",
       "name": "script substantive length: run_regression_evals.py",
       "passed": true,
       "severity": "critical"
@@ -7633,7 +8089,7 @@
       "severity": "critical"
     },
     {
-      "details": "chars=24026",
+      "details": "chars=68060",
       "name": "script substantive length: certify_pass_tracked_upgrade.py",
       "passed": true,
       "severity": "critical"
@@ -7663,6 +8119,84 @@
       "severity": "critical"
     },
     {
+      "details": "live provenance schema is 1.0",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: live provenance schema is 1.0",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "live runtime executable fingerprints are valid and stable",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: live runtime executable fingerprints are valid and stable",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "live plugin validation preflight exact normalized argv succeeded",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: live plugin validation preflight exact normalized argv succeeded",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "live fixture IDs exactly match the current package once each",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: live fixture IDs exactly match the current package once each",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "live fixture specification SHA-256 matches current evals bytes",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: live fixture specification SHA-256 matches current evals bytes",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "live fixture bundle-local transcript paths are unique and complete",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: live fixture bundle-local transcript paths are unique and complete",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "artifact SHA-256 matches current exact bytes",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: artifact SHA-256 matches current exact bytes",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "transcript SHA-256 matches fixture record",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: transcript SHA-256 matches fixture record",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "transcript command exactly matches normalized argv",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: transcript command exactly matches normalized argv",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "transcript command prompt binds exact fixture and artifact",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: transcript command prompt binds exact fixture and artifact",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "self-reported checks match transcript replay",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: self-reported checks match transcript replay",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "structured JSON envelope",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: structured JSON envelope",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "observed-not-cryptographically-authenticated",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: observed-not-cryptographically-authenticated",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
       "details": "formal result",
       "name": "script contains hardening token certify_pass_tracked_upgrade.py: formal result",
       "passed": true,
@@ -7671,6 +8205,78 @@
     {
       "details": "trace authenticated",
       "name": "script contains hardening token certify_pass_tracked_upgrade.py: trace authenticated",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "self-contained regular file",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: self-contained regular file",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "package_tree_sha256",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: package_tree_sha256",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "compute_stable_release_tree",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: compute_stable_release_tree",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "current package tree verifies through shared validator helper",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: current package tree verifies through shared validator helper",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "fresh deterministic package validator still passes",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: fresh deterministic package validator still passes",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "fresh_validation_unconditional",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: fresh_validation_unconditional",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "evidence refs are unique bundle-local regular files",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: evidence refs are unique bundle-local regular files",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "returncode_is_integer_zero",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: returncode_is_integer_zero",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "TEXT_NONZERO_FAILURE_SUMMARY_RE",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: TEXT_NONZERO_FAILURE_SUMMARY_RE",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "anchored negative status",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: anchored negative status",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "stale-token input is readable regular file",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: stale-token input is readable regular file",
+      "passed": true,
+      "severity": "critical"
+    },
+    {
+      "details": "regular_file_error",
+      "name": "script contains hardening token certify_pass_tracked_upgrade.py: regular_file_error",
       "passed": true,
       "severity": "critical"
     },
@@ -7723,13 +8329,13 @@
       "severity": "critical"
     },
     {
-      "details": "chars=24026",
+      "details": "chars=68060",
       "name": "PASS-TRACKED certifier rejects missing runtime evidence",
       "passed": true,
       "severity": "critical"
     },
     {
-      "details": "chars=24026",
+      "details": "chars=68060",
       "name": "PASS-TRACKED certifier requires trace and downstream checks",
       "passed": true,
       "severity": "critical"
@@ -7963,8 +8569,8 @@
       "severity": "critical"
     }
   ],
-  "checks_passed": 1327,
-  "checks_total": 1327,
+  "checks_passed": 1428,
+  "checks_total": 1428,
   "critical_failed": 0,
   "gate_contract": null,
   "mutation_tests": [],

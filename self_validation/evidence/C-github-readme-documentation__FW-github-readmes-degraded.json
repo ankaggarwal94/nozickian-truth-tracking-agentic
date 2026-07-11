@@ -3,7 +3,7 @@
   "claim_id": "C-github-readme-documentation",
   "command_or_source": "v1.0.3 package-local GitHub README documentation and deterministic validator checks",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:01c9382f30b60e48e23a69a27aac2749164761186eb6c603ddae3503760cef98",
+  "hash_or_version": "sha256:8fa810eeed7a36bef7aca389487112870749a7fa0c6d310e23752027d706562f",
   "observed_result": "Observed the false-world mutation that degrades docs/README.md and requires validation failure.",
   "support_summary": "The mutation evidence binds the false-world test to validator code that rejects missing or placeholder GitHub README documentation even when manifests are refreshed.",
   "test_id": "FW-github-readmes-degraded",

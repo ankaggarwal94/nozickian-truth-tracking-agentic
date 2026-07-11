@@ -45,6 +45,7 @@
     "skills"
   ],
   "allowed_top_level_files": [
+    ".gitignore",
     "AUDIT_REPORT.md",
     "LICENSE",
     "MANIFEST.sha256",
@@ -63,7 +64,14 @@
     "v1.0.3 formal trace authentication treats every tool_use/tool_result node as a hard event boundary; nested tool-like objects under data/payload/delta/message/content are payload data, not runtime events.",
     "v1.0.3 formal trace authentication enforces assistant-origin tool_use and user-origin tool_result direction when role context is available.",
     "v1.0.3 strict gate modal tests must have stable nonempty IDs and target the evaluated claim; duplicated, anonymous, or wrong-claim modal coverage cannot satisfy thresholds.",
-    "v1.0.3 release provenance hygiene rejects stale generated self-validation artifacts, previous package-root names, and machine-local build paths before team/internal reuse."
+    "v1.0.3 release provenance hygiene rejects the exact current package root plus configured stale generated-artifact, prior package/work-root, known machine-local markers, and non-UTF-8 provenance files; full prior-root text is allowed only behind the exact Historical provenance reference: line prefix.",
+    "v1.0.3 manifest update preflight preserves typed Git path/mode/object/stage evidence and rejects nonzero stages, symlink/gitlink modes, physical links, and unsupported special entries before any package write.",
+    "v1.0.3 fixed manifest paths are written through fresh same-directory temporary files and os.replace, so destination links are replaced rather than followed.",
+    "v1.0.3 live fixture PASS-SCOPED requires successful version/plugin preflight plus a structured JSON envelope whose substantive result/content report alone satisfies status, term, and artifact checks.",
+    "v1.0.3 Slice F executes every live subprocess through one resolved absolute regular target and requires stable pre/post fingerprints before PASS-SCOPED.",
+    "v1.0.3 Slice F promotion requires exact current fixture IDs, bundle-local transcript replay, a verified package_tree_sha256, unique local evidence refs, self-contained formal companions, and regular no-follow inputs.",
+    "v1.0.3 Slice G binds each fixture to a distinct byte-hashed transcript and canonical prompt/fixture/artifact tuple, independently derives package inventory and exclusion policy from the current validator, and reruns basic package validation unconditionally for promotion.",
+    "v1.0.3 Slice H records the shared stable-tree digest, exact evals.json digest, each artifact-byte digest, and invocation config at live-run start; promotion recomputes every byte binding and requires exact normalized ordered preflight and fixture argv without extras."
   ],
   "forbidden_plugin_manifest_runtime_fields": [
     "skills",
@@ -131,10 +139,16 @@
     "Strict local evidence rejects URI-scheme values in both evidence_refs and artifact_path, regardless of URI scheme case.",
     "v1.0.3 formal trace authentication rejects data/payload/delta event smuggling under tool_result events and rejects role-inverted tool_use/tool_result message directions.",
     "v1.0.3 strict evidence gating requires modal tests to target their evaluated claim and carry stable nonempty IDs; wildcard evidence applicability cannot substitute for a missing test ID.",
-    "v1.0.3 adds a release-time provenance hygiene guard over bundled audit/self-validation artifacts so stale old-version ledgers and absolute build paths cannot masquerade as current release evidence.",
+    "v1.0.3 adds a fixed-pattern release-time provenance hygiene guard over bundled audit/self-validation artifacts so configured stale ledgers and known machine-local build/workspace roots cannot masquerade as current release evidence.",
+    "Raw external runtime transcripts may retain truthful resolved tool paths; bundled runtime summaries recursively normalize exact executable, package-root, and output-directory display values and label the command representation as normalized display rather than literal argv.",
     "v1.0.3 adds a no-automatic-epistemic-closure certificate rule: downstream/deployment/safety/action claims do not inherit pass status from source claims and must be separately represented and tested.",
     "v1.0.3 adds a PASS-TRACKED promotion audit path; promotion requires an external audit bundle, live runtime fixture evidence, official validator evidence, formal artifact trace authentication, strict-gate PASS-TRACKED on the generated certificate, and downstream non-closure review.",
-    "v1.0.3 adds a GitHub-ready README documentation tree under docs/ while preserving the closed runtime surface and forbidding README files inside plugin-loadable component directories."
+    "v1.0.3 adds a GitHub-ready README documentation tree under docs/ while preserving the closed runtime surface and forbidding README files inside plugin-loadable component directories.",
+    "Current live-runtime evidence records executable SHA-256 and version output as observational provenance only; authentication_status=observed-not-cryptographically-authenticated explicitly withholds any claim that the binary is an official build.",
+    "PASS-TRACKED promotion independently executes the current validator inventory policy and requires the stable manifest path set and volatile exclusion arrays to match it exactly; manifest-authored exclusions cannot hide behavior files.",
+    "PASS-TRACKED promotion accepts only the exact ntt-stable-release-tree-v1 package_tree_sha256 computed after stable-manifest self-hash and actual path/hash/byte verification; package_sha256 aliases are ignored.",
+    "Promotion evidence refs are at least five unique relative regular non-symlink files inside the audit bundle, and formal companions are re-authenticated only from each bundle-local result directory.",
+    "PASS-TRACKED promotion rejects stale live results after package, evals.json, artifact, or non-artifact behavior-source changes even when manifests are refreshed; it also rejects prompt-only, missing-plugin-dir, wrong-format, wrong-max-turns, extra-arg, swapped-order, and wrong-preflight normalized argv."
   ],
   "package": "nozickian-truth-tracking-agentic",
   "schema_version": "1.2",
@@ -142,7 +156,7 @@
   "v1.0.1_evidence_hardening": "Strict local evidence mode counts unique canonical evidence and modal tests, rejects URI-scheme refs/artifact paths, requires modal tests to have stable IDs and target the evaluated claim, and release validation now rejects stale generated artifact provenance.",
   "v1.0.1_patch_notes": [
     "Regenerate bundled self-validation ledgers for the current package version rather than carrying stale prior-version outputs.",
-    "Add validate_package.py release-provenance hygiene checks for stale generated artifact tokens, old package-root names, and machine-local build paths in release/audit/self-validation artifacts.",
+    "Add validate_package.py fixed-pattern release-provenance hygiene checks for stale generated artifact tokens, old package-root names, and known machine-local build/workspace roots in release/audit/self-validation artifacts.",
     "Add a nearby-false-world mutation that injects stale self-validation provenance and requires the package validator to reject it.",
     "Document the closed-surface design more explicitly: this validator intentionally rejects plugin runtime surfaces outside the team/internal threat model even when the platform may support them.",
     "Preserve PASS-SCOPED release label until live official Claude Code runtime stream-json traces and optional official validators are available.",
