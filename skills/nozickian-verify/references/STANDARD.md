@@ -108,3 +108,17 @@ A `PASS-TRACKED` upgrade requires all of the following:
 - no downstream, deployment, safety, compliance, or action-authorizing conclusion inherits pass status from an upstream package or trace claim.
 
 If any of those conditions is unavailable, missing, dry-run only, or scope-limited, the correct result is `PASS-SCOPED`, `LIMITED`, `FAIL`, or `UNVERIFIED_RUNTIME`, not `PASS-TRACKED`. The package file `references/PASS_TRACKED_UPGRADE_AUDIT.md` is the detailed operational checklist for this upgrade from PASS-SCOPED.
+
+### v1.0.3 promotion contract
+
+Promotion certificate v2 requires exact-string `promotion_schema_version: "2.0"`, exact required top-level JSON types, at least one well-formed claim, and the fixed nine-role `promotion-evidence-v2` semantic-role DAG. Every role binds one distinct canonical bundle-local regular non-symlink file by exact bytes and SHA-256 and is checked with lane-specific semantics. Every claim is evaluated through the canonical strict gate and modeled completion requires a nonempty result set whose entries all pass. The certificate also supplies an explicit `downstream_review`; empty identified conclusions require a substantive performed-review reason.
+
+Deterministic suites and allowlisted official validators execute fresh. Claude uses exact strict argv; the real ANSI-normalized `✔ Validation passed` output is accepted only when no failure or contradiction occurs anywhere in either complete stream. Status, byte counts, and SHA-256 bind full captured bytes, while bounded excerpts and truncation flags are public presentation metadata. Captures cannot authorize alone, and text validator captures never authorize. An absent allowlisted executable can be scoped only through the explicit flag; that scope changes fresh execution evidence but does not remove either official-policy node or alter the fixed dependencies. An installed failure remains a failure.
+
+Formal result `2.0` verifies an immutable standalone target snapshot and binds the exact report, gate, certificate, ledger, complete transcript, prompt, and target-snapshot companion manifest, package-tree identity, run ID, target identity, and target pre/post stability. Authentication and transcript hashes cover the complete stream, never a tail-only view. Promotion follows only the typed formal-result locator; it does not substitute a basename or take the first glob match. Unrelated nonreserved files may remain.
+
+Malformed or empty claims and other malformed bundle data yield canonical `FAIL` plus `failure_kind`, not an unhandled traceback. Caller-supplied output paths reject symlinked ancestors, direct links, special files, and hardlink aliases with structured invalid-input output; existing private regular `--json` files are intentionally replaced by same-directory atomic regeneration, while an output directory must be a real or safely created directory.
+
+The v1.0.3 certifier alone cannot discharge the two still-parent-enforced Issue #5 charter obligations. A complete modeled result is therefore `PASS-SCOPED` / `CAPPED`, has `promotion_authorized: false` and `satisfied_profile: promotion-contract-v2-complete`, records both exact obligations, and exits nonzero. This mandatory cap does not change generic `ntt_gate.py` or formal-runner `PASS-TRACKED` semantics.
+
+The aggregate promotion suite is synthetic contract evidence. Its expected `36/36` invokes the production certifier CLI for the complete baseline and every negative case but does not authenticate a real runtime.

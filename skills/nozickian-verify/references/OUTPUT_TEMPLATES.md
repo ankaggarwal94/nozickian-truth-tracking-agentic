@@ -70,6 +70,7 @@ The template's `consistency_sweep` and `remote_escalations` fields are parent-en
 
 ```json
 {
+  "promotion_schema_version": "2.0",
   "upgrade_from_status": "PASS-SCOPED",
   "requested_status": "PASS-TRACKED",
   "package_version": "<plugin.json version>",
@@ -82,7 +83,10 @@ The template's `consistency_sweep` and `remote_escalations` fields are parent-en
     "deterministic_commands": ["..."],
     "live_fixture_command": "...",
     "formal_artifact_commands": ["..."],
-    "official_validator_commands": ["..."]
+    "official_validator_commands": [
+      "claude plugin validate <package-root> --strict",
+      "skills-ref validate skills/nozickian-verify"
+    ]
   },
   "live_result_bindings": {
     "package_tree_algorithm": "ntt-stable-release-tree-v1",
@@ -105,26 +109,171 @@ The template's `consistency_sweep` and `remote_escalations` fields are parent-en
       }
     ]
   },
-  "evidence_refs": [
-    "deterministic/package_validation.json",
-    "deterministic/gate_result.json",
-    "official_validators/claude_plugin_validate.json",
-    "live_fixtures/live_runtime_eval_result.json",
-    "formal_artifacts/artifact-001/formal_result.json",
-    "formal_artifacts/artifact-001/example_NOZICKIAN_FORMAL_TRANSCRIPT.stream.jsonl"
-  ],
-  "derived_or_downstream_claims": [
-    {
-      "id": "D-PROD-001",
-      "from_claim_ids": ["C-UPGRADE-001"],
-      "derived_claim": "The verified package is safe for production deployment.",
-      "status": "UNVERIFIED",
-      "reason": "Deployment safety requires its own method M, action-space review, false-world tests, true-world tests, contradiction review, and residual-risk assessment."
+  "evidence": {
+    "schema_version": "promotion-evidence-v2",
+    "nodes": {
+      "deterministic.package_validation": {
+        "path": "deterministic/package_validation.json",
+        "sha256": "sha256:<exact file bytes>",
+        "depends_on": []
+      },
+      "deterministic.gate_result": {
+        "path": "deterministic/gate_result.json",
+        "sha256": "sha256:<exact file bytes>",
+        "depends_on": ["deterministic.package_validation"]
+      },
+      "deterministic.regression": {
+        "path": "deterministic/regression_eval_result.json",
+        "sha256": "sha256:<exact file bytes>",
+        "depends_on": ["deterministic.package_validation"]
+      },
+      "deterministic.gate_contract": {
+        "path": "deterministic/gate_contract_results.json",
+        "sha256": "sha256:<exact file bytes>",
+        "depends_on": ["deterministic.gate_result"]
+      },
+      "deterministic.formal_contract": {
+        "path": "deterministic/formal_runner_contract_results.json",
+        "sha256": "sha256:<exact file bytes>",
+        "depends_on": ["deterministic.gate_contract"]
+      },
+      "official.claude_plugin_validate": {
+        "path": "official_validators/claude_plugin_validate.policy.json",
+        "sha256": "sha256:<exact file bytes>",
+        "depends_on": ["deterministic.package_validation"]
+      },
+      "official.skills_ref_validate": {
+        "path": "official_validators/skills_ref_validate.policy.json",
+        "sha256": "sha256:<exact file bytes>",
+        "depends_on": ["deterministic.package_validation"]
+      },
+      "live.runtime": {
+        "path": "live_fixtures/live_runtime_eval_result.json",
+        "sha256": "sha256:<exact file bytes>",
+        "depends_on": ["deterministic.package_validation", "official.claude_plugin_validate"]
+      },
+      "formal.result": {
+        "path": "formal_artifacts/artifact-001/formal_result.json",
+        "sha256": "sha256:<exact file bytes>",
+        "depends_on": ["live.runtime", "deterministic.gate_result"]
+      }
     }
+  },
+  "claims": [
+    {
+      "id": "C-UPGRADE-001",
+      "text": "The exact package snapshot satisfies the independently evaluated promotion contract.",
+      "importance": "critical",
+      "artifact_location": "promotion_claims/C-UPGRADE-001",
+      "truth_status": "executed_confirmed",
+      "method_m": {
+        "producer": "The recorded live and formal promotion workflow.",
+        "checker": "The production strict gate and promotion certifier.",
+        "artifacts": [
+          "promotion_certificate.json",
+          "formal_artifacts/artifact-001/formal_result.json"
+        ],
+        "environment": [
+          "recorded Claude Code environment",
+          "immutable package and target snapshots"
+        ],
+        "tools": [
+          "fixed-argv subprocesses",
+          "ntt_gate.py",
+          "SHA-256"
+        ],
+        "evidence_process": "Claim and modal-test records bind distinct exact local artifact bytes.",
+        "graders_or_tests": [
+          "strict claim gate",
+          "nearby false-world rejection",
+          "nearby true-world retention"
+        ],
+        "trace_or_logs": [
+          "complete formal stream-json transcript",
+          "promotion certification result"
+        ]
+      },
+      "evidence_refs": [
+        "promotion_claims/C-UPGRADE-001/claim-runtime.json",
+        "promotion_claims/C-UPGRADE-001/claim-formal.json"
+      ],
+      "false_world_tests": [
+        {
+          "id": "FW-C-UPGRADE-001-STALE",
+          "kind": "false_world",
+          "target_claim": "C-UPGRADE-001",
+          "perturbation": "Replace the package binding with stale bytes.",
+          "expected_behavior": "The strict gate rejects the stale promotion claim.",
+          "observed_behavior": "The strict gate rejected the stale promotion claim.",
+          "outcome": "rejected_false_claim",
+          "result": "pass",
+          "evidence_refs": [
+            "promotion_claims/C-UPGRADE-001/FW-stale.json"
+          ]
+        },
+        {
+          "id": "FW-C-UPGRADE-001-UNBOUND",
+          "kind": "false_world",
+          "target_claim": "C-UPGRADE-001",
+          "perturbation": "Remove the independent formal evidence binding.",
+          "expected_behavior": "The strict gate blocks the unbound promotion claim.",
+          "observed_behavior": "The strict gate blocked the unbound promotion claim.",
+          "outcome": "blocked",
+          "result": "pass",
+          "evidence_refs": [
+            "promotion_claims/C-UPGRADE-001/FW-unbound.json"
+          ]
+        }
+      ],
+      "true_world_tests": [
+        {
+          "id": "TW-C-UPGRADE-001-EQUIVALENT",
+          "kind": "true_world",
+          "target_claim": "C-UPGRADE-001",
+          "variant": "Retain equivalent independently bound package and formal evidence.",
+          "expected_behavior": "The strict gate retains the true promotion claim.",
+          "observed_behavior": "The strict gate retained the true promotion claim.",
+          "outcome": "retained_true_claim",
+          "result": "pass",
+          "evidence_refs": [
+            "promotion_claims/C-UPGRADE-001/TW-equivalent.json"
+          ]
+        }
+      ],
+      "unresolved_contradictions": [],
+      "residual_risks": []
+    }
+  ],
+  "downstream_review": {
+    "performed": true,
+    "claims_identified": [],
+    "none_identified_reason": "The independently evaluated C-UPGRADE-001 claim is limited to this exact package promotion contract and asserts no derived deployment, safety, compliance, or action-authorizing conclusion."
+  },
+  "derived_or_downstream_claims": []
+}
+```
+
+The certifier requires exact-string `promotion_schema_version: "2.0"` and exact JSON types for every required top-level field. `claims` is a required nonempty array: every entry must be an object with the exact claim field types shown above, a unique canonical ID, complete method M, local evidence, modal tests, contradiction review, and residual-risk review. The certifier evaluates the claim array through the canonical strict gate and requires a nonempty all-passing result set. `claims` remains distinct from `derived_or_downstream_claims`, whose entries cannot inherit verification from an upstream claim. A performed review may use empty `claims_identified` and `derived_or_downstream_claims` arrays only with a substantive `none_identified_reason`. The certifier does not accept `package_sha256` as an alias or flat promotion `evidence_refs`. Each of the fixed nine typed nodes contains exactly `path`, `sha256`, and `depends_on`; it resolves to a distinct canonical bundle-local regular non-symlink file, binds exact bytes, uses the canonical role path, and participates in the one environment-independent bounded acyclic dependency graph. Equal bytes across distinct roles are allowed; path and file-identity aliases are not.
+
+Deterministic captures cannot authorize by themselves: the certifier runs the fixed suites fresh and compares typed semantic projections. Allowlisted official validators also run fresh. Claude uses the exact strict argv shown above; after ANSI normalization its real `✔ Validation passed` form succeeds only when neither complete output stream contradicts it. Full bytes determine status, byte counts, and SHA-256; bounded excerpts and truncation flags are presentation metadata. Prewritten text captures do not authorize, absent tools scope only through the explicit flag while both official-policy nodes and fixed dependencies remain mandatory, and installed failures fail. Formal result `2.0` binds the immutable standalone target snapshot, exact report/gate/certificate/ledger/complete-transcript/prompt/target-snapshot companion manifest, package-tree identity, run ID, and target identities. Promotion uses the typed `formal.result` path and never basename, glob-first, or tail-only substitution; unrelated nonreserved files may remain.
+
+For an empty `claims_identified` array, add a substantive `none_identified_reason`. Malformed or empty claims and other malformed bundle data return canonical `FAIL` plus `failure_kind`, not a traceback. Caller-supplied output paths reject links, special files, and symlinked ancestors with structured invalid-input results. Existing private regular `--json` files are intentionally regenerated with same-directory exclusive temporary files and atomic replacement; an output directory must be a real or safely created directory.
+
+### v1.0.3 certifier result
+
+A complete modeled v1.0.3 result has this authorization envelope:
+
+```json
+{
+  "status": "PASS-SCOPED",
+  "outcome": "CAPPED",
+  "promotion_authorized": false,
+  "satisfied_profile": "promotion-contract-v2-complete",
+  "unresolved_charter_obligations": [
+    "Issue #5 consistency-sweep activation and resolution mechanics remain parent-enforced.",
+    "Issue #5 REMOTE_GROUND_TRUTH_REQUIRED escalation mechanics remain parent-enforced."
   ]
 }
 ```
 
-The certifier does not accept `package_sha256` as an alias. Both the live harness and certifier invoke the current package-local `validate_package.compute_stable_release_tree` helper, which executes `iter_release_inventory_files`, requires the manifest inventory path set and volatile file/prefix exclusion arrays to equal the current executable policy exactly, and verifies every independently derived regular-file hash and byte count. It then hashes canonical JSON containing algorithm `ntt-stable-release-tree-v1`, the manifest identity (`schema_version`, package and release versions, self file/hash, and file count), and sorted actual `{path, sha256, bytes}` entries. Canonical JSON uses sorted keys, compact separators, UTF-8, and `ensure_ascii=false`; the certificate value is exactly `sha256:<lowercase hex>`. Final certification also reruns the current basic package validator unconditionally; `--run-fresh-package-validator` remains a compatibility flag, not an opt-in gate.
-
-`evidence_refs` contains at least five unique relative paths to existing regular non-symlink files inside the audit bundle. Absolute paths, URI schemes, traversal, missing files, and duplicate raw or canonical paths are invalid. Each live fixture uses a distinct canonical transcript under `live_fixtures/transcripts/<basename>`, records the exact transcript-file and current artifact-byte SHA-256 values, and binds its exact fixture ID and expected artifact to the current `build_fixture_prompt` text. `prompt_sha256` is computed over the exact UTF-8 bytes of that canonical normalized-display prompt after deterministic `<package-root>` substitution. The live result also records the shared current package-tree digest, exact `evals.json` digest, and positive integer `max_turns`. The certifier requires exact normalized preflight argv and exact fixture argv `["<claude-cli>", "--plugin-dir", "<package-root>", "-p", "--output-format", "json", "--max-turns", "<recorded integer>", "<canonical normalized prompt>"]`; prompt-only, missing, extra, reordered, wrong-format, or wrong-turn argv fails independently of prompt/report checks. A package, fixture spec, or artifact byte change after capture fails stale evidence even after manifest refresh. These hashes bind bundle consistency but do not authenticate the transcript producer or an official binary. Each formal result's transcript, certificate, invocation ledger, and evidence root are resolved only inside that result directory.
+The process exits nonzero. This cap is certifier-only; generic gate/formal `PASS-TRACKED` semantics remain unchanged. The 36-case aggregate invokes the production certifier CLI for its complete baseline and every negative, but remains synthetic contract evidence rather than runtime authentication.

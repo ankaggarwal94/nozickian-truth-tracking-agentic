@@ -6,7 +6,7 @@
   "claim_id": "C-formal-invocation",
   "command_or_source": "v1.0.3 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:5130aa17529be10f5e47ce9e747c1e8c71dd45114716b95d1e7f3a5d5dc9f2a1",
+  "hash_or_version": "sha256:c0230749798fbd208d457fc87406a292c93a8bc65d86e96bf656eefc37f05af9",
   "observed_result": "Observed v1.0.3 deterministic evidence for C-formal-invocation",
   "support_summary": "This structured evidence binds C-formal-invocation to skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py, a package-local artifact with exact SHA-256 provenance under strict local evidence mode. v1.0.3 additionally checks unique canonical evidence refs, unique artifact/hash identities for critical evidence sufficiency, and substantive trace-result payload content. v1.0.3 additionally checks context-aware trace payload isolation and unique modal-test thresholds.",
   "timestamp": "1970-01-01T00:00:00Z",

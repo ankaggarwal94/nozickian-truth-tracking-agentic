@@ -1276,7 +1276,12 @@
         "evidence_process": "Package validator checks formal coordinator prompt terms, native Agent tool restrictions, formal runner hardening tokens, CI dry-run command, manifest hashes, and mutation tests. Formal dry-run writes prompt and records UNVERIFIED_RUNTIME without invoking Claude. v1.0.3 formal-runner contracts additionally check recognized stream-json event positions, result-after-call chronology, exact structured selectors, duplicate tool-use IDs, empty results, and generic result text.",
         "graders_or_tests": [
           "duplicate_tool_use_id_across_lanes_does_not_authenticate",
+          "early_general_purpose_event_survives_large_valid_tail",
           "empty_tool_result_content_does_not_authenticate",
+          "formal_runner_atomically_replaces_regular_compatibility_json",
+          "formal_runner_rejects_special_compatibility_json_target",
+          "formal_runner_rejects_symlinked_compatibility_json_ancestor",
+          "formal_runner_rejects_symlinked_output_dir_ancestor",
           "generic_result_without_status_or_is_error_does_not_authenticate",
           "run_formal_runner_contract_tests.py",
           "single_agent_call_mentions_all_lanes_does_not_authenticate",
@@ -1338,15 +1343,15 @@
       "unresolved_contradictions": []
     },
     {
-      "artifact_location": "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md; skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
+      "artifact_location": "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md; skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py; skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py",
       "evidence_refs": [
-        "self_validation/evidence/C-pass-tracked-upgrade-audit__reference.json",
-        "self_validation/evidence/C-pass-tracked-upgrade-audit__certifier.json"
+        "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
+        "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json"
       ],
       "false_world_tests": [
         {
           "evidence_refs": [
-            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json"
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json"
           ],
           "expected_behavior": "The method must reject PASS-TRACKED promotion and report UNVERIFIED_RUNTIME or PASS-SCOPED rather than treating dry-run evidence as runtime tracking.",
           "id": "FW-pass-tracked-dry-run-promotion",
@@ -1361,12 +1366,12 @@
         },
         {
           "evidence_refs": [
-            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json"
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json"
           ],
           "expected_behavior": "The method must block automatic epistemic closure and require independent method M, evidence, false-world tests, true-world tests, contradiction review, and residual-risk assessment for downstream claims.",
           "id": "FW-pass-tracked-auto-closure",
           "kind": "false_world",
-          "observed_behavior": "The upgrade audit and certifier explicitly check downstream non-closure and reject automatic downstream pass inheritance.",
+          "observed_behavior": "Promotion certificate v2 requires explicit downstream_review, the shared evaluator rejects automatic downstream pass inheritance, and the complete modeled baseline remains capped.",
           "outcome": "blocked",
           "perturbation": "A report attempts to infer production safety or global runtime compatibility from an upstream package PASS-SCOPED result without independent downstream claims or modal tests.",
           "result": "pass",
@@ -1376,15 +1381,15 @@
         },
         {
           "evidence_refs": [
-            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
-            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json"
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json"
           ],
           "expected_behavior": "The method must reject or downgrade the promotion because transcript prose is not equivalent to authenticated native tool-use/result event pairs.",
           "id": "FW-pass-tracked-missing-trace-auth",
           "kind": "false_world",
-          "observed_behavior": "The reference requires stream-json trace authentication and the certifier checks trace_authentication.authenticated plus required native lane coverage before returning PASS-TRACKED.",
+          "observed_behavior": "The 36-case aggregate starts from the valid complete bundle and proves complete-stream authentication: a structured text-only transcript fails, and an early disallowed general-purpose event remains fatal after more than 50KB of valid-looking tail. Exact full transcript bytes, byte count, and SHA-256 remain bound; the separate missing trace_authentication metadata case also remains covered.",
           "outcome": "not_certified",
-          "perturbation": "A formal artifact result says PASS-TRACKED in prose but the stream-json transcript lacks authenticated native ntt-* tool-use and matching result events.",
+          "perturbation": "Keep the valid formal result's recorded trace_authentication object, but replace its transcript semantics with a well-formed text-only stream event containing no authentic native ntt-* tool-use or matching result events; refresh only dependent hash bookkeeping.",
           "result": "pass",
           "target_claim_ids": [
             "C-pass-tracked-upgrade-audit"
@@ -1392,15 +1397,15 @@
         },
         {
           "evidence_refs": [
-            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
-            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json"
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json"
           ],
-          "expected_behavior": "The method must reject promotion when live evidence is stale against current package/evals/artifact bytes even after manifest refresh, partial, shared, swapped, unhashed, external-only, invoked with incomplete or reordered argv, or not bound to the exact fixture/artifact prompt; when any success return code is not exact integer zero; when validator status or numeric text summaries contradict a pass marker; when manifest-authored exclusions hide inventory; when fresh current validation fails; when package/evidence identity is unbound; or when formal companions are external-only.",
+          "expected_behavior": "The method must reject or cap promotion when the typed evidence DAG, fresh deterministic/official execution, live bindings, formal result 2.0, downstream review, or mandatory v1.0.3 charter cap is absent, malformed, stale, contradictory, or bypassed.",
           "id": "FW-pass-tracked-unbound-promotion-evidence",
           "kind": "false_world",
-          "observed_behavior": "Fixed offline Slice F/G/H/I certifier probes produced ordinary critical failures for stale source_release, carried-forward evidence, partial fixture IDs, missing/external/shared/swapped transcripts, wrong prompt/transcript hashes, wrong fixture/artifact prompts, fabricated checks, stale package/evals/artifact bytes after manifest refresh, prompt-only or malformed fixture argv, wrong preflight argv, boolean/float/string/null return codes across command and aggregate records, contradictory JSON status, pass text followed by anchored nonzero error/failure/failed summaries, manifest inventory/exclusion drift, fresh-validator failure, package-tree mismatch, unsafe evidence refs, external-only formal companions, and symlink/special inputs.",
+          "observed_behavior": "The 36-case aggregate invokes the production certifier CLI for baseline and all negatives. It rejects missing/wrong-type schema, wrong strict-validator argv, early official failure followed by more than 50KB of neutral output, wrong-tree captures, decoy/swapped formal companions, malformed or empty claim sets, duplicate/invalid IDs, unsafe output destinations, complete transcripts with early disallowed events, missing trace-authentication metadata, noncanonical paths, graph bounds, and identity defects with canonical FAIL plus the intended failure_kind; explicit unavailable-validator scope retains the fixed role DAG.",
           "outcome": "blocked",
-          "perturbation": "A superficially passing promotion bundle substitutes stale package/evals/artifact bytes, prompt-only or malformed argv, shared or mismatched transcript/prompt evidence, non-integer-zero success return codes, contradictory numeric validator summaries, manifest-authored inventory omissions, stale or self-reported runtime evidence, an arbitrary package hash, unsafe evidence references, or producer-machine formal paths for current bundle-local evidence.",
+          "perturbation": "A superficially complete promotion bundle uses flat or malformed evidence, stale captures, fabricated validator text, an ambiguous formal locator, wrong formal companion or identity fields, an invalid downstream review, or attempts to omit the mandatory v1.0.3 cap.",
           "result": "pass",
           "target_claim_ids": [
             "C-pass-tracked-upgrade-audit"
@@ -1413,23 +1418,34 @@
         "artifacts": [
           "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
           "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
+          "skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py",
+          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py",
+          "skills/nozickian-verify/scripts/ntt_gate.py",
           "skills/nozickian-verify/references/STANDARD.md",
           "skills/nozickian-verify/assets/certificate-template.json"
         ],
-        "checker": "validate_package.py validates presence and hardening terms, runs fixed live/promotion false-world probes, and rejects degraded instructions/pass-stub certifier worlds; ntt_gate.py validates this certificate with strict local evidence.",
+        "checker": "validate_package.py validates release-facing metadata and CI policy; run_promotion_certifier_contract_tests.py executes the production certifier CLI for the complete baseline and every negative; ntt_gate.py validates this certificate with strict local evidence.",
         "environment": [
           "local filesystem",
           "Python 3.10+",
           "external audit bundle path required for actual promotion"
         ],
-        "evidence_process": "Package-local structured evidence binds the reference and certifier to SHA-256 hashes; validator checks required terms and fixed offline probes exercise the shared package-tree helper, current package/evals/artifact byte binding, exact ordered preflight and fixture argv, one-to-one prompt/transcript fixture binding, exact integer-zero return-code typing, nonzero numeric text-summary dominance, current-validator-derived inventory/exclusion parity, unconditional fresh validation, official status, package-tree/evidence refs, formal locality, and no-follow rejection.",
+        "evidence_process": "Promotion certificate v2 enforces exact-string promotion_schema_version 2.0, exact required top-level types, a nonempty exact-typed unique-ID claim set evaluated through the canonical strict gate, a fixed environment-independent nine-role promotion-evidence-v2 DAG, and explicit downstream_review. Deterministic and allowlisted official validators run fresh with exact argv; Claude accepts its real ANSI-normalized success form only when neither complete stream contradicts it. Full bytes determine decisions/hashes/counts. Formal result 2.0 binds the immutable standalone target snapshot and complete transcript companions. Unsafe output paths fail structurally; existing private regular --json outputs use atomic replacement. Malformed or empty claims return canonical FAIL plus failure_kind. The aggregate exercises these modeled controls and the mandatory certifier-only cap.",
         "graders_or_tests": [
           "validate_package.py --self-test",
           "ntt_gate.py --strict-evidence",
+          "run_promotion_certifier_contract_tests.py (36/36 synthetic production-CLI cases)",
+          "official_fake_exact_argv_and_real_format",
+          "official_early_failure_survives_large_neutral_tail",
+          "independently_passing_downstream_claim_accepted_before_cap",
+          "empty_promotion_claims_rejected and malformed_claim_* cases",
+          "certifier_json_regular_file_is_atomically_replaced",
+          "certifier_json_symlinked_ancestor_rejected_without_external_overwrite",
+          "certifier_json_special_target_rejected",
           "certify_pass_tracked_upgrade.py for future external audit bundles",
           "release provenance hygiene scan"
         ],
-        "producer": "v1.0.3 package files include PASS_TRACKED_UPGRADE_AUDIT.md, certify_pass_tracked_upgrade.py, updated output templates, and Slice F/G/H/I promotion, transcript, exact-byte, exact-argv, exact-returncode, numeric-summary, and independently derived inventory contracts.",
+        "producer": "v1.0.3 package files include the promotion certificate v2 schema, formal result 2.0, fresh execution policy, structured failure API, dedicated aggregate production-CLI contract suite, and mandatory Issue #5 cap.",
         "tools": [
           "Python",
           "Bash",
@@ -1439,30 +1455,36 @@
         "trace_or_logs": [
           "self_validation/package_validation_self_test_result.json",
           "self_validation/gate_result.json",
+          "self_validation/promotion_certifier_contract_results.json",
+          "self_validation/promotion_certifier_contract_stdout.json",
+          "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json",
+          "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
           "self_validation/v101_targeted_probe_results.json",
           "self_validation/package_validation_result.json"
         ]
       },
       "residual_risks": [
-        "The bundled environment still lacks live Claude Code execution; the package documents and machine-gates future promotion but does not itself certify PASS-TRACKED."
+        "The bundled environment still lacks live Claude Code execution; the 36-case aggregate is synthetic contract evidence rather than runtime authentication.",
+        "Issue #5 consistency-sweep activation and resolution mechanics remain parent-enforced.",
+        "Issue #5 REMOTE_GROUND_TRUTH_REQUIRED escalation mechanics remain parent-enforced."
       ],
-      "text": "v1.0.3 contains first-class auditing instructions and a machine-checkable certifier for determining whether an external Claude Code audit bundle justifies upgrading a result from PASS-SCOPED to PASS-TRACKED.",
+      "text": "v1.0.3 machine-checks the complete promotion certificate v2 model but certify_pass_tracked_upgrade.py alone always caps a modeled pass at PASS-SCOPED/CAPPED, promotion_authorized false, satisfied_profile promotion-contract-v2-complete, both unresolved Issue #5 obligations, and nonzero exit; generic ntt_gate.py and formal-runner PASS-TRACKED semantics remain unchanged.",
       "true_world_tests": [
         {
           "evidence_refs": [
-            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
-            "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json"
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
+            "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json"
           ],
-          "expected_behavior": "The method should retain and certify the PASS-TRACKED upgrade when every required promotion condition is met and no scope limitation remains.",
+          "expected_behavior": "The method should retain every complete modeled promotion check and then apply the mandatory v1.0.3 non-authorizing cap.",
           "id": "TW-pass-tracked-valid-bundle-retained",
           "kind": "true_world",
-          "observed_behavior": "The reference defines the valid bundle shape and the certifier's fixed valid three-fixture bundle, exact integer-zero return codes, pass text with explicit zero summaries, shared-helper package tree, current evals/artifact byte bindings, exact normalized argv, one-to-one prompt/transcript bindings, unconditional fresh validation, and five local evidence refs pass while every targeted nearby false world fails.",
+          "observed_behavior": "The aggregate complete baseline traverses all six lanes and 244 checks through the production certifier CLI, canonically evaluates a real promotion claim, satisfies promotion-contract-v2-complete, retains the fixed role DAG, and returns nonzero PASS-SCOPED/CAPPED with promotion_authorized false and both exact ordered Issue #5 obligations; all 36 synthetic contract cases pass.",
           "outcome": "retained_true_claim",
           "result": "pass",
           "target_claim_ids": [
             "C-pass-tracked-upgrade-audit"
           ],
-          "variant": "A complete external audit bundle contains passing captured and fresh deterministic checks with exact integer-zero return codes, anchored noncontradictory official validator outputs with no nonzero numeric failure summaries, one shared-helper current package-tree digest, the exact current evals.json digest, each current artifact digest, exact ordered preflight and fixture argv, one distinct exact-byte-hashed transcript and canonical prompt/fixture/artifact binding for every current live fixture, a current-validator-derived package inventory and exclusion policy, stable executable fingerprint, self-contained formal artifacts, five-or-more unique bundle-local evidence refs, authenticated native stream-json lane events, and downstream non-closure records."
+          "variant": "A complete exact-string promotion_schema_version 2.0 bundle has at least one real independently gate-passing claim, the fixed nine-role promotion-evidence-v2 DAG, exact strict-validator argv and complete-stream semantics, exact live bindings, formal result 2.0 over an immutable standalone snapshot with a complete transcript, explicit downstream_review, safe output destinations, canonical structured failures for malformed/empty claims, and the mandatory v1.0.3 Issue #5 cap."
         }
       ],
       "truth_status": "confirmed",
@@ -1640,7 +1662,7 @@
     }
   ],
   "consistency_sweep": {
-    "activation_reason": "This release tree revises previously corrected material and the tracked-bytecode assurance claim was corrected during PR #3 Slice J redress. The mandatory whole-artifact sweep therefore covered all prior Slice F/G/H/I categories plus the physical-walker blind spot for tracked nested __pycache__ bytecode, complete tracked-cruft failure details, current totals, and final current-locator resolution.",
+    "activation_reason": "This release tree revises previously corrected material, including the active PASS-TRACKED promotion contract. The mandatory whole-artifact sweep therefore covers all prior Slice F/G/H/I/J categories plus this pre-regeneration round's exact top-level schema, fixed role DAG, complete formal tree, dated provenance split, exact obligation ordering, Issue #8 wording, synthetic aggregate boundary, and mandatory Issue #5 cap. This final replay also corrects import-time stdout contamination of machine-readable CLI evidence. This final independent review also corrects CI semantic reachability, aggregate-count documentation, promotion-template coherence, and certifier/FAQ cap wording.",
     "applies": true,
     "corrected_claims": [
       {
@@ -1648,8 +1670,8 @@
           "C-charter-caps"
         ],
         "correction_locations": [
-          "self_validation/self_certificate.json:1557",
-          "self_validation/self_certificate.json:1570"
+          "self_validation/self_certificate.json:1579",
+          "self_validation/self_certificate.json:1592"
         ],
         "new_wording": "The two charter-deletion observations state the substantive FAIL outcome and cite their bound structured evidence plus the current probe ledger; volatile exact digests are not duplicated in active prose.",
         "old_wording": "The two charter-deletion observed_behavior fields duplicated stale expected and mutated-actual SHA-256 values."
@@ -1665,8 +1687,7 @@
           "C-charter-caps"
         ],
         "correction_locations": [
-          "AUDIT_REPORT.md:257",
-          "self_validation/self_certificate.json:1671"
+          "AUDIT_REPORT.md:266"
         ],
         "new_wording": "Current-state prose cites self_validation/manifest_update_result.json and the integrity manifests instead of embedding an exact MANIFEST.sha256 digest that would create stale digest coupling and maintenance drift.",
         "old_wording": "Current-state certificate and audit prose embedded an exact MANIFEST.sha256 digest as the identifier for the exact release tree."
@@ -1682,11 +1703,11 @@
           "C-charter-caps"
         ],
         "correction_locations": [
-          "AUDIT_REPORT.md:231",
-          "RELEASE_LOCK.json:85",
-          "self_validation/manifest_update_result.json:3"
+          "README.md:10",
+          "RELEASE_LOCK.json:91",
+          "AUDIT_REPORT.md:238"
         ],
-        "new_wording": "Current release-wide self-test evidence is 1565/1565 checks, 56/56 false-world mutations, and 10/10 true-world variants; dated 2026-07-09 charter-probe ledgers retain their earlier 1369/35/4 observations as explicit history.",
+        "new_wording": "The checked-in fixed point passes 1724/1724 checks, 63/63 false-world mutations, and 10/10 true-world variants. Dated 2026-07-09 charter-probe ledgers retain their 1369/35/4 observation as explicit history.",
         "old_wording": "Current-state release prose still used the pre-Slice-A 1369/1369 checks, 35/35 mutations, and 4/4 true-world counts."
       },
       {
@@ -1696,12 +1717,8 @@
           "C-pass-tracked-upgrade-audit"
         ],
         "correction_locations": [
-          "skills/nozickian-verify/scripts/run_live_skill_evals.py:138-697",
-          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:196-1599",
-          "skills/nozickian-verify/scripts/validate_package.py:2562-3940",
-          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:9-236",
-          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-130",
-          "AUDIT_REPORT.md:208-257"
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:35-84",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:447-512"
         ],
         "new_wording": "Slice F/G/I executes one resolved absolute regular Claude target for every subprocess and requires stable pre/post fingerprints; promotion requires current exact fixture IDs, distinct transcript paths and exact transcript-byte hashes, canonical prompt/fixture/artifact text and hash binding, exact integer-zero return codes, anchored noncontradictory official-validator success with nonzero numeric error/failure summaries dominating positives, a current-validator-derived canonical package_tree_sha256 with exact exclusion parity, unconditional fresh package validation, unique local evidence refs, self-contained formal companions, and regular no-follow inputs. Path normalization changes only exact roots and rooted children, preserving non-path suffixes.",
         "old_wording": "Promotion could trust a different relative executable after cwd changes, shared or swapped transcripts, unbound prompts, boolean/float/string/null return codes as success, positive text followed by nonzero numeric failure summaries, manifest-authored inventory omissions, stale current validation, contradictory validator status, arbitrary package hashes and refs, external-only formal paths, symlink/special inputs, and over-broad root-prefix normalization."
@@ -1712,11 +1729,8 @@
           "C-validator-sensitivity"
         ],
         "correction_locations": [
-          "skills/nozickian-verify/scripts/validate_package.py:210-328",
-          "skills/nozickian-verify/scripts/validate_package.py:1450-1544",
-          "skills/nozickian-verify/scripts/validate_package.py:1913-1970",
-          "AUDIT_REPORT.md:195-238",
-          ".github/workflows/nozickian-team-ci.yml:20-28"
+          "skills/nozickian-verify/scripts/validate_package.py:246-287",
+          "AUDIT_REPORT.md:228"
         ],
         "new_wording": "Release validation preserves every typed Git path/mode/object/stage entry; rejects nonzero stages and all non-regular modes; derives tracked __pycache__/.pyc/.DS_Store cruft directly from every index path with _is_cruft_relpath independently of physical traversal; rejects every physical symlink and unsupported special entry before later reads; retains only ignored untracked checkout bytecode; and validates an unpacked Git archive. Source status snapshots remain observational with GIT_OPTIONAL_LOCKS=0 and before/after index hashes.",
         "old_wording": "Current audit prose described only a tracked-build-cruft check and conflated Git absence or Git command failure with a passing not-applicable state."
@@ -1727,16 +1741,8 @@
           "C-validator-sensitivity"
         ],
         "correction_locations": [
-          "skills/nozickian-verify/scripts/validate_package.py:395-442",
-          "skills/nozickian-verify/scripts/validate_package.py:597-659",
-          "skills/nozickian-verify/scripts/validate_package.py:913-974",
-          "skills/nozickian-verify/scripts/validate_package.py:1160-1178",
-          "skills/nozickian-verify/scripts/validate_package.py:1261-1323",
-          "skills/nozickian-verify/scripts/validate_package.py:1840-1873",
-          "skills/nozickian-verify/scripts/validate_package.py:2096-2169",
-          "skills/nozickian-verify/scripts/validate_package.py:2171-2250",
-          "docs/release/README.md:11",
-          "TEAM_INTERNAL_USE.md:32-34"
+          "skills/nozickian-verify/scripts/validate_package.py:923-1302",
+          "skills/nozickian-verify/scripts/validate_package.py:486"
         ],
         "new_wording": "Update mode completes no-follow and typed-Git preflight before any write; fixed manifest destinations use fresh same-directory temporary files and atomic replacement. Non-UTF-8 provenance is a named critical hit, copy-validator exceptions are HARNESS_ERROR, PACKAGE_SURFACE requires an object and unique-string allowed_agents, normalization is exact-root/path-prefix aware, and generated_utc has a fixed kind/value/semantics contract with no caller override.",
         "old_wording": "Reachable validator paths directly wrote MANIFEST.sha256, silently skipped UnicodeDecodeError, treated copy-validator exceptions as ordinary FAIL evidence, accepted PACKAGE_SURFACE type holes, normalized by substring replacement, and exposed a generated_utc override."
@@ -1748,11 +1754,8 @@
           "C-pass-tracked-upgrade-audit"
         ],
         "correction_locations": [
-          "skills/nozickian-verify/scripts/run_live_skill_evals.py:138-697",
-          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:430-1151",
-          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:85",
-          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:97-177",
-          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:179-194"
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:344-377",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:1438-1475"
         ],
         "new_wording": "Live fixture PASS-SCOPED executes one resolved absolute regular target, requires successful version/plugin preflight and equal pre/post fingerprints, and accepts only a substantive non-error structured report. Promotion additionally requires exact current-run provenance, every current fixture ID once, and bundle-local transcript stdout replay matching self-reported checks. Identity remains explicitly observed-not-cryptographically-authenticated; no official-binary proof is claimed.",
         "old_wording": "The live harness could accept fixture keywords recursively from arbitrary JSON or stderr and could return PASS-SCOPED despite failed version/plugin preflight; promotion checks did not require structured report envelopes or observational runtime identity."
@@ -1764,12 +1767,8 @@
           "C-pass-tracked-upgrade-audit"
         ],
         "correction_locations": [
-          "skills/nozickian-verify/scripts/run_live_skill_evals.py:138-697",
-          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:196-1599",
-          "skills/nozickian-verify/scripts/validate_package.py:2562-3940",
-          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:9-236",
-          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-130",
-          "AUDIT_REPORT.md:208-257"
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:41-84",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:1438-1475"
         ],
         "new_wording": "Every promotion input is bound to the current package and bundle: exact resolved executable plus stable fingerprints, current transcript replay, anchored validator status, verified package tree, unique local refs, self-contained formal companions, no-follow reads, and separator-only root boundaries.",
         "old_wording": "Promotion could accept cwd-relative executable drift, stale or fabricated live checks, contradictory validator status, arbitrary package hashes/refs, external formal pointers, nonregular inputs, and broad root-prefix rewriting."
@@ -1779,8 +1778,7 @@
           "C-validator-sensitivity"
         ],
         "correction_locations": [
-          "skills/nozickian-verify/scripts/validate_package.py:445-454",
-          "AUDIT_REPORT.md:201"
+          "skills/nozickian-verify/scripts/validate_package.py:408-472"
         ],
         "new_wording": "The two context-free bare-version patterns are removed; context-bearing stale path/root markers and the field-aware certificate/plugin version check remain, and explicit historical version prose is a retained true world.",
         "old_wording": "The fixed-pattern hygiene scanner still contained context-free bare-version patterns that rejected legitimate history and were brittle across future releases."
@@ -1790,11 +1788,7 @@
           "C-charter-caps"
         ],
         "correction_locations": [
-          "skills/nozickian-verify/assets/certificate-template.json:10-47",
-          "skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md:54-79",
-          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:41-50",
-          "agents/ntt-claim-extractor.md:20-30",
-          "agents/ntt-gate-auditor.md:22-29"
+          "self_validation/self_certificate.json:1924-2377"
         ],
         "new_wording": "Each consistency-sweep record requires duplicate-free canonical affected_claim_ids, unique locations/edited_locations, recommended_edit, classification/resolution pairings, and resolution-conditional completion evidence. The example-bearing certificate template consistently sets applies=true and sweep_ran=true. The contract explicitly remains parent/auditor-enforced rather than mechanically gated.",
         "old_wording": "Echo records lacked affected-claim linkage and recommended_edit and used vague scalar location values."
@@ -1805,9 +1799,7 @@
           "C-formal-invocation"
         ],
         "correction_locations": [
-          "self_validation/live_runtime_eval_result.json:49-80",
-          "self_validation/live_runtime_eval_stdout.json:49-80",
-          "self_validation/self_certificate.json:2250"
+          "self_validation/self_certificate.json:2428"
         ],
         "new_wording": "Bundled runtime summaries use an explicit normalized executable display; the legacy producing run's source release and observation time remain unknown, carried_forward is null, runtime identity is unavailable, and runtime status remains UNVERIFIED_RUNTIME.",
         "old_wording": "The active method manifest said the current live-runtime bytes were carried from a prior release even though their original producing-run lineage was not bound."
@@ -1818,11 +1810,8 @@
           "C-validator-sensitivity"
         ],
         "correction_locations": [
-          ".gitignore:1-3",
-          "skills/nozickian-verify/scripts/validate_package.py:169-207",
-          "skills/nozickian-verify/scripts/validate_package.py:1450-1538",
-          "skills/nozickian-verify/scripts/validate_package.py:4138-4410",
-          "skills/nozickian-verify/scripts/validate_package.py:4526-4548"
+          "skills/nozickian-verify/scripts/validate_package.py:246-282",
+          "AUDIT_REPORT.md:228"
         ],
         "new_wording": "The historical binary remains absent. Verified worktrees now classify every typed Git index path with _is_cruft_relpath independently of physical traversal. A checkout false world force-adds the exact historical nested path, requires one ordinary critical failure at the named cruft check, and directly requires every tracked cruft index path in failure details; direct tracked .pyc rejection and ignored untracked bytecode acceptance remain.",
         "old_wording": "A tracked ntt_gate.cpython-312.pyc binary was present in an earlier revision, and the post-redress physical cruft classification was assumed to reject that exact nested index path even though traversal stops at __pycache__."
@@ -1834,20 +1823,104 @@
           "C-pass-tracked-upgrade-audit"
         ],
         "correction_locations": [
-          "skills/nozickian-verify/scripts/validate_package.py:683-911",
-          "skills/nozickian-verify/scripts/validate_package.py:2562-3302",
-          "skills/nozickian-verify/scripts/run_live_skill_evals.py:196-697",
-          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:430-1151",
-          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:1326-1373",
-          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:9-236",
-          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-130",
-          "AUDIT_REPORT.md:217-257"
+          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:56-90",
+          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:310-676"
         ],
         "new_wording": "Slice H uses validate_package.compute_stable_release_tree as the single ntt-stable-release-tree-v1 implementation for live capture and certification; live results bind exact current package, evals.json, and artifact bytes plus run_config.max_turns, and promotion requires exact ordered normalized preflight and fixture argv while independently retaining prompt, transcript, fixture, artifact, and report checks.",
         "old_wording": "Slice G live evidence bound transcript and prompt bytes inside the bundle but did not bind a captured run to current package/evals/artifact bytes and accepted any transcript argv whose last argument was the expected prompt."
+      },
+      {
+        "affected_claim_ids": [
+          "C-pass-tracked-upgrade-audit",
+          "C-formal-invocation"
+        ],
+        "correction_locations": [
+          "AUDIT_REPORT.md:212-217",
+          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-279",
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:83-233",
+          "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json:8",
+          "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json:9"
+        ],
+        "new_wording": "Promotion certificate v2 enforces exact top-level types, a nonempty canonically evaluated claim set, and a fixed environment-independent nine-role promotion-evidence-v2 DAG. Formal result 2.0 binds a complete transcript and standalone snapshot. The 36-case aggregate invokes the production certifier CLI for all cases but is synthetic, covers complete-stream and safe-output-path false worlds, asserts both exact ordered Issue #5 obligations, and retains the Issue #8 non-closure wording. v1.0.3 certify_pass_tracked_upgrade.py alone applies the exact PASS-SCOPED/CAPPED non-authorizing cap while generic gate/formal PASS-TRACKED semantics remain unchanged.",
+        "old_wording": "Active release text described flat five-or-more promotion evidence refs, trusted captured validator outputs as promotion evidence, selected formal companions by legacy path conventions, and said a complete bundle should return PASS-TRACKED."
+      },
+      {
+        "affected_claim_ids": [
+          "C-structure",
+          "C-gate-hardening",
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit",
+          "C-github-readme-documentation",
+          "C-charter-caps"
+        ],
+        "correction_locations": [
+          "self_validation/package_validation_self_test_result.json:10348",
+          "self_validation/SELF_VALIDATION_REPORT.md:4",
+          "self_validation/manifest_update_result.json:6"
+        ],
+        "new_wording": "The checked-in fixed point regenerates every active structured-evidence hash, formal dry-run record, validation ledger, MANIFEST.sha256, STABLE_RELEASE_MANIFEST.json, and manifest_update_result.json; the full self-test records 1724/1724 checks, 63/63 mutations, and 10/10 true-world variants.",
+        "old_wording": "Checked-in generated outputs and manifests still described the prior 1565-check fixed point."
+      },
+      {
+        "affected_claim_ids": [
+          "C-structure",
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit"
+        ],
+        "correction_locations": [
+          "skills/nozickian-verify/scripts/validate_package.py:1302-1320",
+          "skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py:32-51",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:417-437",
+          "skills/nozickian-verify/scripts/run_gate_contract_tests.py:44-63",
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:210-226",
+          "skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py:42-62",
+          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:97-118"
+        ],
+        "new_wording": "All seven fixed package-local dynamic loaders contain import-time stdout. The pass-stub mutation asserts empty outer stdout and ordinary FAIL/nonzero completion, while every raw release CLI stream and result file parses directly with json.load as exactly one document without document extraction or cleanup. Formal dry-run display paths are normalized only after raw single-document acceptance, with companion hashes recomputed.",
+        "old_wording": "A package-local dynamic import could relay top-level helper output into the parent CLI stream; the PASS-TRACKED certifier pass-stub mutation therefore prefixed the full self-test JSON with a separate status document."
+      },
+      {
+        "affected_claim_ids": [
+          "C-structure",
+          "C-validator-sensitivity",
+          "C-github-readme-documentation",
+          "C-pass-tracked-upgrade-audit"
+        ],
+        "correction_locations": [
+          "skills/nozickian-verify/scripts/validate_package.py:601-864",
+          ".github/workflows/nozickian-team-ci.yml:16-48",
+          "docs/README.md:22",
+          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-260",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:9",
+          "docs/faq/README.md:13"
+        ],
+        "new_wording": "CI semantic reachability excludes statically disabled jobs and accepts required commands only as direct top-level commands outside shell control flow. The current workflow keeps both aggregate commands directly reachable; dedicated self-test false worlds fail all intended assertions. Active docs say 36 cases, the promotion skeleton contains a complete representative C-UPGRADE-001 claim while allowing an empty downstream conclusion with a substantive performed-review reason, and certifier/FAQ text states the independent non-authorizing v1.0.3 Issue #5 cap.",
+        "old_wording": "CI release-policy checks did not inspect job-level static disablement and could treat exact command strings inside shell control-flow wrappers as active. Active documentation still said 21 aggregate cases, the empty-claims promotion skeleton referenced a nonexistent upstream claim, the certifier description implied it could enable recorded PASS-TRACKED, and the FAQ omitted the independent Issue #5 cap."
+      },
+      {
+        "affected_claim_ids": [
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit"
+        ],
+        "correction_locations": [
+          "AUDIT_REPORT.md:212-217",
+          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-279",
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:83-233",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:1438-3923",
+          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:152-1602",
+          "skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py:1003-3216",
+          "skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py:587-1621",
+          "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json:8",
+          "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json:9"
+        ],
+        "new_wording": "The accepted final production contract requires a nonempty exact-typed promotion claim set evaluated through the canonical strict gate; exact Claude strict argv with real ANSI-normalized success parsing; complete-stream validator/formal decisions and hashes with bounded excerpts and explicit truncation metadata; complete formal transcript and standalone-snapshot binding; malformed/empty claim rejection; and lexical no-follow output-path safety with intentional atomic replacement of existing private regular --json files. The synthetic aggregate records 36/36 with a 244-check capped baseline; formal contracts record 73/73.",
+        "old_wording": "The prior fixed point did not document or evidence the accepted nonempty-claim, complete-stream, real-validator-format, and caller-controlled output-path contracts."
       }
     ],
-    "correction_evidence_checked": "Affirmatively checked the PR #3 Slice J index-derived tracked-cruft implementation, the exact force-added historical nested bytecode false world, the named ordinary critical failure, complete tracked-cruft failure details, the retained direct-.pyc false world and ignored-untracked-bytecode true world, every prior Slice F/G/H/I control, citation-only MANIFEST prose, and final current-state totals. Preserved every resolved original fragment in its immutable git:f5d0e984c624da1b3e98ed92392b919a7634b590:<path> object (plus the retained 738c historical .pyc locator), then iteratively re-resolved and semantically verified all 62 current correction_locations and 56 current edited_locations entries after final JSON serialization until the 118-locator set reached a fixed point.",
+    "correction_evidence_checked": "Affirmatively checked the current promotion certifier, formal runner, 36-case aggregate suite, v2 schemas/templates, release policy, active CI run blocks, current documentation, historical/current evidence split, regenerated structured evidence, formal dry-run records, generated validation ledgers, and both integrity manifests for stale flat-ref, environment-dependent-role, incomplete-formal-tree, complete-stream early failures, real strict-validator output/argv, malformed or empty claims, canonical downstream claim evaluation, unsafe output paths, traceback, synthetic-runtime, obligation drift, Issue-8 closure, authorizing PASS-TRACKED, and prior-generated-output echoes. Direct single-document json.load acceptance and the pass-stub outer-stdout regression were also checked.",
     "echo_findings": [
       {
         "affected_claim_ids": [
@@ -1855,8 +1928,8 @@
         ],
         "classification": "live-claim",
         "edited_locations": [
-          "self_validation/self_certificate.json:1557",
-          "self_validation/self_certificate.json:1570"
+          "self_validation/self_certificate.json:1579",
+          "self_validation/self_certificate.json:1592"
         ],
         "embedded_in_true_sentence": "yes",
         "fragment": "duplicated stale expected and mutated-actual SHA-256 values in charter observed_behavior prose",
@@ -1879,8 +1952,7 @@
         ],
         "classification": "live-claim",
         "edited_locations": [
-          "AUDIT_REPORT.md:257",
-          "self_validation/self_certificate.json:1671"
+          "AUDIT_REPORT.md:266"
         ],
         "embedded_in_true_sentence": "yes",
         "fragment": "exact MANIFEST.sha256 digest embedded in current-state certificate and audit prose",
@@ -1904,9 +1976,9 @@
         ],
         "classification": "live-claim",
         "edited_locations": [
-          "AUDIT_REPORT.md:231",
-          "RELEASE_LOCK.json:85",
-          "self_validation/manifest_update_result.json:3"
+          "README.md:10",
+          "RELEASE_LOCK.json:91",
+          "AUDIT_REPORT.md:238"
         ],
         "embedded_in_true_sentence": "yes",
         "fragment": "1369/1369 checks, 35/35 mutations, 4/4 true-world variants used as current release counts",
@@ -1915,8 +1987,8 @@
           "git:f5d0e984c624da1b3e98ed92392b919a7634b590:RELEASE_LOCK.json",
           "git:f5d0e984c624da1b3e98ed92392b919a7634b590:self_validation/manifest_update_result.json"
         ],
-        "recommended_edit": "Replace current-state totals with 1565/1565 checks, 56/56 mutations, and 10/10 true worlds while preserving dated earlier ledgers as history.",
-        "replacement_evidence": "The current audit, release metadata, and manifest regeneration note use 1565/1565, 56/56, and 10/10; the dated v102 ledger retains its historical 1369/35/4 observation.",
+        "recommended_edit": "Record the final checked-in 1724/1724, 63/63, and 10/10 result in active release metadata while preserving dated history.",
+        "replacement_evidence": "The active audit, release lock, README, certificate, and checked-in generated ledgers record the final 1724/63/10 result; dated earlier ledgers remain explicit history.",
         "resolution": "resolved"
       },
       {
@@ -1926,11 +1998,8 @@
         ],
         "classification": "live-claim",
         "edited_locations": [
-          "skills/nozickian-verify/scripts/validate_package.py:210-328",
-          "skills/nozickian-verify/scripts/validate_package.py:1450-1544",
-          "skills/nozickian-verify/scripts/validate_package.py:1913-1970",
-          "AUDIT_REPORT.md:195-238",
-          ".github/workflows/nozickian-team-ci.yml:20-28"
+          "skills/nozickian-verify/scripts/validate_package.py:246-287",
+          "AUDIT_REPORT.md:228"
         ],
         "embedded_in_true_sentence": "yes",
         "fragment": "tracked-only cruft wording and Git absence/error conflation",
@@ -1949,16 +2018,8 @@
         ],
         "classification": "live-claim",
         "edited_locations": [
-          "skills/nozickian-verify/scripts/validate_package.py:395-442",
-          "skills/nozickian-verify/scripts/validate_package.py:597-659",
-          "skills/nozickian-verify/scripts/validate_package.py:913-974",
-          "skills/nozickian-verify/scripts/validate_package.py:1160-1178",
-          "skills/nozickian-verify/scripts/validate_package.py:1261-1323",
-          "skills/nozickian-verify/scripts/validate_package.py:1840-1873",
-          "skills/nozickian-verify/scripts/validate_package.py:2096-2169",
-          "skills/nozickian-verify/scripts/validate_package.py:2171-2250",
-          "docs/release/README.md:11",
-          "TEAM_INTERNAL_USE.md:32-34"
+          "skills/nozickian-verify/scripts/validate_package.py:923-1302",
+          "skills/nozickian-verify/scripts/validate_package.py:486"
         ],
         "embedded_in_true_sentence": "yes",
         "fragment": "direct manifest write, UnicodeDecodeError skip, ordinary-FAIL exception mapping, reachable schema holes, and substring-only display normalization",
@@ -1977,11 +2038,8 @@
         ],
         "classification": "live-claim",
         "edited_locations": [
-          "skills/nozickian-verify/scripts/run_live_skill_evals.py:138-697",
-          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:430-1151",
-          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:85",
-          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:97-177",
-          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:179-194"
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:344-377",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:1438-1475"
         ],
         "embedded_in_true_sentence": "yes",
         "fragment": "recursive JSON/stderr keyword acceptance and fixture PASS despite failed live preflight",
@@ -2001,12 +2059,8 @@
         ],
         "classification": "live-claim",
         "edited_locations": [
-          "skills/nozickian-verify/scripts/run_live_skill_evals.py:138-697",
-          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:196-1599",
-          "skills/nozickian-verify/scripts/validate_package.py:2562-3940",
-          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:9-236",
-          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-130",
-          "AUDIT_REPORT.md:208-257"
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:41-84",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:1438-1475"
         ],
         "embedded_in_true_sentence": "yes",
         "fragment": "unbound promotion evidence: permissive scalar return codes, contradictory numeric validator summaries, arbitrary package hashes/refs, external formal pointers, nonregular inputs, and broad root-prefix rewriting",
@@ -2027,14 +2081,8 @@
         ],
         "classification": "live-claim",
         "edited_locations": [
-          "skills/nozickian-verify/scripts/validate_package.py:683-911",
-          "skills/nozickian-verify/scripts/validate_package.py:2562-3302",
-          "skills/nozickian-verify/scripts/run_live_skill_evals.py:196-697",
-          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:430-1151",
-          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:1326-1373",
-          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:9-236",
-          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-130",
-          "AUDIT_REPORT.md:217-257"
+          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:56-90",
+          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:310-676"
         ],
         "embedded_in_true_sentence": "no",
         "fragment": "live evidence bound transcript prompt bytes but not current package, fixture-spec, artifact bytes, or the complete normalized argv",
@@ -2054,8 +2102,7 @@
         ],
         "classification": "stale-echo",
         "edited_locations": [
-          "skills/nozickian-verify/scripts/validate_package.py:445-454",
-          "AUDIT_REPORT.md:201"
+          "skills/nozickian-verify/scripts/validate_package.py:408-472"
         ],
         "embedded_in_true_sentence": "yes",
         "fragment": "context-free bare-version provenance patterns",
@@ -2073,11 +2120,7 @@
         ],
         "classification": "stale-echo",
         "edited_locations": [
-          "skills/nozickian-verify/assets/certificate-template.json:10-47",
-          "skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md:54-79",
-          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:41-50",
-          "agents/ntt-claim-extractor.md:20-30",
-          "agents/ntt-gate-auditor.md:22-29"
+          "self_validation/self_certificate.json:1924-2377"
         ],
         "embedded_in_true_sentence": "no",
         "fragment": "echo records without uniqueness/pairing requirements plus an example-bearing template that said applies=false and sweep_ran=false",
@@ -2099,9 +2142,7 @@
         ],
         "classification": "live-claim",
         "edited_locations": [
-          "self_validation/live_runtime_eval_result.json:49-80",
-          "self_validation/live_runtime_eval_stdout.json:49-80",
-          "self_validation/self_certificate.json:2250"
+          "self_validation/self_certificate.json:2428"
         ],
         "embedded_in_true_sentence": "yes",
         "fragment": "live runtime result carried as bundled evidence from the prior release",
@@ -2121,11 +2162,8 @@
         ],
         "classification": "stale-echo",
         "edited_locations": [
-          ".gitignore:1-3",
-          "skills/nozickian-verify/scripts/validate_package.py:169-207",
-          "skills/nozickian-verify/scripts/validate_package.py:1450-1538",
-          "skills/nozickian-verify/scripts/validate_package.py:4138-4410",
-          "skills/nozickian-verify/scripts/validate_package.py:4526-4548"
+          "skills/nozickian-verify/scripts/validate_package.py:246-282",
+          "AUDIT_REPORT.md:228"
         ],
         "embedded_in_true_sentence": "no",
         "fragment": "ntt_gate.cpython-312.pyc",
@@ -2152,18 +2190,155 @@
         "fragment": "dated v1.0.1 and 2026-07-09 validation observations",
         "locations": [
           "AUDIT_REPORT.md:5",
-          "self_validation/v102_charter_caps_probe_results.json:30-46",
-          "self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json:7-8"
+          "self_validation/v102_charter_caps_probe_results.json:2-38",
+          "self_validation/evidence/C-charter-caps__TW-charter-intact-selftest.json:2"
         ],
         "recommended_edit": "Retain these explicitly dated historical observations and do not reinterpret them as current release counts or provenance.",
         "replacement_evidence": "none",
         "resolution": "accepted-intentional-reference"
+      },
+      {
+        "affected_claim_ids": [
+          "C-pass-tracked-upgrade-audit",
+          "C-formal-invocation"
+        ],
+        "classification": "stale-echo",
+        "edited_locations": [
+          "AUDIT_REPORT.md:212-217",
+          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-279",
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:83-233",
+          "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json:8",
+          "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json:9"
+        ],
+        "embedded_in_true_sentence": "yes",
+        "fragment": "flat five-or-more promotion evidence refs and an authorizing PASS-TRACKED v1.0.3 certifier result",
+        "locations": [
+          "git:fb919fdaa8f0051e21a98b0771daebd92f4a5ba3:README.md",
+          "git:fb919fdaa8f0051e21a98b0771daebd92f4a5ba3:skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
+          "git:fb919fdaa8f0051e21a98b0771daebd92f4a5ba3:skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
+          "git:fb919fdaa8f0051e21a98b0771daebd92f4a5ba3:skills/nozickian-verify/assets/certificate-template.json",
+          "git:fb919fdaa8f0051e21a98b0771daebd92f4a5ba3:AUDIT_REPORT.md"
+        ],
+        "recommended_edit": "Replace active promotion prose and schemas with the typed promotion certificate v2 DAG, fresh execution policy, formal result 2.0, structured failure API, synthetic aggregate boundary, and mandatory certifier-only Issue #5 cap while preserving ordinary gate evidence_refs and generic gate/formal PASS-TRACKED semantics.",
+        "replacement_evidence": "The active release files now consistently state exact-string promotion_schema_version 2.0, nonempty canonical promotion claim evaluation, fixed nine-role promotion-evidence-v2 semantics, complete-stream official/formal binding, safe output paths, 36/36 synthetic production-CLI aggregate evidence, canonical FAIL plus failure_kind, both ordered Issue #5 obligations, Issue #8 non-closure, and the exact non-authorizing v1.0.3 cap.",
+        "resolution": "resolved"
+      },
+      {
+        "affected_claim_ids": [
+          "C-structure",
+          "C-gate-hardening",
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit",
+          "C-github-readme-documentation",
+          "C-charter-caps"
+        ],
+        "classification": "stale-echo",
+        "edited_locations": [
+          "self_validation/package_validation_self_test_result.json:10348",
+          "self_validation/SELF_VALIDATION_REPORT.md:4",
+          "self_validation/manifest_update_result.json:6"
+        ],
+        "embedded_in_true_sentence": "yes",
+        "fragment": "prior checked-in generated outputs reported the 1565-check fixed point",
+        "locations": [
+          "git:fb919fdaa8f0051e21a98b0771daebd92f4a5ba3:self_validation/package_validation_self_test_result.json",
+          "git:fb919fdaa8f0051e21a98b0771daebd92f4a5ba3:self_validation/SELF_VALIDATION_REPORT.md",
+          "git:fb919fdaa8f0051e21a98b0771daebd92f4a5ba3:self_validation/manifest_update_result.json"
+        ],
+        "recommended_edit": "Regenerate structured evidence, MANIFEST.sha256, STABLE_RELEASE_MANIFEST.json, formal dry-run records, and every final generated output from the reviewed source fixed point; record the observed final package count.",
+        "replacement_evidence": "The checked-in full self-test and Markdown report now record 1724/1724 checks, and manifest_update_result.json records the final package tree and integrity-manifest identities.",
+        "resolution": "resolved"
+      },
+      {
+        "affected_claim_ids": [
+          "C-structure",
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit"
+        ],
+        "classification": "live-claim",
+        "edited_locations": [
+          "skills/nozickian-verify/scripts/validate_package.py:1302-1320",
+          "skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py:32-51",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:417-437",
+          "skills/nozickian-verify/scripts/run_gate_contract_tests.py:44-63",
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:210-226",
+          "skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py:42-62",
+          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:97-118"
+        ],
+        "embedded_in_true_sentence": "yes",
+        "fragment": "import-time PASS-TRACKED stub stdout preceding the final self-test JSON document",
+        "locations": [
+          "git:fb919fdaa8f0051e21a98b0771daebd92f4a5ba3:skills/nozickian-verify/scripts/validate_package.py"
+        ],
+        "recommended_edit": "Contain stdout around every fixed package-local exec_module call and assert that the pass-stub mutation emits no outer stdout while still failing normally. Reject release evidence unless each raw machine-readable CLI file parses directly as one JSON document.",
+        "replacement_evidence": "The full self-test records a passing pass_stub_stdout_assertion with outer_stdout_empty, validator_completed, harness_error_absent, and failed_normally all true. Direct json.load checks pass for every raw checked-in CLI stream and paired result.",
+        "resolution": "resolved"
+      },
+      {
+        "affected_claim_ids": [
+          "C-structure",
+          "C-validator-sensitivity",
+          "C-github-readme-documentation",
+          "C-pass-tracked-upgrade-audit"
+        ],
+        "classification": "live-claim",
+        "edited_locations": [
+          "skills/nozickian-verify/scripts/validate_package.py:601-864",
+          ".github/workflows/nozickian-team-ci.yml:16-48",
+          "docs/README.md:22",
+          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-260",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:9",
+          "docs/faq/README.md:13"
+        ],
+        "embedded_in_true_sentence": "yes",
+        "fragment": "CI command strings counted without job/control-flow reachability; 21-case documentation; incoherent empty-claims promotion skeleton; promotion-enabling certifier description; and FAQ omission of the independent Issue #5 cap",
+        "locations": [
+          "git:fb919fdaa8f0051e21a98b0771daebd92f4a5ba3:skills/nozickian-verify/scripts/validate_package.py",
+          "git:fb919fdaa8f0051e21a98b0771daebd92f4a5ba3:docs/README.md",
+          "git:fb919fdaa8f0051e21a98b0771daebd92f4a5ba3:skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
+          "git:fb919fdaa8f0051e21a98b0771daebd92f4a5ba3:skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
+          "git:fb919fdaa8f0051e21a98b0771daebd92f4a5ba3:docs/faq/README.md"
+        ],
+        "recommended_edit": "Parse job-level literal conditions, count only direct reachable shell commands, add targeted whole-job and if-false mutations, correct active aggregate counts, use a complete representative promotion claim with an explicit empty downstream conclusion, and state the certifier-only Issue #5 cap explicitly.",
+        "replacement_evidence": "The full self-test records both CI false worlds with ordinary FAIL and all intended aggregate assertions failed; active docs/template/docstrings encode the corrected 36-case, nonempty-claim, and independent-cap contracts.",
+        "resolution": "resolved"
+      },
+      {
+        "affected_claim_ids": [
+          "C-validator-sensitivity",
+          "C-formal-invocation",
+          "C-pass-tracked-upgrade-audit"
+        ],
+        "classification": "live-claim",
+        "edited_locations": [
+          "AUDIT_REPORT.md:212-217",
+          "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:69-279",
+          "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md:83-233",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:1438-3923",
+          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:152-1602",
+          "skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py:1003-3216",
+          "skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py:587-1621",
+          "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json:8",
+          "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json:9"
+        ],
+        "embedded_in_true_sentence": "yes",
+        "fragment": "Promotion evidence documentation and active self-certificate omitted the accepted nonempty canonical claim evaluation, real strict-validator output/argv, complete-stream binding, and lexical output-path safety contracts.",
+        "locations": [
+          "git:fb919fdaa8f0051e21a98b0771daebd92f4a5ba3:self_validation/self_certificate.json"
+        ],
+        "recommended_edit": "Document and evidence the accepted production semantics, update the complete representative promotion skeleton, refresh focused counts, and regenerate active evidence/manifests without modifying historical modal records.",
+        "replacement_evidence": "Production scripts and focused suites enforce the accepted contracts; active docs, current evidence records, generated ledgers, and manifests are regenerated together while the two historical modal files remain byte-identical to HEAD.",
+        "resolution": "resolved"
       }
     ],
+    "locator_finalization_note": "An iterative post-serialization resolver bound all 18 corrected claims and 18 echo findings to current semantic targets; every current file:line[-line] locator was then checked against final serialized files. Git-qualified historical locators remain immutable.",
+    "locator_status": "final-fixed-point-resolved",
     "none_found": false,
     "not_applicable_reason": "none",
     "sweep_ran": true,
-    "swept_at": "2026-07-10 (PR #3 Slice A through Slice J final original-scope redress)"
+    "swept_at": "2026-07-14 (PR #3 promotion contract v2 final release-evidence fixed point)"
   },
   "derived_or_downstream_claims": [
     {
@@ -2212,6 +2387,7 @@
       "scripts/run_live_skill_evals.py",
       "agents/ntt-formal-coordinator.md",
       "skills/nozickian-verify/scripts/run_formal_artifact_verification.py",
+      "skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py",
       "self_validation/formal_invocation_dry_run.json",
       "AUDIT_REPORT.md",
       "STABLE_RELEASE_MANIFEST.json"
@@ -2220,7 +2396,7 @@
     "checker": "Hardened deterministic validation suite: validate_package.py --self-test, run_gate_contract_tests.py, ntt_gate.py, manifest hash checks, and manual inspection of results.",
     "environment": [
       "local filesystem",
-      "Python 3.13",
+      "Python 3.14.6",
       "temporary mutation copies under /tmp",
       "web-checked Claude Code and Agent Skills docs"
     ],
@@ -2228,9 +2404,11 @@
     "graders_or_tests": [
       "validate_package.py --self-test; run_gate_contract_tests.py; run_regression_evals.py; ntt_gate.py; run_formal_artifact_verification.py --dry-run; package mutation tests including formal runner and coordinator false worlds.",
       "run_formal_runner_contract_tests.py",
+      "run_promotion_certifier_contract_tests.py (36/36 synthetic production certifier CLI baseline and negatives)",
       "structured evidence binding in ntt_gate.py",
       "stream-json native subagent trace authentication in run_formal_artifact_verification.py",
-      "run_gate_contract_tests.py cases for partial bad evidence refs, evidence-ref escape, absolute refs, external valid-hash refs, and remote refs"
+      "run_gate_contract_tests.py cases for partial bad evidence refs, evidence-ref escape, absolute refs, external valid-hash refs, and remote refs",
+      "Direct json.load single-document acceptance for every raw machine-readable release CLI stream and paired result; no raw_decode, line stripping, tail extraction, or normalization that hides extra output. Formal display-path normalization occurs only after raw acceptance."
     ],
     "human_review": "Final inspection of validation outputs and known runtime gaps.",
     "port_2026_07_09": {
@@ -2267,6 +2445,10 @@
       "self_validation/gate_contract_results.json",
       "self_validation/GATE_RESULT.md",
       "self_validation/formal_runner_contract_results.json",
+      "self_validation/promotion_certifier_contract_results.json",
+      "self_validation/promotion_certifier_contract_stdout.json",
+      "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json",
+      "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
       "AUDIT_REPORT.md",
       "STABLE_RELEASE_MANIFEST.json"
     ],
@@ -2277,10 +2459,168 @@
     "validator_scope": "deterministic package integrity, release lock, closed plugin surface, regression fixtures, and gate contract checks; live Claude Code invocation remains separately reported"
   },
   "pass_tracked_upgrade_audit": {
+    "aggregate_contract": {
+      "actual_result": "36/36",
+      "baseline_check_count": 244,
+      "command": "python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .",
+      "expected_result": "36/36",
+      "production_certifier_cli_baseline_and_negatives": true,
+      "runtime_authentication": false,
+      "status": "PASS",
+      "synthetic_contract_evidence_only": true
+    },
     "certifier": "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
-    "reason": "This release contains the audit instructions and certifier needed for a future Claude Code runtime environment to certify PASS-SCOPED to PASS-TRACKED, but the bundled self-validation environment did not execute live Claude Code fixture or formal runs.",
+    "claim_evaluation_policy": "claims is nonempty; every entry has exact required types and a unique canonical id; ntt_gate.evaluate_certificate runs at the bundle evidence root; modeled completion requires a nonempty all-PASS claim-result set passed to promotion-strict downstream non-closure evaluation",
+    "current_evidence_refs": [
+      "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json",
+      "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json"
+    ],
+    "downstream_review": {
+      "automatic_closure_forbidden": true,
+      "current_downstream_claims_authorized": false,
+      "independent_claim_required_for_downstream_pass": true,
+      "performed": true,
+      "policy": "promotion-v2",
+      "result": "The modeled baseline contains a real canonically evaluated promotion claim but identifies no derived deployment, safety, compliance, or action-authorizing conclusion; an explicit empty downstream conclusion is therefore retained with a substantive reason."
+    },
+    "formal_required_companions": [
+      "report",
+      "gate",
+      "certificate",
+      "ledger",
+      "transcript",
+      "prompt",
+      "target_snapshot"
+    ],
+    "formal_result_schema_version": "2.0",
+    "formal_transcript_binding": "The complete bounded stream-json transcript is written, byte-counted, SHA-256 bound, and authenticated. Public excerpts and truncation flags do not authorize; capture-limit excess fails closed and tail-only authentication is forbidden.",
+    "official_validator_stream_policy": "Claude runs with exact ordered argv ending in --strict and accepts the real ANSI-normalized Validation passed form only when neither complete output stream contains a failure or contradiction. Full bytes determine status, hashes, and byte counts.",
+    "promotion_evidence_schema_version": "promotion-evidence-v2",
+    "promotion_required_top_level_types": {
+      "claims": "nonempty array of exact-typed unique-id objects",
+      "derived_or_downstream_claims": "array",
+      "downstream_review": "object",
+      "evidence": "object",
+      "live_result_bindings": "object",
+      "method_m_upgrade": "object",
+      "package_tree_sha256": "string",
+      "package_version": "string",
+      "promotion_schema_version": "exact string 2.0",
+      "requested_status": "string",
+      "upgrade_from_status": "string"
+    },
+    "promotion_role_contract": {
+      "availability_invariant": "Both official-policy roles and every canonical dependency remain present when an absent executable is explicitly scope-excluded.",
+      "fixed_role_count": 9,
+      "roles": [
+        "deterministic.package_validation",
+        "deterministic.gate_result",
+        "deterministic.regression",
+        "deterministic.gate_contract",
+        "deterministic.formal_contract",
+        "official.claude_plugin_validate",
+        "official.skills_ref_validate",
+        "live.runtime",
+        "formal.result"
+      ]
+    },
+    "promotion_schema_version": "2.0",
+    "reason": "This release models every promotion contract lane, but v1.0.3 certify_pass_tracked_upgrade.py alone must cap a complete result because both Issue #5 charter mechanics remain parent-enforced. The bundled self-validation environment also did not execute real live Claude Code fixture or formal runs.",
     "reference": "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
-    "status": "NOT_CERTIFIED_IN_THIS_RELEASE"
+    "safe_output_policy": "Caller-supplied certifier/formal destinations reject symlinked ancestors, direct links, special files, and hardlink aliases with structured invalid-input results. Existing private regular --json files are intentionally replaced through same-directory exclusive temporary plus atomic replacement; --output-dir must be a real or safely created directory.",
+    "status": "PASS-SCOPED",
+    "v1_0_3_cap": {
+      "exit": "nonzero",
+      "outcome": "CAPPED",
+      "promotion_authorized": false,
+      "satisfied_profile": "promotion-contract-v2-complete",
+      "status": "PASS-SCOPED",
+      "unresolved_charter_obligations": [
+        "Issue #5 consistency-sweep activation and resolution mechanics remain parent-enforced.",
+        "Issue #5 REMOTE_GROUND_TRUTH_REQUIRED escalation mechanics remain parent-enforced."
+      ]
+    }
+  },
+  "release_validation": {
+    "formal_runner_contract": {
+      "passed": 73,
+      "status": "PASS",
+      "total": 73
+    },
+    "gate_contract": {
+      "passed": 78,
+      "status": "PASS",
+      "total": 78
+    },
+    "official_validators": {
+      "claude_plugin_validate": {
+        "command": "claude plugin validate . --strict",
+        "returncode": 0,
+        "runtime_version": "2.1.209 (Claude Code)",
+        "status": "PASS"
+      },
+      "skills_ref_validate": {
+        "reason": "skills-ref executable was not installed in the final regeneration environment.",
+        "status": "NOT_EXECUTED"
+      }
+    },
+    "package_basic": {
+      "checks_passed": 1618,
+      "checks_total": 1618,
+      "critical_failed": 0,
+      "status": "PASS"
+    },
+    "package_self_test": {
+      "checks_passed": 1724,
+      "checks_total": 1724,
+      "ci_false_worlds": {
+        "aggregate_commands_inside_if_false": "rejected_by_all_three_aggregate_assertions",
+        "statically_disabled_whole_job": "rejected_by_all_three_aggregate_assertions"
+      },
+      "critical_failed": 0,
+      "mutations_passed": 63,
+      "mutations_total": 63,
+      "status": "PASS",
+      "true_world_passed": 10,
+      "true_world_total": 10
+    },
+    "promotion_contract": {
+      "baseline_check_count": 244,
+      "baseline_outcome": "CAPPED",
+      "baseline_status": "PASS-SCOPED",
+      "passed": 36,
+      "runtime_authentication": false,
+      "status": "PASS",
+      "total": 36
+    },
+    "raw_single_document_cli": {
+      "document_extraction_or_cleanup_used": false,
+      "formal_display_path_normalization_after_raw_parse": true,
+      "parser": "json.load",
+      "status": "PASS",
+      "streams": [
+        "package basic stdout",
+        "package full self-test stdout",
+        "strict gate stdout",
+        "gate contracts stdout and result",
+        "formal contracts stdout and result",
+        "regression stdout and result",
+        "promotion aggregate stdout and result",
+        "formal dry-run stdout, compatibility result, and canonical formal_result.json"
+      ]
+    },
+    "regression": {
+      "checks_passed": 166,
+      "checks_total": 166,
+      "status": "PASS"
+    },
+    "strict_gate": {
+      "claims_total": 7,
+      "critical_failed": 0,
+      "derived_or_downstream_claims": 3,
+      "major_failed": 0,
+      "status": "PASS-SCOPED"
+    }
   },
   "remote_escalations": [],
   "remote_escalations_note": "None. No REMOTE_GROUND_TRUTH_REQUIRED entry was used to verify a claim in this package-local redress. The legacy live-runtime summaries' original producing-run lineage remains explicitly unknown and those bytes remain UNVERIFIED_RUNTIME rather than supporting a verified current-runtime claim. When a remote escalation does occur, each record follows the canonical schema in assets/certificate-template.json with fetched-and-readjudicated companion evidence.",
@@ -2312,7 +2652,8 @@
     "v1.0.3 Slice H package/evals/artifact byte hashes and exact normalized argv bind current live evidence to the captured package invocation; legacy bundled runtime fields remain null and UNVERIFIED_RUNTIME rather than being backfilled.",
     "v1.0.3 formal trace authentication rejects metadata-only text/document/image result blocks and requires payload-bearing completion evidence.",
     "v1.0.3 strict evidence mode counts unique canonical evidence files and unique underlying artifact/hash identities for critical evidence sufficiency.",
-    "v1.0.3 still remains PASS-SCOPED because live official Claude Code runtime traces were not captured in this environment.",
+    "v1.0.3 remains PASS-SCOPED because live official Claude Code runtime traces were not captured and certify_pass_tracked_upgrade.py cannot discharge the two parent-enforced Issue #5 obligations.",
+    "The 36-case promotion aggregate is synthetic contract evidence that invokes the production certifier CLI for all cases; it is not real runtime authentication.",
     "v1.0.3 formal trace authentication rejects metadata-only result content blocks and requires substantive payload-bearing completion evidence.",
     "v1.0.3 strict local evidence mode counts unique canonical evidence refs and unique structured evidence artifacts for critical evidence sufficiency.",
     "v1.0.3 formal trace authentication treats tool_result.content as output data and does not parse payload data as nested runtime tool events.",

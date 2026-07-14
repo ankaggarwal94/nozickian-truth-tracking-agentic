@@ -1,6 +1,16 @@
 {
   "cases": [
     {
+      "bytecode_after": [],
+      "bytecode_before": [],
+      "name": "repeated_plain_validation_creates_no_bytecode_cruft",
+      "passed": true,
+      "returncodes": [
+        0,
+        0
+      ]
+    },
+    {
       "auth": {
         "agent_calls_authenticated": [],
         "agent_results_authenticated": [],
@@ -118,6 +128,232 @@
       "name": "general_purpose_fallback_fails_formal_trace",
       "passed": true,
       "reason": "runtime trace shows general-purpose fallback in a formal run"
+    },
+    {
+      "auth": {
+        "agent_calls_authenticated": [
+          "ntt-claim-extractor",
+          "ntt-code-verifier",
+          "ntt-false-world-adversary",
+          "ntt-gate-auditor",
+          "ntt-method-cartographer",
+          "ntt-source-verifier",
+          "ntt-true-world-adherence"
+        ],
+        "agent_results_authenticated": [
+          "ntt-claim-extractor",
+          "ntt-code-verifier",
+          "ntt-false-world-adversary",
+          "ntt-gate-auditor",
+          "ntt-method-cartographer",
+          "ntt-source-verifier",
+          "ntt-true-world-adherence"
+        ],
+        "authenticated": false,
+        "duplicate_tool_use_ids": {},
+        "events_seen": 71,
+        "evidence_events": [
+          {
+            "event_type": "tool_use",
+            "line": 1,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "unexpected-tool-use",
+            "position": 100002,
+            "selector": "general-purpose",
+            "tool_ids": [
+              "toolu-early-general"
+            ],
+            "tool_name": "Agent"
+          },
+          {
+            "event_type": "tool_result",
+            "line": 2,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "tool-result",
+            "position": 200002,
+            "success": true,
+            "tool_id": "toolu-early-general"
+          },
+          {
+            "agent": "ntt-method-cartographer",
+            "event_type": "tool_use",
+            "line": 58,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "tool-use",
+            "position": 5800002,
+            "tool_id": "toolu-ntt-method-cartographer",
+            "tool_name": "Agent"
+          },
+          {
+            "event_type": "tool_result",
+            "line": 59,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "tool-result",
+            "position": 5900002,
+            "success": true,
+            "tool_id": "toolu-ntt-method-cartographer"
+          },
+          {
+            "agent": "ntt-claim-extractor",
+            "event_type": "tool_use",
+            "line": 60,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "tool-use",
+            "position": 6000002,
+            "tool_id": "toolu-ntt-claim-extractor",
+            "tool_name": "Agent"
+          },
+          {
+            "event_type": "tool_result",
+            "line": 61,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "tool-result",
+            "position": 6100002,
+            "success": true,
+            "tool_id": "toolu-ntt-claim-extractor"
+          },
+          {
+            "agent": "ntt-source-verifier",
+            "event_type": "tool_use",
+            "line": 62,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "tool-use",
+            "position": 6200002,
+            "tool_id": "toolu-ntt-source-verifier",
+            "tool_name": "Agent"
+          },
+          {
+            "event_type": "tool_result",
+            "line": 63,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "tool-result",
+            "position": 6300002,
+            "success": true,
+            "tool_id": "toolu-ntt-source-verifier"
+          },
+          {
+            "agent": "ntt-code-verifier",
+            "event_type": "tool_use",
+            "line": 64,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "tool-use",
+            "position": 6400002,
+            "tool_id": "toolu-ntt-code-verifier",
+            "tool_name": "Agent"
+          },
+          {
+            "event_type": "tool_result",
+            "line": 65,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "tool-result",
+            "position": 6500002,
+            "success": true,
+            "tool_id": "toolu-ntt-code-verifier"
+          },
+          {
+            "agent": "ntt-false-world-adversary",
+            "event_type": "tool_use",
+            "line": 66,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "tool-use",
+            "position": 6600002,
+            "tool_id": "toolu-ntt-false-world-adversary",
+            "tool_name": "Agent"
+          },
+          {
+            "event_type": "tool_result",
+            "line": 67,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "tool-result",
+            "position": 6700002,
+            "success": true,
+            "tool_id": "toolu-ntt-false-world-adversary"
+          },
+          {
+            "agent": "ntt-true-world-adherence",
+            "event_type": "tool_use",
+            "line": 68,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "tool-use",
+            "position": 6800002,
+            "tool_id": "toolu-ntt-true-world-adherence",
+            "tool_name": "Agent"
+          },
+          {
+            "event_type": "tool_result",
+            "line": 69,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "tool-result",
+            "position": 6900002,
+            "success": true,
+            "tool_id": "toolu-ntt-true-world-adherence"
+          },
+          {
+            "agent": "ntt-gate-auditor",
+            "event_type": "tool_use",
+            "line": 70,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "tool-use",
+            "position": 7000002,
+            "tool_id": "toolu-ntt-gate-auditor",
+            "tool_name": "Agent"
+          },
+          {
+            "event_type": "tool_result",
+            "line": 71,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "phase": "tool-result",
+            "position": 7100002,
+            "success": true,
+            "tool_id": "toolu-ntt-gate-auditor"
+          }
+        ],
+        "missing_agents": [],
+        "missing_result_agents": [],
+        "reasons": [
+          "transcript includes a general-purpose Agent/Task call",
+          "unexpected native Agent/Task tool-use events without required ntt-* structured selectors: 1"
+        ],
+        "result_before_call_ids": {},
+        "role_violations": [],
+        "saw_general_purpose": true,
+        "unexpected_native_tool_calls": [
+          {
+            "event_type": "tool_use",
+            "line": 1,
+            "node_index": 2,
+            "path": "$.message.content[0]",
+            "position": 100002,
+            "selector": "general-purpose",
+            "tool_ids": [
+              "toolu-early-general"
+            ],
+            "tool_name": "Agent"
+          }
+        ]
+      },
+      "capped_status": "FAIL",
+      "name": "early_general_purpose_event_survives_large_valid_tail",
+      "passed": true,
+      "reason": "runtime trace shows general-purpose fallback in a formal run",
+      "stream_bytes": 62842,
+      "stream_sha256": "sha256:475d5ee304be30899fc255ca4a16d584a1e0efe55949a317cbee7497cb6a8a31"
     },
     {
       "auth": {
@@ -7310,6 +7546,18 @@
       "passed": true
     },
     {
+      "name": "formal_result_v2_is_canonical_and_typed",
+      "passed": true
+    },
+    {
+      "name": "formal_result_declares_standalone_snapshot_context",
+      "passed": true
+    },
+    {
+      "name": "json_compatibility_copy_matches_canonical_result_bytes",
+      "passed": true
+    },
+    {
       "name": "package_tree_output_dir_rejected_without_refresh_manifest",
       "passed": true
     },
@@ -7322,10 +7570,94 @@
       "passed": true
     },
     {
+      "name": "formal_runner_atomically_replaces_regular_compatibility_json",
+      "passed": true
+    },
+    {
+      "name": "formal_runner_preserves_separate_evidence_root_compatibility",
+      "passed": true
+    },
+    {
+      "name": "formal_prompt_verifies_immutable_target_snapshot",
+      "passed": true
+    },
+    {
+      "name": "invalid_package_identity_forbids_formal_pass",
+      "passed": true
+    },
+    {
+      "name": "target_mutation_forbids_formal_pass",
+      "passed": true
+    },
+    {
+      "name": "target_mutate_restore_metadata_change_forbids_formal_pass",
+      "passed": true
+    },
+    {
+      "name": "formal_runner_structures_existing_file_output_dir_failure",
+      "passed": true
+    },
+    {
+      "name": "formal_runner_structures_symlink_output_dir_failure",
+      "passed": true
+    },
+    {
+      "name": "formal_runner_rejects_symlinked_output_dir_ancestor",
+      "passed": true
+    },
+    {
+      "name": "formal_runner_structures_special_output_dir_failure",
+      "passed": true
+    },
+    {
+      "name": "formal_runner_rejects_compatibility_json_symlink",
+      "passed": true
+    },
+    {
+      "name": "formal_runner_rejects_symlinked_compatibility_json_ancestor",
+      "passed": true
+    },
+    {
+      "name": "formal_runner_rejects_special_compatibility_json_target",
+      "passed": true
+    },
+    {
+      "name": "safe_atomic_write_rejects_symlink_without_overwriting_sentinel",
+      "passed": true
+    },
+    {
+      "name": "formal_output_preflight_rejects_preexisting_hardlink",
+      "passed": true
+    },
+    {
+      "name": "formal_runner_rejects_preexisting_output_symlink_sentinel",
+      "passed": true
+    },
+    {
+      "name": "formal_runner_rejects_preexisting_output_hardlink_sentinel",
+      "passed": true
+    },
+    {
+      "name": "formal_runner_rejects_preexisting_special_output",
+      "passed": true
+    },
+    {
+      "name": "formal_runner_rejects_target_canonical_result_collision",
+      "passed": true
+    },
+    {
+      "name": "formal_runner_rejects_json_target_collision",
+      "passed": true
+    },
+    {
+      "name": "formal_runner_rejects_symlink_target_without_following",
+      "passed": true
+    },
+    {
       "name": "refresh_release_manifest_explicitly_allows_package_tree_output",
       "passed": true
     }
   ],
-  "passed": 47,
-  "total": 47
+  "passed": 73,
+  "total": 73
 }

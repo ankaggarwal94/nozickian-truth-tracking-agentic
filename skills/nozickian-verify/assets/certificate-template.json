@@ -73,23 +73,69 @@
   },
   "method_unknowns": [],
   "pass_tracked_upgrade_audit": {
+    "aggregate_contract": {
+      "command": "python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .",
+      "expected_cases": "36/36",
+      "evidence_kind": "synthetic-contract-not-runtime-authentication",
+      "production_certifier_cli": true
+    },
     "audit_bundle": "pass_tracked_audit_bundle/",
     "certifier_command": "python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json",
-    "downgrade_if_missing": [
-      "UNVERIFIED_RUNTIME",
-      "PASS-SCOPED",
-      "LIMITED",
-      "FAIL"
-    ],
+    "deterministic_policy": "Every deterministic-capture-v2 suite is executed fresh with fixed argv and compared through its typed semantic projection; captures never authorize alone.",
+    "evidence_contract": {
+      "canonical_file_policy": "bundle-local canonical relative regular non-symlink files with exact bytes and sha256",
+      "graph_policy": "fixed environment-independent nine-role graph with canonical bounded acyclic depends_on edges; both official-policy roles remain under explicit unavailable-tool scope exclusion",
+      "node_fields": [
+        "path",
+        "sha256",
+        "depends_on"
+      ],
+      "role_specific_validation": true,
+      "semantic_roles": [
+        "deterministic.package_validation",
+        "deterministic.gate_result",
+        "deterministic.regression",
+        "deterministic.gate_contract",
+        "deterministic.formal_contract",
+        "official.claude_plugin_validate",
+        "official.skills_ref_validate",
+        "live.runtime",
+        "formal.result"
+      ],
+      "schema_version": "promotion-evidence-v2"
+    },
+    "formal_result_contract": {
+      "companion_manifest": "exact report, gate, certificate, ledger, transcript, prompt, and target_snapshot path/sha256/bytes records",
+      "selection": "typed formal.result locator only; no basename or glob-first substitution; unrelated nonreserved files may remain",
+      "standalone_target_snapshot": "immutable",
+      "version": "2.0",
+      "identities": [
+        "package_tree_identity",
+        "run_id",
+        "target_snapshot_identity",
+        "target_pre_post_identity"
+      ]
+    },
+    "malformed_input_result": {
+      "failure_kind": "INVALID_INPUT|CHECK_FAILED|INTERNAL_ERROR",
+      "status": "FAIL",
+      "traceback_exposed": false
+    },
+    "official_validator_policy": "Allowlisted validators run fresh. Claude uses exact ordered strict argv and accepts its real ANSI-normalized Validation passed form only when no failure or contradiction appears anywhere in either complete stream. Full captured bytes determine status/hash/byte counts; bounded excerpts and truncation flags never authorize. Text captures never authorize; absent tools scope only through the explicit flag while both official-policy nodes and canonical dependencies remain mandatory; installed failures fail.",
+    "promotion_claim_policy": "claims is a nonempty array of exact-typed objects with unique canonical ids; every claim is evaluated through the canonical strict gate at the bundle evidence root; modeled completion requires a nonempty all-PASS result set passed into promotion-strict downstream non-closure evaluation; empty downstream conclusions remain valid only with a real passing promotion claim, performed review, and substantive reason",
+    "promotion_required_top_level_types": "promotion_schema_version/upgrade_from_status/requested_status/package_version/package_tree_sha256 are exact strings; method_m_upgrade/live_result_bindings/evidence/downstream_review are objects; claims is a nonempty array and derived_or_downstream_claims is an array",
+    "promotion_schema_version": "2.0",
     "requested_status": "PASS-TRACKED",
     "required_evidence": [
-      "deterministic checks",
-      "official Claude Code validators",
+      "fresh deterministic checks with deterministic-capture-v2 projections",
+      "fresh allowlisted official validators",
       "live fixture runtime evals",
-      "formal artifact run with trace auth",
+      "formal result 2.0 with immutable standalone target snapshot and trace auth",
       "strict gate PASS-TRACKED on generated certificate",
-      "downstream non-closure review"
+      "explicit downstream_review"
     ],
+    "safe_output_policy": "Caller-supplied certifier/formal paths reject symlinked ancestors, direct links, special files, and hardlink aliases with structured invalid-input results. Existing private regular --json files are intentionally replaced through same-directory exclusive temporaries plus atomic replacement; --output-dir must be a real directory or safely created new directory.",
+    "stream_binding_policy": "Official validator decisions and formal transcript authentication/hash/byte counts bind complete captured bytes. Public results may contain bounded sanitized excerpts and explicit truncation metadata; capture-limit excess fails closed and tail-only authentication is forbidden.",
     "live_result_bindings": {
       "artifact_sha256_by_fixture": {
         "FIXTURE_ID": "LOWERCASE_SHA256_OVER_EXACT_ARTIFACT_BYTES"
@@ -127,7 +173,19 @@
         "print_mode": true
       }
     },
-    "upgrade_from_status": "PASS-SCOPED"
+    "upgrade_from_status": "PASS-SCOPED",
+    "v1_0_3_mandatory_cap": {
+      "exit": "nonzero",
+      "outcome": "CAPPED",
+      "promotion_authorized": false,
+      "satisfied_profile": "promotion-contract-v2-complete",
+      "status": "PASS-SCOPED",
+      "unresolved_charter_obligations": [
+        "Issue #5 consistency-sweep activation and resolution mechanics remain parent-enforced.",
+        "Issue #5 REMOTE_GROUND_TRUTH_REQUIRED escalation mechanics remain parent-enforced."
+      ],
+      "scope": "certify_pass_tracked_upgrade.py only; generic ntt_gate.py and formal-runner PASS-TRACKED semantics remain unchanged"
+    }
   },
   "remote_escalations": [
     {

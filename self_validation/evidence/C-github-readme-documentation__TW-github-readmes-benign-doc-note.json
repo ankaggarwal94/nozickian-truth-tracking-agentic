@@ -3,7 +3,7 @@
   "claim_id": "C-github-readme-documentation",
   "command_or_source": "v1.0.3 package-local GitHub README documentation and deterministic validator checks",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:6d4d1557f9ef2fcbd4bb44590cd6ebd678ded86c8dfd4ff83e6b93f02b794002",
+  "hash_or_version": "sha256:5f8f605fb56009c394ca92dca9d764ed5bc0c6a484556e0893f949035aa603ee",
   "observed_result": "Observed the benign true-world variation that appends documentation text and retains validation when manifests are refreshed.",
   "support_summary": "The true-world evidence binds the benign documentation variation to validator code that permits substantive README documentation changes without treating them as runtime-surface expansion.",
   "test_id": "TW-github-readmes-benign-doc-note",

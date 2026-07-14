@@ -14,8 +14,14 @@ python3 skills/nozickian-verify/scripts/validate_package.py . --update-manifest
 
 4. Refresh the stable release manifest after stable package-file changes.
 5. Rerun the base validator and the full self-test.
-6. Rerun the strict evidence gate if certificate-bound artifacts changed.
-7. Review stale-token and provenance hygiene output before packaging.
+6. Run the promotion aggregate contract suite:
+
+```bash
+python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .
+```
+
+7. Rerun the strict evidence gate if certificate-bound artifacts changed.
+8. Review stale-token and provenance hygiene output before packaging.
 
 ## Where to add documentation
 
@@ -28,3 +34,5 @@ If a file cited by structured evidence changes, update the evidence JSON hash an
 ## Editing validators
 
 Validator changes require mutation thinking: identify the nearby false world that the new check should reject, add a mutation or contract test where practical, and make sure a benign true-world variant still passes.
+
+The promotion aggregate must remain independent synthetic evidence: its 36 cases invoke the production certifier CLI for the complete baseline and all negatives. Do not treat `36/36` as real runtime authentication. Keep its generated result/stdout ledgers volatile and regenerate release manifests and final generated outputs only after source/schema/policy review reaches a fixed point.

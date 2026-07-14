@@ -44,20 +44,20 @@ REQUIRED_NATIVE_AGENTS = [
 EXPECTED_REFERENCES = {
     "STANDARD.md", "SUBAGENT_PROTOCOLS.md", "ARTIFACT_GUIDE.md", "OUTPUT_TEMPLATES.md", "EVAL_BEST_PRACTICES.md", "SOURCES.md", "EVIDENCE_SCHEMA.md", "PASS_TRACKED_UPGRADE_AUDIT.md"
 }
-EXPECTED_SCRIPTS = {"ntt_gate.py", "validate_package.py", "run_gate_contract_tests.py", "run_live_skill_evals.py", "run_regression_evals.py", "run_formal_artifact_verification.py", "run_formal_runner_contract_tests.py", "certify_pass_tracked_upgrade.py"}
+EXPECTED_SCRIPTS = {"ntt_gate.py", "validate_package.py", "run_gate_contract_tests.py", "run_live_skill_evals.py", "run_regression_evals.py", "run_formal_artifact_verification.py", "run_formal_runner_contract_tests.py", "run_promotion_certifier_contract_tests.py", "certify_pass_tracked_upgrade.py"}
 EXPECTED_FIXTURES = {"mini_manual.md", "mini_code.py", "fake_trace.json"}
 EXPECTED_ASSETS = {"certificate-template.json", "subagent-task-card.md"}
 EXPECTED_GITHUB_READMES: Dict[str, List[str]] = {
-    "docs/README.md": ["Documentation hub", "PASS-SCOPED", "PASS-TRACKED", "closed-surface"],
-    "docs/quickstart/README.md": ["Quickstart", "validate_package.py", "run_live_skill_evals.py", "UNVERIFIED_RUNTIME"],
+    "docs/README.md": ["Documentation hub", "PASS-SCOPED", "PASS-TRACKED", "closed-surface", "synthetic aggregate contract", "36 baseline/negative cases"],
+    "docs/quickstart/README.md": ["Quickstart", "validate_package.py", "run_live_skill_evals.py", "UNVERIFIED_RUNTIME", "run_promotion_certifier_contract_tests.py", "36/36"],
     "docs/audit-model/README.md": ["Nozickian", "CoVe", "no automatic epistemic closure", "derived_or_downstream_claims"],
-    "docs/evidence/README.md": ["self_certificate.json", "strict", "SHA-256", "structured evidence"],
-    "docs/pass-tracked-upgrade/README.md": ["PASS-SCOPED", "PASS-TRACKED", "certify_pass_tracked_upgrade.py", "promotion certificate"],
-    "docs/runtime-trace-auth/README.md": ["stream", "tool-use", "tool-result", "trace authentication"],
+    "docs/evidence/README.md": ["self_certificate.json", "strict", "SHA-256", "structured evidence", "promotion-evidence-v2", "failure_kind"],
+    "docs/pass-tracked-upgrade/README.md": ["PASS-SCOPED", "PASS-TRACKED", "certify_pass_tracked_upgrade.py", "promotion certificate", "promotion-evidence-v2", "CAPPED", "36/36"],
+    "docs/runtime-trace-auth/README.md": ["stream", "tool-use", "tool-result", "trace authentication", "formal result `2.0`", "CAPPED"],
     "docs/security/README.md": ["closed surface", "threat model", "runtime", "README"],
-    "docs/development/README.md": ["Development", "update-manifest", "validator", "evidence"],
-    "docs/release/README.md": ["Release", "MANIFEST.sha256", "STABLE_RELEASE_MANIFEST.json", "PASS-SCOPED"],
-    "docs/faq/README.md": ["FAQ", "PASS-SCOPED", "PASS-TRACKED", "downstream"],
+    "docs/development/README.md": ["Development", "update-manifest", "validator", "evidence", "run_promotion_certifier_contract_tests.py"],
+    "docs/release/README.md": ["Release", "MANIFEST.sha256", "STABLE_RELEASE_MANIFEST.json", "PASS-SCOPED", "reproducible-build epoch", "Issue #8", "promotion-evidence-v2"],
+    "docs/faq/README.md": ["FAQ", "PASS-SCOPED", "PASS-TRACKED", "downstream", "Issue #5"],
     "docs/github/README.md": ["GitHub", "README", "repository", "runtime"],
 }
 FORBIDDEN_RUNTIME_README_PATHS = {
@@ -77,7 +77,82 @@ ALLOWED_PLUGIN_MANIFEST_FILES = {".claude-plugin/plugin.json"}
 ALLOWED_SKILL_RUNTIME_DIRS = {"assets", "evals", "references", "scripts"}
 FORBIDDEN_SURFACES = {"commands", "hooks", "monitors", "bin"}
 FORBIDDEN_ROOT_FILES = {"settings.json", ".mcp.json", ".lsp.json"}
-REQUIRED_STANDARD_TERMS = ["claim-level decomposition", "method M", "nearby false-world", "nearby true-world", "gate condition", "sensitivity", "adherence", "thresholds can be tightened", "cannot be relaxed", "no automatic epistemic closure", "downstream transmission", "derived_or_downstream_claims", "PASS-TRACKED upgrade audit", "upgrade from PASS-SCOPED"]
+REQUIRED_STANDARD_TERMS = ["claim-level decomposition", "method M", "nearby false-world", "nearby true-world", "gate condition", "sensitivity", "adherence", "thresholds can be tightened", "cannot be relaxed", "no automatic epistemic closure", "downstream transmission", "derived_or_downstream_claims", "PASS-TRACKED upgrade audit", "upgrade from PASS-SCOPED", "promotion-evidence-v2", "formal result `2.0`", "promotion-contract-v2-complete", "failure_kind"]
+PROMOTION_AGGREGATE_COMMAND = (
+    "python3 "
+    "skills/nozickian-verify/scripts/"
+    "run_promotion_certifier_contract_tests.py ."
+)
+EXPECTED_RELEASE_VERSION = "1.0.3"
+EXPECTED_ISSUE_5_UNRESOLVED_OBLIGATIONS = [
+    "Issue #5 consistency-sweep activation and resolution mechanics remain parent-enforced.",
+    "Issue #5 REMOTE_GROUND_TRUTH_REQUIRED escalation mechanics remain parent-enforced.",
+]
+EXPECTED_CURRENT_PROMOTION_EVIDENCE_FILES = {
+    (
+        "self_validation/evidence/"
+        "C-pass-tracked-upgrade-audit__aggregate-certifier.json"
+    ),
+    (
+        "self_validation/evidence/"
+        "C-pass-tracked-upgrade-audit__promotion-v2-reference.json"
+    ),
+}
+REQUIRED_PROMOTION_SURFACE_INVARIANTS = (
+    (
+        "v1.0.3 promotion certificate schema 2.0 uses "
+        "promotion-evidence-v2: the fixed nine typed canonical semantic roles "
+        "form one environment-independent bounded DAG and bind distinct "
+        "bundle-local regular non-symlink files by exact bytes plus SHA-256 "
+        "with role-specific validation; both official-policy roles remain "
+        "mandatory when unavailable execution is explicitly scope-excluded."
+    ),
+    (
+        "v1.0.3 formal result 2.0 binds the immutable standalone target "
+        "snapshot, exact report/gate/certificate/ledger/transcript/prompt/"
+        "target-snapshot companion manifest, package-tree identity, run "
+        "identity, and target pre/post identity; promotion uses only the typed "
+        "formal.result locator and allows unrelated nonreserved files."
+    ),
+    (
+        "v1.0.3 promotion claims form a nonempty exact-typed unique-ID set; "
+        "canonical strict-gate evaluation must return a nonempty all-PASS "
+        "result set before promotion-strict downstream non-closure "
+        "evaluation, while a performed review may explicitly identify no "
+        "downstream conclusion with a substantive reason."
+    ),
+    (
+        "v1.0.3 malformed or empty promotion claims and other malformed "
+        "bundle data return canonical FAIL plus failure_kind without exposing "
+        "a traceback."
+    ),
+    (
+        "v1.0.3 official validator decisions and formal transcript "
+        "authentication/hash/byte counts bind complete captured bytes; "
+        "bounded excerpts and truncation flags are presentation metadata, "
+        "capture-limit excess fails closed, and tail-only authentication is "
+        "forbidden."
+    ),
+    (
+        "v1.0.3 caller-supplied certifier/formal output paths reject "
+        "symlinked ancestors, direct links, special files, and hardlink "
+        "aliases; existing private regular --json files are intentionally "
+        "atomically replaced, while --output-dir must be a real or safely "
+        "created directory."
+    ),
+    (
+        "v1.0.3 aggregate promotion contracts are synthetic 36/36 evidence "
+        "and invoke the production certifier CLI for the baseline and every "
+        "negative; they do not authenticate a real runtime."
+    ),
+    (
+        "v1.0.3 certify_pass_tracked_upgrade.py alone caps every complete "
+        "modeled result at PASS-SCOPED/CAPPED with promotion_authorized false, "
+        "promotion-contract-v2-complete, both unresolved Issue #5 "
+        "obligations, and nonzero exit; generic gate/formal PASS-TRACKED "
+        "semantics remain unchanged."
+    ),
+)
 SKILL_BROAD_TOOL_PATTERNS = [
     r"allowed-tools\s*:\s*.*\bBash\b", r"allowed-tools\s*:\s*.*\bWrite\b", r"allowed-tools\s*:\s*.*\bEdit\b", r"allowed-tools\s*:\s*.*\bAgent\b", r"allowed-tools\s*:\s*.*\bWebFetch\b",
     r"permissionMode\s*:\s*bypassPermissions", r"permissionMode\s*:\s*dontAsk", r"dangerously-skip-permissions", r"allow-dangerously-skip-permissions",
@@ -154,6 +229,8 @@ VOLATILE_RELEASE_EXCLUSION_FILES = {
     "self_validation/package_validation_report_basic.md",
     "self_validation/package_validation_result.json",
     "self_validation/package_validation_self_test_result.json",
+    "self_validation/promotion_certifier_contract_results.json",
+    "self_validation/promotion_certifier_contract_stdout.json",
     "self_validation/regression_eval_result.json",
     "self_validation/regression_stdout.json",
     "self_validation/trace_auth_smoke_result.json",
@@ -454,33 +531,19 @@ def scan_release_provenance_hygiene(root: Path) -> List[Dict[str, Any]]:
 # are the retained defenses. Bare historical version prose is not provenance.
 
 
-def check_downstream_nonclosure_records(cert: Mapping[str, Any]) -> List[str]:
-    problems: List[str] = []
-    claims = cert.get("claims", []) if isinstance(cert, Mapping) else []
-    claim_ids = {str(c.get("id")) for c in claims if isinstance(c, Mapping) and c.get("id")}
-    records = cert.get("derived_or_downstream_claims") if isinstance(cert, Mapping) else None
-    if not isinstance(records, list) or not records:
-        return ["self-certificate lacks derived_or_downstream_claims non-closure records"]
-    pass_like = {"pass", "passed", "verified", "confirmed", "pass-tracked", "pass-scoped", "pass_tracked", "pass_scoped"}
-    for idx, rec in enumerate(records, start=1):
-        if not isinstance(rec, Mapping):
-            problems.append(f"derived_or_downstream_claims[{idx}] is not an object")
-            continue
-        did = rec.get("id", f"derived-{idx}")
-        from_ids = [str(x) for x in rec.get("from_claim_ids", [])] if isinstance(rec.get("from_claim_ids"), list) else []
-        if not from_ids:
-            problems.append(f"{did} lacks from_claim_ids")
-        elif not set(from_ids).issubset(claim_ids):
-            problems.append(f"{did} cites unknown source claim ids: {sorted(set(from_ids) - claim_ids)}")
-        if not str(rec.get("derived_claim", rec.get("claim", ""))).strip():
-            problems.append(f"{did} lacks derived_claim text")
-        status = str(rec.get("status", "")).strip().lower()
-        own_claim_id = str(rec.get("own_claim_id") or rec.get("claim_id") or "").strip()
-        if status in pass_like and own_claim_id not in claim_ids:
-            problems.append(f"{did} attempts automatic pass/status inheritance without independent claim record")
-        if status in {"", "unverified", "unknown"} and not str(rec.get("reason", "")).strip():
-            problems.append(f"{did} is unverified but lacks reason")
-    return problems
+def check_downstream_nonclosure_records(
+    cert: Mapping[str, Any],
+    evaluator: Any,
+) -> List[str]:
+    """Delegate package policy to the gate's shared non-closure evaluator."""
+    if not callable(evaluator):
+        return ["shared downstream non-closure evaluator is unavailable"]
+    problems, _count = evaluator(
+        cert,
+        {},
+        policy="package-self",
+    )
+    return list(problems)
 
 def sha256_path(path: Path) -> str:
     if path.is_symlink():
@@ -533,6 +596,269 @@ def is_unique_string_list(value: Any) -> bool:
         and all(isinstance(item, str) for item in value)
         and len(value) == len(set(value))
     )
+
+
+def ci_condition_is_static_false(value: Optional[str]) -> bool:
+    """Recognize only literal GitHub Actions conditions that cannot run."""
+    if value is None:
+        return False
+    condition = value.strip()
+    if (
+        len(condition) >= 2
+        and condition[0] == condition[-1]
+        and condition[0] in {"'", '"'}
+    ):
+        condition = condition[1:-1].strip()
+    expression = re.fullmatch(r"\$\{\{\s*(.*?)\s*\}\}", condition)
+    if expression:
+        condition = expression.group(1).strip()
+    while (
+        len(condition) >= 2
+        and condition.startswith("(")
+        and condition.endswith(")")
+    ):
+        condition = condition[1:-1].strip()
+    compact = re.sub(r"\s+", "", condition).lower()
+    return compact in {
+        "false",
+        "!true",
+        "!!false",
+        "0",
+        "-0",
+        "null",
+    }
+
+
+def direct_ci_shell_commands(lines: Iterable[str]) -> List[str]:
+    """Return only top-level commands from a conservative shell subset.
+
+    Commands in comments, heredocs, conditionals, loops, functions, case
+    statements, or grouping constructs are intentionally not considered
+    reachable release-policy commands.
+    """
+    commands: List[str] = []
+    control_stack: List[str] = []
+    heredoc_delimiter: Optional[str] = None
+    for raw_line in lines:
+        command = raw_line.strip()
+        if heredoc_delimiter is not None:
+            if command.lstrip("\t") == heredoc_delimiter:
+                heredoc_delimiter = None
+            continue
+        if not command or command.startswith("#"):
+            continue
+        heredoc = re.search(
+            r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1",
+            command,
+        )
+        if heredoc:
+            heredoc_delimiter = heredoc.group(2)
+            continue
+        if re.match(r"^(?:fi|done|esac)(?:\s|;|$)|^[})]", command):
+            if control_stack:
+                control_stack.pop()
+            continue
+
+        control_kind: Optional[str] = None
+        inline_close = False
+        if re.match(r"^if(?:\s|$)", command):
+            control_kind = "if"
+            inline_close = bool(re.search(r"(?:^|;)\s*fi(?:\s*;|$)", command))
+        elif re.match(r"^(?:for|while|until|select)(?:\s|$)", command):
+            control_kind = "loop"
+            inline_close = bool(
+                re.search(r"(?:^|;)\s*done(?:\s*;|$)", command)
+            )
+        elif re.match(r"^case(?:\s|$)", command):
+            control_kind = "case"
+            inline_close = bool(
+                re.search(r"(?:^|;)\s*esac(?:\s*;|$)", command)
+            )
+        elif (
+            re.match(
+                r"^(?:function\s+)?[A-Za-z_][A-Za-z0-9_]*\s*\(\s*\)\s*\{",
+                command,
+            )
+            or re.match(r"^function\s+[A-Za-z_][A-Za-z0-9_]*\s*\{", command)
+        ):
+            control_kind = "function"
+            inline_close = command.rstrip().endswith("}")
+        elif command == "(" or command.startswith("( "):
+            control_kind = "subshell"
+            inline_close = command.rstrip().endswith(")")
+        elif command == "{" or command.startswith("{ "):
+            control_kind = "group"
+            inline_close = command.rstrip().endswith("}")
+
+        if control_kind is not None:
+            if not inline_close:
+                control_stack.append(control_kind)
+            continue
+        if control_stack:
+            continue
+        if re.match(r"^(?:then|elif|else|do)(?:\s|$)", command):
+            continue
+        if "&&" in command or "||" in command:
+            continue
+        commands.append(command)
+    return commands
+
+
+def active_ci_run_steps(text: str) -> List[Dict[str, Any]]:
+    """Extract reachable direct commands from named workflow run blocks.
+
+    This is deliberately a conservative line parser rather than a YAML or
+    shell evaluator. Statically disabled jobs, conditional steps, and commands
+    nested under shell control flow cannot satisfy release command policy.
+    """
+    lines = text.splitlines()
+    jobs_index: Optional[int] = None
+    jobs_indent = 0
+    for index, line in enumerate(lines):
+        match = re.match(r"^(\s*)jobs:\s*$", line)
+        if match and not line.lstrip().startswith("#"):
+            jobs_index = index
+            jobs_indent = len(match.group(1))
+            break
+    if jobs_index is None:
+        return []
+
+    job_candidates: List[Tuple[int, int, str]] = []
+    for index in range(jobs_index + 1, len(lines)):
+        line = lines[index]
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip())
+        if indent <= jobs_indent:
+            break
+        match = re.match(r"^(\s*)([A-Za-z0-9_.-]+):\s*$", line)
+        if match:
+            job_candidates.append((index, indent, match.group(2)))
+    if not job_candidates:
+        return []
+    job_indent = min(item[1] for item in job_candidates)
+    jobs = [item for item in job_candidates if item[1] == job_indent]
+
+    steps: List[Dict[str, Any]] = []
+    for job_position, (job_start, _, job_name) in enumerate(jobs):
+        job_end = (
+            jobs[job_position + 1][0]
+            if job_position + 1 < len(jobs)
+            else len(lines)
+        )
+        for index in range(job_start + 1, job_end):
+            line = lines[index]
+            if (
+                line.strip()
+                and not line.lstrip().startswith("#")
+                and len(line) - len(line.lstrip()) <= jobs_indent
+            ):
+                job_end = index
+                break
+        job_condition: Optional[str] = None
+        for index in range(job_start + 1, job_end):
+            line = lines[index]
+            indent = len(line) - len(line.lstrip())
+            match = re.match(r"^\s*if:\s*(.*?)\s*$", line)
+            if match and indent == job_indent + 2:
+                job_condition = match.group(1)
+                break
+        job_statically_disabled = ci_condition_is_static_false(job_condition)
+
+        steps_start: Optional[int] = None
+        steps_indent: Optional[int] = None
+        for index in range(job_start + 1, job_end):
+            line = lines[index]
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            indent = len(line) - len(line.lstrip())
+            if re.match(r"^\s*steps:\s*$", line) and indent == job_indent + 2:
+                steps_start = index
+                steps_indent = indent
+                break
+        direct_items: List[Tuple[int, int, Optional[str]]] = []
+        if steps_start is not None and steps_indent is not None:
+            item_candidates: List[Tuple[int, int, Optional[str]]] = []
+            for index in range(steps_start + 1, job_end):
+                line = lines[index]
+                if not line.strip() or line.lstrip().startswith("#"):
+                    continue
+                match = re.match(
+                    r"^(\s*)-\s+([A-Za-z_][A-Za-z0-9_-]*):\s*(.*?)\s*$",
+                    line,
+                )
+                if match and len(match.group(1)) > steps_indent:
+                    name = (
+                        match.group(3).strip().strip("\"'")
+                        if match.group(2) == "name"
+                        else None
+                    )
+                    item_candidates.append(
+                        (index, len(match.group(1)), name)
+                    )
+            if item_candidates:
+                direct_indent = min(item[1] for item in item_candidates)
+                direct_items = [
+                    item for item in item_candidates
+                    if item[1] == direct_indent
+                ]
+        for position, (start, step_indent, name) in enumerate(direct_items):
+            if name is None:
+                continue
+            end = (
+                direct_items[position + 1][0]
+                if position + 1 < len(direct_items)
+                else job_end
+            )
+            condition: Optional[str] = None
+            run_lines: List[str] = []
+            run_found = False
+            index = start + 1
+            while index < end:
+                line = lines[index]
+                stripped = line.strip()
+                if not stripped or line.lstrip().startswith("#"):
+                    index += 1
+                    continue
+                indent = len(line) - len(line.lstrip())
+                condition_match = re.match(r"^\s*if:\s*(.*?)\s*$", line)
+                if condition_match and indent > step_indent:
+                    condition = condition_match.group(1)
+                    index += 1
+                    continue
+                run_match = re.match(r"^(\s*)run:\s*([|>][-+]?)\s*$", line)
+                if run_match and indent > step_indent:
+                    run_found = True
+                    run_indent = len(run_match.group(1))
+                    index += 1
+                    while index < end:
+                        command_line = lines[index]
+                        if (
+                            command_line.strip()
+                            and len(command_line)
+                            - len(command_line.lstrip())
+                            <= run_indent
+                        ):
+                            break
+                        run_lines.append(command_line)
+                        index += 1
+                    continue
+                index += 1
+            steps.append(
+                {
+                    "job": job_name,
+                    "job_condition": job_condition,
+                    "job_statically_disabled": job_statically_disabled,
+                    "name": name,
+                    "unconditional": (
+                        condition is None and not job_statically_disabled
+                    ),
+                    "condition": condition,
+                    "run_found": run_found,
+                    "commands": direct_ci_shell_commands(run_lines),
+                }
+            )
+    return steps
 
 
 def normalize_cli_display(value: Any, package_root: Path) -> Any:
@@ -979,7 +1305,18 @@ def load_module_from_path(name: str, path: Path):
         raise RuntimeError(f"cannot import {path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[name] = module
-    spec.loader.exec_module(module)  # type: ignore[attr-defined]
+    previous_dont_write = sys.dont_write_bytecode
+    import_stdout = io.StringIO()
+    try:
+        # Validation must not mutate the package tree it is measuring.
+        sys.dont_write_bytecode = True
+        # SECURITY-REVIEW: Package-local helpers and mutation stubs execute at
+        # import time. Contain their stdout so the outer CLI emits exactly one
+        # machine-readable JSON document.
+        with contextlib.redirect_stdout(import_stdout):
+            spec.loader.exec_module(module)  # type: ignore[attr-defined]
+    finally:
+        sys.dont_write_bytecode = previous_dont_write
     return module
 
 
@@ -1107,6 +1444,24 @@ class Validator:
             self.add("release lock parses", False, details=str(exc)); return
         self.add("release lock tier is team-internal", data.get("assurance_tier") == "team-internal-reuse", details=str(data.get("assurance_tier")))
         self.add("release lock plugin name matches", data.get("plugin_name") == PLUGIN_NAME, details=str(data.get("plugin_name")))
+        self.add(
+            "release lock version is exactly 1.0.3",
+            type(data.get("version")) is str
+            and data.get("version") == EXPECTED_RELEASE_VERSION,
+            details=repr(data.get("version")),
+        )
+        self.add(
+            "release lock plugin_version is exactly 1.0.3",
+            type(data.get("plugin_version")) is str
+            and data.get("plugin_version") == EXPECTED_RELEASE_VERSION,
+            details=repr(data.get("plugin_version")),
+        )
+        self.add(
+            "release lock release_status is exactly PASS-SCOPED",
+            type(data.get("release_status")) is str
+            and data.get("release_status") == "PASS-SCOPED",
+            details=repr(data.get("release_status")),
+        )
         try:
             plugin = json.loads(self.path(".claude-plugin/plugin.json").read_text(encoding="utf-8"))
         except Exception:
@@ -1131,6 +1486,29 @@ class Validator:
         joined = "\n".join(cmds or []) if isinstance(cmds, list) else ""
         for token in ["validate_package.py", "ntt_gate.py", "run_regression_evals.py", "claude plugin validate", "skills-ref validate"]:
             self.add(f"release lock command includes {token}", token in joined, details=token)
+        self.add(
+            "release lock requires aggregate promotion contract command",
+            isinstance(cmds, list) and PROMOTION_AGGREGATE_COMMAND in cmds,
+            details=PROMOTION_AGGREGATE_COMMAND,
+        )
+        minimum_review = data.get("minimum_review")
+        review_text = (
+            "\n".join(minimum_review)
+            if is_unique_string_list(minimum_review)
+            else ""
+        )
+        for token in [
+            "36/36",
+            "production certifier CLI",
+            "promotion-contract-v2-complete",
+            "Issue #8",
+            "remote issue is closed",
+        ]:
+            self.add(
+                f"release lock review policy includes {token}",
+                token in review_text,
+                details=token,
+            )
         self.add("release lock formal dry-run avoids package-tree output", "--output-dir self_validation" not in joined and "--json self_validation/formal_invocation_dry_run.json" not in joined, details=joined)
         self.add("release lock records external generated-output path", ("/tmp/nozickian-formal-dry-run-result.json" in joined or "../ntt_release_formal_invocation_dry_run" in joined), details=joined)
 
@@ -1146,6 +1524,31 @@ class Validator:
             table_rows = len(re.findall(r"^\|", text, flags=re.M))
             self.add("audit report is tabulated", table_rows >= 35, details=f"table_rows={table_rows}")
             self.add("audit report records PASS-SCOPED and UNVERIFIED_RUNTIME", "PASS-SCOPED" in text and "UNVERIFIED_RUNTIME" in text, details="status labels")
+        self_certificate_present = self.path(
+            "self_validation/self_certificate.json"
+        ).exists()
+        for rel in sorted(EXPECTED_CURRENT_PROMOTION_EVIDENCE_FILES):
+            if not self_certificate_present:
+                self.add(
+                    (
+                        "current promotion evidence record absent with "
+                        f"self certificate; not applicable: {rel}"
+                    ),
+                    True,
+                    details=rel,
+                )
+                continue
+            evidence_path = self.path(rel)
+            evidence_error = (
+                regular_file_error(evidence_path)
+                if os.path.lexists(evidence_path)
+                else "missing"
+            )
+            self.add(
+                f"current promotion evidence record is stable and regular: {rel}",
+                evidence_error is None,
+                details=evidence_error or rel,
+            )
         manifest = self.path(STABLE_RELEASE_MANIFEST)
         self.add("stable release manifest exists", manifest.exists(), details=STABLE_RELEASE_MANIFEST)
         if not manifest.exists():
@@ -1255,7 +1658,68 @@ class Validator:
         except Exception as exc:
             self.add("self certificate parses for downstream non-closure check", False, details=str(exc))
             return
-        downstream_problems = check_downstream_nonclosure_records(data)
+        upgrade_audit = data.get("pass_tracked_upgrade_audit")
+        expected_cap = {
+            "status": "PASS-SCOPED",
+            "exit": "nonzero",
+            "outcome": "CAPPED",
+            "promotion_authorized": False,
+            "satisfied_profile": "promotion-contract-v2-complete",
+            "unresolved_charter_obligations": (
+                EXPECTED_ISSUE_5_UNRESOLVED_OBLIGATIONS
+            ),
+        }
+        actual_cap = (
+            upgrade_audit.get("v1_0_3_cap")
+            if type(upgrade_audit) is dict
+            else None
+        )
+        aggregate_contract = (
+            upgrade_audit.get("aggregate_contract")
+            if type(upgrade_audit) is dict
+            else None
+        )
+        self.add(
+            "self certificate promotion audit envelope is exact",
+            type(upgrade_audit) is dict
+            and upgrade_audit.get("status") == "PASS-SCOPED"
+            and upgrade_audit.get("promotion_schema_version") == "2.0"
+            and upgrade_audit.get("promotion_evidence_schema_version")
+            == "promotion-evidence-v2"
+            and upgrade_audit.get("formal_result_schema_version") == "2.0"
+            and type(aggregate_contract) is dict
+            and aggregate_contract.get("expected_result") == "36/36"
+            and aggregate_contract.get(
+                "production_certifier_cli_baseline_and_negatives"
+            )
+            is True
+            and aggregate_contract.get("runtime_authentication") is False,
+            details=repr(upgrade_audit),
+        )
+        self.add(
+            "self certificate promotion cap and Issue #5 obligations are exact",
+            actual_cap == expected_cap,
+            details=repr(actual_cap),
+        )
+        try:
+            gate = load_module_from_path(
+                "ntt_gate_for_package_downstream_policy",
+                self.path(f"{SKILL_DIR}/scripts/ntt_gate.py"),
+            )
+            downstream_evaluator = getattr(
+                gate,
+                "evaluate_downstream_nonclosure",
+                None,
+            )
+            downstream_problems = check_downstream_nonclosure_records(
+                data,
+                downstream_evaluator,
+            )
+        except Exception as exc:
+            downstream_problems = [
+                "shared downstream non-closure evaluator failed: "
+                f"{type(exc).__name__}"
+            ]
         self.add("self certificate declares downstream non-closure records", not downstream_problems, details="; ".join(downstream_problems[:20]))
 
     def check_package_surface_policy(self) -> None:
@@ -1281,6 +1745,24 @@ class Validator:
             "package surface policy has no unknown top-level keys",
             not unknown_keys,
             details=", ".join(unknown_keys),
+        )
+        self.add(
+            "package surface package is exact",
+            type(data.get("package")) is str
+            and data.get("package") == PLUGIN_NAME,
+            details=repr(data.get("package")),
+        )
+        self.add(
+            "package surface version is exactly 1.0.3",
+            type(data.get("version")) is str
+            and data.get("version") == EXPECTED_RELEASE_VERSION,
+            details=repr(data.get("version")),
+        )
+        self.add(
+            "package surface schema_version is exactly 1.2",
+            type(data.get("schema_version")) is str
+            and data.get("schema_version") == "1.2",
+            details=repr(data.get("schema_version")),
         )
         self.add("package surface tier is team-internal", data.get("assurance_tier") == "team-internal-reuse", details=str(data.get("assurance_tier")))
         self.add("package surface closed", data.get("closed_surface") is True, details=str(data.get("closed_surface")))
@@ -1390,6 +1872,39 @@ class Validator:
         notes = "\n".join(data.get("notes", [])) if isinstance(data.get("notes"), list) else ""
         self.add("package surface documents formal invocation", "formal" in notes.lower() and "ntt-formal-coordinator" in notes and "certificate" in notes.lower(), details=notes[:300])
         self.add("package surface declares non-runtime GitHub docs", "docs" in set(data.get("allowed_top_level_dirs", [])) and data.get("non_runtime_documentation_dirs") == ["docs"] and isinstance(data.get("github_readme_documentation"), dict), details=str(data.get("github_readme_documentation")))
+        surface_contract = json.dumps(
+            {
+                "closed_surface_invariants": data.get(
+                    "closed_surface_invariants"
+                ),
+                "notes": data.get("notes"),
+            },
+            sort_keys=True,
+        )
+        surface_invariants = data.get("closed_surface_invariants")
+        for invariant in REQUIRED_PROMOTION_SURFACE_INVARIANTS:
+            self.add(
+                "package surface carries exact promotion invariant: "
+                + invariant[:52],
+                type(surface_invariants) is list
+                and invariant in surface_invariants,
+                details=invariant,
+            )
+        for token in [
+            "promotion-evidence-v2",
+            "formal result 2.0",
+            "canonical FAIL plus failure_kind",
+            "synthetic 36/36",
+            "promotion-contract-v2-complete",
+            "aggregate-certifier.json",
+            "promotion-v2-reference.json",
+            "run_promotion_certifier_contract_tests.py",
+        ]:
+            self.add(
+                f"package surface records promotion contract: {token}",
+                token in surface_contract,
+                details=token,
+            )
 
     def check_github_readmes(self) -> None:
         """Validate the GitHub-facing README documentation set without expanding runtime surface."""
@@ -1432,6 +1947,17 @@ class Validator:
             if sv_readme.exists():
                 sv_text = sv_readme.read_text(encoding="utf-8")
                 self.add("self_validation GitHub README substantive", len(sv_text) >= 700, details=f"chars={len(sv_text)}")
+                for token in [
+                    "promotion_certifier_contract_results.json",
+                    "36/36",
+                    "synthetic contract evidence",
+                    "CAPPED",
+                ]:
+                    self.add(
+                        f"self_validation README contains promotion token: {token}",
+                        token in sv_text,
+                        details=token,
+                    )
                 for term in ["Self-validation", "self_certificate.json", "evidence", "UNVERIFIED_RUNTIME"]:
                     self.add(f"self_validation GitHub README contains term: {term}", term.lower() in sv_text.lower(), details=term)
         else:
@@ -1572,8 +2098,56 @@ class Validator:
             ci_path = self.path(".github/workflows/nozickian-team-ci.yml")
             if ci_path.exists() and not ci_path.is_symlink():
                 ci_text = ci_path.read_text(encoding="utf-8")
+                parsed_steps = active_ci_run_steps(ci_text)
+                active_steps = [
+                    step for step in parsed_steps
+                    if step.get("unconditional") is True
+                    and step.get("run_found") is True
+                ]
+                active_commands = [
+                    command
+                    for step in active_steps
+                    for command in step["commands"]
+                ]
                 for token in ["validate_package.py . --self-test", 'archive_root="$(mktemp -d)"', 'git archive --format=tar HEAD | tar -xf - -C "$archive_root"', 'validate_package.py" "$archive_root"', "ntt_gate.py self_validation/self_certificate.json --evidence-root .", "run_regression_evals.py .", "run_formal_runner_contract_tests.py .", "run_formal_artifact_verification.py . README.md --dry-run"]:
-                    self.add(f"CI workflow includes {token}", token in ci_text, details=token)
+                    self.add(
+                        f"CI active run step includes {token}",
+                        any(token in command for command in active_commands),
+                        details=token,
+                    )
+                aggregate_occurrences = [
+                    step["name"]
+                    for step in active_steps
+                    for command in step["commands"]
+                    if command == PROMOTION_AGGREGATE_COMMAND
+                ]
+                checkout_steps = [
+                    step for step in active_steps
+                    if step["name"]
+                    == "Run promotion certifier aggregate contracts"
+                    and PROMOTION_AGGREGATE_COMMAND in step["commands"]
+                ]
+                archive_steps = [
+                    step for step in active_steps
+                    if step["name"] == "Validate unpacked Git archive"
+                    and PROMOTION_AGGREGATE_COMMAND in step["commands"]
+                    and 'cd "$archive_root"' in step["commands"]
+                ]
+                self.add(
+                    "CI has exactly two active unconditional aggregate commands",
+                    len(aggregate_occurrences) == 2,
+                    details=repr(aggregate_occurrences),
+                )
+                self.add(
+                    "CI active checkout aggregate step is exact",
+                    len(checkout_steps) == 1,
+                    details=repr(checkout_steps),
+                )
+                self.add(
+                    "CI active archive aggregate step runs inside unpacked root",
+                    len(archive_steps) == 1,
+                    details=repr(archive_steps),
+                )
         for name in sorted(FORBIDDEN_ROOT_FILES):
             self.add(f"forbidden root file absent: {name}", not self.path(name).exists(), details=name)
         for name in sorted(FORBIDDEN_SURFACES):
@@ -1678,6 +2252,52 @@ class Validator:
         self.add("skill states closed-surface policy", "closed-surface" in text.lower() and "hooks" in text.lower() and "settings.json" in text.lower())
         self.add("skill line count within guidance", len(text.splitlines()) <= 500, details=f"lines={len(text.splitlines())}")
         self.add("skill documents formal invocation mode", "formal invocation mode" in text.lower() and "ntt-formal-coordinator" in text and "certificate.json" in text and "ntt_gate.py" in text)
+        for token in [
+            "promotion-evidence-v2",
+            "formal result `2.0`",
+            "promotion-contract-v2-complete",
+            "run_promotion_certifier_contract_tests.py",
+        ]:
+            self.add(
+                f"skill documents promotion contract: {token}",
+                token in text,
+                details=token,
+            )
+        template_path = self.path(
+            f"{SKILL_DIR}/assets/certificate-template.json"
+        )
+        try:
+            template = json.loads(template_path.read_text(encoding="utf-8"))
+            upgrade = template.get("pass_tracked_upgrade_audit")
+        except Exception as exc:
+            upgrade = None
+            self.add(
+                "certificate template parses for promotion metadata",
+                False,
+                details=type(exc).__name__,
+            )
+        else:
+            self.add(
+                "certificate template parses for promotion metadata",
+                True,
+            )
+        self.add(
+            "certificate template carries promotion v2 metadata",
+            isinstance(upgrade, Mapping)
+            and upgrade.get("promotion_schema_version") == "2.0"
+            and isinstance(upgrade.get("evidence_contract"), Mapping)
+            and upgrade["evidence_contract"].get("schema_version")
+            == "promotion-evidence-v2"
+            and isinstance(upgrade.get("aggregate_contract"), Mapping)
+            and upgrade["aggregate_contract"].get("expected_cases")
+            == "36/36"
+            and isinstance(upgrade.get("v1_0_3_mandatory_cap"), Mapping)
+            and upgrade["v1_0_3_mandatory_cap"].get(
+                "satisfied_profile"
+            )
+            == "promotion-contract-v2-complete",
+            details=repr(upgrade),
+        )
 
     def check_references(self) -> None:
         std = self.path(f"{SKILL_DIR}/references/STANDARD.md")
@@ -1696,9 +2316,38 @@ class Validator:
                 rtext = p.read_text(encoding="utf-8")
                 self.add(f"reference substantive: {rel}", len(rtext) >= 600, details=rel)
                 if rel == "PASS_TRACKED_UPGRADE_AUDIT.md":
-                    upgrade_terms = ["PASS-SCOPED to PASS-TRACKED", "Required audit bundle layout", "Required command sequence", "--output-format stream-json", "--include-hook-events", "--plugin-dir", "run_live_skill_evals.py", "run_formal_artifact_verification.py", "--require-trace-auth", "certify_pass_tracked_upgrade.py", "promotion_certificate.json", "UNVERIFIED_RUNTIME", "downstream", "no automatic"]
+                    upgrade_terms = ["PASS-SCOPED to PASS-TRACKED", "Required audit bundle layout", "Required command sequence", "--output-format stream-json", "--include-hook-events", "--plugin-dir", "run_live_skill_evals.py", "run_formal_artifact_verification.py", "--require-trace-auth", "certify_pass_tracked_upgrade.py", "promotion_certificate.json", "UNVERIFIED_RUNTIME", "downstream", "no automatic", "promotion_schema_version", "promotion-evidence-v2", "formal result `2.0`", "fresh allowlisted official validators", "CAPPED", "36/36"]
                     for term in upgrade_terms:
                         self.add(f"PASS-TRACKED upgrade audit contains term: {term}", term.lower() in rtext.lower(), details=term)
+                if rel in {"EVIDENCE_SCHEMA.md", "OUTPUT_TEMPLATES.md"}:
+                    for term in [
+                        "promotion-evidence-v2",
+                        "downstream_review",
+                        "failure_kind",
+                    ]:
+                        self.add(
+                            f"{rel} contains promotion term: {term}",
+                            term.lower() in rtext.lower(),
+                            details=term,
+                        )
+                if rel == "OUTPUT_TEMPLATES.md":
+                    self.add(
+                        "OUTPUT_TEMPLATES.md promotion skeleton has a complete representative claim",
+                        '"claims": [' in rtext
+                        and '"id": "C-UPGRADE-001"' in rtext
+                        and '"method_m": {' in rtext
+                        and '"evidence_refs": [' in rtext
+                        and '"false_world_tests": [' in rtext
+                        and '"true_world_tests": [' in rtext
+                        and '"unresolved_contradictions": []' in rtext
+                        and '"residual_risks": []' in rtext
+                        and '"derived_or_downstream_claims": []' in rtext
+                        and '"performed": true' in rtext
+                        and '"claims_identified": []' in rtext
+                        and '"none_identified_reason":' in rtext
+                        and "`claims` is a required nonempty array" in rtext.lower(),
+                        details="nonempty canonical claim/downstream review skeleton",
+                    )
 
     def check_agents(self) -> None:
         for name, policy in EXPECTED_AGENTS.items():
@@ -1778,15 +2427,99 @@ class Validator:
     def check_scripts(self) -> None:
         sdir = self.path(f"{SKILL_DIR}/scripts")
         scripts = {
-            "ntt_gate.py": ["DEFAULT_THRESHOLDS", "derived_or_downstream_claims", "evaluate_downstream_nonclosure", "automatic closure", "threshold relaxation attempt ignored", "false_world_tests", "true_world_tests", "method_completeness", "evidence_refs", "unresolved_contradictions", "--evidence-root", "structured evidence", "structured_evidence_count", "evidence_schema_version", "_verify_artifact_sha256", "hash_or_version does not match artifact_path SHA-256", "_ref_to_path_checked", "invalid evidence refs", "evidence ref escapes evidence_root", "remote evidence refs are not allowed in strict local evidence mode", "urlparse", "URI schemes are case-insensitive", "non-empty URI scheme", "unique evidence refs", "unique structured evidence artifacts", "duplicate or aliased evidence refs", "missing modal test id", "test target_claim does not match evaluated claim", "target_claim_ids"],
-            "validate_package.py": ["check_closed_surface", "GitEntry", "ls-files\", \"--stage", "regular blob modes 100644/100755", "atomic_write_fixed_text", "HARNESS_ERROR", "GIT_OPTIONAL_LOCKS", "check_self_certificate_nonclosure", "self certificate artifact version matches plugin", "downstream non-closure", "plugin manifest has no component-path/runtime fields", "dynamic skill shell disabled", "semantic prompt poisoning", "placeholder eval", "run_live_skill_evals.py", "update_manifest", "agents.rglob", "recursive plugin agent", "check_release_audit_artifacts", "check_release_provenance_hygiene", "check_github_readmes", "EXPECTED_GITHUB_READMES", "GitHub README", "stale generated artifact", "absolute build path", "provenance hygiene", "stable release manifest self-hash", "compute_stable_release_tree", "run_release_lock_idempotence_test", "run_promotion_certifier_contract_probes", "mismatched-package-tree-sha256", "external-only formal companion paths", "shared-transcript-across-fixtures", "prompt-only-argv", "missing-plugin-dir-argv", "wrong-output-format-argv", "wrong-max-turns-argv", "extra-fixture-arg", "swapped-fixture-arg-order", "wrong-preflight-argv", "returncode-bool-false-version-preflight", "validator text nonzero 1-error summary dominates pass", "artifact-bytes-refreshed-manifests-stale-live", "fixture-spec-refreshed-manifests-stale-live", "nonartifact-source-refreshed-manifests-stale-live", "manifest exclusion cannot hide behavior file", "fresh validator is unconditional", "--skip-release-idempotence", "volatile generated exclusions", "TemporaryDirectory"],
-            "run_gate_contract_tests.py": ["downstream_claim_auto_pass_rejected", "downstream_unverified_record_retains_pass", "zero_threshold_no_tests_bypass", "observed_accepts_false", "observed_rejects_true", "method_component_overclaim", "valid_structured_evidence_hashes", "wrong_structured_evidence_hash_rejected", "artifact_path_escape_rejected", "one_of_two_claim_evidence_hashes_wrong_rejected", "one_of_two_test_evidence_hashes_wrong_rejected", "evidence_ref_path_escape_rejected", "evidence_ref_absolute_path_rejected", "external_ref_with_valid_artifact_hash_rejected", "remote_ref_rejected_in_strict_local_mode", "uppercase_https_evidence_ref_rejected", "mixed_case_https_evidence_ref_rejected", "uppercase_doi_urn_refs_rejected", "scheme_like_evidence_ref_rejected_in_strict_mode", "duplicate_claim_evidence_ref_does_not_satisfy_minimum", "aliased_same_claim_evidence_ref_does_not_satisfy_minimum", "duplicate_structured_evidence_file_counted_once", "same_artifact_path_for_all_claim_refs_fails_for_critical_claims", "unique_evidence_refs_with_valid_hashes_still_pass", "wrong_false_world_target_claim_rejected", "wrong_true_world_target_claim_rejected", "missing_false_world_test_id_rejected", "missing_true_world_test_id_rejected", "wildcard_applies_to_tests_does_not_replace_test_id", "valid_target_claim_ids_list_still_passes"],
+            "ntt_gate.py": ["DEFAULT_THRESHOLDS", "DOWNSTREAM_STATUSES", "unknown downstream policy", "derived_or_downstream_claims", "evaluate_downstream_nonclosure", "automatic closure", "threshold relaxation attempt ignored", "false_world_tests", "true_world_tests", "method_completeness", "evidence_refs", "unresolved_contradictions", "--evidence-root", "structured evidence", "structured_evidence_count", "evidence_schema_version", "_verify_artifact_sha256", "hash_or_version does not match artifact_path SHA-256", "_ref_to_path_checked", "_canonical_relative_path", "_atomic_write_new_text", "invalid evidence refs", "evidence ref escapes evidence_root", "canonical relative POSIX path", "urlparse", "URI schemes are case-insensitive", "non-empty URI scheme", "unique evidence refs", "unique structured evidence artifacts", "duplicate or aliased evidence refs", "missing modal test id", "test target_claim does not match evaluated claim", "target_claim_ids"],
+            "validate_package.py": ["check_closed_surface", "GitEntry", "ls-files\", \"--stage", "regular blob modes 100644/100755", "atomic_write_fixed_text", "HARNESS_ERROR", "GIT_OPTIONAL_LOCKS", "check_self_certificate_nonclosure", "self certificate artifact version matches plugin", "downstream non-closure", "plugin manifest has no component-path/runtime fields", "dynamic skill shell disabled", "semantic prompt poisoning", "placeholder eval", "run_live_skill_evals.py", "update_manifest", "agents.rglob", "recursive plugin agent", "check_release_audit_artifacts", "check_release_provenance_hygiene", "check_github_readmes", "EXPECTED_GITHUB_READMES", "GitHub README", "stale generated artifact", "absolute build path", "provenance hygiene", "stable release manifest self-hash", "compute_stable_release_tree", "run_release_lock_idempotence_test", "run_promotion_certifier_contract_probes", "promotion deterministic projection ignores presentation fields", "official validator stderr contradiction dominates stdout success", "promotion evidence paths require raw canonical POSIX syntax", "promotion evidence graph analysis is iterative for deep input", "promotion evidence graph rejects oversized input early", "promotion failure API keeps canonical FAIL status", "TemporaryDirectory"],
+            "run_gate_contract_tests.py": ["downstream_claim_auto_pass_rejected", "downstream_unknown_status_", "unknown_downstream_policy_fails_closed", "downstream_unverified_record_retains_pass", "zero_threshold_no_tests_bypass", "observed_accepts_false", "observed_rejects_true", "method_component_overclaim", "valid_structured_evidence_hashes", "wrong_structured_evidence_hash_rejected", "artifact_path_escape_rejected", "noncanonical_evidence_ref_", "noncanonical_artifact_path_", "one_of_two_claim_evidence_hashes_wrong_rejected", "one_of_two_test_evidence_hashes_wrong_rejected", "evidence_ref_path_escape_rejected", "evidence_ref_absolute_path_rejected", "external_ref_with_valid_artifact_hash_rejected", "remote_ref_rejected_in_strict_local_mode", "uppercase_https_evidence_ref_rejected", "mixed_case_https_evidence_ref_rejected", "uppercase_doi_urn_refs_rejected", "scheme_like_evidence_ref_rejected_in_strict_mode", "duplicate_claim_evidence_ref_does_not_satisfy_minimum", "aliased_same_claim_evidence_ref_does_not_satisfy_minimum", "duplicate_structured_evidence_file_counted_once", "same_artifact_path_for_all_claim_refs_fails_for_critical_claims", "unique_evidence_refs_with_valid_hashes_still_pass", "wrong_false_world_target_claim_rejected", "wrong_true_world_target_claim_rejected", "missing_false_world_test_id_rejected", "missing_true_world_test_id_rejected", "wildcard_applies_to_tests_does_not_replace_test_id", "valid_target_claim_ids_list_still_passes"],
             "run_live_skill_evals.py": ["--plugin-dir", "-p", "--output-format", "--max-turns", "build_fixture_prompt", "package_tree_algorithm", "package_tree_sha256", "fixture_spec_sha256", "artifact_sha256", "run_config", "compute_stable_release_tree", "prompt_sha256", "transcript_sha256", "sha256_text", "transcript_checks", "structured_json_envelope", "report_field", "runtime_identity", "provenance_schema_version", "observed-not-cryptographically-authenticated", "runtime_preflight_succeeded", "resolve_claude_executable", "load_regular_json", "executable_sha256_pre", "executable_sha256_post", "fingerprint_stable", "regular non-symlink", "UNVERIFIED_RUNTIME", "--run-fixtures", "ACCEPTABLE_PASS_STATUSES", "dominant_status"],
             "run_regression_evals.py": ["REQUIRED_FIXTURE_FIELDS", "false_worlds", "true_worlds", "expected_gate", "evidence_required"],
-            "run_formal_artifact_verification.py": ["ntt-formal-coordinator", "FORMAL_SUBAGENT_FAILURE", "certificate.json", "ntt_gate.py", "INVOCATION_LEDGER", "--agent", "--plugin-dir", "--dry-run", "Substitution used: none", "check_required_outputs", "authenticate_trace", "--include-hook-events", "trace_authentication", "cap_status_by_trace", "--require-trace-auth", "--skip-prechecks", "--refresh-release-manifest", "release tree output requires --refresh-release-manifest", "missing successful matching tool-result/completion events", "_tool_result_ids", "_structured_subagent_selector", "duplicate_tool_use_ids", "structured selector exact match", "empty/generic result", "text-only or mismatched-id", "_candidate_trace_nodes", "recognized stream-json event positions", "nested-fake-result", "result_before_call_ids", "CONTENT_METADATA_KEYS", "metadata-only", "payload-bearing fields", "role_violations", "role-inverted", "hard event boundary", "tool_result.data", "payload"],
-            "certify_pass_tracked_upgrade.py": ["PASS-SCOPED to PASS-TRACKED", "promotion_certificate.json", "official validators", "live runtime eval", "live provenance schema is 1.0", "live runtime executable fingerprints are valid and stable", "live plugin validation preflight exact normalized argv succeeded", "live fixture IDs exactly match the current package once each", "live fixture specification SHA-256 matches current evals bytes", "live fixture bundle-local transcript paths are unique and complete", "artifact SHA-256 matches current exact bytes", "transcript SHA-256 matches fixture record", "transcript command exactly matches normalized argv", "transcript command prompt binds exact fixture and artifact", "self-reported checks match transcript replay", "structured JSON envelope", "observed-not-cryptographically-authenticated", "formal result", "trace authenticated", "self-contained regular file", "package_tree_sha256", "compute_stable_release_tree", "current package tree verifies through shared validator helper", "fresh deterministic package validator still passes", "fresh_validation_unconditional", "evidence refs are unique bundle-local regular files", "returncode_is_integer_zero", "TEXT_NONZERO_FAILURE_SUMMARY_RE", "anchored negative status", "stale-token input is readable regular file", "regular_file_error", "PASS-TRACKED", "UNVERIFIED_RUNTIME", "derived_or_downstream_claims", "no automatic downstream pass inheritance", "run-fresh-package-validator", "allow-official-validator-scope-exclusion", "strict gate PASS-TRACKED", "native stream-json trace authentication"],
-            "run_formal_runner_contract_tests.py": ["fake claude", "no tool_use events", "PASS-TRACKED", "trace authentication", "run_formal_artifact_verification.py", "native_tool_use_without_results_does_not_authenticate", "failed_native_result_does_not_authenticate", "mismatched_tool_result_id_does_not_authenticate", "single_agent_call_mentions_all_lanes_does_not_authenticate", "duplicate_tool_use_id_across_lanes_does_not_authenticate", "empty_tool_result_content_does_not_authenticate", "generic_result_without_status_or_is_error_does_not_authenticate", "structured_subagent_type_exact_match_required", "nested_tool_result_inside_tool_input_does_not_authenticate", "nested_tool_result_inside_arguments_does_not_authenticate", "tool_result_before_tool_use_does_not_authenticate", "same_event_input_embedded_result_does_not_authenticate", "text_block_tool_use_does_not_authenticate", "text_block_tool_result_does_not_authenticate", "assistant_message_tool_use_masquerade_does_not_authenticate", "message_result_masquerade_does_not_authenticate", "unexpected_agent_call_without_structured_selector_rejected", "unknown_agent_selector_rejected", "tool_result_metadata_only_text_block_does_not_authenticate", "tool_result_document_block_without_data_does_not_authenticate", "tool_result_nonempty_text_block_authenticates", "missing_result_agents", "tool_use_inside_tool_result_payload_does_not_authenticate", "tool_result_inside_tool_result_payload_does_not_authenticate", "fake_tool_use_and_result_inside_tool_result_data_does_not_authenticate", "tool_use_inside_tool_result_delta_does_not_authenticate", "user_message_tool_use_does_not_authenticate", "assistant_message_tool_result_does_not_authenticate", "role_inverted_tool_use_result_trace_does_not_authenticate", "valid_assistant_tool_use_user_tool_result_still_authenticates"],
+            "run_formal_artifact_verification.py": ["ntt-formal-coordinator", "FORMAL_SUBAGENT_FAILURE", "FORMAL_COMPANION_SPECS", "target_snapshot_stability", "cap_status_by_target_stability", "atomic_write_new", "reserve_regular_output", "formal_output_collision_error", "certificate.json", "ntt_gate.py", "INVOCATION_LEDGER", "--agent", "--plugin-dir", "--dry-run", "Substitution used: none", "check_required_outputs", "authenticate_trace", "--include-hook-events", "trace_authentication", "cap_status_by_trace", "--require-trace-auth", "--skip-prechecks", "--refresh-release-manifest", "release tree output requires --refresh-release-manifest", "missing successful matching tool-result/completion events", "_tool_result_ids", "_structured_subagent_selector", "duplicate_tool_use_ids", "structured selector exact match", "empty/generic result", "text-only or mismatched-id", "_candidate_trace_nodes", "recognized stream-json event positions", "nested-fake-result", "result_before_call_ids", "CONTENT_METADATA_KEYS", "metadata-only", "payload-bearing fields", "role_violations", "role-inverted", "hard event boundary", "tool_result.data", "payload"],
+            "certify_pass_tracked_upgrade.py": ["PASS-SCOPED to PASS-TRACKED", "PROMOTION_EVIDENCE_SPECS", "CHECK_SUITE_PROJECTION_SPECS", "MAX_EVIDENCE_NODES", "promotion_certificate.json", "official validators", "validator_contradiction", "live runtime eval", "live provenance schema is 1.0", "live runtime executable fingerprints are valid and stable", "live plugin validation preflight exact normalized argv succeeded", "live fixture IDs exactly match the current package once each", "live fixture specification SHA-256 matches current evals bytes", "live fixture bundle-local transcript paths are unique and complete", "artifact SHA-256 matches current exact bytes", "transcript SHA-256 matches fixture record", "transcript command exactly matches normalized argv", "transcript command prompt binds exact fixture and artifact", "self-reported checks match transcript replay", "structured JSON envelope", "observed-not-cryptographically-authenticated", "formal result", "formal result package-tree identity has exact JSON schema", "formal transcript re-authenticates", "bundle-local regular file", "package_tree_sha256", "compute_stable_release_tree", "current package tree verifies through shared validator helper", "fresh deterministic package validator still passes", "fresh_validation_unconditional", "promotion evidence roles exactly match required semantic roles", "returncode_is_integer_zero", "TEXT_NONZERO_FAILURE_SUMMARY_RE", "anchored negative status", "stale-token input is readable regular file", "regular_file_error", "PASS-TRACKED", "UNVERIFIED_RUNTIME", "derived_or_downstream_claims", "evaluate_downstream_nonclosure", "run-fresh-package-validator", "allow-official-validator-scope-exclusion", "strict gate PASS-TRACKED", "native stream-json trace authentication", "failure_kind", "iterative_evidence_graph_analysis", "OFFICIAL_POLICY_SCHEMA"],
+            "run_promotion_certifier_contract_tests.py": ["production_certifier_cli_baseline", "complete_synthetic_baseline_cli_is_capped", "distinct_formal_roles_may_contain_equal_bytes", "stale_deterministic_capture_wrong_tree", "fabricated_official_text_policy", "decoy_formal_companion", "swapped_formal_companions", "dummy_untyped_evidence", "official_stderr_contradiction_dominates_stdout", "formal_package_identity_bool_int_alias", "noncanonical_promotion_evidence_path", "fake_own_claim_id", "malformed_scalar", "oversized_evidence_graph_is_bounded"],
+            "run_formal_runner_contract_tests.py": ["fake claude", "no tool_use events", "PASS-TRACKED", "trace authentication", "run_formal_artifact_verification.py", "target_mutation_forbids_formal_pass", "target_mutate_restore_metadata_change_forbids_formal_pass", "formal_runner_rejects_preexisting_output_symlink_sentinel", "formal_runner_rejects_preexisting_output_hardlink_sentinel", "formal_runner_rejects_preexisting_special_output", "native_tool_use_without_results_does_not_authenticate", "failed_native_result_does_not_authenticate", "mismatched_tool_result_id_does_not_authenticate", "single_agent_call_mentions_all_lanes_does_not_authenticate", "duplicate_tool_use_id_across_lanes_does_not_authenticate", "empty_tool_result_content_does_not_authenticate", "generic_result_without_status_or_is_error_does_not_authenticate", "structured_subagent_type_exact_match_required", "nested_tool_result_inside_tool_input_does_not_authenticate", "nested_tool_result_inside_arguments_does_not_authenticate", "tool_result_before_tool_use_does_not_authenticate", "same_event_input_embedded_result_does_not_authenticate", "text_block_tool_use_does_not_authenticate", "text_block_tool_result_does_not_authenticate", "assistant_message_tool_use_masquerade_does_not_authenticate", "message_result_masquerade_does_not_authenticate", "unexpected_agent_call_without_structured_selector_rejected", "unknown_agent_selector_rejected", "tool_result_metadata_only_text_block_does_not_authenticate", "tool_result_document_block_without_data_does_not_authenticate", "tool_result_nonempty_text_block_authenticates", "missing_result_agents", "tool_use_inside_tool_result_payload_does_not_authenticate", "tool_result_inside_tool_result_payload_does_not_authenticate", "fake_tool_use_and_result_inside_tool_result_data_does_not_authenticate", "tool_use_inside_tool_result_delta_does_not_authenticate", "user_message_tool_use_does_not_authenticate", "assistant_message_tool_result_does_not_authenticate", "role_inverted_tool_use_result_trace_does_not_authenticate", "valid_assistant_tool_use_user_tool_result_still_authenticates"],
         }
+        scripts["certify_pass_tracked_upgrade.py"].extend([
+            "PROMOTION_CERTIFICATE_SCHEMA",
+            "PROMOTION_CERTIFICATE_REQUIRED_FIELD_TYPES",
+            "promotion certificate schema version is exact string 2.0",
+            "claims must contain at least one promotion claim",
+            "bool(raw_claim_results)",
+            "lexical_directory_ancestor_error",
+            "atomic_replace_regular_text",
+            "v1.0.3 always emits a non-authorizing PASS-SCOPED/CAPPED result",
+            (
+                "Official executable availability changes only fresh "
+                "execution evidence"
+            ),
+        ])
+        scripts["validate_package.py"].extend([
+            "official validator structured stderr failure dominates stdout success",
+            "official validator mixed JSONL stderr failure dominates stdout success",
+            "formal trace authentication rejects bool-int aliases",
+            "formal invalid package identity forbids pass",
+            "previous_dont_write = sys.dont_write_bytecode",
+            "active_ci_run_steps",
+            "ci_condition_is_static_false",
+            "direct_ci_shell_commands",
+            "job_statically_disabled",
+            "EXPECTED_ISSUE_5_UNRESOLVED_OBLIGATIONS",
+            "EXPECTED_CURRENT_PROMOTION_EVIDENCE_FILES",
+            "REQUIRED_PROMOTION_SURFACE_INVARIANTS",
+        ])
+        scripts["run_formal_artifact_verification.py"].extend([
+            "FORMAL_VERIFICATION_CONTEXT",
+            "TRACE_AUTHENTICATION_FIELDS",
+            "load_module_without_bytecode",
+            "cap_status_by_package_identity",
+            "lexical_directory_ancestor_error",
+            "replaceable_regular_output_error",
+            "atomic_replace_regular",
+            "standalone-immutable-snapshot",
+            "PYTHONDONTWRITEBYTECODE",
+        ])
+        scripts["run_live_skill_evals.py"].append(
+            "previous_dont_write = sys.dont_write_bytecode"
+        )
+        scripts["certify_pass_tracked_upgrade.py"].extend([
+            "validator_stream_semantics",
+            "json_line_validator_semantics",
+            "exact_json_equal",
+            "trace_authentication_schema_valid",
+            "formal result projected fields have exact JSON types",
+            "formal trace authentication has exact JSON schema",
+        ])
+        scripts["run_promotion_certifier_contract_tests.py"].extend([
+            "official_structured_stderr_failure_dominates_stdout",
+            "official_mixed_jsonl_stderr_failure_dominates_stdout",
+            "formal_trace_authenticated_bool_int_alias",
+            "formal_transcript_without_authentic_native_events",
+            "formal_trace_authentication_missing",
+            "missing_promotion_schema_version",
+            "wrong_type_promotion_schema_version",
+            "official_scope_exclusion_retains_fixed_role_dag",
+            "EXPECTED_PROMOTION_DEPENDENCIES",
+            "EXPECTED_BASELINE_LANE_COUNTS",
+            "EXPECTED_CASE_NAMES",
+            "EXPECTED_POSITIVE_MUTATION_CHECK_INVENTORIES",
+            "EXPECTED_MUTATION_CHECK_INVENTORIES",
+            "failed_checks contains a malformed entry",
+            "detail_matches",
+            "recorded_detail_matches",
+            "all_negative_cases_use_production_cli",
+            "normal_invocation_creates_no_python_bytecode",
+            "empty_promotion_claims_rejected",
+            "certifier_json_regular_file_is_atomically_replaced",
+            "certifier_json_symlinked_ancestor_rejected_without_external_overwrite",
+            "certifier_json_special_target_rejected",
+        ])
+        scripts["run_formal_runner_contract_tests.py"].extend([
+            "formal_result_declares_standalone_snapshot_context",
+            "invalid_package_identity_forbids_formal_pass",
+            "repeated_plain_validation_creates_no_bytecode_cruft",
+            "formal_runner_atomically_replaces_regular_compatibility_json",
+            "formal_runner_rejects_symlinked_output_dir_ancestor",
+            "formal_runner_rejects_symlinked_compatibility_json_ancestor",
+            "formal_runner_rejects_special_compatibility_json_target",
+        ])
         for name, tokens in scripts.items():
             p = sdir/name
             self.add(f"script exists: {name}", p.exists(), details=name)
@@ -1796,6 +2529,21 @@ class Validator:
             self.add(f"script substantive length: {name}", len(text) >= min_len, details=f"chars={len(text)}")
             for token in tokens:
                 self.add(f"script contains hardening token {name}: {token}", token in text, details=token)
+            if name in {
+                "validate_package.py",
+                "run_promotion_certifier_contract_tests.py",
+                "certify_pass_tracked_upgrade.py",
+                "run_gate_contract_tests.py",
+                "run_live_skill_evals.py",
+                "run_formal_runner_contract_tests.py",
+                "run_formal_artifact_verification.py",
+            }:
+                self.add(
+                    f"script contains import-time stdout containment: {name}",
+                    "import_stdout = io.StringIO()" in text
+                    and "with contextlib.redirect_stdout(import_stdout):" in text,
+                    details=name,
+                )
             if name == "run_live_skill_evals.py":
                 self.add("live harness not obvious pass stub", "PASS-SCOPED" in text and "transcript_checks" in text and "--run-fixtures" in text and "claude --version only" not in text and "dominant_status" in text)
             if name == "run_regression_evals.py":
@@ -1821,7 +2569,35 @@ class Validator:
                 self.add("formal runner contract test is substantive", "fake claude" in text.lower() and "no tool_use events" in text and "PASS-TRACKED" in text and len(text) > 6000, details=f"chars={len(text)}")
             if name == "certify_pass_tracked_upgrade.py":
                 self.add("PASS-TRACKED certifier rejects missing runtime evidence", "UNVERIFIED_RUNTIME" in text and "live runtime was executed" in text and "formal result" in text, details=f"chars={len(text)}")
-                self.add("PASS-TRACKED certifier requires trace and downstream checks", "trace authenticated" in text and "no automatic downstream pass inheritance" in text and "derived_or_downstream_claims" in text, details=f"chars={len(text)}")
+                self.add(
+                    "PASS-TRACKED certifier requires trace and downstream checks",
+                    "formal transcript re-authenticates" in text
+                    and "evaluate_downstream_nonclosure" in text
+                    and "derived_or_downstream_claims" in text,
+                    details=f"chars={len(text)}",
+                )
+                try:
+                    certifier_module = load_module_from_path(
+                        "ntt_certifier_release_policy",
+                        p,
+                    )
+                    production_obligations = getattr(
+                        certifier_module,
+                        "ISSUE_5_UNRESOLVED_OBLIGATIONS",
+                        None,
+                    )
+                    self.add(
+                        "production certifier Issue #5 obligations are exact and ordered",
+                        production_obligations
+                        == EXPECTED_ISSUE_5_UNRESOLVED_OBLIGATIONS,
+                        details=repr(production_obligations),
+                    )
+                except Exception as exc:
+                    self.add(
+                        "production certifier Issue #5 obligations are exact and ordered",
+                        False,
+                        details=type(exc).__name__,
+                    )
 
     def run_gate_contract_tests(self) -> None:
         script = self.path(f"{SKILL_DIR}/scripts/run_gate_contract_tests.py")
@@ -1842,6 +2618,12 @@ class Validator:
             nested = Validator(copy_root, run_self_test=False, skip_release_idempotence=True)
             data = nested.validate()
             critical_failed = int(data.get("critical_failed", 0))
+            failed_critical_check_names = sorted(
+                str(check.get("name"))
+                for check in data.get("checks", [])
+                if check.get("severity") == "critical"
+                and check.get("passed") is False
+            )
             return {
                 "status": data.get("status"),
                 "completed": True,
@@ -1851,6 +2633,7 @@ class Validator:
                 "checks_total": int(data.get("checks_total", 0)),
                 "checks_passed": int(data.get("checks_passed", 0)),
                 "returncode": 0 if critical_failed == 0 else 2,
+                "failed_critical_check_names": failed_critical_check_names,
                 "cruft_check": next(
                     (
                         dict(check)
@@ -2560,1382 +3343,248 @@ class Validator:
             self.add("live harness contract probes complete without harness error", False, details=repr(exc))
 
     def run_promotion_certifier_contract_probes(self) -> None:
-        """Exercise promotion-only false worlds with fixed offline evidence."""
+        """Exercise bounded promotion helpers without aggregate fixture setup."""
         try:
             certifier = load_module_from_path(
-                "ntt_promotion_certifier_contract_selftest",
-                self.path(f"{SKILL_DIR}/scripts/certify_pass_tracked_upgrade.py"),
+                "ntt_promotion_certifier_helper_selftest",
+                self.path(
+                    f"{SKILL_DIR}/scripts/certify_pass_tracked_upgrade.py"
+                ),
             )
-            live = load_module_from_path(
-                "ntt_live_replay_contract_selftest",
-                self.path(f"{SKILL_DIR}/scripts/run_live_skill_evals.py"),
+            deterministic_probe = {
+                "status": "PASS",
+                "checks_total": 1,
+                "checks_passed": 1,
+                "critical_failed": 0,
+                "checks": [{
+                    "name": "stable release manifest is current",
+                    "passed": True,
+                    "severity": "critical",
+                }],
+            }
+            projection = certifier.deterministic_semantic_projection(
+                "package_validation",
+                deterministic_probe,
             )
-            plugin = json.loads(
-                self.path(".claude-plugin/plugin.json").read_text(encoding="utf-8")
+            presentation_variant = json.loads(json.dumps(deterministic_probe))
+            presentation_variant["presentation_timestamp"] = "ignored"
+            self.add(
+                "promotion deterministic projection ignores presentation fields",
+                projection
+                == certifier.deterministic_semantic_projection(
+                    "package_validation",
+                    presentation_variant,
+                ),
             )
-            evals_path = self.path(f"{SKILL_DIR}/evals/evals.json")
-            evals = json.loads(evals_path.read_text(encoding="utf-8"))
-            fixtures = evals["fixtures"]
-            fixture_spec_sha256 = sha256_path(evals_path)
-            live_package_tree = certifier.package_tree_sha256(self.root)
-
-            def write_json(path: Path, data: Any) -> None:
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text(
-                    json.dumps(data, indent=2, sort_keys=True) + "\n",
-                    encoding="utf-8",
+            rejected_types: List[str] = []
+            for label, value in (
+                ("boolean", True),
+                ("float", 1.0),
+                ("string", "1"),
+            ):
+                malformed = json.loads(json.dumps(deterministic_probe))
+                malformed["checks_total"] = value
+                try:
+                    certifier.deterministic_semantic_projection(
+                        "package_validation",
+                        malformed,
+                    )
+                except ValueError:
+                    rejected_types.append(label)
+            malformed = json.loads(json.dumps(deterministic_probe))
+            malformed["checks"][0]["passed"] = 1
+            try:
+                certifier.deterministic_semantic_projection(
+                    "package_validation",
+                    malformed,
                 )
+            except ValueError:
+                rejected_types.append("integer-as-boolean")
+            self.add(
+                "promotion deterministic projections enforce exact scalar types",
+                rejected_types
+                == ["boolean", "float", "string", "integer-as-boolean"],
+                details=json.dumps(rejected_types),
+            )
 
-            def make_live_bundle(bundle: Path) -> Dict[str, Any]:
-                fixture_results: List[Dict[str, Any]] = []
-                transcript_checks: List[Dict[str, Any]] = []
-                for fixture in fixtures:
-                    fixture_id = fixture["id"]
-                    artifact = fixture["artifact"]
-                    artifact_name = Path(artifact).name
-                    artifact_path = (
-                        self.root / f"{SKILL_DIR}/evals" / artifact
-                    )
-                    literal_prompt = live.build_fixture_prompt(
-                        plugin["name"],
-                        fixture_id,
-                        artifact_path,
-                    )
-                    canonical_prompt = live.normalize_display(
-                        literal_prompt,
-                        ((str(self.root), "<package-root>"),),
-                    )
-                    prompt_sha256 = hashlib.sha256(
-                        canonical_prompt.encode("utf-8")
-                    ).hexdigest()
-                    report = (
-                        f"Verification report for {artifact_name}: method M was "
-                        "inspected; false-world sensitivity and true-world "
-                        "adherence were tested; final gate status: PASS-SCOPED."
-                    )
-                    stdout = json.dumps(
-                        {"is_error": False, "result": report},
-                        sort_keys=True,
-                    )
-                    checks = live.transcript_checks(stdout, artifact)
-                    transcript_name = f"{fixture_id}.json"
-                    transcript_path = (
-                        bundle
-                        / "live_fixtures/transcripts"
-                        / transcript_name
-                    )
-                    write_json(
-                        transcript_path,
-                        {
-                            "cmd": [
-                                "<claude-cli>",
-                                "--plugin-dir",
-                                "<package-root>",
-                                "-p",
-                                "--output-format",
-                                "json",
-                                "--max-turns",
-                                "20",
-                                canonical_prompt,
-                            ],
-                            "returncode": 0,
-                            "stdout": stdout,
-                            "stderr": "",
-                        },
-                    )
-                    fixture_results.append(
-                        {
-                            "id": fixture_id,
-                            "artifact": f"<package-root>/skills/nozickian-verify/evals/{artifact}",
-                            "artifact_sha256": sha256_path(artifact_path),
-                            "prompt": canonical_prompt,
-                            "prompt_sha256": prompt_sha256,
-                            "returncode": 0,
-                            "transcript_file": f"<output-dir>/{transcript_name}",
-                            "transcript_sha256": certifier.sha256_path(
-                                transcript_path
-                            ),
-                            "checks": checks,
-                        }
-                    )
-                    transcript_checks.append(checks)
-                digest = "a" * 64
-                data = {
-                    "status": "PASS-SCOPED",
-                    "reason": "fixed current-run contract fixture",
-                    "package_tree_algorithm": live_package_tree.get(
-                        "algorithm"
-                    ),
-                    "package_tree_sha256": live_package_tree.get("sha256"),
-                    "fixture_spec_sha256": fixture_spec_sha256,
-                    "run_config": {
-                        "max_fixtures": len(fixtures),
-                        "max_turns": 20,
-                        "output_format": "json",
-                        "plugin_dir": "<package-root>",
-                        "print_mode": True,
-                        "timeout_sec": 900,
-                        "working_directory": "<package-root>",
-                    },
-                    "provenance": {
-                        "provenance_schema_version": "1.0",
-                        "status": "observed-current-run",
-                        "source_release": plugin["version"],
-                        "observed_at_utc": "2026-07-10T20:00:00Z",
-                        "carried_forward": False,
-                        "resolved_executable_path_recorded": False,
-                    },
-                    "runtime_identity": {
-                        "authentication_status": "observed-not-cryptographically-authenticated",
-                        "executable_sha256": digest,
-                        "executable_sha256_pre": digest,
-                        "executable_sha256_post": digest,
-                        "fingerprint_stable": True,
-                        "executable_fingerprint_error": None,
-                        "resolved_executable_path_recorded": False,
-                        "version_output": "2.1.205 (Claude Code)",
-                        "version_pattern_match": True,
-                    },
-                    "commands": [
-                        {
-                            "cmd": ["<claude-cli>", "--version"],
-                            "returncode": 0,
-                        },
-                        {
-                            "cmd": [
-                                "<claude-cli>",
-                                "plugin",
-                                "validate",
-                                "<package-root>",
-                            ],
-                            "returncode": 0,
-                        },
-                    ],
-                    "preflight": {
-                        "successful": True,
-                        "version_returncode": 0,
-                        "plugin_validate_returncode": 0,
-                    },
-                    "fixture_results": fixture_results,
-                    "transcript_checks": transcript_checks,
-                }
-                write_json(
-                    bundle / "live_fixtures/live_runtime_eval_result.json",
-                    data,
+            official_ok, official_reason = certifier.official_validator_status(
+                "\x1b[32m✔ Validation passed\x1b[0m\n",
+                "Status: failed\n",
+                validator_id="claude_plugin_validate",
+            )
+            self.add(
+                "official validator stderr contradiction dominates stdout success",
+                official_ok is False
+                and "contradiction" in official_reason,
+                details=official_reason,
+            )
+            structured_official_ok, structured_official_reason = (
+                certifier.official_validator_status(
+                    "\x1b[32m✔ Validation passed\x1b[0m\n",
+                    '{"status":"failed"}\n',
+                    validator_id="claude_plugin_validate",
                 )
-                return data
-
-            def live_probe(
-                root: Path,
-                label: str,
-                mutate: Any,
-                expected_failed_name: str,
-            ) -> None:
-                bundle = root / label
-                data = make_live_bundle(bundle)
-                mutate(bundle, data)
-                write_json(
-                    bundle / "live_fixtures/live_runtime_eval_result.json",
-                    data,
+            )
+            self.add(
+                "official validator structured stderr failure dominates stdout success",
+                structured_official_ok is False
+                and "explicit negative JSON status"
+                in structured_official_reason,
+                details=structured_official_reason,
+            )
+            mixed_official_ok, mixed_official_reason = (
+                certifier.official_validator_status(
+                    "\x1b[32m✔ Validation passed\x1b[0m\n",
+                    '{"event":"start"}\n{"status":"failed"}\n',
+                    validator_id="claude_plugin_validate",
                 )
-                checks = certifier.live_fixture_checks(self.root, bundle)
-                failed_names = [check.name for check in checks if not check.passed]
-                summary = certifier.summarize(checks, False)
-                self.add(
-                    f"promotion false world: {label}",
-                    summary.get("status") == "FAIL"
-                    and expected_failed_name in failed_names,
-                    details=json.dumps(
-                        {
-                            "status": summary.get("status"),
-                            "expected_failed_name": expected_failed_name,
-                            "failed_names": failed_names,
-                        },
-                        sort_keys=True,
-                    ),
+            )
+            self.add(
+                "official validator mixed JSONL stderr failure dominates stdout success",
+                mixed_official_ok is False
+                and "line 2 explicit negative JSON status"
+                in mixed_official_reason,
+                details=mixed_official_reason,
+            )
+
+            formal_runner = load_module_from_path(
+                "ntt_formal_runner_helper_selftest",
+                self.path(
+                    f"{SKILL_DIR}/scripts/"
+                    "run_formal_artifact_verification.py"
+                ),
+            )
+            with tempfile.TemporaryDirectory(
+                prefix="ntt_trace_type_probe_"
+            ) as temporary:
+                missing_trace = Path(temporary) / "missing.trace"
+                trace_auth = formal_runner.authenticate_trace(missing_trace)
+            trace_auth["authenticated"] = 1
+            self.add(
+                "formal trace authentication rejects bool-int aliases",
+                not certifier.trace_authentication_schema_valid(
+                    trace_auth,
+                    formal_runner.TRACE_AUTHENTICATION_FIELDS,
+                ),
+                details=repr(trace_auth.get("authenticated")),
+            )
+            invalid_package_identity = {
+                "algorithm": "stable-release-inventory-v1",
+                "sha256": "sha256:" + "a" * 64,
+                "valid": 1,
+            }
+            self.add(
+                "formal invalid package identity forbids pass",
+                formal_runner.cap_status_by_package_identity(
+                    "PASS-TRACKED",
+                    invalid_package_identity,
+                )[0]
+                == "FAIL",
+            )
+
+            rejected_paths = []
+            for raw in (
+                "./evidence/result.json",
+                "evidence//result.json",
+                "evidence/result.json/",
+                "evidence\\result.json",
+                "../evidence/result.json",
+                "/evidence/result.json",
+            ):
+                _path, error = certifier.safe_relative_posix_path(raw)
+                if error is not None:
+                    rejected_paths.append(raw)
+            self.add(
+                "promotion evidence paths require raw canonical POSIX syntax",
+                len(rejected_paths) == 6,
+                details=json.dumps(rejected_paths),
+            )
+
+            deep_graph = {
+                f"node-{index}": (
+                    [] if index == 0 else [f"node-{index - 1}"]
                 )
-
-            with tempfile.TemporaryDirectory(prefix="nozickian_certifier_live_") as tmp_s:
-                tmp = Path(tmp_s)
-                valid_bundle = tmp / "valid"
-                make_live_bundle(valid_bundle)
-                valid_checks = certifier.live_fixture_checks(self.root, valid_bundle)
-                valid_summary = certifier.summarize(valid_checks, False)
-                self.add(
-                    "promotion true world: valid three-fixture transcript-bound bundle passes its lane",
-                    len(fixtures) == 3
-                    and valid_summary.get("status") == "PASS-TRACKED",
-                    details=json.dumps(
-                        {
-                            "fixture_count": len(fixtures),
-                            "status": valid_summary.get("status"),
-                            "failed": [
-                                check.name
-                                for check in valid_checks
-                                if not check.passed
-                            ],
-                        },
-                        sort_keys=True,
-                    ),
-                )
-
-                def stale_release(_bundle: Path, data: Dict[str, Any]) -> None:
-                    data["provenance"]["source_release"] = "0.0.0"
-
-                def carried_forward(_bundle: Path, data: Dict[str, Any]) -> None:
-                    data["provenance"]["carried_forward"] = True
-
-                def partial_set(_bundle: Path, data: Dict[str, Any]) -> None:
-                    data["fixture_results"] = data["fixture_results"][:1]
-
-                def absent_transcript(bundle: Path, data: Dict[str, Any]) -> None:
-                    name = Path(data["fixture_results"][0]["transcript_file"]).name
-                    (bundle / "live_fixtures/transcripts" / name).unlink()
-
-                def external_only_transcript(bundle: Path, data: Dict[str, Any]) -> None:
-                    original_name = Path(
-                        data["fixture_results"][0]["transcript_file"]
-                    ).name
-                    original = bundle / "live_fixtures/transcripts" / original_name
-                    external = tmp / "external-only-live-transcript.json"
-                    external.write_bytes(original.read_bytes())
-                    original.unlink()
-                    data["fixture_results"][0]["transcript_file"] = str(external)
-
-                def fabricated_checks(bundle: Path, data: Dict[str, Any]) -> None:
-                    name = Path(data["fixture_results"][0]["transcript_file"]).name
-                    transcript = bundle / "live_fixtures/transcripts" / name
-                    transcript_data = json.loads(
-                        transcript.read_text(encoding="utf-8")
-                    )
-                    transcript_data["stdout"] = json.dumps(
-                        {
-                            "is_error": False,
-                            "result": "No substantive verification report was produced.",
-                        }
-                    )
-                    write_json(transcript, transcript_data)
-                    data["fixture_results"][0]["checks"]["passed"] = True
-
-                def shared_transcript(bundle: Path, data: Dict[str, Any]) -> None:
-                    artifact_names = " ".join(
-                        Path(fixture["artifact"]).name
-                        for fixture in fixtures
-                    )
-                    stdout = json.dumps(
-                        {
-                            "is_error": False,
-                            "result": (
-                                "Shared verification report for "
-                                f"{artifact_names}: method M was inspected; "
-                                "false-world sensitivity and true-world "
-                                "adherence were tested; final gate status: "
-                                "PASS-SCOPED."
-                            ),
-                        },
-                        sort_keys=True,
-                    )
-                    shared_pointer = data["fixture_results"][0][
-                        "transcript_file"
-                    ]
-                    shared_path = (
-                        bundle
-                        / "live_fixtures/transcripts"
-                        / Path(shared_pointer).name
-                    )
-                    transcript_data = json.loads(
-                        shared_path.read_text(encoding="utf-8")
-                    )
-                    transcript_data["stdout"] = stdout
-                    write_json(shared_path, transcript_data)
-                    shared_hash = certifier.sha256_path(shared_path)
-                    replayed: List[Dict[str, Any]] = []
-                    expected_artifacts = {
-                        fixture["id"]: fixture["artifact"]
-                        for fixture in fixtures
-                    }
-                    for result_item in data["fixture_results"]:
-                        result_item["transcript_file"] = shared_pointer
-                        result_item["transcript_sha256"] = shared_hash
-                        result_item["checks"] = live.transcript_checks(
-                            stdout,
-                            expected_artifacts[result_item["id"]],
-                        )
-                        replayed.append(result_item["checks"])
-                    data["transcript_checks"] = replayed
-
-                def swapped_transcripts(
-                    _bundle: Path,
-                    data: Dict[str, Any],
-                ) -> None:
-                    first, second = data["fixture_results"][:2]
-                    first["transcript_file"], second["transcript_file"] = (
-                        second["transcript_file"],
-                        first["transcript_file"],
-                    )
-                    first["transcript_sha256"], second[
-                        "transcript_sha256"
-                    ] = (
-                        second["transcript_sha256"],
-                        first["transcript_sha256"],
-                    )
-
-                def wrong_prompt_hash(
-                    _bundle: Path,
-                    data: Dict[str, Any],
-                ) -> None:
-                    data["fixture_results"][0]["prompt_sha256"] = "0" * 64
-
-                def wrong_artifact_fixture_prompt(
-                    bundle: Path,
-                    data: Dict[str, Any],
-                ) -> None:
-                    first, second = data["fixture_results"][:2]
-                    transcript_path = (
-                        bundle
-                        / "live_fixtures/transcripts"
-                        / Path(first["transcript_file"]).name
-                    )
-                    transcript_data = json.loads(
-                        transcript_path.read_text(encoding="utf-8")
-                    )
-                    transcript_data["cmd"][-1] = second["prompt"]
-                    write_json(transcript_path, transcript_data)
-                    first["transcript_sha256"] = certifier.sha256_path(
-                        transcript_path
-                    )
-
-                def mutate_first_fixture_argv(
-                    bundle: Path,
-                    data: Dict[str, Any],
-                    mutate_argv: Any,
-                ) -> None:
-                    first = data["fixture_results"][0]
-                    transcript_path = (
-                        bundle
-                        / "live_fixtures/transcripts"
-                        / Path(first["transcript_file"]).name
-                    )
-                    transcript_data = json.loads(
-                        transcript_path.read_text(encoding="utf-8")
-                    )
-                    transcript_data["cmd"] = mutate_argv(
-                        list(transcript_data["cmd"])
-                    )
-                    write_json(transcript_path, transcript_data)
-                    first["transcript_sha256"] = certifier.sha256_path(
-                        transcript_path
-                    )
-
-                def prompt_only_argv(
-                    bundle: Path,
-                    data: Dict[str, Any],
-                ) -> None:
-                    mutate_first_fixture_argv(
-                        bundle,
-                        data,
-                        lambda argv: [argv[0], argv[-1]],
-                    )
-
-                def missing_plugin_dir_argv(
-                    bundle: Path,
-                    data: Dict[str, Any],
-                ) -> None:
-                    mutate_first_fixture_argv(
-                        bundle,
-                        data,
-                        lambda argv: argv[:1] + argv[3:],
-                    )
-
-                def wrong_output_format_argv(
-                    bundle: Path,
-                    data: Dict[str, Any],
-                ) -> None:
-                    def mutate(argv: List[str]) -> List[str]:
-                        argv[5] = "text"
-                        return argv
-
-                    mutate_first_fixture_argv(bundle, data, mutate)
-
-                def wrong_max_turns_argv(
-                    bundle: Path,
-                    data: Dict[str, Any],
-                ) -> None:
-                    def mutate(argv: List[str]) -> List[str]:
-                        argv[7] = "21"
-                        return argv
-
-                    mutate_first_fixture_argv(bundle, data, mutate)
-
-                def extra_fixture_arg(
-                    bundle: Path,
-                    data: Dict[str, Any],
-                ) -> None:
-                    mutate_first_fixture_argv(
-                        bundle,
-                        data,
-                        lambda argv: argv[:-1]
-                        + ["--verbose", argv[-1]],
-                    )
-
-                def swapped_fixture_arg_order(
-                    bundle: Path,
-                    data: Dict[str, Any],
-                ) -> None:
-                    def mutate(argv: List[str]) -> List[str]:
-                        argv[3], argv[4] = argv[4], argv[3]
-                        return argv
-
-                    mutate_first_fixture_argv(bundle, data, mutate)
-
-                def wrong_preflight_argv(
-                    _bundle: Path,
-                    data: Dict[str, Any],
-                ) -> None:
-                    data["commands"][1]["cmd"] = [
-                        "<claude-cli>",
-                        "plugin",
-                        "validate",
-                        "--strict",
-                        "<package-root>",
-                    ]
-
-                def bool_false_version_returncode(
-                    _bundle: Path,
-                    data: Dict[str, Any],
-                ) -> None:
-                    data["commands"][0]["returncode"] = False
-
-                def bool_true_aggregate_preflight_returncode(
-                    _bundle: Path,
-                    data: Dict[str, Any],
-                ) -> None:
-                    data["preflight"]["plugin_validate_returncode"] = True
-
-                def float_zero_fixture_returncode(
-                    _bundle: Path,
-                    data: Dict[str, Any],
-                ) -> None:
-                    data["fixture_results"][0]["returncode"] = 0.0
-
-                def string_zero_transcript_returncode(
-                    bundle: Path,
-                    data: Dict[str, Any],
-                ) -> None:
-                    first = data["fixture_results"][0]
-                    transcript_path = (
-                        bundle
-                        / "live_fixtures/transcripts"
-                        / Path(first["transcript_file"]).name
-                    )
-                    transcript_data = json.loads(
-                        transcript_path.read_text(encoding="utf-8")
-                    )
-                    transcript_data["returncode"] = "0"
-                    write_json(transcript_path, transcript_data)
-                    first["transcript_sha256"] = certifier.sha256_path(
-                        transcript_path
-                    )
-
-                provenance_check = "live provenance records the current observed run"
-                live_probe(tmp, "stale-source-release", stale_release, provenance_check)
-                live_probe(tmp, "carried-forward-result", carried_forward, provenance_check)
-                live_probe(
-                    tmp,
-                    "partial-fixture-set",
-                    partial_set,
-                    "live fixture IDs exactly match the current package once each",
-                )
-                live_probe(
-                    tmp,
-                    "absent-transcript",
-                    absent_transcript,
-                    "live fixture 1 transcript is a bundle-local regular file",
-                )
-                live_probe(
-                    tmp,
-                    "external-only-transcript",
-                    external_only_transcript,
-                    "live fixture 1 transcript is a bundle-local regular file",
-                )
-                live_probe(
-                    tmp,
-                    "fabricated-self-reported-checks",
-                    fabricated_checks,
-                    "live fixture 1 self-reported checks match transcript replay",
-                )
-                live_probe(
-                    tmp,
-                    "shared-transcript-across-fixtures",
-                    shared_transcript,
-                    "live fixture bundle-local transcript paths are unique and complete",
-                )
-                live_probe(
-                    tmp,
-                    "swapped-fixture-transcripts",
-                    swapped_transcripts,
-                    "live fixture 1 transcript command prompt binds exact fixture and artifact",
-                )
-                live_probe(
-                    tmp,
-                    "wrong-recorded-prompt-hash",
-                    wrong_prompt_hash,
-                    "live fixture 1 recorded prompt SHA-256 matches current canonical prompt",
-                )
-                live_probe(
-                    tmp,
-                    "wrong-artifact-fixture-command-prompt",
-                    wrong_artifact_fixture_prompt,
-                    "live fixture 1 transcript command prompt binds exact fixture and artifact",
-                )
-                exact_fixture_argv_check = (
-                    "live fixture 1 transcript command exactly matches "
-                    "normalized argv"
-                )
-                live_probe(
-                    tmp,
-                    "prompt-only-argv",
-                    prompt_only_argv,
-                    exact_fixture_argv_check,
-                )
-                live_probe(
-                    tmp,
-                    "missing-plugin-dir-argv",
-                    missing_plugin_dir_argv,
-                    exact_fixture_argv_check,
-                )
-                live_probe(
-                    tmp,
-                    "wrong-output-format-argv",
-                    wrong_output_format_argv,
-                    exact_fixture_argv_check,
-                )
-                live_probe(
-                    tmp,
-                    "wrong-max-turns-argv",
-                    wrong_max_turns_argv,
-                    exact_fixture_argv_check,
-                )
-                live_probe(
-                    tmp,
-                    "extra-fixture-arg",
-                    extra_fixture_arg,
-                    exact_fixture_argv_check,
-                )
-                live_probe(
-                    tmp,
-                    "swapped-fixture-arg-order",
-                    swapped_fixture_arg_order,
-                    exact_fixture_argv_check,
-                )
-                live_probe(
-                    tmp,
-                    "wrong-preflight-argv",
-                    wrong_preflight_argv,
-                    "live plugin validation preflight exact normalized argv succeeded",
-                )
-                live_probe(
-                    tmp,
-                    "returncode-bool-false-version-preflight",
-                    bool_false_version_returncode,
-                    "live Claude version preflight exact normalized argv succeeded",
-                )
-                live_probe(
-                    tmp,
-                    "returncode-bool-true-aggregate-preflight",
-                    bool_true_aggregate_preflight_returncode,
-                    "live harness records successful aggregate preflight",
-                )
-                live_probe(
-                    tmp,
-                    "returncode-float-zero-fixture-result",
-                    float_zero_fixture_returncode,
-                    "live fixture 1 command returned zero",
-                )
-                live_probe(
-                    tmp,
-                    "returncode-string-zero-transcript",
-                    string_zero_transcript_returncode,
-                    "live fixture 1 transcript returncode matches result",
-                )
-
-                def stale_live_binding_probe(
-                    label: str,
-                    mutate_package: Any,
-                    expected_failed_names: List[str],
-                ) -> None:
-                    bundle = tmp / f"{label}-bundle"
-                    make_live_bundle(bundle)
-                    package_copy = tmp / f"{label}-package"
-                    # SECURITY-REVIEW: Preserve links in the validator-owned
-                    # disposable copy so no-follow checks still observe them.
-                    shutil.copytree(
-                        self.root,
-                        package_copy,
-                        symlinks=True,
-                        ignore=shutil.ignore_patterns(
-                            ".git",
-                            "__pycache__",
-                            "*.pyc",
-                            ".DS_Store",
-                        ),
-                    )
-                    mutate_package(package_copy)
-                    update_manifest(package_copy)
-                    write_stable_release_manifest(package_copy)
-                    refreshed_validation = Validator(
-                        package_copy,
-                        run_self_test=False,
-                        skip_release_idempotence=True,
-                    ).validate()
-                    refreshed_tree = certifier.package_tree_sha256(
-                        package_copy
-                    )
-                    stale_checks = certifier.live_fixture_checks(
-                        package_copy,
-                        bundle,
-                    )
-                    failed_names = [
-                        check.name
-                        for check in stale_checks
-                        if not check.passed
-                    ]
-                    self.add(
-                        f"promotion false world: {label}",
-                        refreshed_validation.get("status") == "PASS"
-                        and refreshed_validation.get("critical_failed") == 0
-                        and refreshed_tree.get("valid") is True
-                        and all(
-                            name in failed_names
-                            for name in expected_failed_names
-                        )
-                        and certifier.summarize(
-                            stale_checks,
-                            False,
-                        ).get("status")
-                        == "FAIL",
-                        details=json.dumps(
-                            {
-                                "refreshed_validation": {
-                                    "status": refreshed_validation.get(
-                                        "status"
-                                    ),
-                                    "critical_failed": (
-                                        refreshed_validation.get(
-                                            "critical_failed"
-                                        )
-                                    ),
-                                    "checks_total": (
-                                        refreshed_validation.get(
-                                            "checks_total"
-                                        )
-                                    ),
-                                },
-                                "refreshed_tree": refreshed_tree,
-                                "expected_failed_names": (
-                                    expected_failed_names
-                                ),
-                                "failed_names": failed_names,
-                            },
-                            sort_keys=True,
-                        ),
-                    )
-
-                def mutate_artifact_bytes(package_root: Path) -> None:
-                    artifact_path = (
-                        package_root
-                        / f"{SKILL_DIR}/evals"
-                        / fixtures[0]["artifact"]
-                    )
-                    artifact_path.write_bytes(
-                        artifact_path.read_bytes()
-                        + b"\nSlice-H stale-live artifact mutation.\n"
-                    )
-
-                def mutate_fixture_spec_bytes(package_root: Path) -> None:
-                    path = package_root / f"{SKILL_DIR}/evals/evals.json"
-                    payload = json.loads(path.read_text(encoding="utf-8"))
-                    payload["description"] += (
-                        " Slice-H stale-live fixture-spec mutation."
-                    )
-                    write_json(path, payload)
-
-                def mutate_nonartifact_behavior_source(
-                    package_root: Path,
-                ) -> None:
-                    path = package_root / "agents/ntt-source-verifier.md"
-                    path.write_text(
-                        path.read_text(encoding="utf-8")
-                        + "\n<!-- Slice-H stale-live behavior mutation. -->\n",
-                        encoding="utf-8",
-                    )
-
-                package_binding_check = (
-                    "live package-tree SHA-256 matches current package bytes"
-                )
-                stale_live_binding_probe(
-                    "artifact-bytes-refreshed-manifests-stale-live",
-                    mutate_artifact_bytes,
-                    [
-                        package_binding_check,
-                        (
-                            "live fixture 1 artifact SHA-256 matches current "
-                            "exact bytes"
-                        ),
-                    ],
-                )
-                stale_live_binding_probe(
-                    "fixture-spec-refreshed-manifests-stale-live",
-                    mutate_fixture_spec_bytes,
-                    [
-                        package_binding_check,
-                        (
-                            "live fixture specification SHA-256 matches "
-                            "current evals bytes"
-                        ),
-                    ],
-                )
-                stale_live_binding_probe(
-                    "nonartifact-source-refreshed-manifests-stale-live",
-                    mutate_nonartifact_behavior_source,
-                    [package_binding_check],
-                )
-
-            with tempfile.TemporaryDirectory(prefix="nozickian_certifier_official_") as tmp_s:
-                bundle = Path(tmp_s)
-                write_json(
-                    bundle / "official_validators/claude_plugin_validate.json",
-                    {"returncode": 0, "status": "failed"},
-                )
-                write_json(
-                    bundle / "official_validators/skills_ref_validate.json",
-                    {"returncode": 7, "status": "pass"},
-                )
-                checks = certifier.official_validator_checks(bundle, False)
-                failed_names = [check.name for check in checks if not check.passed]
-                self.add(
-                    "promotion false world: contradictory official-validator JSON statuses",
-                    "official validator passed: claude_plugin_validate"
-                    in failed_names
-                    and "official validator passed: skills_ref_validate"
-                    in failed_names,
-                    details=json.dumps(failed_names),
-                )
-                invalid_text = bundle / "official-invalid.txt"
-                invalid_text.write_text(
-                    "Validation failed: plugin is invalid\n",
-                    encoding="utf-8",
-                )
-                text_ok, text_reason = certifier.file_status_from_text(invalid_text)
-                self.add(
-                    "promotion false world: invalid validator text cannot match valid",
-                    text_ok is False
-                    and text_reason == "text contains an anchored negative status",
-                    details=text_reason,
-                )
-                contradictory_text_cases = [
-                    (
-                        "1-error",
-                        "Validation passed\n1 error\n",
-                    ),
-                    (
-                        "2-errors-punctuation-case",
-                        "PASS!\n2 ERRORS!\n",
-                    ),
-                    (
-                        "1-failure-punctuation-case",
-                        "Status: success.\n1 Failure.\n",
-                    ),
-                    (
-                        "3-failed-punctuation-case",
-                        "Result = OK!\n3 FAILED:\n",
-                    ),
-                ]
-                for label, contents in contradictory_text_cases:
-                    path = bundle / f"official-contradictory-{label}.txt"
-                    path.write_text(contents, encoding="utf-8")
-                    case_ok, case_reason = certifier.file_status_from_text(path)
-                    self.add(
-                        "promotion false world: validator text nonzero "
-                        f"{label} summary dominates pass",
-                        case_ok is False
-                        and case_reason
-                        == "text contains an anchored nonzero failure summary",
-                        details=case_reason,
-                    )
-                strict_scalar_cases = [
-                    ("false", False),
-                    ("true", True),
-                    ("float-zero", 0.0),
-                    ("string-zero", "0"),
-                    ("null", None),
-                ]
-                for label, value in strict_scalar_cases:
-                    scalar_ok, scalar_reason, _ = (
-                        certifier.json_validator_status(
-                            {"returncode": value, "status": "success"}
-                        )
-                    )
-                    self.add(
-                        "promotion false world: official validator "
-                        f"returncode {label} is not integer zero",
-                        scalar_ok is False
-                        and scalar_reason
-                        == "validator JSON returncode is not integer zero",
-                        details=scalar_reason,
-                    )
-                zero_summary_true_cases = [
-                    (
-                        "zero-errors-plus-pass",
-                        "Validation passed\n0 errors\n",
-                    ),
-                    (
-                        "zero-failed-plus-pass",
-                        "0 FAILED\nResult: PASS.\n",
-                    ),
-                ]
-                for label, contents in zero_summary_true_cases:
-                    path = bundle / f"official-{label}.txt"
-                    path.write_text(contents, encoding="utf-8")
-                    case_ok, case_reason = certifier.file_status_from_text(path)
-                    self.add(
-                        "promotion true world: validator text "
-                        f"{label} is retained",
-                        case_ok is True,
-                        details=case_reason,
-                    )
-                positive_text = bundle / "official-valid.txt"
-                positive_text.write_text("Valid\n", encoding="utf-8")
-                positive_ok, _ = certifier.file_status_from_text(positive_text)
-                json_ok, _, _ = certifier.json_validator_status(
-                    {"returncode": 0, "status": "success"}
-                )
-                self.add(
-                    "promotion true world: integer-zero anchored official-validator success is retained",
-                    positive_ok
-                    and json_ok
-                    and certifier.returncode_is_integer_zero(0),
-                )
-
-            with tempfile.TemporaryDirectory(prefix="nozickian_certifier_package_") as tmp_s:
-                tmp = Path(tmp_s)
-                tree = certifier.package_tree_sha256(self.root)
-
-                def make_promotion_bundle(name: str) -> Tuple[Path, Dict[str, Any]]:
-                    bundle = tmp / name
-                    refs = []
-                    for index in range(5):
-                        rel = f"evidence/ref-{index}.json"
-                        write_json(bundle / rel, {"index": index})
-                        refs.append(rel)
-                    certificate = {
-                        "upgrade_from_status": "PASS-SCOPED",
-                        "requested_status": "PASS-TRACKED",
-                        "package_version": plugin["version"],
-                        "package_tree_sha256": f"sha256:{tree.get('sha256')}",
-                        "evidence_refs": refs,
-                        "derived_or_downstream_claims": [],
-                    }
-                    write_json(bundle / "promotion_certificate.json", certificate)
-                    return bundle, certificate
-
-                bundle, certificate = make_promotion_bundle("valid")
-                baseline_checks = certifier.promotion_certificate_checks(
-                    self.root,
-                    bundle,
-                )
-                self.add(
-                    "promotion true world: package tree and five local evidence refs bind",
-                    tree.get("valid") is True
-                    and all(check.passed for check in baseline_checks),
-                    details=json.dumps(
-                        {
-                            "tree": tree,
-                            "failed": [
-                                check.name
-                                for check in baseline_checks
-                                if not check.passed
-                            ],
-                        },
-                        sort_keys=True,
-                    ),
-                )
-
-                def promotion_probe(
-                    name: str,
-                    mutate: Any,
-                    expected_failed_name: str,
-                ) -> None:
-                    probe_bundle, probe_certificate = make_promotion_bundle(name)
-                    mutate(probe_bundle, probe_certificate)
-                    write_json(
-                        probe_bundle / "promotion_certificate.json",
-                        probe_certificate,
-                    )
-                    probe_checks = certifier.promotion_certificate_checks(
-                        self.root,
-                        probe_bundle,
-                    )
-                    failed = [
-                        check.name for check in probe_checks if not check.passed
-                    ]
-                    self.add(
-                        f"promotion false world: {name}",
-                        expected_failed_name in failed
-                        and certifier.summarize(probe_checks, False).get("status")
-                        == "FAIL",
-                        details=json.dumps(failed),
-                    )
-
-                promotion_probe(
-                    "mismatched-package-tree-sha256",
-                    lambda _bundle, cert: cert.__setitem__(
-                        "package_tree_sha256",
-                        "sha256:" + "0" * 64,
-                    ),
-                    "promotion certificate package_tree_sha256 matches current package tree",
-                )
-
-                def missing_ref(_bundle: Path, cert: Dict[str, Any]) -> None:
-                    cert["evidence_refs"][-1] = "evidence/missing.json"
-
-                promotion_probe(
-                    "missing-evidence-ref",
-                    missing_ref,
-                    "promotion certificate evidence refs are unique bundle-local regular files",
-                )
-
-                outside = tmp / "outside-evidence.json"
-                write_json(outside, {"outside": True})
-
-                def outside_ref(_bundle: Path, cert: Dict[str, Any]) -> None:
-                    cert["evidence_refs"][0] = str(outside)
-
-                promotion_probe(
-                    "outside-evidence-ref",
-                    outside_ref,
-                    "promotion certificate evidence refs are unique bundle-local regular files",
-                )
-
-                def duplicate_ref(_bundle: Path, cert: Dict[str, Any]) -> None:
-                    cert["evidence_refs"][1] = cert["evidence_refs"][0]
-
-                promotion_probe(
-                    "duplicate-evidence-ref",
-                    duplicate_ref,
-                    "promotion certificate evidence refs are unique bundle-local regular files",
-                )
+                for index in range(1024)
+            }
+            cycle, depth = certifier.iterative_evidence_graph_analysis(
+                deep_graph
+            )
+            self.add(
+                "promotion evidence graph analysis is iterative for deep input",
+                cycle == [] and depth == 1024,
+                details=f"cycle={cycle[:3]!r}; depth={depth}",
+            )
 
             with tempfile.TemporaryDirectory(
-                prefix="nozickian_certifier_inventory_"
-            ) as tmp_s:
-                tmp = Path(tmp_s)
-
-                def copy_current_package(name: str) -> Path:
-                    destination = tmp / name
-                    # SECURITY-REVIEW: Preserve links in the validator-owned
-                    # disposable copy so no-follow checks observe them.
-                    shutil.copytree(
-                        self.root,
-                        destination,
-                        symlinks=True,
-                        ignore=shutil.ignore_patterns(
-                            ".git",
-                            "__pycache__",
-                            "*.pyc",
-                            ".DS_Store",
-                        ),
-                    )
-                    return destination
-
-                def rewrite_stable_manifest(
-                    package_root: Path,
-                    mutate: Any,
-                ) -> Dict[str, Any]:
-                    manifest_path = (
-                        package_root / STABLE_RELEASE_MANIFEST
-                    )
-                    manifest_data = json.loads(
-                        manifest_path.read_text(encoding="utf-8")
-                    )
-                    mutate(manifest_data)
-                    manifest_data["self_hash_sha256"] = (
-                        stable_manifest_self_hash(manifest_data)
-                    )
-                    write_json(manifest_path, manifest_data)
-                    return manifest_data
-
-                def promotion_tree_failures(
-                    package_root: Path,
-                    name: str,
-                ) -> Tuple[List[str], str]:
-                    bundle = tmp / f"{name}-promotion"
-                    refs: List[str] = []
-                    for index in range(5):
-                        rel = f"evidence/ref-{index}.json"
-                        write_json(bundle / rel, {"index": index})
-                        refs.append(rel)
-                    write_json(
-                        bundle / "promotion_certificate.json",
-                        {
-                            "upgrade_from_status": "PASS-SCOPED",
-                            "requested_status": "PASS-TRACKED",
-                            "package_version": plugin["version"],
-                            "package_tree_sha256": "sha256:" + "a" * 64,
-                            "evidence_refs": refs,
-                            "derived_or_downstream_claims": [],
-                        },
-                    )
-                    promotion_checks = (
-                        certifier.promotion_certificate_checks(
-                            package_root,
-                            bundle,
-                        )
-                    )
-                    return (
-                        [
-                            check.name
-                            for check in promotion_checks
-                            if not check.passed
-                        ],
-                        certifier.summarize(
-                            promotion_checks,
-                            False,
-                        ).get("status"),
-                    )
-
-                behavior_path = (
-                    "skills/nozickian-verify/scripts/"
-                    "run_live_skill_evals.py"
-                )
-
-                exclusion_bypass_root = copy_current_package(
-                    "manifest-exclusion-bypass"
-                )
-
-                def add_behavior_exclusion(
-                    manifest_data: Dict[str, Any],
-                ) -> None:
-                    manifest_data["file_inventory"] = [
-                        item
-                        for item in manifest_data["file_inventory"]
-                        if item.get("path") != behavior_path
-                    ]
-                    manifest_data["file_count_excluding_self"] = len(
-                        manifest_data["file_inventory"]
-                    )
-                    files = manifest_data[
-                        "volatile_generated_exclusions"
-                    ]["files"]
-                    manifest_data[
-                        "volatile_generated_exclusions"
-                    ]["files"] = sorted(set(files) | {behavior_path})
-
-                rewrite_stable_manifest(
-                    exclusion_bypass_root,
-                    add_behavior_exclusion,
-                )
-                exclusion_bypass_tree = certifier.package_tree_sha256(
-                    exclusion_bypass_root
-                )
-                exclusion_bypass_errors = exclusion_bypass_tree.get(
-                    "errors",
-                    [],
-                )
-                exclusion_promotion_failures, exclusion_promotion_status = (
-                    promotion_tree_failures(
-                        exclusion_bypass_root,
-                        "manifest-exclusion-bypass",
-                    )
-                )
-                self.add(
-                    "promotion false world: manifest exclusion cannot hide behavior file",
-                    exclusion_bypass_tree.get("valid") is False
-                    and any(
-                        "excluded files do not match current validator policy"
-                        in error
-                        for error in exclusion_bypass_errors
-                    )
-                    and any(
-                        "misses independently derived files" in error
-                        and behavior_path in error
-                        for error in exclusion_bypass_errors
-                    )
-                    and not any(
-                        "self-hash does not match" in error
-                        for error in exclusion_bypass_errors
-                    )
-                    and exclusion_promotion_status == "FAIL"
-                    and (
-                        "current package tree verifies against stable release manifest"
-                        in exclusion_promotion_failures
-                    ),
-                    details=json.dumps(
-                        {
-                            "tree_errors": exclusion_bypass_errors,
-                            "promotion_failed": (
-                                exclusion_promotion_failures
-                            ),
-                        },
-                        sort_keys=True,
-                    ),
-                )
-
-                exclusions_root = copy_current_package(
-                    "tampered-exclusion-arrays"
-                )
-
-                def tamper_exclusion_arrays(
-                    manifest_data: Dict[str, Any],
-                ) -> None:
-                    prefixes = manifest_data[
-                        "volatile_generated_exclusions"
-                    ]["prefixes"]
-                    manifest_data[
-                        "volatile_generated_exclusions"
-                    ]["prefixes"] = sorted(set(prefixes) | {"docs/"})
-
-                rewrite_stable_manifest(
-                    exclusions_root,
-                    tamper_exclusion_arrays,
-                )
-                exclusions_tree = certifier.package_tree_sha256(
-                    exclusions_root
-                )
-                exclusions_errors = exclusions_tree.get("errors", [])
-                exclusions_promotion_failures, exclusions_promotion_status = (
-                    promotion_tree_failures(
-                        exclusions_root,
-                        "tampered-exclusion-arrays",
-                    )
-                )
-                self.add(
-                    "promotion false world: tampered manifest exclusion arrays fail current policy",
-                    exclusions_tree.get("valid") is False
-                    and any(
-                        "excluded prefixes do not match current validator policy"
-                        in error
-                        for error in exclusions_errors
-                    )
-                    and not any(
-                        "self-hash does not match" in error
-                        for error in exclusions_errors
-                    )
-                    and exclusions_promotion_status == "FAIL"
-                    and (
-                        "current package tree verifies against stable release manifest"
-                        in exclusions_promotion_failures
-                    ),
-                    details=json.dumps(
-                        {
-                            "tree_errors": exclusions_errors,
-                            "promotion_failed": (
-                                exclusions_promotion_failures
-                            ),
-                        },
-                        sort_keys=True,
-                    ),
-                )
-
-                missing_path_root = copy_current_package(
-                    "missing-derived-inventory-path"
-                )
-                missing_path = "README.md"
-
-                def remove_derived_path(
-                    manifest_data: Dict[str, Any],
-                ) -> None:
-                    manifest_data["file_inventory"] = [
-                        item
-                        for item in manifest_data["file_inventory"]
-                        if item.get("path") != missing_path
-                    ]
-                    manifest_data["file_count_excluding_self"] = len(
-                        manifest_data["file_inventory"]
-                    )
-
-                rewrite_stable_manifest(
-                    missing_path_root,
-                    remove_derived_path,
-                )
-                missing_path_tree = certifier.package_tree_sha256(
-                    missing_path_root
-                )
-                missing_path_errors = missing_path_tree.get("errors", [])
-                missing_promotion_failures, missing_promotion_status = (
-                    promotion_tree_failures(
-                        missing_path_root,
-                        "missing-derived-inventory-path",
-                    )
-                )
-                self.add(
-                    "promotion false world: missing independently derived inventory path fails",
-                    missing_path_tree.get("valid") is False
-                    and any(
-                        "misses independently derived files" in error
-                        and missing_path in error
-                        for error in missing_path_errors
-                    )
-                    and not any(
-                        "self-hash does not match" in error
-                        for error in missing_path_errors
-                    )
-                    and missing_promotion_status == "FAIL"
-                    and (
-                        "current package tree verifies against stable release manifest"
-                        in missing_promotion_failures
-                    ),
-                    details=json.dumps(
-                        {
-                            "tree_errors": missing_path_errors,
-                            "promotion_failed": missing_promotion_failures,
-                        },
-                        sort_keys=True,
-                    ),
-                )
-
-                stale_root = copy_current_package(
-                    "fresh-validator-failure"
-                )
-                (stale_root / "settings.json").write_text(
-                    '{"forbidden": true}\n',
-                    encoding="utf-8",
-                )
-                stale_bundle = tmp / "fresh-validator-bundle"
-                stale_bundle.mkdir()
-                stale_checks = certifier.deterministic_checks(
-                    stale_root,
-                    stale_bundle,
-                    False,
-                )
-                fresh_check = next(
-                    check
-                    for check in stale_checks
-                    if check.name
-                    == "fresh deterministic package validator still passes"
-                )
-                self.add(
-                    "promotion false world: fresh validator is unconditional and rejects stale package",
-                    not fresh_check.passed
-                    and isinstance(fresh_check.details, Mapping)
-                    and fresh_check.details.get(
-                        "fresh_validation_unconditional"
-                    )
-                    is True
-                    and fresh_check.details.get(
-                        "compatibility_flag_requested"
-                    )
-                    is False,
-                    details=json.dumps(
-                        fresh_check.details,
-                        sort_keys=True,
-                    ),
-                )
-
-            with tempfile.TemporaryDirectory(prefix="nozickian_certifier_formal_") as tmp_s:
-                tmp = Path(tmp_s)
-                bundle = tmp / "bundle"
-                result_dir = bundle / "formal_artifacts/artifact-001"
-                external = tmp / "external-formal-transcript.stream.jsonl"
-                external_bytes = b"fixed external formal transcript sentinel\n"
-                external.write_bytes(external_bytes)
-                write_json(
-                    result_dir / "formal_result.json",
+                prefix="ntt_bounded_evidence_graph_"
+            ) as temporary:
+                oversized_nodes = {
+                    f"attacker-{index}": {
+                        "path": "promotion_certificate.json",
+                        "sha256": "sha256:" + "0" * 64,
+                        "depends_on": [],
+                    }
+                    for index in range(certifier.MAX_EVIDENCE_NODES + 1)
+                }
+                checks = certifier.promotion_evidence_checks(
+                    Path(temporary),
                     {
-                        "status": "PASS-TRACKED",
-                        "gate_status": "PASS-TRACKED",
-                        "output_dir": str(tmp / "external-output"),
-                        "transcript_file": str(external),
-                        "evidence_root": str(tmp / "external-evidence"),
-                        "trace_authentication": {
-                            "authenticated": True,
-                            "missing_agents": [],
-                            "missing_result_agents": [],
-                            "agent_calls_authenticated": list(
-                                certifier.REQUIRED_NATIVE_AGENTS
+                        "evidence": {
+                            "schema_version": (
+                                certifier.PROMOTION_EVIDENCE_SCHEMA
                             ),
-                            "agent_results_authenticated": list(
-                                certifier.REQUIRED_NATIVE_AGENTS
-                            ),
-                            "saw_general_purpose": False,
-                            "role_violations": [],
-                        },
+                            "nodes": oversized_nodes,
+                        }
                     },
-                )
-                formal_checks = certifier.formal_artifact_checks(
-                    self.root,
-                    bundle,
-                )
-                formal_failed = [
-                    check.name for check in formal_checks if not check.passed
-                ]
-                self.add(
-                    "promotion false world: external-only formal companion paths",
-                    "formal result 1 transcript is self-contained regular file"
-                    in formal_failed
-                    and external.read_bytes() == external_bytes,
-                    details=json.dumps(formal_failed),
-                )
-
-            with tempfile.TemporaryDirectory(prefix="nozickian_certifier_nofollow_") as tmp_s:
-                tmp = Path(tmp_s)
-                bundle = tmp / "bundle"
-                bundle.mkdir()
-                sentinel = tmp / "external-sentinel.txt"
-                sentinel_bytes = (
-                    b"/" + b"mnt" + b"/data/fixed-external-content-must-not-be-read\n"
-                )
-                sentinel.write_bytes(sentinel_bytes)
-                link = bundle / "fixed-link"
-                link.symlink_to(sentinel)
-                fifo = bundle / "fixed-fifo"
-                os.mkfifo(fifo)
-                stale_checks = certifier.stale_token_checks(self.root, bundle)
-                stale_failures = [
-                    check.name for check in stale_checks if not check.passed
-                ]
-                stale_token_check = next(
-                    check
-                    for check in stale_checks
-                    if check.name
-                    == "no stale local path or prior-version tokens in package/bundle evidence"
-                )
-                deterministic = bundle / "deterministic"
-                deterministic.mkdir()
-                package_validation = deterministic / "package_validation.json"
-                package_validation.symlink_to(sentinel)
-                deterministic_checks = certifier.deterministic_checks(
-                    self.root,
-                    bundle,
                     False,
                 )
-                regular_input_check = next(
-                    check
-                    for check in deterministic_checks
-                    if check.name
-                    == "deterministic artifact present as regular file: package_validation"
-                )
+                failed = [check.name for check in checks if not check.passed]
                 self.add(
-                    "promotion no-follow probes reject symlink and special inputs without external reads",
-                    any("bundle:fixed-link" in name for name in stale_failures)
-                    and any("bundle:fixed-fifo" in name for name in stale_failures)
-                    and stale_token_check.passed
-                    and not regular_input_check.passed
-                    and sentinel.read_bytes() == sentinel_bytes,
-                    details=json.dumps(
-                        {
-                            "stale_failures": stale_failures,
-                            "stale_external_token_seen": not stale_token_check.passed,
-                            "deterministic_regular": regular_input_check.passed,
-                        },
-                        sort_keys=True,
-                    ),
+                    "promotion evidence graph rejects oversized input early",
+                    failed == ["promotion evidence node count is bounded"],
+                    details=json.dumps(failed),
                 )
+
+            capped = certifier.finalize_promotion_result(
+                [certifier.Check("modeled", True)],
+                allow_official_scope_exclusion=False,
+                execution_evidence={},
+                synthetic_origin=True,
+            )
+            invalid = certifier.finalize_promotion_result(
+                [
+                    certifier.Check(
+                        "malformed",
+                        False,
+                        failure_kind="INVALID_INPUT",
+                    )
+                ],
+                allow_official_scope_exclusion=False,
+                execution_evidence={},
+                synthetic_origin=False,
+            )
+            self.add(
+                "promotion result API caps only complete modeled baseline",
+                capped.get("status") == "PASS-SCOPED"
+                and capped.get("promotion_authorized") is False
+                and capped.get("satisfied_profile")
+                == certifier.PROMOTION_PROFILE
+                and capped.get("outcome") == "CAPPED",
+                details=json.dumps(capped, sort_keys=True),
+            )
+            self.add(
+                "promotion failure API keeps canonical FAIL status",
+                invalid.get("status") == "FAIL"
+                and invalid.get("failure_kind") == "INVALID_INPUT"
+                and invalid.get("outcome") == "FAILED"
+                and "satisfied_profile" not in invalid,
+                details=json.dumps(invalid, sort_keys=True),
+            )
         except Exception as exc:
             self.add(
-                "promotion certifier contract probes complete without harness error",
+                "promotion certifier focused helper probes complete",
                 False,
-                details=repr(exc),
+                details=f"{type(exc).__name__}: helper probe failed",
             )
 
     def run_mutation_tests(self) -> None:
@@ -4054,9 +3703,131 @@ class Validator:
             p.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
             maybe_update(dest)
         mutations.append(("rejects duplicate PACKAGE_SURFACE allowed_agents", duplicate_allowed_agents))
+        def release_lock_wrong_exact_status(dest: Path):
+            p = dest / "RELEASE_LOCK.json"
+            data = json.loads(p.read_text(encoding="utf-8"))
+            data["version"] = "1.0.4"
+            data["release_status"] = "PASS-TRACKED"
+            p.write_text(
+                json.dumps(data, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            maybe_update(dest)
+        mutations.append((
+            "rejects wrong exact RELEASE_LOCK version and status",
+            release_lock_wrong_exact_status,
+        ))
+        def package_surface_missing_promotion_invariant(dest: Path):
+            p = dest / "PACKAGE_SURFACE.json"
+            data = json.loads(p.read_text(encoding="utf-8"))
+            data["closed_surface_invariants"].remove(
+                REQUIRED_PROMOTION_SURFACE_INVARIANTS[0]
+            )
+            p.write_text(
+                json.dumps(data, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            maybe_update(dest)
+        mutations.append((
+            "rejects missing exact promotion surface invariant",
+            package_surface_missing_promotion_invariant,
+        ))
+        def self_certificate_obligation_drift(dest: Path):
+            p = dest / "self_validation/self_certificate.json"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            # SECURITY-REVIEW: The fixed package-local certificate is copied
+            # into the disposable mutation tree without following caller input.
+            shutil.copy2(
+                self.root / "self_validation/self_certificate.json",
+                p,
+                follow_symlinks=False,
+            )
+            data = json.loads(p.read_text(encoding="utf-8"))
+            data["pass_tracked_upgrade_audit"]["v1_0_3_cap"][
+                "unresolved_charter_obligations"
+            ].reverse()
+            p.write_text(
+                json.dumps(data, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            maybe_update(dest)
+        mutations.append((
+            "rejects reordered self-certificate Issue #5 obligations",
+            self_certificate_obligation_drift,
+        ))
         def ci_noop(dest: Path):
             p=dest/".github/workflows/nozickian-team-ci.yml"; p.write_text("name: noop\non: [push]\njobs: {}\n", encoding="utf-8"); maybe_update(dest)
         mutations.append(("rejects no-op CI workflow after manifest update", ci_noop))
+        def ci_commented_aggregate(dest: Path):
+            p = dest / ".github/workflows/nozickian-team-ci.yml"
+            text = p.read_text(encoding="utf-8")
+            text = text.replace(
+                "          " + PROMOTION_AGGREGATE_COMMAND,
+                "          # " + PROMOTION_AGGREGATE_COMMAND,
+            )
+            p.write_text(text, encoding="utf-8")
+            maybe_update(dest)
+        mutations.append((
+            "rejects aggregate commands present only in CI comments",
+            ci_commented_aggregate,
+        ))
+        def ci_disabled_aggregate(dest: Path):
+            p = dest / ".github/workflows/nozickian-team-ci.yml"
+            text = p.read_text(encoding="utf-8")
+            needle = (
+                "      - name: Run promotion certifier aggregate contracts\n"
+                "        run: |\n"
+            )
+            replacement = (
+                "      - name: Run promotion certifier aggregate contracts\n"
+                "        if: ${{ false }}\n"
+                "        run: |\n"
+            )
+            if needle not in text:
+                raise AssertionError("aggregate CI step not found")
+            p.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+            maybe_update(dest)
+        mutations.append((
+            "rejects disabled aggregate CI step",
+            ci_disabled_aggregate,
+        ))
+        def ci_statically_disabled_job(dest: Path):
+            p = dest / ".github/workflows/nozickian-team-ci.yml"
+            text = p.read_text(encoding="utf-8")
+            needle = (
+                "  deterministic-validation:\n"
+                "    runs-on: ubuntu-latest\n"
+            )
+            replacement = (
+                "  deterministic-validation:\n"
+                "    if: ${{ false }}\n"
+                "    runs-on: ubuntu-latest\n"
+            )
+            if needle not in text:
+                raise AssertionError("deterministic CI job not found")
+            p.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+            maybe_update(dest)
+        mutations.append((
+            "rejects statically disabled whole CI job",
+            ci_statically_disabled_job,
+        ))
+        def ci_aggregate_inside_if_false(dest: Path):
+            p = dest / ".github/workflows/nozickian-team-ci.yml"
+            text = p.read_text(encoding="utf-8")
+            needle = "          " + PROMOTION_AGGREGATE_COMMAND
+            if text.count(needle) != 2:
+                raise AssertionError("two direct aggregate CI commands not found")
+            replacement = (
+                "          if false; then\n"
+                "            " + PROMOTION_AGGREGATE_COMMAND + "\n"
+                "          fi"
+            )
+            p.write_text(text.replace(needle, replacement), encoding="utf-8")
+            maybe_update(dest)
+        mutations.append((
+            "rejects aggregate CI commands nested inside if false",
+            ci_aggregate_inside_if_false,
+        ))
         def formal_runner_stub(dest: Path):
             p=dest/f"{SKILL_DIR}/scripts/run_formal_artifact_verification.py"; p.write_text("#!/usr/bin/env python3\nprint('{\"status\":\"PASS-SCOPED\"}')\n", encoding="utf-8"); maybe_update(dest)
         mutations.append(("rejects formal runner pass stub after manifest update", formal_runner_stub))
@@ -4335,7 +4106,9 @@ class Validator:
             dest = copy_factory()
             try:
                 mut(dest)
-                result = self.run_validator_in_copy(dest)
+                outer_stdout = io.StringIO()
+                with contextlib.redirect_stdout(outer_stdout):
+                    result = self.run_validator_in_copy(dest)
                 failed = (
                     result.get("completed") is True
                     and result.get("harness_error") is False
@@ -4345,6 +4118,65 @@ class Validator:
                         and result.get("critical_failed", 0) > 0
                     )
                 )
+                pass_stub_stdout_assertion: Dict[str, Any] | None = None
+                if name == "rejects PASS-TRACKED upgrade certifier pass stub":
+                    pass_stub_stdout_assertion = {
+                        "outer_stdout_empty": outer_stdout.getvalue() == "",
+                        "validator_completed": result.get("completed") is True,
+                        "harness_error_absent": (
+                            result.get("harness_error") is False
+                        ),
+                        "failed_normally": (
+                            result.get("status") == "FAIL"
+                            and isinstance(result.get("critical_failed"), int)
+                            and result.get("critical_failed", 0) > 0
+                            and result.get("returncode") == 2
+                        ),
+                    }
+                    pass_stub_regression_passed = all(
+                        value is True
+                        for value in pass_stub_stdout_assertion.values()
+                    )
+                    failed = failed and pass_stub_regression_passed
+                    self.add(
+                        (
+                            "PASS-TRACKED certifier pass-stub import emits no "
+                            "outer stdout and fails normally"
+                        ),
+                        pass_stub_regression_passed,
+                        details=json.dumps(
+                            pass_stub_stdout_assertion,
+                            sort_keys=True,
+                        ),
+                    )
+                targeted_ci_assertion: Dict[str, Any] | None = None
+                if name in {
+                    "rejects statically disabled whole CI job",
+                    "rejects aggregate CI commands nested inside if false",
+                }:
+                    failed_names = set(
+                        result.get("failed_critical_check_names", [])
+                    )
+                    targeted_ci_assertion = {
+                        "ordinary_validator_failure": (
+                            result.get("status") == "FAIL"
+                            and result.get("harness_error") is False
+                            and result.get("returncode") == 2
+                        ),
+                        "aggregate_count_assertion_failed": (
+                            "CI has exactly two active unconditional aggregate commands"
+                            in failed_names
+                        ),
+                        "checkout_assertion_failed": (
+                            "CI active checkout aggregate step is exact"
+                            in failed_names
+                        ),
+                        "archive_assertion_failed": (
+                            "CI active archive aggregate step runs inside unpacked root"
+                            in failed_names
+                        ),
+                    }
+                    failed = failed and all(targeted_ci_assertion.values())
                 targeted_cruft_assertion: Dict[str, Any] | None = None
                 if name == "rejects exact historical tracked __pycache__ bytecode":
                     git_surface = git_tracked_files(dest)
@@ -4403,6 +4235,20 @@ class Validator:
                         **(
                             {"targeted_cruft_assertion": targeted_cruft_assertion}
                             if targeted_cruft_assertion is not None
+                            else {}
+                        ),
+                        **(
+                            {
+                                "pass_stub_stdout_assertion": (
+                                    pass_stub_stdout_assertion
+                                )
+                            }
+                            if pass_stub_stdout_assertion is not None
+                            else {}
+                        ),
+                        **(
+                            {"targeted_ci_assertion": targeted_ci_assertion}
+                            if targeted_ci_assertion is not None
                             else {}
                         ),
                     }
@@ -4587,11 +4433,15 @@ class Validator:
         keep this self-test deterministic and avoid nested stdout-heavy process
         chains, the regression executes their semantic equivalents in-process
         where possible: package validation, strict gate, regression fixture
-        validation, external formal dry-run, formal runner contracts, and final
-        validation. The key truth-tracking property is unchanged: the copied
-        package tree must be byte-for-byte identical after the chain.
+        validation, external formal dry-run, formal runner contracts, aggregate
+        promotion contracts, and final validation. The key truth-tracking
+        property is unchanged: the copied package tree must be byte-for-byte
+        identical after the chain.
         """
-        with tempfile.TemporaryDirectory(prefix="nozickian_release_idempotence_") as tmp_s:
+        with tempfile.TemporaryDirectory(
+            prefix="nozickian_release_idempotence_",
+            dir=str(Path(tempfile.gettempdir()).resolve()),
+        ) as tmp_s:
             tmp = Path(tmp_s)
             dest = tmp / self.root.name
             # SECURITY-REVIEW: Preserve symlinks so the copied validator's
@@ -4663,6 +4513,32 @@ class Validator:
                 contract_result = {"total": len(cases), "passed": sum(1 for c in cases if c.get("passed")), "cases": cases}
                 formal_contract_json.write_text(json.dumps(contract_result, indent=2, sort_keys=True), encoding="utf-8")
                 record("python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json <external>", contract_result["passed"] == contract_result["total"], {"passed": contract_result["passed"], "total": contract_result["total"]})
+
+                promotion_contract = load_module_from_path(
+                    "ntt_promotion_contract_release_idempotence",
+                    script_dir / "run_promotion_certifier_contract_tests.py",
+                )
+                promotion_result = promotion_contract.run_contract(dest)
+                record(
+                    PROMOTION_AGGREGATE_COMMAND,
+                    promotion_result.get("status") == "PASS"
+                    and promotion_result.get("passed") == 36
+                    and promotion_result.get("total") == 36
+                    and promotion_result.get(
+                        "production_certifier_cli_baseline"
+                    )
+                    is True,
+                    {
+                        "status": promotion_result.get("status"),
+                        "passed": promotion_result.get("passed"),
+                        "total": promotion_result.get("total"),
+                        "production_certifier_cli_baseline": (
+                            promotion_result.get(
+                                "production_certifier_cli_baseline"
+                            )
+                        ),
+                    },
+                )
 
                 final = Validator(dest, run_self_test=False, skip_release_idempotence=True).validate()
                 record("python3 skills/nozickian-verify/scripts/validate_package.py . [final]", final.get("critical_failed") == 0 and final.get("status") == "PASS", {"status": final.get("status"), "critical_failed": final.get("critical_failed")})

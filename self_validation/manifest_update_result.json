@@ -1,12 +1,17 @@
 {
-  "manifest_sha256": "sha256:f6dd7e4e88ccede1323ec848e1fded86ffab743395dadc4d22c8cd67ce13084f",
-  "note": "MANIFEST.sha256 and STABLE_RELEASE_MANIFEST.json regenerated after the PR #3 Slice A through Slice J final original-scope redress (atomic fixed-path manifest replacement, typed Git mode/stage evidence, fail-fast no-follow physical-entry preflight, observational source-index snapshots, non-UTF-8 provenance rejection, HARNESS_ERROR separation, exact pre/post-fingerprinted live executable invocation, one-to-one canonical prompt and transcript-byte fixture binding, shared stable-tree computation, exact current package/evals/artifact byte binding, exact normalized preflight/fixture argv, exact integer-zero promotion return codes, contradictory nonzero numeric validator-summary rejection, current-validator-derived inventory and exclusion parity, unconditional fresh promotion validation, anchored official-validator status, package-tree and evidence-ref binding, self-contained formal companions, complete PACKAGE_SURFACE parity, boundary-aware producer display normalization, exact reproducible-build epoch kind/value/semantics, immutable original-echo Git locators, iterative current-locator fixed-point verification, citation-only digest prose, index-derived tracked-cruft classification independent of physical traversal, exact historical nested bytecode rejection with complete failure details, retained ignored-untracked-bytecode acceptance, and current release-wide totals of 1565/1565 checks, 56/56 mutations, and 10/10 true-world variants). Current CI follow-up uses a fresh mktemp archive root with EXIT cleanup and updated validator token assertions.",
+  "active_evidence_record_count": 104,
+  "active_evidence_target_count": 15,
+  "historical_modal_evidence_unchanged": true,
+  "manifest_sha256": "sha256:457335725fd938bec14fc5e92b6adc0d988ca3e1eb6e5c4fd55fe620a4ccac78",
+  "note": "MANIFEST.sha256 and STABLE_RELEASE_MANIFEST.json were regenerated after the accepted final v1.0.3 production, documentation, self-certificate, exact-locator, and structured-evidence updates. The fixed point records 1618/1618 basic checks, 1724/1724 full checks, 63/63 false-world mutations, 10/10 true-world variants, 78/78 gate contracts, 73/73 formal-runner contracts, 166/166 regression checks, and 36/36 synthetic promotion contracts with a 244-check capped baseline. Raw machine-readable release CLI stdout and paired result files parse directly with json.load as exactly one document; formal display-path normalization occurred only after raw acceptance. Two consecutive evidence/manifest regeneration cycles updated zero evidence records and changed neither integrity-manifest byte stream. Historical modal evidence remains byte-identical to HEAD. The production formal dry-run remains UNVERIFIED_RUNTIME and no live promotion was executed.",
   "package": "nozickian-truth-tracking-agentic",
   "package_tree_algorithm": "ntt-stable-release-tree-v1",
-  "package_tree_file_count": 252,
-  "package_tree_sha256": "sha256:a0bd958e4a221adeca5c57344668b01d6457f30e47f410ccd0b653b9611d999a",
+  "package_tree_file_count": 255,
+  "package_tree_sha256": "sha256:79ff5c0580b3cfe293c6068fbce1a8a25f9346ecc6106dc1763621979734d006",
   "schema_version": "1.0",
-  "stable_release_manifest_sha256": "sha256:6ecd518a5cd20e16499766f2cc350d8ff844fd70cc71ccd579579478aeb95dae",
+  "stable_release_manifest_self_hash": "sha256:c20e80823c8f161c723b5345247d1e269577c6ea7963515546cd8ef05fe68679",
+  "stable_release_manifest_sha256": "sha256:deba563948792c7015b13afb84be9ec5eb6e700c4c244ea73bc7463e2905e157",
   "status": "PASS",
+  "two_pass_idempotence": true,
   "version": "1.0.3"
 }

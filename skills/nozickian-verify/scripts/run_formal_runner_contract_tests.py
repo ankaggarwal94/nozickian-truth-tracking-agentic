@@ -11,10 +11,14 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
+import os
 import shutil
+import stat
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -30,6 +34,9 @@ REQUIRED_NATIVE_AGENTS = [
     "ntt-gate-auditor",
 ]
 SKILL_PATH = "skills/nozickian-verify"
+# macOS may expose the temp root through /var -> /private/var. Resolve that
+# platform alias so positive controls do not themselves contain a link.
+CANONICAL_TEMP_ROOT = Path(tempfile.gettempdir()).resolve()
 
 
 def load_runner(package_root: Path):
@@ -39,12 +46,26 @@ def load_runner(package_root: Path):
         raise RuntimeError(f"cannot import {path}")
     mod = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = mod
-    spec.loader.exec_module(mod)  # type: ignore[attr-defined]
+    previous_dont_write = sys.dont_write_bytecode
+    import_stdout = io.StringIO()
+    try:
+        sys.dont_write_bytecode = True
+        # SECURITY-REVIEW: The fixed package-local formal runner executes at
+        # import time. Contain stdout so this contract CLI emits one document.
+        with contextlib.redirect_stdout(import_stdout):
+            spec.loader.exec_module(mod)  # type: ignore[attr-defined]
+    finally:
+        sys.dont_write_bytecode = previous_dont_write
     return mod
 
 
 def write_transcript(lines: List[Dict[str, Any]]) -> Path:
-    tmp = Path(tempfile.mkdtemp(prefix="nozickian_trace_contract_"))
+    tmp = Path(
+        tempfile.mkdtemp(
+            prefix="nozickian_trace_contract_",
+            dir=str(CANONICAL_TEMP_ROOT),
+        )
+    )
     path = tmp / "transcript.stream.jsonl"
     path.write_text("\n".join(json.dumps(line) for line in lines) + "\n", encoding="utf-8")
     return path
@@ -566,6 +587,77 @@ def call_runner_main(runner, argv: List[str]) -> tuple[int, str]:
 def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
     cases: List[Dict[str, Any]] = []
 
+    def bytecode_inventory(root: Path) -> List[str]:
+        found: List[str] = []
+        for current, directories, files in os.walk(root, followlinks=False):
+            directories[:] = [
+                name for name in directories if name != ".git"
+            ]
+            current_path = Path(current)
+            for name in directories:
+                if name == "__pycache__":
+                    found.append(
+                        (current_path / name).relative_to(root).as_posix()
+                    )
+            for name in files:
+                if name.endswith((".pyc", ".pyo")):
+                    found.append(
+                        (current_path / name).relative_to(root).as_posix()
+                    )
+        return sorted(found)
+
+    validator = (
+        package_root
+        / SKILL_PATH
+        / "scripts/validate_package.py"
+    )
+    bytecode_before = bytecode_inventory(package_root)
+    validation_env = os.environ.copy()
+    # This probe deliberately removes environment-level suppression so the
+    # validator's dynamic loader must be bytecode-safe on its own.
+    validation_env.pop("PYTHONDONTWRITEBYTECODE", None)
+    validation_env.pop("PYTHONPYCACHEPREFIX", None)
+    validation_command = [sys.executable, str(validator), str(package_root)]
+    # SECURITY-REVIEW: The contract invokes only the package-local validator
+    # through fixed argv, with no shell or untrusted argv interpolation.
+    validation_runs = [
+        subprocess.run(
+            validation_command,
+            cwd=package_root,
+            env=validation_env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=300,
+            check=False,
+        )
+        for _ in range(2)
+    ]
+    parsed_validations: List[Dict[str, Any]] = []
+    for completed in validation_runs:
+        try:
+            parsed = json.loads(completed.stdout)
+        except (TypeError, ValueError):
+            parsed = {}
+        parsed_validations.append(parsed if isinstance(parsed, dict) else {})
+    bytecode_after = bytecode_inventory(package_root)
+    cases.append({
+        "name": "repeated_plain_validation_creates_no_bytecode_cruft",
+        "passed": (
+            not bytecode_before
+            and bytecode_after == bytecode_before
+            and [run.returncode for run in validation_runs]
+            in ([0, 0], [2, 2])
+            and all(
+                result.get("status") in {"PASS", "FAIL"}
+                for result in parsed_validations
+            )
+        ),
+        "returncodes": [run.returncode for run in validation_runs],
+        "bytecode_before": bytecode_before,
+        "bytecode_after": bytecode_after,
+    })
+
     fake_text_only = write_transcript([
         {"type": "assistant", "message": {"content": [{"type": "text", "text": "Native subagents completed: " + ", ".join(REQUIRED_NATIVE_AGENTS)}]}}
     ])
@@ -580,6 +672,108 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
     auth = runner.authenticate_trace(fake_general)
     capped, reason = runner.cap_status_by_trace("PASS-TRACKED", auth)
     cases.append({"name": "general_purpose_fallback_fails_formal_trace", "passed": auth.get("saw_general_purpose") is True and capped == "FAIL", "auth": auth, "capped_status": capped, "reason": reason})
+
+    with tempfile.TemporaryDirectory(
+        prefix="nozickian_full_stream_contract_",
+        dir=str(CANONICAL_TEMP_ROOT),
+    ) as stream_tmp_raw:
+        stream_tmp = Path(stream_tmp_raw)
+        stream_lines = [
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [{
+                        "id": "toolu-early-general",
+                        "type": "tool_use",
+                        "name": "Agent",
+                        "input": {
+                            "subagent_type": "general-purpose",
+                            "description": "disallowed early fallback",
+                        },
+                    }]
+                },
+            },
+            {
+                "type": "user",
+                "message": {
+                    "content": [{
+                        "type": "tool_result",
+                        "tool_use_id": "toolu-early-general",
+                        "status": "success",
+                        "content": "disallowed fallback completed",
+                    }]
+                },
+            },
+            *[
+                {
+                    "type": "progress",
+                    "message": "neutral-padding-" + ("x" * 1024),
+                }
+                for _ in range(55)
+            ],
+            *completed_native_trace(success=True),
+        ]
+        full_payload = (
+            "\n".join(json.dumps(line) for line in stream_lines) + "\n"
+        ).encode("utf-8")
+        payload_path = stream_tmp / "payload.stream.jsonl"
+        payload_path.write_bytes(full_payload)
+        emitter = stream_tmp / "emit.py"
+        emitter.write_text(
+            "from pathlib import Path\n"
+            "import sys\n"
+            f"sys.stdout.buffer.write(Path({str(payload_path)!r}).read_bytes())\n",
+            encoding="utf-8",
+        )
+        # SECURITY-REVIEW: The contract invokes a fixed temporary emitter with
+        # shell parsing disabled to exercise production full-stream capture.
+        invocation = runner.run_cmd(
+            [sys.executable, str(emitter)],
+            cwd=stream_tmp,
+            timeout=30,
+        )
+        complete_transcript = stream_tmp / "complete.stream.jsonl"
+        transcript_record = runner.write_complete_stream_transcript(
+            complete_transcript,
+            invocation,
+        )
+        auth = runner.authenticate_trace(complete_transcript)
+        capped, reason = runner.cap_status_by_trace("PASS-TRACKED", auth)
+        normalized_command_record = getattr(
+            runner,
+            "_normalized_command_record",
+        )
+        normalized = normalized_command_record(
+            invocation,
+            package_root,
+            stream_tmp,
+            emitter,
+        )
+        expected_digest = "sha256:" + hashlib.sha256(full_payload).hexdigest()
+        cases.append({
+            "name": "early_general_purpose_event_survives_large_valid_tail",
+            "passed": (
+                len(full_payload) > 50000
+                and complete_transcript.read_bytes() == full_payload
+                and transcript_record
+                == {
+                    "bytes": len(full_payload),
+                    "sha256": expected_digest,
+                }
+                and normalized.get("stdout_bytes") == len(full_payload)
+                and normalized.get("stdout_sha256") == expected_digest
+                and normalized.get("stdout_truncated") is True
+                and normalized.get("capture_limit_exceeded") is False
+                and auth.get("saw_general_purpose") is True
+                and auth.get("authenticated") is False
+                and capped == "FAIL"
+            ),
+            "stream_bytes": len(full_payload),
+            "stream_sha256": expected_digest,
+            "auth": auth,
+            "capped_status": capped,
+            "reason": reason,
+        })
 
     native_calls_only = write_transcript([native_event(agent) for agent in REQUIRED_NATIVE_AGENTS])
     auth = runner.authenticate_trace(native_calls_only)
@@ -776,7 +970,10 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
     capped, reason = runner.cap_status_by_trace("PASS-SCOPED", auth)
     cases.append({"name": "trace_auth_does_not_promote_pass_scoped_gate", "passed": auth.get("authenticated") is True and capped == "PASS-SCOPED", "auth": auth, "capped_status": capped, "reason": reason})
 
-    with tempfile.TemporaryDirectory(prefix="nozickian_formal_output_contract_") as tmp_s:
+    with tempfile.TemporaryDirectory(
+        prefix="nozickian_formal_output_contract_",
+        dir=str(CANONICAL_TEMP_ROOT),
+    ) as tmp_s:
         tmp = Path(tmp_s)
         fake_root = tmp / "pkg"
         fake_root.mkdir()
@@ -788,13 +985,71 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
         inside_json = fake_root / "self_validation" / "formal.json"
 
         rc, out = call_runner_main(runner, [str(fake_root), str(target), "--dry-run", "--skip-prechecks", "--json", str(external_json)])
+        parsed: Dict[str, Any] = {}
         try:
             parsed = json.loads(out)
-            path_checker = getattr(runner, "_path_with", getattr(runner, "_path_within"))
+            path_checker = getattr(runner, "_path_within")
             default_outside = not path_checker(Path(parsed.get("output_dir", ".")), fake_root)
-        except Exception:
+        except (AttributeError, OSError, TypeError, ValueError):
             default_outside = False
         cases.append({"name": "default_formal_dry_run_output_is_outside_package_tree", "passed": rc == 0 and default_outside and external_json.exists()})
+
+        canonical_result = Path(parsed.get("output_dir", ".")) / "formal_result.json"
+        canonical_data = (
+            json.loads(canonical_result.read_text(encoding="utf-8"))
+            if canonical_result.is_file()
+            else {}
+        )
+        companions = canonical_data.get("companions")
+        required_companions = set(runner.FORMAL_COMPANION_SPECS)
+        companion_hashes_typed = (
+            isinstance(companions, dict)
+            and required_companions.issubset(companions)
+            and all(
+                isinstance(companions.get(role), dict)
+                and isinstance(companions[role].get("path"), str)
+                and "sha256" in companions[role]
+                and (
+                    companions[role].get("sha256") is None
+                    or (
+                        isinstance(companions[role].get("sha256"), str)
+                        and companions[role]["sha256"].startswith("sha256:")
+                    )
+                )
+                for role in required_companions
+            )
+        )
+        cases.append({
+            "name": "formal_result_v2_is_canonical_and_typed",
+            "passed": (
+                canonical_data.get("formal_result_schema_version") == "2.0"
+                and isinstance(canonical_data.get("run_id"), str)
+                and bool(canonical_data.get("run_id"))
+                and companion_hashes_typed
+                and "formal_result" not in (companions or {})
+                and canonical_data.get("verification_context")
+                == runner.FORMAL_VERIFICATION_CONTEXT
+            ),
+        })
+        cases.append({
+            "name": "formal_result_declares_standalone_snapshot_context",
+            "passed": (
+                canonical_data.get("verification_context")
+                == {
+                    "mode": "standalone-immutable-snapshot",
+                    "relative_sibling_context": "unavailable",
+                    "execution_working_directory": "snapshot-parent",
+                }
+            ),
+        })
+        cases.append({
+            "name": "json_compatibility_copy_matches_canonical_result_bytes",
+            "passed": (
+                canonical_result.is_file()
+                and external_json.is_file()
+                and canonical_result.read_bytes() == external_json.read_bytes()
+            ),
+        })
 
         rc, out = call_runner_main(runner, [str(fake_root), str(target), "--dry-run", "--skip-prechecks", "--output-dir", str(inside), "--json", str(external_json)])
         cases.append({"name": "package_tree_output_dir_rejected_without_refresh_manifest", "passed": rc == 2 and "requires --refresh-release-manifest" in out and not inside.exists()})
@@ -802,8 +1057,556 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
         rc, out = call_runner_main(runner, [str(fake_root), str(target), "--dry-run", "--skip-prechecks", "--output-dir", str(external), "--json", str(inside_json)])
         cases.append({"name": "package_tree_json_rejected_without_refresh_manifest", "passed": rc == 2 and "requires --refresh-release-manifest" in out and not inside_json.exists()})
 
-        rc, out = call_runner_main(runner, [str(fake_root), str(target), "--dry-run", "--skip-prechecks", "--output-dir", str(external), "--json", str(external_json)])
-        cases.append({"name": "external_output_locations_allowed", "passed": rc == 0 and external_json.exists()})
+        allowed_external = tmp / "allowed-external"
+        allowed_external_json = tmp / "allowed-external.json"
+        rc, out = call_runner_main(runner, [str(fake_root), str(target), "--dry-run", "--skip-prechecks", "--output-dir", str(allowed_external), "--json", str(allowed_external_json)])
+        cases.append({"name": "external_output_locations_allowed", "passed": rc == 0 and allowed_external_json.exists()})
+
+        replaceable_json = tmp / "replaceable-formal-result.json"
+        original_compatibility_bytes = b"replace this compatibility result\n"
+        replaceable_json.write_bytes(original_compatibility_bytes)
+        replacement_output = tmp / "replacement-output"
+        rc, output = call_runner_main(
+            runner,
+            [
+                str(fake_root),
+                str(target),
+                "--dry-run",
+                "--skip-prechecks",
+                "--output-dir",
+                str(replacement_output),
+                "--json",
+                str(replaceable_json),
+            ],
+        )
+        try:
+            replacement_stdout = json.loads(output)
+            replacement_file = json.loads(
+                replaceable_json.read_text(encoding="utf-8")
+            )
+        except (OSError, TypeError, ValueError):
+            replacement_stdout = None
+            replacement_file = None
+        replacement_metadata = replaceable_json.lstat()
+        cases.append({
+            "name": "formal_runner_atomically_replaces_regular_compatibility_json",
+            "passed": (
+                rc == 0
+                and replacement_stdout == replacement_file
+                and replaceable_json.read_bytes()
+                != original_compatibility_bytes
+                and stat.S_ISREG(replacement_metadata.st_mode)
+                and replacement_metadata.st_nlink == 1
+            ),
+        })
+
+        separate_evidence_root = tmp / "separate-evidence-root"
+        separate_output = tmp / "separate-evidence-output"
+        rc, out = call_runner_main(
+            runner,
+            [
+                str(fake_root),
+                str(target),
+                "--dry-run",
+                "--skip-prechecks",
+                "--output-dir",
+                str(separate_output),
+                "--evidence-root",
+                str(separate_evidence_root),
+            ],
+        )
+        cases.append({
+            "name": "formal_runner_preserves_separate_evidence_root_compatibility",
+            "passed": (
+                rc == 0
+                and str(separate_evidence_root.resolve()) in out
+            ),
+        })
+
+        snapshot_prompt_output = tmp / "snapshot-prompt-output"
+        snapshot_prompt_output.mkdir()
+        snapshot_paths = runner.output_paths(target, snapshot_prompt_output)
+        snapshot_prompt = runner.build_formal_prompt(
+            fake_root,
+            snapshot_paths["target_snapshot"],
+            snapshot_paths,
+            separate_evidence_root,
+        )
+        cases.append({
+            "name": "formal_prompt_verifies_immutable_target_snapshot",
+            "passed": (
+                str(snapshot_paths["target_snapshot"]) in snapshot_prompt
+                and f"Target artifact:\n{target}" not in snapshot_prompt
+                and "standalone-immutable-snapshot" in snapshot_prompt
+                and "Relative sibling context" in snapshot_prompt
+                and "Do not infer claims from files adjacent" in snapshot_prompt
+            ),
+        })
+
+        valid_package_identity = {
+            "algorithm": "stable-release-inventory-v1",
+            "sha256": "sha256:" + "a" * 64,
+            "valid": True,
+        }
+        invalid_package_identity = dict(valid_package_identity)
+        invalid_package_identity["valid"] = 1
+        cases.append({
+            "name": "invalid_package_identity_forbids_formal_pass",
+            "passed": (
+                runner.cap_status_by_package_identity(
+                    "PASS-TRACKED",
+                    valid_package_identity,
+                )[0]
+                == "PASS-TRACKED"
+                and runner.cap_status_by_package_identity(
+                    "PASS-TRACKED",
+                    invalid_package_identity,
+                )[0]
+                == "FAIL"
+                and not runner.package_tree_identity_is_valid(
+                    invalid_package_identity
+                )
+            ),
+        })
+
+        stability_target = tmp / "stability-target.md"
+        stability_snapshot = tmp / "stability-snapshot.bin"
+        stability_target.write_text("stable target\n", encoding="utf-8")
+        runner.atomic_write_new(
+            stability_snapshot,
+            stability_target.read_bytes(),
+        )
+        source_before = runner.file_snapshot_identity(stability_target)
+        snapshot_before = runner.file_snapshot_identity(stability_snapshot)
+        stability_target.write_text("mutated target\n", encoding="utf-8")
+        source_after_mutation = runner.file_snapshot_identity(stability_target)
+        mutation_stability = runner.target_snapshot_stability(
+            source_before,
+            source_after_mutation,
+            snapshot_before,
+            runner.file_snapshot_identity(stability_snapshot),
+        )
+        stability_target.write_text("stable target\n", encoding="utf-8")
+        source_after_restore = runner.file_snapshot_identity(stability_target)
+        restore_stability = runner.target_snapshot_stability(
+            source_before,
+            source_after_restore,
+            snapshot_before,
+            runner.file_snapshot_identity(stability_snapshot),
+        )
+        cases.append({
+            "name": "target_mutation_forbids_formal_pass",
+            "passed": (
+                mutation_stability["stable"] is False
+                and runner.cap_status_by_target_stability(
+                    "PASS-TRACKED",
+                    mutation_stability,
+                )[0]
+                == "FAIL"
+            ),
+        })
+        cases.append({
+            "name": "target_mutate_restore_metadata_change_forbids_formal_pass",
+            "passed": (
+                source_before["sha256"] == source_after_restore["sha256"]
+                and restore_stability["stable"] is False
+                and restore_stability["source_metadata_stable"] is False
+                and runner.cap_status_by_target_stability(
+                    "PASS-TRACKED",
+                    restore_stability,
+                )[0]
+                == "FAIL"
+            ),
+        })
+
+        sentinel = tmp / "external-sentinel.txt"
+        sentinel_bytes = b"external sentinel must not change\n"
+        sentinel.write_bytes(sentinel_bytes)
+        existing_file_output_dir = tmp / "existing-file-output-dir"
+        existing_file_output_dir.write_bytes(b"existing output-dir sentinel\n")
+        existing_file_bytes = existing_file_output_dir.read_bytes()
+        rc, output = call_runner_main(
+            runner,
+            [
+                str(fake_root),
+                str(target),
+                "--dry-run",
+                "--skip-prechecks",
+                "--output-dir",
+                str(existing_file_output_dir),
+            ],
+        )
+        cases.append({
+            "name": "formal_runner_structures_existing_file_output_dir_failure",
+            "passed": (
+                rc == 2
+                and '"status": "INVALID_INPUT"' in output
+                and "unsafe --output-dir" in output
+                and existing_file_output_dir.read_bytes() == existing_file_bytes
+            ),
+        })
+
+        real_output_target = tmp / "real-output-target"
+        real_output_target.mkdir()
+        symlink_output_dir = tmp / "symlink-output-dir"
+        symlink_output_dir.symlink_to(real_output_target, target_is_directory=True)
+        rc, output = call_runner_main(
+            runner,
+            [
+                str(fake_root),
+                str(target),
+                "--dry-run",
+                "--skip-prechecks",
+                "--output-dir",
+                str(symlink_output_dir),
+            ],
+        )
+        cases.append({
+            "name": "formal_runner_structures_symlink_output_dir_failure",
+            "passed": (
+                rc == 2
+                and '"status": "INVALID_INPUT"' in output
+                and "symbolic link" in output
+                and not list(real_output_target.iterdir())
+            ),
+        })
+
+        output_ancestor_external = tmp / "output-ancestor-external"
+        output_ancestor_nested = output_ancestor_external / "nested"
+        output_ancestor_nested.mkdir(parents=True)
+        output_ancestor_sentinel = output_ancestor_nested / "sentinel.txt"
+        output_ancestor_sentinel_bytes = (
+            b"formal output ancestor sentinel must remain unchanged\n"
+        )
+        output_ancestor_sentinel.write_bytes(
+            output_ancestor_sentinel_bytes
+        )
+        output_ancestor_link = tmp / "output-ancestor-link"
+        output_ancestor_link.symlink_to(
+            output_ancestor_external,
+            target_is_directory=True,
+        )
+        unsafe_nested_output = (
+            output_ancestor_link / "nested/generated-output"
+        )
+        rc, output = call_runner_main(
+            runner,
+            [
+                str(fake_root),
+                str(target),
+                "--dry-run",
+                "--skip-prechecks",
+                "--output-dir",
+                str(unsafe_nested_output),
+            ],
+        )
+        cases.append({
+            "name": "formal_runner_rejects_symlinked_output_dir_ancestor",
+            "passed": (
+                rc == 2
+                and '"status": "INVALID_INPUT"' in output
+                and "symbolic link ancestor" in output
+                and output_ancestor_sentinel.read_bytes()
+                == output_ancestor_sentinel_bytes
+                and not (
+                    output_ancestor_nested / "generated-output"
+                ).exists()
+            ),
+        })
+
+        if hasattr(os, "mkfifo"):
+            special_output_dir = tmp / "special-output-dir"
+            os.mkfifo(special_output_dir)
+            rc, output = call_runner_main(
+                runner,
+                [
+                    str(fake_root),
+                    str(target),
+                    "--dry-run",
+                    "--skip-prechecks",
+                    "--output-dir",
+                    str(special_output_dir),
+                ],
+            )
+            cases.append({
+                "name": "formal_runner_structures_special_output_dir_failure",
+                "passed": (
+                    rc == 2
+                    and '"status": "INVALID_INPUT"' in output
+                    and "not a directory" in output
+                ),
+            })
+
+        compatibility_symlink = tmp / "compatibility-result.json"
+        compatibility_symlink.symlink_to(sentinel)
+        rc, output = call_runner_main(
+            runner,
+            [
+                str(fake_root),
+                str(target),
+                "--dry-run",
+                "--skip-prechecks",
+                "--output-dir",
+                str(tmp / "compatibility-symlink-output"),
+                "--json",
+                str(compatibility_symlink),
+            ],
+        )
+        cases.append({
+            "name": "formal_runner_rejects_compatibility_json_symlink",
+            "passed": (
+                rc == 2
+                and '"status": "INVALID_INPUT"' in output
+                and "symbolic link" in output
+                and compatibility_symlink.is_symlink()
+                and sentinel.read_bytes() == sentinel_bytes
+            ),
+        })
+
+        json_ancestor_external = tmp / "json-ancestor-external"
+        json_ancestor_nested = json_ancestor_external / "nested"
+        json_ancestor_nested.mkdir(parents=True)
+        json_ancestor_sentinel = json_ancestor_nested / "result.json"
+        json_ancestor_sentinel_bytes = (
+            b"formal json ancestor sentinel must remain unchanged\n"
+        )
+        json_ancestor_sentinel.write_bytes(json_ancestor_sentinel_bytes)
+        json_ancestor_link = tmp / "json-ancestor-link"
+        json_ancestor_link.symlink_to(
+            json_ancestor_external,
+            target_is_directory=True,
+        )
+        unsafe_nested_json = json_ancestor_link / "nested/result.json"
+        nested_json_output = tmp / "nested-json-output"
+        rc, output = call_runner_main(
+            runner,
+            [
+                str(fake_root),
+                str(target),
+                "--dry-run",
+                "--skip-prechecks",
+                "--output-dir",
+                str(nested_json_output),
+                "--json",
+                str(unsafe_nested_json),
+            ],
+        )
+        cases.append({
+            "name": "formal_runner_rejects_symlinked_compatibility_json_ancestor",
+            "passed": (
+                rc == 2
+                and '"status": "INVALID_INPUT"' in output
+                and "symbolic link ancestor" in output
+                and json_ancestor_sentinel.read_bytes()
+                == json_ancestor_sentinel_bytes
+                and not nested_json_output.exists()
+            ),
+        })
+
+        special_compatibility_json = tmp / "special-compatibility.json"
+        os.mkfifo(special_compatibility_json)
+        special_json_output = tmp / "special-json-output"
+        rc, output = call_runner_main(
+            runner,
+            [
+                str(fake_root),
+                str(target),
+                "--dry-run",
+                "--skip-prechecks",
+                "--output-dir",
+                str(special_json_output),
+                "--json",
+                str(special_compatibility_json),
+            ],
+        )
+        cases.append({
+            "name": "formal_runner_rejects_special_compatibility_json_target",
+            "passed": (
+                rc == 2
+                and '"status": "INVALID_INPUT"' in output
+                and "special file" in output
+                and stat.S_ISFIFO(
+                    special_compatibility_json.lstat().st_mode
+                )
+                and not special_json_output.exists()
+            ),
+        })
+
+        unsafe_output = tmp / "unsafe-output"
+        unsafe_output.mkdir()
+        unsafe_prompt = unsafe_output / "unsafe-prompt.md"
+        unsafe_prompt.symlink_to(sentinel)
+        atomic_rejected = False
+        try:
+            runner.atomic_write_new(unsafe_prompt, b"overwrite attempt\n")
+        except (FileExistsError, OSError, ValueError):
+            atomic_rejected = True
+        cases.append({
+            "name": "safe_atomic_write_rejects_symlink_without_overwriting_sentinel",
+            "passed": (
+                atomic_rejected
+                and sentinel.read_bytes() == sentinel_bytes
+                and unsafe_prompt.is_symlink()
+            ),
+        })
+
+        hardlink_output = unsafe_output / "hardlink-output.json"
+        hardlink_output.hardlink_to(sentinel)
+        collision_paths = runner.output_paths(target, unsafe_output)
+        collision_paths["formal_result"] = hardlink_output
+        hardlink_error = runner.formal_output_collision_error(
+            target,
+            collision_paths,
+            None,
+        )
+        cases.append({
+            "name": "formal_output_preflight_rejects_preexisting_hardlink",
+            "passed": (
+                isinstance(hardlink_error, str)
+                and "pre-existing" in hardlink_error
+                and sentinel.read_bytes() == sentinel_bytes
+            ),
+        })
+
+        symlink_main_output = tmp / "symlink-main-output"
+        symlink_main_output.mkdir()
+        symlink_main_paths = runner.output_paths(target, symlink_main_output)
+        symlink_main_paths["prompt"].symlink_to(sentinel)
+        rc, output = call_runner_main(
+            runner,
+            [
+                str(fake_root),
+                str(target),
+                "--dry-run",
+                "--skip-prechecks",
+                "--output-dir",
+                str(symlink_main_output),
+            ],
+        )
+        cases.append({
+            "name": "formal_runner_rejects_preexisting_output_symlink_sentinel",
+            "passed": (
+                rc == 2
+                and "pre-existing formal output" in output
+                and sentinel.read_bytes() == sentinel_bytes
+            ),
+        })
+
+        hardlink_main_output = tmp / "hardlink-main-output"
+        hardlink_main_output.mkdir()
+        hardlink_main_paths = runner.output_paths(target, hardlink_main_output)
+        hardlink_main_paths["formal_result"].hardlink_to(sentinel)
+        rc, output = call_runner_main(
+            runner,
+            [
+                str(fake_root),
+                str(target),
+                "--dry-run",
+                "--skip-prechecks",
+                "--output-dir",
+                str(hardlink_main_output),
+            ],
+        )
+        cases.append({
+            "name": "formal_runner_rejects_preexisting_output_hardlink_sentinel",
+            "passed": (
+                rc == 2
+                and "hardlink alias" in output
+                and sentinel.read_bytes() == sentinel_bytes
+            ),
+        })
+
+        if hasattr(os, "mkfifo"):
+            fifo_output = tmp / "fifo-main-output"
+            fifo_output.mkdir()
+            fifo_paths = runner.output_paths(target, fifo_output)
+            os.mkfifo(fifo_paths["transcript"])
+            rc, output = call_runner_main(
+                runner,
+                [
+                    str(fake_root),
+                    str(target),
+                    "--dry-run",
+                    "--skip-prechecks",
+                    "--output-dir",
+                    str(fifo_output),
+                ],
+            )
+            cases.append({
+                "name": "formal_runner_rejects_preexisting_special_output",
+                "passed": rc == 2 and "special file" in output,
+            })
+
+        collision_dir = tmp / "collision"
+        collision_dir.mkdir()
+        collision_target = collision_dir / "formal_result.json"
+        collision_bytes = b"target bytes must remain unchanged\n"
+        collision_target.write_bytes(collision_bytes)
+        rc, out = call_runner_main(
+            runner,
+            [
+                str(fake_root),
+                str(collision_target),
+                "--dry-run",
+                "--skip-prechecks",
+                "--output-dir",
+                str(collision_dir),
+            ],
+        )
+        cases.append({
+            "name": "formal_runner_rejects_target_canonical_result_collision",
+            "passed": (
+                rc == 2
+                and '"status": "INVALID_INPUT"' in out
+                and "aliases a reserved formal output path" in out
+                and collision_target.read_bytes() == collision_bytes
+            ),
+        })
+        json_collision_output = tmp / "json-collision-output"
+        rc, out = call_runner_main(
+            runner,
+            [
+                str(fake_root),
+                str(collision_target),
+                "--dry-run",
+                "--skip-prechecks",
+                "--output-dir",
+                str(json_collision_output),
+                "--json",
+                str(collision_target),
+            ],
+        )
+        cases.append({
+            "name": "formal_runner_rejects_json_target_collision",
+            "passed": (
+                rc == 2
+                and '"status": "INVALID_INPUT"' in out
+                and "json compatibility path aliases target_artifact" in out
+                and collision_target.read_bytes() == collision_bytes
+            ),
+        })
+        target_symlink = tmp / "target-symlink.md"
+        target_symlink.symlink_to(collision_target)
+        rc, out = call_runner_main(
+            runner,
+            [
+                str(fake_root),
+                str(target_symlink),
+                "--dry-run",
+                "--skip-prechecks",
+                "--output-dir",
+                str(tmp / "symlink-target-output"),
+            ],
+        )
+        cases.append({
+            "name": "formal_runner_rejects_symlink_target_without_following",
+            "passed": (
+                rc == 2
+                and '"status": "INVALID_INPUT"' in out
+                and "symbolic link" in out
+                and collision_target.read_bytes() == collision_bytes
+            ),
+        })
 
         if inside.exists():
             shutil.rmtree(inside)

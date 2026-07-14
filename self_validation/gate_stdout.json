@@ -845,7 +845,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/validate_package.py",
-              "artifact_sha256": "6d4d1557f9ef2fcbd4bb44590cd6ebd678ded86c8dfd4ff83e6b93f02b794002",
+              "artifact_sha256": "5f8f605fb56009c394ca92dca9d764ed5bc0c6a484556e0893f949035aa603ee",
               "canonical_ref": "<package-root>/self_validation/evidence/C-validator-sensitivity__FW-historical-nested-cruft.json",
               "exists": true,
               "reasons": [],
@@ -1619,11 +1619,11 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
-              "artifact_sha256": "1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21",
-              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
+              "artifact_sha256": "4fa9034000a8fb0492af7c518b62ca45f40c029daa8c9a8b92f8ffe3ec4fcee3",
+              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
               "exists": true,
               "reasons": [],
-              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
+              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
               "structured": true
             }
           ],
@@ -1636,12 +1636,12 @@
           "evidence_checks": [
             {
               "artifact_identity": "",
-              "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
-              "artifact_sha256": "5d97289564d618e9e6cb3d95195f2c3e3a0949f2daf8dd1d45f10ca2ac419832",
-              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
+              "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py",
+              "artifact_sha256": "d88bf2f0a21699de5bffd866f47565b2f4a3102b571b356945abf19fce43d6e2",
+              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json",
               "exists": true,
               "reasons": [],
-              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
+              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json",
               "structured": true
             }
           ],
@@ -1655,21 +1655,21 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
-              "artifact_sha256": "1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21",
-              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
+              "artifact_sha256": "4fa9034000a8fb0492af7c518b62ca45f40c029daa8c9a8b92f8ffe3ec4fcee3",
+              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
               "exists": true,
               "reasons": [],
-              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
+              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
               "structured": true
             },
             {
               "artifact_identity": "",
-              "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
-              "artifact_sha256": "5d97289564d618e9e6cb3d95195f2c3e3a0949f2daf8dd1d45f10ca2ac419832",
-              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
+              "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py",
+              "artifact_sha256": "d88bf2f0a21699de5bffd866f47565b2f4a3102b571b356945abf19fce43d6e2",
+              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json",
               "exists": true,
               "reasons": [],
-              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
+              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json",
               "structured": true
             }
           ],
@@ -1683,21 +1683,21 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
-              "artifact_sha256": "1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21",
-              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
+              "artifact_sha256": "4fa9034000a8fb0492af7c518b62ca45f40c029daa8c9a8b92f8ffe3ec4fcee3",
+              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
               "exists": true,
               "reasons": [],
-              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
+              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
               "structured": true
             },
             {
               "artifact_identity": "",
-              "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
-              "artifact_sha256": "5d97289564d618e9e6cb3d95195f2c3e3a0949f2daf8dd1d45f10ca2ac419832",
-              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
+              "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py",
+              "artifact_sha256": "d88bf2f0a21699de5bffd866f47565b2f4a3102b571b356945abf19fce43d6e2",
+              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json",
               "exists": true,
               "reasons": [],
-              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
+              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json",
               "structured": true
             }
           ],
@@ -1711,21 +1711,21 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
-              "artifact_sha256": "1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21",
-              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
+              "artifact_sha256": "4fa9034000a8fb0492af7c518b62ca45f40c029daa8c9a8b92f8ffe3ec4fcee3",
+              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
               "exists": true,
               "reasons": [],
-              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
+              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
               "structured": true
             },
             {
               "artifact_identity": "",
-              "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
-              "artifact_sha256": "5d97289564d618e9e6cb3d95195f2c3e3a0949f2daf8dd1d45f10ca2ac419832",
-              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
+              "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py",
+              "artifact_sha256": "d88bf2f0a21699de5bffd866f47565b2f4a3102b571b356945abf19fce43d6e2",
+              "canonical_ref": "<package-root>/self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json",
               "exists": true,
               "reasons": [],
-              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json",
+              "ref": "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json",
               "structured": true
             }
           ],
@@ -1757,7 +1757,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/validate_package.py",
-              "artifact_sha256": "6d4d1557f9ef2fcbd4bb44590cd6ebd678ded86c8dfd4ff83e6b93f02b794002",
+              "artifact_sha256": "5f8f605fb56009c394ca92dca9d764ed5bc0c6a484556e0893f949035aa603ee",
               "canonical_ref": "<package-root>/self_validation/evidence/C-github-readme-documentation__FW-github-readmes-degraded.json",
               "exists": true,
               "reasons": [],
@@ -1775,7 +1775,7 @@
             {
               "artifact_identity": "",
               "artifact_path_resolved": "<package-root>/skills/nozickian-verify/scripts/validate_package.py",
-              "artifact_sha256": "6d4d1557f9ef2fcbd4bb44590cd6ebd678ded86c8dfd4ff83e6b93f02b794002",
+              "artifact_sha256": "5f8f605fb56009c394ca92dca9d764ed5bc0c6a484556e0893f949035aa603ee",
               "canonical_ref": "<package-root>/self_validation/evidence/C-github-readme-documentation__TW-github-readmes-benign-doc-note.json",
               "exists": true,
               "reasons": [],
@@ -1876,10 +1876,11 @@
     "critical_failed": 0,
     "derived_or_downstream_claims": 3,
     "downstream_nonclosure_violations": 0,
+    "downstream_policy": "generic",
     "evidence_root_checked": true,
     "failed_claims": 0,
     "major_failed": 0,
-    "scope_limitations": 35,
+    "scope_limitations": 36,
     "strict_evidence": true,
     "structured_evidence_required": true
   }

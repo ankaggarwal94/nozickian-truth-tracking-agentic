@@ -2,7 +2,7 @@
   "assurance_tier": "team-internal-reuse",
   "audit_report": "AUDIT_REPORT.md",
   "behavior_manifest": "MANIFEST.sha256",
-  "file_count_excluding_self": 252,
+  "file_count_excluding_self": 255,
   "file_inventory": [
     {
       "bytes": 664,
@@ -11,10 +11,10 @@
       "sha256": "8e16ce008bbc7f71b2fe428342b1189d3862cf3b392e56773660cf26c634b10a"
     },
     {
-      "bytes": 2245,
+      "bytes": 2535,
       "path": ".github/workflows/nozickian-team-ci.yml",
       "role": "behavior",
-      "sha256": "d24676c02b8e34b5203d67275a451c6b4f84309c6e099979e6e9f38efa3b3030"
+      "sha256": "98cf7324fc2c292ed2d0caeda92adbc1febb032dbfc6a676d8b8ee44a5977509"
     },
     {
       "bytes": 71,
@@ -23,10 +23,10 @@
       "sha256": "ad36bf2e524de5e768aa086d8091526564d95831afb4f6c513bc7a4d0a4948d9"
     },
     {
-      "bytes": 34186,
+      "bytes": 37886,
       "path": "AUDIT_REPORT.md",
       "role": "release-metadata",
-      "sha256": "29edb0eafeb42a6e496e1dd19a7b1c3584c77147a571cf19376447a8ed12d24b"
+      "sha256": "30569788434f2d3ed1851224b2a4dd3b7159549a196fe316552ebdc1f6833397"
     },
     {
       "bytes": 1056,
@@ -35,28 +35,28 @@
       "sha256": "1126322e2cc8d165adc4c792eeb195717de2bcc7b39be1ce77959d78e87ef685"
     },
     {
-      "bytes": 4776,
+      "bytes": 4916,
       "path": "MANIFEST.sha256",
       "role": "release-metadata",
-      "sha256": "f6dd7e4e88ccede1323ec848e1fded86ffab743395dadc4d22c8cd67ce13084f"
+      "sha256": "457335725fd938bec14fc5e92b6adc0d988ca3e1eb6e5c4fd55fe620a4ccac78"
     },
     {
-      "bytes": 13510,
+      "bytes": 16952,
       "path": "PACKAGE_SURFACE.json",
       "role": "behavior",
-      "sha256": "399b9e0243b00fb635333b66ffe79d947ea33600dca80c658f148241ab845065"
+      "sha256": "31a519d999bdb697a689fc382603cc347cf1c7ecb16bd642b27359d27848c304"
     },
     {
-      "bytes": 5837,
+      "bytes": 9711,
       "path": "README.md",
       "role": "release-metadata",
-      "sha256": "dad025667482f14f737fa4324dcbc485de3696f9dde8affa50b7e758eedab11e"
+      "sha256": "3d168df7c1cd32b1223ee1b98ea40178af740294b0a4097614538d274999bc43"
     },
     {
-      "bytes": 20802,
+      "bytes": 25354,
       "path": "RELEASE_LOCK.json",
       "role": "behavior",
-      "sha256": "573fbcb6fe35fe5a6df07cddd9ca334d4ad2508377381a0e0a131f0748763c4b"
+      "sha256": "6f74508129ba6541dd180036471f9f2b80f5e7301625dfa02a336e60585fb270"
     },
     {
       "bytes": 1060,
@@ -65,10 +65,10 @@
       "sha256": "013455e005043b1a8f60fa0fb3e933e73c0fa58dbf1f1fc5cf5cb0a5514fb5fd"
     },
     {
-      "bytes": 11696,
+      "bytes": 12661,
       "path": "TEAM_INTERNAL_USE.md",
       "role": "release-metadata",
-      "sha256": "e8d0d299897abca7deb6df2780a64bc354730b25dcca03c863ab584815c5e1ed"
+      "sha256": "273f17bc18f1688bb2aee470a82d006935fec7e14718b079af5078694f98263c"
     },
     {
       "bytes": 4408,
@@ -125,10 +125,10 @@
       "sha256": "25d6eeab034d503e7e50ef5ca5089a75ef2a7347e681be199c23dada0e635bad"
     },
     {
-      "bytes": 2141,
+      "bytes": 2990,
       "path": "docs/README.md",
       "role": "behavior",
-      "sha256": "e4727381fc728f1eed336ad25f0ecb7516f33bb82e043297d4c6ab24b6c18172"
+      "sha256": "b53678adc7d592fb78bc0df787e14b4a1dab797d004728503e0ca073d16d32cb"
     },
     {
       "bytes": 1938,
@@ -137,22 +137,22 @@
       "sha256": "59689ccac075488085a75e7b060f7abdd37b83a2b80a85f90569e1dd4c61cac5"
     },
     {
-      "bytes": 1564,
+      "bytes": 2098,
       "path": "docs/development/README.md",
       "role": "behavior",
-      "sha256": "0af63fd06d7925823f080ad4e302682126f3bd8739b716cd6a758d1b1e9e2cca"
+      "sha256": "15bd16cdb740f3608895eaac0155f3ac1a5e7f066c3b65c4bd610a729d0839ed"
     },
     {
-      "bytes": 1585,
+      "bytes": 3614,
       "path": "docs/evidence/README.md",
       "role": "behavior",
-      "sha256": "34389ff220a849a045a8cc59586f0a941bdf18564a1923a889789e9260e4c526"
+      "sha256": "8135bbc41fba4ec57338b4c7b136379da35b0add96f05e659ec01474070b1f30"
     },
     {
-      "bytes": 1412,
+      "bytes": 1729,
       "path": "docs/faq/README.md",
       "role": "behavior",
-      "sha256": "5c926f1368575056db4b5ba079d38e27a3562271b2687bed9c9272f9ace51ddc"
+      "sha256": "6fff4c181bc5cdf871562540c470ea456267dec749d61356e09438d8548d0a46"
     },
     {
       "bytes": 1241,
@@ -161,28 +161,28 @@
       "sha256": "442b559b3766e4ec885dc91161c94f40f834b50d58a435043a57e9e77c3e842d"
     },
     {
-      "bytes": 2701,
+      "bytes": 5273,
       "path": "docs/pass-tracked-upgrade/README.md",
       "role": "behavior",
-      "sha256": "3e495137fa5bb69160c675fbc43024acde8fcd84cd4d8aa0ccd76970611c9388"
+      "sha256": "e3b97ac595112485f0b7bf8fc3fab82bcaf1576172aa5d378e9f620eb3c951a2"
     },
     {
-      "bytes": 1486,
+      "bytes": 2059,
       "path": "docs/quickstart/README.md",
       "role": "behavior",
-      "sha256": "d01c6ae0b1ea1cc28d7fdf56c82457d2cd02787c0273cd73c644ef7981ba07ae"
+      "sha256": "db6b9b7ce08185587b65d49a77d1694de72e329b726bf0f5d852cf92c99fb3f1"
     },
     {
-      "bytes": 2721,
+      "bytes": 3897,
       "path": "docs/release/README.md",
       "role": "behavior",
-      "sha256": "eb368c6e7e2ac81b0508fc61594fecf5cb33eb63aaae6a1b03544fec9592af4e"
+      "sha256": "893c4f9f1f6623ff4249c4567252e0b12a2a804ee000fd8963cf100e09444696"
     },
     {
-      "bytes": 1492,
+      "bytes": 2687,
       "path": "docs/runtime-trace-auth/README.md",
       "role": "behavior",
-      "sha256": "2ec284f16cd3de80a61b2a905509962af1452c35c477583ca1a28e6cc0eb1ced"
+      "sha256": "b9f8bed9c7d7591b8094700464e945c7057a8ed07a161f3df6e6e555a9cb7f37"
     },
     {
       "bytes": 1581,
@@ -191,10 +191,10 @@
       "sha256": "915c052ee05ef9922aab5989cfbcab024ca12cf3b0e55ff61fd5eb88796a3533"
     },
     {
-      "bytes": 1436,
+      "bytes": 2633,
       "path": "self_validation/README.md",
       "role": "self_validation",
-      "sha256": "361a09351e329bb6a0d644073c3f7ef66cb9d520a19cae8ee5056c4657cf85fb"
+      "sha256": "96153e141709775c34092a0ec6303968d67d992d354983de4f3fed5bca19e9f3"
     },
     {
       "bytes": 1017,
@@ -218,13 +218,13 @@
       "bytes": 989,
       "path": "self_validation/evidence/C-charter-caps__claim.json",
       "role": "self_validation",
-      "sha256": "bb194951e992fac60369ffd40e9c5aea09bf6f5e3d8c0538ac439e51584913a6"
+      "sha256": "17c7b33955061e9cec95f98a627cb9afc900dbe43be1098314356de706424e53"
     },
     {
       "bytes": 1002,
       "path": "self_validation/evidence/C-charter-caps__gate.json",
       "role": "self_validation",
-      "sha256": "9a0e1bf9f9153e34eaf3a08d9511d59c611adfb0f890672254fc7865cc7f2ee1"
+      "sha256": "82834c8655f14c90c9918d415cdb1eac7ed24531b81659291af493e7fdd64f49"
     },
     {
       "bytes": 1149,
@@ -464,13 +464,13 @@
       "bytes": 1106,
       "path": "self_validation/evidence/C-formal-invocation__claim.json",
       "role": "self_validation",
-      "sha256": "01c571986228b7d4ec4ad5a5da16535d88b284780774fe1b562a4c00fce535bb"
+      "sha256": "5bef12e00e1dfdb5b9c067a4667ed783d6ba7390bd815e5acbd0bbfb552fd7bd"
     },
     {
       "bytes": 1106,
       "path": "self_validation/evidence/C-formal-invocation__gate.json",
       "role": "self_validation",
-      "sha256": "6e443747e3007b015f980078268de6f253486e7ea78b727fa2851bf4c041f0d8"
+      "sha256": "7beceafff44e3b2a712d6bc4fdff9e7e471b48e1e871e43bc105790632fd5d25"
     },
     {
       "bytes": 1053,
@@ -686,37 +686,43 @@
       "bytes": 1049,
       "path": "self_validation/evidence/C-gate-hardening__claim.json",
       "role": "self_validation",
-      "sha256": "c41a798afefcbe50dbc67d9d75f74a4e154d0e6970e023b774ea3ff983a7f4f8"
+      "sha256": "a358ab23c0a504be1f8b8be07eeb1d693ea13b4b6974e5bcac41592be1908185"
     },
     {
       "bytes": 1079,
       "path": "self_validation/evidence/C-gate-hardening__gate.json",
       "role": "self_validation",
-      "sha256": "f3e7acdf20c7e3b017d44082f31d06ca63d48d3967901fe527bf8f46069743cc"
+      "sha256": "a268a7705913b31a81678b5676ddb040d8e200500504829998a6de41d96e96bb"
     },
     {
       "bytes": 762,
       "path": "self_validation/evidence/C-github-readme-documentation__FW-github-readmes-degraded.json",
       "role": "self_validation",
-      "sha256": "1557018b2edc5ffeb8893839d8aaec7721b96ceef239d3293b65037cebfdb3af"
+      "sha256": "6c25756c218a58ac42b00614e80a2d75355a58f8ce7428153f93ab65755ac4fe"
     },
     {
       "bytes": 822,
       "path": "self_validation/evidence/C-github-readme-documentation__TW-github-readmes-benign-doc-note.json",
       "role": "self_validation",
-      "sha256": "26028dddd384dd486c8aec9e638f86b8a4db02aad275678d67e74e40794bece0"
+      "sha256": "05c5da84227da453ee706d0cb4f641152ffcb37435328d5fb5c022a85d2e702a"
     },
     {
       "bytes": 765,
       "path": "self_validation/evidence/C-github-readme-documentation__docs-hub.json",
       "role": "self_validation",
-      "sha256": "8f200727e2e362e58bda8c0fbf305a4423ce958a23a20b5bc1b754ecbb2b170c"
+      "sha256": "0f3dd7ad9767f7c841966bd13864029030ba23ee9c01115ec39601bb738f66d6"
     },
     {
       "bytes": 767,
       "path": "self_validation/evidence/C-github-readme-documentation__validator.json",
       "role": "self_validation",
-      "sha256": "1eafc8733eff1565a5b96836a9fbd25b65a66e613a857c8c265ee3ed647e4d62"
+      "sha256": "cc17d95b7f58f8f19b2b7c582a612245dd68257389db2f91ee4aac9c98df656a"
+    },
+    {
+      "bytes": 1719,
+      "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json",
+      "role": "self_validation",
+      "sha256": "b294cc828b97a5a015b3c87086ef6c141aa27ed30da666f0b9f2a45161f1ca7a"
     },
     {
       "bytes": 1986,
@@ -735,6 +741,12 @@
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json",
       "role": "self_validation",
       "sha256": "a66f9444f5327a2e06f670d459eacf58d7ed0baa945ec81b7bf33803cffc0c70"
+    },
+    {
+      "bytes": 1695,
+      "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
+      "role": "self_validation",
+      "sha256": "aa16e5804421ea446f97b90504c70babd87d44b93eaf0b119d38186d7fe9dab4"
     },
     {
       "bytes": 1443,
@@ -782,19 +794,19 @@
       "bytes": 1148,
       "path": "self_validation/evidence/C-structure__claim.json",
       "role": "self_validation",
-      "sha256": "27a57a637fe42c0514c5d028bf7a452397b05015d8ea03c1caf3fe1fbb36818b"
+      "sha256": "27887acdf53820b2f5943ef1cba8d9bb849c2fa3b25950160b05011f91c96210"
     },
     {
       "bytes": 966,
       "path": "self_validation/evidence/C-structure__gate.json",
       "role": "self_validation",
-      "sha256": "1fd8a3f7cc95b72727f485b559bdb75db0c031ef7f7f43604eecdb23df2fbd96"
+      "sha256": "a2c81d067349155b9d16de5162ece83de415ea6e99ec79a1e6a2094d02c204a8"
     },
     {
       "bytes": 1017,
       "path": "self_validation/evidence/C-validator-sensitivity__FW-historical-nested-cruft.json",
       "role": "self_validation",
-      "sha256": "edbe65d29a16ecccaa4c9c2a5f9cd8d507ccc722a4650320bf6fe4efe43e3aeb"
+      "sha256": "10f68e0887f07b430089c11fa503f4e5b332700ae3f659713aba035b7e7a482e"
     },
     {
       "bytes": 1139,
@@ -824,7 +836,7 @@
       "bytes": 1543,
       "path": "self_validation/evidence/C-validator-sensitivity__claim.json",
       "role": "self_validation",
-      "sha256": "972dacf32007c0eb07b011bffffc0ad7d88e7af5f38c0584494895f24e873351"
+      "sha256": "c0816e002d8696eb625e8932b9a15cf0398b7de297f5c19be7b7b2208fbdb950"
     },
     {
       "bytes": 1064,
@@ -1361,10 +1373,10 @@
       "sha256": "b9ff493dbb04a7138cc6f154e4837562d826aa003d6f0d107f8b5ffaf5595047"
     },
     {
-      "bytes": 151557,
+      "bytes": 173368,
       "path": "self_validation/self_certificate.json",
       "role": "self_validation",
-      "sha256": "d1426a1b0d766e2004c6c7322b7afc412beb1056282c9bb6451b3882a7ed06f0"
+      "sha256": "78a86a1fce00f7df29614a5638aa4910c26b1c8a619c6fd4779e3daf708fd28a"
     },
     {
       "bytes": 4830,
@@ -1379,16 +1391,16 @@
       "sha256": "323da8ffaf457bce8c1a524834af908b5988fea7253645c250fd8aec740c4d0a"
     },
     {
-      "bytes": 17499,
+      "bytes": 19400,
       "path": "skills/nozickian-verify/SKILL.md",
       "role": "behavior",
-      "sha256": "e2e91d0e2a9f65cdcaa850c6db7a1af6db992ea93934fd55ec223d4165d085b0"
+      "sha256": "7a6ce4cad84dfa989c71444d2f6024c73e33dd8535ece9d16ec27826e853dfca"
     },
     {
-      "bytes": 5439,
+      "bytes": 10111,
       "path": "skills/nozickian-verify/assets/certificate-template.json",
       "role": "release-metadata",
-      "sha256": "55b03e008641176ab9955c4e041337cd70a98ed2d83afdd306bbd10602b21b1d"
+      "sha256": "68b8e4067c24e4765aa88270ac884d7a5a893deaa8ad0f40005e245dad3825a0"
     },
     {
       "bytes": 220,
@@ -1433,22 +1445,22 @@
       "sha256": "47f97cde1acf5054a4b70dfea7a47e76da98e41c533d2a882d04e3c179089455"
     },
     {
-      "bytes": 2328,
+      "bytes": 9871,
       "path": "skills/nozickian-verify/references/EVIDENCE_SCHEMA.md",
       "role": "behavior",
-      "sha256": "8bd3fad2c5f19dab59adfe79d566cf7b911cde9e8300affe40b1759aa238ded3"
+      "sha256": "393cf5c3d931fca7dc8306da2d878b2268686ec32a8263c6326ccd0d60ba076c"
     },
     {
-      "bytes": 9339,
+      "bytes": 15427,
       "path": "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
       "role": "behavior",
-      "sha256": "bb4485fc3ddb07043f61875373033e91a1ff064ec15b0cef72f0321f348974b8"
+      "sha256": "e72a9748f5fac5bd528121d06900fbb3c2888f637712c1541af694f0b31007e2"
     },
     {
-      "bytes": 20911,
+      "bytes": 26794,
       "path": "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
       "role": "behavior",
-      "sha256": "1445949009ba509894e70ebe5fea18cba665d44188e19368d3492dba01fe7e21"
+      "sha256": "4fa9034000a8fb0492af7c518b62ca45f40c029daa8c9a8b92f8ffe3ec4fcee3"
     },
     {
       "bytes": 1868,
@@ -1457,10 +1469,10 @@
       "sha256": "6d12e94adbfeea80f1c3594103d431934c3f8a546c752b0fd278033526a6c7ba"
     },
     {
-      "bytes": 7876,
+      "bytes": 10862,
       "path": "skills/nozickian-verify/references/STANDARD.md",
       "role": "behavior",
-      "sha256": "3e5517ed7233420cf3c2b10f443e8bd7f893ff349d41875d1fa5f2092ad86566"
+      "sha256": "1ea2af7d5b7897058659fab82f61fade88e224d34ce5afa3f0e74d3d41a1185c"
     },
     {
       "bytes": 9743,
@@ -1469,40 +1481,46 @@
       "sha256": "42e3bd1ec8584d2616cb6ef67ac871f6dfb66af9f81d48154ad4b57764089e42"
     },
     {
-      "bytes": 68060,
+      "bytes": 149665,
       "path": "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
       "role": "behavior",
-      "sha256": "5d97289564d618e9e6cb3d95195f2c3e3a0949f2daf8dd1d45f10ca2ac419832"
+      "sha256": "dc2609f4cd9d3f68e1733fe58647d717b05ef2746e6149f3bed7f25066256fd2"
     },
     {
-      "bytes": 39891,
+      "bytes": 51746,
       "path": "skills/nozickian-verify/scripts/ntt_gate.py",
       "role": "behavior",
-      "sha256": "3df08a56cf692e65ec7e8d82397905a152538b0dee8a4106c8c68c938b0caf76"
+      "sha256": "768718e0669578b4eb0bb725ff3f58c265906f87bc28df300f28eb5f675a0489"
     },
     {
-      "bytes": 45341,
+      "bytes": 83744,
       "path": "skills/nozickian-verify/scripts/run_formal_artifact_verification.py",
       "role": "behavior",
-      "sha256": "4b52c8477d2fb8def2ea0bf360eab56171df5bcc9c96c37018dd535583941c58"
+      "sha256": "49a7f680ae7cd47256bfd994b28a31ae0dd2793f17e5ed7cc0275c35f56fe978"
     },
     {
-      "bytes": 49273,
+      "bytes": 79389,
       "path": "skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py",
       "role": "behavior",
-      "sha256": "5130aa17529be10f5e47ce9e747c1e8c71dd45114716b95d1e7f3a5d5dc9f2a1"
+      "sha256": "c0230749798fbd208d457fc87406a292c93a8bc65d86e96bf656eefc37f05af9"
     },
     {
-      "bytes": 33442,
+      "bytes": 42460,
       "path": "skills/nozickian-verify/scripts/run_gate_contract_tests.py",
       "role": "behavior",
-      "sha256": "6480239b4685f61ff56cd93524cd191f63734d84631cf7f821140874f0d1940a"
+      "sha256": "73a3031d5cd56b7ef8a923bd20eb722c01674fabbefe2307f1d0cfd95254dd2d"
     },
     {
-      "bytes": 29755,
+      "bytes": 30377,
       "path": "skills/nozickian-verify/scripts/run_live_skill_evals.py",
       "role": "behavior",
-      "sha256": "7e65db2e76a2e6197230e35a568ed6ba28903608155c1d98bd327d44fdcc3916"
+      "sha256": "0de0c8768597e241f92101224de8cfa7842b6e0a1a5b734f2bac77a5f214d1ed"
+    },
+    {
+      "bytes": 125896,
+      "path": "skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py",
+      "role": "behavior",
+      "sha256": "d88bf2f0a21699de5bffd866f47565b2f4a3102b571b356945abf19fce43d6e2"
     },
     {
       "bytes": 6751,
@@ -1511,10 +1529,10 @@
       "sha256": "0b8f0c622ab3eee944c21f4b0d94c0f1b38ed98cc5e74bd5b0649428c071c23a"
     },
     {
-      "bytes": 255620,
+      "bytes": 249286,
       "path": "skills/nozickian-verify/scripts/validate_package.py",
       "role": "behavior",
-      "sha256": "6d4d1557f9ef2fcbd4bb44590cd6ebd678ded86c8dfd4ff83e6b93f02b794002"
+      "sha256": "5f8f605fb56009c394ca92dca9d764ed5bc0c6a484556e0893f949035aa603ee"
     }
   ],
   "generated_utc": "2026-05-26T00:00:00Z",
@@ -1534,20 +1552,21 @@
   ],
   "self_exclusion": "file_inventory intentionally excludes STABLE_RELEASE_MANIFEST.json to avoid a self-referential hash cycle; self_hash_sha256 is computed over canonical JSON with self_hash_sha256 set to null.",
   "self_file": "STABLE_RELEASE_MANIFEST.json",
-  "self_hash_sha256": "2eddaaad91f31461e3620180fd54fb9743cafe98fb3a2161e23963daeefddd12",
+  "self_hash_sha256": "c20e80823c8f161c723b5345247d1e269577c6ea7963515546cd8ef05fe68679",
   "validation_commands": [
     "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test",
     "python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence",
     "python3 skills/nozickian-verify/scripts/run_regression_evals.py .",
     "python3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . <target-artifact> --dry-run --skip-prechecks --output-dir ../ntt_release_formal_invocation_dry_run --json ../ntt_release_formal_invocation_dry_run.json",
     "python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json ../ntt_release_formal_runner_contract_results.json",
+    "python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .",
     "optional: claude plugin validate . --strict",
     "optional: skills-ref validate skills/nozickian-verify",
     "optional: python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures",
     "python3 skills/nozickian-verify/scripts/validate_package.py .",
     "python3 - <<'PY'\nfrom pathlib import Path\nroot = Path(\".\").resolve()\ntext = \"\\n\".join(p.read_text(encoding=\"utf-8\", errors=\"replace\") for p in Path(\"self_validation\").rglob(\"*\") if p.is_file())\ntokens = [\n    \"/\" + \"mnt\" + \"/\" + \"data\",\n    \"/\" + \"home\" + \"/\" + \"oai\",\n    \"ntt_v07\" + \"12_work\",\n    \"ntt_v07\" + \"11_work\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"12\",\n    \"nozickian-truth-tracking-agentic-v\" + \"0.7.\" + \"11\",\n    \"v07\" + \"12_targeted_probe_results\",\n    \"v07\" + \"11_targeted_probe_results\",\n    str(root),\n]\nfor token in tokens:\n    assert token not in text, token\nPY",
     "python3 - <<'PY'\nimport json, pathlib\njson.loads(pathlib.Path(\"STABLE_RELEASE_MANIFEST.json\").read_text())\nPY",
-    "promotion-only: python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json"
+    "promotion-contract-v2 modeled check (v1.0.3 remains capped): python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json"
   ],
   "volatile_generated_exclusions": {
     "files": [
@@ -1567,6 +1586,8 @@
       "self_validation/package_validation_report_basic.md",
       "self_validation/package_validation_result.json",
       "self_validation/package_validation_self_test_result.json",
+      "self_validation/promotion_certifier_contract_results.json",
+      "self_validation/promotion_certifier_contract_stdout.json",
       "self_validation/regression_eval_result.json",
       "self_validation/regression_stdout.json",
       "self_validation/trace_auth_smoke_result.json"

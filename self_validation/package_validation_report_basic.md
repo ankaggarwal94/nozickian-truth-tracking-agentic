@@ -1,7 +1,7 @@
 # Team/internal package validation report
 
 **Status:** PASS
-**Checks:** 1429 / 1429 passed
+**Checks:** 1618 / 1618 passed
 **Critical failures:** 0
 
 ## All checks
@@ -14,14 +14,17 @@
 - PASS: no unexpected top-level files
 - PASS: no unexpected top-level directories
 - PASS: only expected team CI workflow present
-- PASS: CI workflow includes validate_package.py . --self-test
-- PASS: CI workflow includes archive_root="$(mktemp -d)"
-- PASS: CI workflow includes git archive --format=tar HEAD | tar -xf - -C "$archive_root"
-- PASS: CI workflow includes validate_package.py" "$archive_root"
-- PASS: CI workflow includes ntt_gate.py self_validation/self_certificate.json --evidence-root .
-- PASS: CI workflow includes run_regression_evals.py .
-- PASS: CI workflow includes run_formal_runner_contract_tests.py .
-- PASS: CI workflow includes run_formal_artifact_verification.py . README.md --dry-run
+- PASS: CI active run step includes validate_package.py . --self-test
+- PASS: CI active run step includes archive_root="$(mktemp -d)"
+- PASS: CI active run step includes git archive --format=tar HEAD | tar -xf - -C "$archive_root"
+- PASS: CI active run step includes validate_package.py" "$archive_root"
+- PASS: CI active run step includes ntt_gate.py self_validation/self_certificate.json --evidence-root .
+- PASS: CI active run step includes run_regression_evals.py .
+- PASS: CI active run step includes run_formal_runner_contract_tests.py .
+- PASS: CI active run step includes run_formal_artifact_verification.py . README.md --dry-run
+- PASS: CI has exactly two active unconditional aggregate commands
+- PASS: CI active checkout aggregate step is exact
+- PASS: CI active archive aggregate step runs inside unpacked root
 - PASS: forbidden root file absent: .lsp.json
 - PASS: forbidden root file absent: .mcp.json
 - PASS: forbidden root file absent: settings.json
@@ -59,6 +62,9 @@
 - PASS: release lock parses
 - PASS: release lock tier is team-internal
 - PASS: release lock plugin name matches
+- PASS: release lock version is exactly 1.0.3
+- PASS: release lock plugin_version is exactly 1.0.3
+- PASS: release lock release_status is exactly PASS-SCOPED
 - PASS: release lock version matches plugin
 - PASS: self certificate artifact version matches plugin
 - PASS: release lock commands listed
@@ -67,6 +73,12 @@
 - PASS: release lock command includes run_regression_evals.py
 - PASS: release lock command includes claude plugin validate
 - PASS: release lock command includes skills-ref validate
+- PASS: release lock requires aggregate promotion contract command
+- PASS: release lock review policy includes 36/36
+- PASS: release lock review policy includes production certifier CLI
+- PASS: release lock review policy includes promotion-contract-v2-complete
+- PASS: release lock review policy includes Issue #8
+- PASS: release lock review policy includes remote issue is closed
 - PASS: release lock formal dry-run avoids package-tree output
 - PASS: release lock records external generated-output path
 - PASS: full tabulated audit report exists
@@ -79,6 +91,8 @@
 - PASS: audit report contains section: Stable release manifest
 - PASS: audit report is tabulated
 - PASS: audit report records PASS-SCOPED and UNVERIFIED_RUNTIME
+- PASS: current promotion evidence record is stable and regular: self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json
+- PASS: current promotion evidence record is stable and regular: self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json
 - PASS: stable release manifest exists
 - PASS: stable release manifest parses
 - PASS: stable release manifest schema recognized
@@ -331,12 +345,16 @@
 - PASS: stable release manifest bytes match: self_validation/evidence/C-github-readme-documentation__docs-hub.json
 - PASS: stable release manifest hash matches: self_validation/evidence/C-github-readme-documentation__validator.json
 - PASS: stable release manifest bytes match: self_validation/evidence/C-github-readme-documentation__validator.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json
 - PASS: stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__certifier.json
 - PASS: stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__certifier.json
 - PASS: stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json
 - PASS: stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-certifier.json
 - PASS: stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json
 - PASS: stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__modal-reference.json
+- PASS: stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json
+- PASS: stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json
 - PASS: stable release manifest hash matches: self_validation/evidence/C-pass-tracked-upgrade-audit__reference.json
 - PASS: stable release manifest bytes match: self_validation/evidence/C-pass-tracked-upgrade-audit__reference.json
 - PASS: stable release manifest hash matches: self_validation/evidence/C-structure__FW-agent-unsupported-key.json
@@ -593,6 +611,8 @@
 - PASS: stable release manifest bytes match: skills/nozickian-verify/scripts/run_gate_contract_tests.py
 - PASS: stable release manifest hash matches: skills/nozickian-verify/scripts/run_live_skill_evals.py
 - PASS: stable release manifest bytes match: skills/nozickian-verify/scripts/run_live_skill_evals.py
+- PASS: stable release manifest hash matches: skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py
+- PASS: stable release manifest bytes match: skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py
 - PASS: stable release manifest hash matches: skills/nozickian-verify/scripts/run_regression_evals.py
 - PASS: stable release manifest bytes match: skills/nozickian-verify/scripts/run_regression_evals.py
 - PASS: stable release manifest hash matches: skills/nozickian-verify/scripts/validate_package.py
@@ -600,11 +620,16 @@
 - PASS: release provenance hygiene has no stale generated artifact or absolute build path tokens
 - PASS: self certificate exists for downstream non-closure check
 - PASS: self certificate parses for downstream non-closure check
+- PASS: self certificate promotion audit envelope is exact
+- PASS: self certificate promotion cap and Issue #5 obligations are exact
 - PASS: self certificate declares downstream non-closure records
 - PASS: package surface policy exists
 - PASS: package surface policy parses
 - PASS: package surface policy root is a JSON object
 - PASS: package surface policy has no unknown top-level keys
+- PASS: package surface package is exact
+- PASS: package surface version is exactly 1.0.3
+- PASS: package surface schema_version is exactly 1.2
 - PASS: package surface tier is team-internal
 - PASS: package surface closed
 - PASS: package surface allowed skills match
@@ -629,6 +654,22 @@
 - PASS: package surface has no allowed/forbidden contradictions
 - PASS: package surface documents formal invocation
 - PASS: package surface declares non-runtime GitHub docs
+- PASS: package surface carries exact promotion invariant: v1.0.3 promotion certificate schema 2.0 uses promoti
+- PASS: package surface carries exact promotion invariant: v1.0.3 formal result 2.0 binds the immutable standal
+- PASS: package surface carries exact promotion invariant: v1.0.3 promotion claims form a nonempty exact-typed
+- PASS: package surface carries exact promotion invariant: v1.0.3 malformed or empty promotion claims and other
+- PASS: package surface carries exact promotion invariant: v1.0.3 official validator decisions and formal trans
+- PASS: package surface carries exact promotion invariant: v1.0.3 caller-supplied certifier/formal output paths
+- PASS: package surface carries exact promotion invariant: v1.0.3 aggregate promotion contracts are synthetic 3
+- PASS: package surface carries exact promotion invariant: v1.0.3 certify_pass_tracked_upgrade.py alone caps ev
+- PASS: package surface records promotion contract: promotion-evidence-v2
+- PASS: package surface records promotion contract: formal result 2.0
+- PASS: package surface records promotion contract: canonical FAIL plus failure_kind
+- PASS: package surface records promotion contract: synthetic 36/36
+- PASS: package surface records promotion contract: promotion-contract-v2-complete
+- PASS: package surface records promotion contract: aggregate-certifier.json
+- PASS: package surface records promotion contract: promotion-v2-reference.json
+- PASS: package surface records promotion contract: run_promotion_certifier_contract_tests.py
 - PASS: root GitHub README exists
 - PASS: root GitHub README is substantive
 - PASS: root GitHub README contains term: Documentation map
@@ -649,6 +690,8 @@
 - PASS: GitHub README docs/README.md contains term: PASS-SCOPED
 - PASS: GitHub README docs/README.md contains term: PASS-TRACKED
 - PASS: GitHub README docs/README.md contains term: closed-surface
+- PASS: GitHub README docs/README.md contains term: synthetic aggregate contract
+- PASS: GitHub README docs/README.md contains term: 36 baseline/negative cases
 - PASS: GitHub README exists: docs/quickstart/README.md
 - PASS: GitHub README substantive: docs/quickstart/README.md
 - PASS: GitHub README has heading: docs/quickstart/README.md
@@ -657,6 +700,8 @@
 - PASS: GitHub README docs/quickstart/README.md contains term: validate_package.py
 - PASS: GitHub README docs/quickstart/README.md contains term: run_live_skill_evals.py
 - PASS: GitHub README docs/quickstart/README.md contains term: UNVERIFIED_RUNTIME
+- PASS: GitHub README docs/quickstart/README.md contains term: run_promotion_certifier_contract_tests.py
+- PASS: GitHub README docs/quickstart/README.md contains term: 36/36
 - PASS: GitHub README exists: docs/audit-model/README.md
 - PASS: GitHub README substantive: docs/audit-model/README.md
 - PASS: GitHub README has heading: docs/audit-model/README.md
@@ -673,6 +718,8 @@
 - PASS: GitHub README docs/evidence/README.md contains term: strict
 - PASS: GitHub README docs/evidence/README.md contains term: SHA-256
 - PASS: GitHub README docs/evidence/README.md contains term: structured evidence
+- PASS: GitHub README docs/evidence/README.md contains term: promotion-evidence-v2
+- PASS: GitHub README docs/evidence/README.md contains term: failure_kind
 - PASS: GitHub README exists: docs/pass-tracked-upgrade/README.md
 - PASS: GitHub README substantive: docs/pass-tracked-upgrade/README.md
 - PASS: GitHub README has heading: docs/pass-tracked-upgrade/README.md
@@ -681,6 +728,9 @@
 - PASS: GitHub README docs/pass-tracked-upgrade/README.md contains term: PASS-TRACKED
 - PASS: GitHub README docs/pass-tracked-upgrade/README.md contains term: certify_pass_tracked_upgrade.py
 - PASS: GitHub README docs/pass-tracked-upgrade/README.md contains term: promotion certificate
+- PASS: GitHub README docs/pass-tracked-upgrade/README.md contains term: promotion-evidence-v2
+- PASS: GitHub README docs/pass-tracked-upgrade/README.md contains term: CAPPED
+- PASS: GitHub README docs/pass-tracked-upgrade/README.md contains term: 36/36
 - PASS: GitHub README exists: docs/runtime-trace-auth/README.md
 - PASS: GitHub README substantive: docs/runtime-trace-auth/README.md
 - PASS: GitHub README has heading: docs/runtime-trace-auth/README.md
@@ -689,6 +739,8 @@
 - PASS: GitHub README docs/runtime-trace-auth/README.md contains term: tool-use
 - PASS: GitHub README docs/runtime-trace-auth/README.md contains term: tool-result
 - PASS: GitHub README docs/runtime-trace-auth/README.md contains term: trace authentication
+- PASS: GitHub README docs/runtime-trace-auth/README.md contains term: formal result `2.0`
+- PASS: GitHub README docs/runtime-trace-auth/README.md contains term: CAPPED
 - PASS: GitHub README exists: docs/security/README.md
 - PASS: GitHub README substantive: docs/security/README.md
 - PASS: GitHub README has heading: docs/security/README.md
@@ -705,6 +757,7 @@
 - PASS: GitHub README docs/development/README.md contains term: update-manifest
 - PASS: GitHub README docs/development/README.md contains term: validator
 - PASS: GitHub README docs/development/README.md contains term: evidence
+- PASS: GitHub README docs/development/README.md contains term: run_promotion_certifier_contract_tests.py
 - PASS: GitHub README exists: docs/release/README.md
 - PASS: GitHub README substantive: docs/release/README.md
 - PASS: GitHub README has heading: docs/release/README.md
@@ -713,6 +766,9 @@
 - PASS: GitHub README docs/release/README.md contains term: MANIFEST.sha256
 - PASS: GitHub README docs/release/README.md contains term: STABLE_RELEASE_MANIFEST.json
 - PASS: GitHub README docs/release/README.md contains term: PASS-SCOPED
+- PASS: GitHub README docs/release/README.md contains term: reproducible-build epoch
+- PASS: GitHub README docs/release/README.md contains term: Issue #8
+- PASS: GitHub README docs/release/README.md contains term: promotion-evidence-v2
 - PASS: GitHub README exists: docs/faq/README.md
 - PASS: GitHub README substantive: docs/faq/README.md
 - PASS: GitHub README has heading: docs/faq/README.md
@@ -721,6 +777,7 @@
 - PASS: GitHub README docs/faq/README.md contains term: PASS-SCOPED
 - PASS: GitHub README docs/faq/README.md contains term: PASS-TRACKED
 - PASS: GitHub README docs/faq/README.md contains term: downstream
+- PASS: GitHub README docs/faq/README.md contains term: Issue #5
 - PASS: GitHub README exists: docs/github/README.md
 - PASS: GitHub README substantive: docs/github/README.md
 - PASS: GitHub README has heading: docs/github/README.md
@@ -731,6 +788,10 @@
 - PASS: GitHub README docs/github/README.md contains term: runtime
 - PASS: self_validation GitHub README exists when self_validation is bundled
 - PASS: self_validation GitHub README substantive
+- PASS: self_validation README contains promotion token: promotion_certifier_contract_results.json
+- PASS: self_validation README contains promotion token: 36/36
+- PASS: self_validation README contains promotion token: synthetic contract evidence
+- PASS: self_validation README contains promotion token: CAPPED
 - PASS: self_validation GitHub README contains term: Self-validation
 - PASS: self_validation GitHub README contains term: self_certificate.json
 - PASS: self_validation GitHub README contains term: evidence
@@ -783,6 +844,7 @@
 - PASS: manifest hash matches: skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py
 - PASS: manifest hash matches: skills/nozickian-verify/scripts/run_gate_contract_tests.py
 - PASS: manifest hash matches: skills/nozickian-verify/scripts/run_live_skill_evals.py
+- PASS: manifest hash matches: skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py
 - PASS: manifest hash matches: skills/nozickian-verify/scripts/run_regression_evals.py
 - PASS: manifest hash matches: skills/nozickian-verify/scripts/validate_package.py
 - PASS: skill frontmatter parses
@@ -806,6 +868,12 @@
 - PASS: skill states closed-surface policy
 - PASS: skill line count within guidance
 - PASS: skill documents formal invocation mode
+- PASS: skill documents promotion contract: promotion-evidence-v2
+- PASS: skill documents promotion contract: formal result `2.0`
+- PASS: skill documents promotion contract: promotion-contract-v2-complete
+- PASS: skill documents promotion contract: run_promotion_certifier_contract_tests.py
+- PASS: certificate template parses for promotion metadata
+- PASS: certificate template carries promotion v2 metadata
 - PASS: STANDARD.md exists
 - PASS: STANDARD.md substantive length
 - PASS: STANDARD.md contains term: claim-level decomposition
@@ -822,6 +890,10 @@
 - PASS: STANDARD.md contains term: derived_or_downstream_claims
 - PASS: STANDARD.md contains term: PASS-TRACKED upgrade audit
 - PASS: STANDARD.md contains term: upgrade from PASS-SCOPED
+- PASS: STANDARD.md contains term: promotion-evidence-v2
+- PASS: STANDARD.md contains term: formal result `2.0`
+- PASS: STANDARD.md contains term: promotion-contract-v2-complete
+- PASS: STANDARD.md contains term: failure_kind
 - PASS: STANDARD.md not obvious nonsense
 - PASS: reference exists: ARTIFACT_GUIDE.md
 - PASS: reference substantive: ARTIFACT_GUIDE.md
@@ -829,8 +901,15 @@
 - PASS: reference substantive: EVAL_BEST_PRACTICES.md
 - PASS: reference exists: EVIDENCE_SCHEMA.md
 - PASS: reference substantive: EVIDENCE_SCHEMA.md
+- PASS: EVIDENCE_SCHEMA.md contains promotion term: promotion-evidence-v2
+- PASS: EVIDENCE_SCHEMA.md contains promotion term: downstream_review
+- PASS: EVIDENCE_SCHEMA.md contains promotion term: failure_kind
 - PASS: reference exists: OUTPUT_TEMPLATES.md
 - PASS: reference substantive: OUTPUT_TEMPLATES.md
+- PASS: OUTPUT_TEMPLATES.md contains promotion term: promotion-evidence-v2
+- PASS: OUTPUT_TEMPLATES.md contains promotion term: downstream_review
+- PASS: OUTPUT_TEMPLATES.md contains promotion term: failure_kind
+- PASS: OUTPUT_TEMPLATES.md promotion skeleton has a complete representative claim
 - PASS: reference exists: PASS_TRACKED_UPGRADE_AUDIT.md
 - PASS: reference substantive: PASS_TRACKED_UPGRADE_AUDIT.md
 - PASS: PASS-TRACKED upgrade audit contains term: PASS-SCOPED to PASS-TRACKED
@@ -847,6 +926,12 @@
 - PASS: PASS-TRACKED upgrade audit contains term: UNVERIFIED_RUNTIME
 - PASS: PASS-TRACKED upgrade audit contains term: downstream
 - PASS: PASS-TRACKED upgrade audit contains term: no automatic
+- PASS: PASS-TRACKED upgrade audit contains term: promotion_schema_version
+- PASS: PASS-TRACKED upgrade audit contains term: promotion-evidence-v2
+- PASS: PASS-TRACKED upgrade audit contains term: formal result `2.0`
+- PASS: PASS-TRACKED upgrade audit contains term: fresh allowlisted official validators
+- PASS: PASS-TRACKED upgrade audit contains term: CAPPED
+- PASS: PASS-TRACKED upgrade audit contains term: 36/36
 - PASS: reference exists: SOURCES.md
 - PASS: reference substantive: SOURCES.md
 - PASS: reference exists: STANDARD.md
@@ -1154,6 +1239,8 @@
 - PASS: script exists: ntt_gate.py
 - PASS: script substantive length: ntt_gate.py
 - PASS: script contains hardening token ntt_gate.py: DEFAULT_THRESHOLDS
+- PASS: script contains hardening token ntt_gate.py: DOWNSTREAM_STATUSES
+- PASS: script contains hardening token ntt_gate.py: unknown downstream policy
 - PASS: script contains hardening token ntt_gate.py: derived_or_downstream_claims
 - PASS: script contains hardening token ntt_gate.py: evaluate_downstream_nonclosure
 - PASS: script contains hardening token ntt_gate.py: automatic closure
@@ -1170,9 +1257,11 @@
 - PASS: script contains hardening token ntt_gate.py: _verify_artifact_sha256
 - PASS: script contains hardening token ntt_gate.py: hash_or_version does not match artifact_path SHA-256
 - PASS: script contains hardening token ntt_gate.py: _ref_to_path_checked
+- PASS: script contains hardening token ntt_gate.py: _canonical_relative_path
+- PASS: script contains hardening token ntt_gate.py: _atomic_write_new_text
 - PASS: script contains hardening token ntt_gate.py: invalid evidence refs
 - PASS: script contains hardening token ntt_gate.py: evidence ref escapes evidence_root
-- PASS: script contains hardening token ntt_gate.py: remote evidence refs are not allowed in strict local evidence mode
+- PASS: script contains hardening token ntt_gate.py: canonical relative POSIX path
 - PASS: script contains hardening token ntt_gate.py: urlparse
 - PASS: script contains hardening token ntt_gate.py: URI schemes are case-insensitive
 - PASS: script contains hardening token ntt_gate.py: non-empty URI scheme
@@ -1215,29 +1304,31 @@
 - PASS: script contains hardening token validate_package.py: compute_stable_release_tree
 - PASS: script contains hardening token validate_package.py: run_release_lock_idempotence_test
 - PASS: script contains hardening token validate_package.py: run_promotion_certifier_contract_probes
-- PASS: script contains hardening token validate_package.py: mismatched-package-tree-sha256
-- PASS: script contains hardening token validate_package.py: external-only formal companion paths
-- PASS: script contains hardening token validate_package.py: shared-transcript-across-fixtures
-- PASS: script contains hardening token validate_package.py: prompt-only-argv
-- PASS: script contains hardening token validate_package.py: missing-plugin-dir-argv
-- PASS: script contains hardening token validate_package.py: wrong-output-format-argv
-- PASS: script contains hardening token validate_package.py: wrong-max-turns-argv
-- PASS: script contains hardening token validate_package.py: extra-fixture-arg
-- PASS: script contains hardening token validate_package.py: swapped-fixture-arg-order
-- PASS: script contains hardening token validate_package.py: wrong-preflight-argv
-- PASS: script contains hardening token validate_package.py: returncode-bool-false-version-preflight
-- PASS: script contains hardening token validate_package.py: validator text nonzero 1-error summary dominates pass
-- PASS: script contains hardening token validate_package.py: artifact-bytes-refreshed-manifests-stale-live
-- PASS: script contains hardening token validate_package.py: fixture-spec-refreshed-manifests-stale-live
-- PASS: script contains hardening token validate_package.py: nonartifact-source-refreshed-manifests-stale-live
-- PASS: script contains hardening token validate_package.py: manifest exclusion cannot hide behavior file
-- PASS: script contains hardening token validate_package.py: fresh validator is unconditional
-- PASS: script contains hardening token validate_package.py: --skip-release-idempotence
-- PASS: script contains hardening token validate_package.py: volatile generated exclusions
+- PASS: script contains hardening token validate_package.py: promotion deterministic projection ignores presentation fields
+- PASS: script contains hardening token validate_package.py: official validator stderr contradiction dominates stdout success
+- PASS: script contains hardening token validate_package.py: promotion evidence paths require raw canonical POSIX syntax
+- PASS: script contains hardening token validate_package.py: promotion evidence graph analysis is iterative for deep input
+- PASS: script contains hardening token validate_package.py: promotion evidence graph rejects oversized input early
+- PASS: script contains hardening token validate_package.py: promotion failure API keeps canonical FAIL status
 - PASS: script contains hardening token validate_package.py: TemporaryDirectory
+- PASS: script contains hardening token validate_package.py: official validator structured stderr failure dominates stdout success
+- PASS: script contains hardening token validate_package.py: official validator mixed JSONL stderr failure dominates stdout success
+- PASS: script contains hardening token validate_package.py: formal trace authentication rejects bool-int aliases
+- PASS: script contains hardening token validate_package.py: formal invalid package identity forbids pass
+- PASS: script contains hardening token validate_package.py: previous_dont_write = sys.dont_write_bytecode
+- PASS: script contains hardening token validate_package.py: active_ci_run_steps
+- PASS: script contains hardening token validate_package.py: ci_condition_is_static_false
+- PASS: script contains hardening token validate_package.py: direct_ci_shell_commands
+- PASS: script contains hardening token validate_package.py: job_statically_disabled
+- PASS: script contains hardening token validate_package.py: EXPECTED_ISSUE_5_UNRESOLVED_OBLIGATIONS
+- PASS: script contains hardening token validate_package.py: EXPECTED_CURRENT_PROMOTION_EVIDENCE_FILES
+- PASS: script contains hardening token validate_package.py: REQUIRED_PROMOTION_SURFACE_INVARIANTS
+- PASS: script contains import-time stdout containment: validate_package.py
 - PASS: script exists: run_gate_contract_tests.py
 - PASS: script substantive length: run_gate_contract_tests.py
 - PASS: script contains hardening token run_gate_contract_tests.py: downstream_claim_auto_pass_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: downstream_unknown_status_
+- PASS: script contains hardening token run_gate_contract_tests.py: unknown_downstream_policy_fails_closed
 - PASS: script contains hardening token run_gate_contract_tests.py: downstream_unverified_record_retains_pass
 - PASS: script contains hardening token run_gate_contract_tests.py: zero_threshold_no_tests_bypass
 - PASS: script contains hardening token run_gate_contract_tests.py: observed_accepts_false
@@ -1246,6 +1337,8 @@
 - PASS: script contains hardening token run_gate_contract_tests.py: valid_structured_evidence_hashes
 - PASS: script contains hardening token run_gate_contract_tests.py: wrong_structured_evidence_hash_rejected
 - PASS: script contains hardening token run_gate_contract_tests.py: artifact_path_escape_rejected
+- PASS: script contains hardening token run_gate_contract_tests.py: noncanonical_evidence_ref_
+- PASS: script contains hardening token run_gate_contract_tests.py: noncanonical_artifact_path_
 - PASS: script contains hardening token run_gate_contract_tests.py: one_of_two_claim_evidence_hashes_wrong_rejected
 - PASS: script contains hardening token run_gate_contract_tests.py: one_of_two_test_evidence_hashes_wrong_rejected
 - PASS: script contains hardening token run_gate_contract_tests.py: evidence_ref_path_escape_rejected
@@ -1267,6 +1360,7 @@
 - PASS: script contains hardening token run_gate_contract_tests.py: missing_true_world_test_id_rejected
 - PASS: script contains hardening token run_gate_contract_tests.py: wildcard_applies_to_tests_does_not_replace_test_id
 - PASS: script contains hardening token run_gate_contract_tests.py: valid_target_claim_ids_list_still_passes
+- PASS: script contains import-time stdout containment: run_gate_contract_tests.py
 - PASS: script exists: run_live_skill_evals.py
 - PASS: script substantive length: run_live_skill_evals.py
 - PASS: script contains hardening token run_live_skill_evals.py: --plugin-dir
@@ -1300,6 +1394,8 @@
 - PASS: script contains hardening token run_live_skill_evals.py: --run-fixtures
 - PASS: script contains hardening token run_live_skill_evals.py: ACCEPTABLE_PASS_STATUSES
 - PASS: script contains hardening token run_live_skill_evals.py: dominant_status
+- PASS: script contains hardening token run_live_skill_evals.py: previous_dont_write = sys.dont_write_bytecode
+- PASS: script contains import-time stdout containment: run_live_skill_evals.py
 - PASS: live harness not obvious pass stub
 - PASS: script exists: run_regression_evals.py
 - PASS: script substantive length: run_regression_evals.py
@@ -1313,6 +1409,12 @@
 - PASS: script substantive length: run_formal_artifact_verification.py
 - PASS: script contains hardening token run_formal_artifact_verification.py: ntt-formal-coordinator
 - PASS: script contains hardening token run_formal_artifact_verification.py: FORMAL_SUBAGENT_FAILURE
+- PASS: script contains hardening token run_formal_artifact_verification.py: FORMAL_COMPANION_SPECS
+- PASS: script contains hardening token run_formal_artifact_verification.py: target_snapshot_stability
+- PASS: script contains hardening token run_formal_artifact_verification.py: cap_status_by_target_stability
+- PASS: script contains hardening token run_formal_artifact_verification.py: atomic_write_new
+- PASS: script contains hardening token run_formal_artifact_verification.py: reserve_regular_output
+- PASS: script contains hardening token run_formal_artifact_verification.py: formal_output_collision_error
 - PASS: script contains hardening token run_formal_artifact_verification.py: certificate.json
 - PASS: script contains hardening token run_formal_artifact_verification.py: ntt_gate.py
 - PASS: script contains hardening token run_formal_artifact_verification.py: INVOCATION_LEDGER
@@ -1348,6 +1450,16 @@
 - PASS: script contains hardening token run_formal_artifact_verification.py: hard event boundary
 - PASS: script contains hardening token run_formal_artifact_verification.py: tool_result.data
 - PASS: script contains hardening token run_formal_artifact_verification.py: payload
+- PASS: script contains hardening token run_formal_artifact_verification.py: FORMAL_VERIFICATION_CONTEXT
+- PASS: script contains hardening token run_formal_artifact_verification.py: TRACE_AUTHENTICATION_FIELDS
+- PASS: script contains hardening token run_formal_artifact_verification.py: load_module_without_bytecode
+- PASS: script contains hardening token run_formal_artifact_verification.py: cap_status_by_package_identity
+- PASS: script contains hardening token run_formal_artifact_verification.py: lexical_directory_ancestor_error
+- PASS: script contains hardening token run_formal_artifact_verification.py: replaceable_regular_output_error
+- PASS: script contains hardening token run_formal_artifact_verification.py: atomic_replace_regular
+- PASS: script contains hardening token run_formal_artifact_verification.py: standalone-immutable-snapshot
+- PASS: script contains hardening token run_formal_artifact_verification.py: PYTHONDONTWRITEBYTECODE
+- PASS: script contains import-time stdout containment: run_formal_artifact_verification.py
 - PASS: formal runner not obvious pass stub
 - PASS: formal runner authenticates stream-json trace
 - PASS: formal runner includes hook events in stream
@@ -1356,8 +1468,12 @@
 - PASS: script exists: certify_pass_tracked_upgrade.py
 - PASS: script substantive length: certify_pass_tracked_upgrade.py
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: PASS-SCOPED to PASS-TRACKED
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: PROMOTION_EVIDENCE_SPECS
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: CHECK_SUITE_PROJECTION_SPECS
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: MAX_EVIDENCE_NODES
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: promotion_certificate.json
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: official validators
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: validator_contradiction
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: live runtime eval
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: live provenance schema is 1.0
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: live runtime executable fingerprints are valid and stable
@@ -1373,14 +1489,15 @@
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: structured JSON envelope
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: observed-not-cryptographically-authenticated
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: formal result
-- PASS: script contains hardening token certify_pass_tracked_upgrade.py: trace authenticated
-- PASS: script contains hardening token certify_pass_tracked_upgrade.py: self-contained regular file
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: formal result package-tree identity has exact JSON schema
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: formal transcript re-authenticates
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: bundle-local regular file
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: package_tree_sha256
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: compute_stable_release_tree
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: current package tree verifies through shared validator helper
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: fresh deterministic package validator still passes
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: fresh_validation_unconditional
-- PASS: script contains hardening token certify_pass_tracked_upgrade.py: evidence refs are unique bundle-local regular files
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: promotion evidence roles exactly match required semantic roles
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: returncode_is_integer_zero
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: TEXT_NONZERO_FAILURE_SUMMARY_RE
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: anchored negative status
@@ -1389,13 +1506,72 @@
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: PASS-TRACKED
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: UNVERIFIED_RUNTIME
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: derived_or_downstream_claims
-- PASS: script contains hardening token certify_pass_tracked_upgrade.py: no automatic downstream pass inheritance
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: evaluate_downstream_nonclosure
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: run-fresh-package-validator
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: allow-official-validator-scope-exclusion
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: strict gate PASS-TRACKED
 - PASS: script contains hardening token certify_pass_tracked_upgrade.py: native stream-json trace authentication
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: failure_kind
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: iterative_evidence_graph_analysis
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: OFFICIAL_POLICY_SCHEMA
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: PROMOTION_CERTIFICATE_SCHEMA
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: PROMOTION_CERTIFICATE_REQUIRED_FIELD_TYPES
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: promotion certificate schema version is exact string 2.0
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: claims must contain at least one promotion claim
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: bool(raw_claim_results)
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: lexical_directory_ancestor_error
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: atomic_replace_regular_text
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: v1.0.3 always emits a non-authorizing PASS-SCOPED/CAPPED result
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: Official executable availability changes only fresh execution evidence
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: validator_stream_semantics
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: json_line_validator_semantics
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: exact_json_equal
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: trace_authentication_schema_valid
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: formal result projected fields have exact JSON types
+- PASS: script contains hardening token certify_pass_tracked_upgrade.py: formal trace authentication has exact JSON schema
+- PASS: script contains import-time stdout containment: certify_pass_tracked_upgrade.py
 - PASS: PASS-TRACKED certifier rejects missing runtime evidence
 - PASS: PASS-TRACKED certifier requires trace and downstream checks
+- PASS: production certifier Issue #5 obligations are exact and ordered
+- PASS: script exists: run_promotion_certifier_contract_tests.py
+- PASS: script substantive length: run_promotion_certifier_contract_tests.py
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: production_certifier_cli_baseline
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: complete_synthetic_baseline_cli_is_capped
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: distinct_formal_roles_may_contain_equal_bytes
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: stale_deterministic_capture_wrong_tree
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: fabricated_official_text_policy
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: decoy_formal_companion
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: swapped_formal_companions
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: dummy_untyped_evidence
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: official_stderr_contradiction_dominates_stdout
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: formal_package_identity_bool_int_alias
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: noncanonical_promotion_evidence_path
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: fake_own_claim_id
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: malformed_scalar
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: oversized_evidence_graph_is_bounded
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: official_structured_stderr_failure_dominates_stdout
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: official_mixed_jsonl_stderr_failure_dominates_stdout
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: formal_trace_authenticated_bool_int_alias
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: formal_transcript_without_authentic_native_events
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: formal_trace_authentication_missing
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: missing_promotion_schema_version
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: wrong_type_promotion_schema_version
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: official_scope_exclusion_retains_fixed_role_dag
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: EXPECTED_PROMOTION_DEPENDENCIES
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: EXPECTED_BASELINE_LANE_COUNTS
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: EXPECTED_CASE_NAMES
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: EXPECTED_POSITIVE_MUTATION_CHECK_INVENTORIES
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: EXPECTED_MUTATION_CHECK_INVENTORIES
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: failed_checks contains a malformed entry
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: detail_matches
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: recorded_detail_matches
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: all_negative_cases_use_production_cli
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: normal_invocation_creates_no_python_bytecode
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: empty_promotion_claims_rejected
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: certifier_json_regular_file_is_atomically_replaced
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: certifier_json_symlinked_ancestor_rejected_without_external_overwrite
+- PASS: script contains hardening token run_promotion_certifier_contract_tests.py: certifier_json_special_target_rejected
+- PASS: script contains import-time stdout containment: run_promotion_certifier_contract_tests.py
 - PASS: script exists: run_formal_runner_contract_tests.py
 - PASS: script substantive length: run_formal_runner_contract_tests.py
 - PASS: script contains hardening token run_formal_runner_contract_tests.py: fake claude
@@ -1403,6 +1579,11 @@
 - PASS: script contains hardening token run_formal_runner_contract_tests.py: PASS-TRACKED
 - PASS: script contains hardening token run_formal_runner_contract_tests.py: trace authentication
 - PASS: script contains hardening token run_formal_runner_contract_tests.py: run_formal_artifact_verification.py
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: target_mutation_forbids_formal_pass
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: target_mutate_restore_metadata_change_forbids_formal_pass
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: formal_runner_rejects_preexisting_output_symlink_sentinel
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: formal_runner_rejects_preexisting_output_hardlink_sentinel
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: formal_runner_rejects_preexisting_special_output
 - PASS: script contains hardening token run_formal_runner_contract_tests.py: native_tool_use_without_results_does_not_authenticate
 - PASS: script contains hardening token run_formal_runner_contract_tests.py: failed_native_result_does_not_authenticate
 - PASS: script contains hardening token run_formal_runner_contract_tests.py: mismatched_tool_result_id_does_not_authenticate
@@ -1433,4 +1614,12 @@
 - PASS: script contains hardening token run_formal_runner_contract_tests.py: assistant_message_tool_result_does_not_authenticate
 - PASS: script contains hardening token run_formal_runner_contract_tests.py: role_inverted_tool_use_result_trace_does_not_authenticate
 - PASS: script contains hardening token run_formal_runner_contract_tests.py: valid_assistant_tool_use_user_tool_result_still_authenticates
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: formal_result_declares_standalone_snapshot_context
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: invalid_package_identity_forbids_formal_pass
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: repeated_plain_validation_creates_no_bytecode_cruft
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: formal_runner_atomically_replaces_regular_compatibility_json
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: formal_runner_rejects_symlinked_output_dir_ancestor
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: formal_runner_rejects_symlinked_compatibility_json_ancestor
+- PASS: script contains hardening token run_formal_runner_contract_tests.py: formal_runner_rejects_special_compatibility_json_target
+- PASS: script contains import-time stdout containment: run_formal_runner_contract_tests.py
 - PASS: formal runner contract test is substantive

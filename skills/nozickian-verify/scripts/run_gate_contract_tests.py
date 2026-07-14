@@ -15,9 +15,11 @@ of Nozickian verification. v0.7.2 hardens strict local evidence semantics:
 """
 from __future__ import annotations
 import argparse
+import contextlib
 import copy
 import hashlib
 import importlib.util
+import io
 import json
 import re
 import sys
@@ -45,7 +47,16 @@ def load_gate(gate_path: Path):
         raise RuntimeError(f"cannot import {gate_path}")
     mod = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = mod
-    spec.loader.exec_module(mod)  # type: ignore[attr-defined]
+    previous_dont_write = sys.dont_write_bytecode
+    import_stdout = io.StringIO()
+    try:
+        sys.dont_write_bytecode = True
+        # SECURITY-REVIEW: The fixed package-local gate executes at import
+        # time. Contain stdout so this contract CLI emits one JSON document.
+        with contextlib.redirect_stdout(import_stdout):
+            spec.loader.exec_module(mod)  # type: ignore[attr-defined]
+    finally:
+        sys.dont_write_bytecode = previous_dont_write
     return mod
 
 
@@ -264,10 +275,50 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
                 out.append(clean(f"{cid}: {reason}"))
         return out[:12]
 
-    def add(name: str, cert: Dict[str, Any], allowed: Set[str]) -> None:
+    def add(
+        name: str,
+        cert: Dict[str, Any],
+        allowed: Set[str],
+        *,
+        downstream_policy: str = "generic",
+        reason_contains: tuple[str, ...] = (),
+    ) -> None:
+        result = gate_mod.evaluate_certificate(
+            cert,
+            downstream_policy=downstream_policy,
+        )
+        status = result.get("status")
+        reasons = summarize(result)
+        cases.append(
+            {
+                "name": name,
+                "status": status,
+                "expected_any": sorted(allowed),
+                "passed": status in allowed
+                and all(
+                    any(expected in reason for reason in reasons)
+                    for expected in reason_contains
+                ),
+                "reasons": reasons,
+            }
+        )
+
+    def add_invalid(name: str, cert: Any) -> None:
         result = gate_mod.evaluate_certificate(cert)
         status = result.get("status")
-        cases.append({"name": name, "status": status, "expected_any": sorted(allowed), "passed": status in allowed, "reasons": summarize(result)})
+        cases.append(
+            {
+                "name": name,
+                "status": status,
+                "expected_any": ["INVALID_INPUT"],
+                "passed": (
+                    status == "INVALID_INPUT"
+                    and isinstance(result.get("reasons"), list)
+                    and bool(result.get("reasons"))
+                ),
+                "reasons": summarize(result),
+            }
+        )
 
     def add_strict(
         name: str,
@@ -295,7 +346,7 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
                 ref_value = "/tmp/ntt_gate_absolute_ref_probe.json"
                 try:
                     Path(ref_value).write_text(external_path.read_text(encoding="utf-8"), encoding="utf-8")
-                except Exception:
+                except (OSError, UnicodeError):
                     pass
             else:
                 ref_value = external_ref
@@ -319,7 +370,7 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         })
 
     def add_strict_same_artifact(name: str, cert: Dict[str, Any], allowed: Set[str]) -> None:
-        evidence_root, outside_root = write_structured_evidence_tree(cert)
+        evidence_root, _outside_root = write_structured_evidence_tree(cert)
         refs = list(cert["claims"][0].get("evidence_refs", []))
         if len(refs) >= 2:
             first = evidence_root / refs[0]
@@ -341,8 +392,55 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
             "reasons": summarize(result),
         })
 
+    def add_noncanonical_path(
+        name: str,
+        *,
+        evidence_ref: Optional[str] = None,
+        artifact_path: Optional[str] = None,
+    ) -> None:
+        cert = copy.deepcopy(base)
+        evidence_root, _outside_root = write_structured_evidence_tree(cert)
+        original_ref = cert["claims"][0]["evidence_refs"][0]
+        if evidence_ref is not None:
+            cert["claims"][0]["evidence_refs"][0] = evidence_ref
+        if artifact_path is not None:
+            evidence_file = evidence_root / original_ref
+            evidence_data = json.loads(evidence_file.read_text(encoding="utf-8"))
+            evidence_data["artifact_path"] = artifact_path
+            evidence_file.write_text(
+                json.dumps(evidence_data, indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+        result = gate_mod.evaluate_certificate(
+            cert,
+            evidence_root=evidence_root,
+            strict_evidence=True,
+        )
+        reasons = summarize(result)
+        cases.append(
+            {
+                "name": name,
+                "status": result.get("status"),
+                "expected_any": ["FAIL"],
+                "passed": result.get("status") == "FAIL",
+                "evidence_root": "<temporary strict-evidence root>",
+                "outside_root": "<temporary outside-root probe>",
+                "reasons": reasons,
+            }
+        )
+
     base = valid_cert()
     add("valid_substantive_certificate", copy.deepcopy(base), {"PASS-TRACKED"})
+    add_invalid("non_object_certificate_is_invalid_input", 7)
+    malformed_claims = copy.deepcopy(base)
+    malformed_claims["claims"] = "not-a-list"
+    add_invalid("non_list_claims_is_invalid_input", malformed_claims)
+    malformed_claim_entry = copy.deepcopy(base)
+    malformed_claim_entry["claims"].append(7)
+    add_invalid(
+        "non_object_claim_entry_is_invalid_input",
+        malformed_claim_entry,
+    )
     add_strict("valid_structured_evidence_hashes", copy.deepcopy(base), {"PASS-TRACKED"})
     add_strict("wrong_structured_evidence_hash_rejected", copy.deepcopy(base), {"FAIL"}, wrong_refs={ev("FW-001")})
     add_strict("artifact_path_escape_rejected", copy.deepcopy(base), {"FAIL"}, artifact_escape_refs={ev("FW-002")})
@@ -448,6 +546,36 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     external_valid["claims"][0]["evidence_refs"] = ["../ntt_gate_external_valid_ref/evidence.json", ev("ntt-gate-source")]
     add_strict("external_ref_with_valid_artifact_hash_rejected", external_valid, {"FAIL"}, external_ref="../ntt_gate_external_valid_ref/evidence.json")
 
+    canonical_ref = base["claims"][0]["evidence_refs"][0]
+    for case_name, variant in (
+        ("dot_component", f"./{canonical_ref}"),
+        ("repeated_separator", canonical_ref.replace("/", "//", 1)),
+        ("trailing_separator", f"{canonical_ref}/"),
+        ("backslash_separator", canonical_ref.replace("/", "\\", 1)),
+    ):
+        add_noncanonical_path(
+            f"noncanonical_evidence_ref_{case_name}_rejected",
+            evidence_ref=variant,
+        )
+
+    canonical_artifact = f"observations/{Path(canonical_ref).stem}.txt"
+    for case_name, variant in (
+        ("dot_component", f"./{canonical_artifact}"),
+        (
+            "repeated_separator",
+            canonical_artifact.replace("/", "//", 1),
+        ),
+        ("trailing_separator", f"{canonical_artifact}/"),
+        (
+            "backslash_separator",
+            canonical_artifact.replace("/", "\\", 1),
+        ),
+    ):
+        add_noncanonical_path(
+            f"noncanonical_artifact_path_{case_name}_rejected",
+            artifact_path=variant,
+        )
+
     remote = copy.deepcopy(base)
     remote["claims"][0]["evidence_refs"].append(REMOTE_EVIDENCE_REF)
     add_strict("remote_ref_rejected_in_strict_local_mode", remote, {"FAIL"})
@@ -478,6 +606,136 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         "reason": "Improper automatic closure from C-001."
     }]
     add("downstream_claim_auto_pass_rejected", downstream_auto_pass, {"FAIL"})
+
+    downstream_source_alias = copy.deepcopy(base)
+    downstream_source_alias["derived_or_downstream_claims"] = [{
+        "id": "D-OWN-SOURCE",
+        "from_claim_ids": ["C-001"],
+        "derived_claim": "The source claim automatically proves its own downstream consequence.",
+        "status": "PASS-TRACKED",
+        "own_claim_id": "C-001",
+        "reason": "A source claim is not a distinct downstream evaluation.",
+    }]
+    add(
+        "downstream_pass_cannot_alias_source_claim",
+        downstream_source_alias,
+        {"FAIL"},
+    )
+
+    downstream_scalar_own_claim = copy.deepcopy(base)
+    downstream_scalar_own_claim["derived_or_downstream_claims"] = [{
+        "id": "D-SCALAR-OWN",
+        "from_claim_ids": ["C-001"],
+        "derived_claim": "A scalar identifier must not be coerced into a claim ID.",
+        "status": "PASS-TRACKED",
+        "own_claim_id": 123,
+        "reason": "Malformed untrusted downstream identifier.",
+    }]
+    add(
+        "downstream_non_string_own_claim_id_rejected",
+        downstream_scalar_own_claim,
+        {"FAIL"},
+    )
+
+    for unknown_status in ("SUCCESS", "VALID", "ACCEPTED"):
+        unknown_downstream_status = copy.deepcopy(base)
+        unknown_downstream_status["derived_or_downstream_claims"] = [{
+            "id": f"D-UNKNOWN-{unknown_status}",
+            "from_claim_ids": ["C-001"],
+            "derived_claim": "An unknown status token must not close this claim.",
+            "status": unknown_status,
+            "reason": "The status vocabulary is closed.",
+        }]
+        add(
+            f"downstream_unknown_status_{unknown_status.lower()}_rejected",
+            unknown_downstream_status,
+            {"FAIL"},
+            reason_contains=("uses unsupported status",),
+        )
+
+    downstream_independent = copy.deepcopy(base)
+    independent_claim = copy.deepcopy(base["claims"][0])
+    independent_claim["id"] = "C-DOWNSTREAM-001"
+    independent_claim["text"] = (
+        "The downstream production-readiness claim was independently evaluated."
+    )
+    for test in (
+        independent_claim["false_world_tests"]
+        + independent_claim["true_world_tests"]
+    ):
+        test["target_claim"] = "C-DOWNSTREAM-001"
+    downstream_independent["claims"].append(independent_claim)
+    downstream_independent["derived_or_downstream_claims"] = [{
+        "id": "D-INDEPENDENT",
+        "from_claim_ids": ["C-001"],
+        "derived_claim": (
+            "The production-readiness consequence was independently evaluated."
+        ),
+        "status": "PASS-TRACKED",
+        "own_claim_id": "C-DOWNSTREAM-001",
+        "reason": "The distinct claim record carries its own complete evaluation.",
+    }]
+    add(
+        "downstream_independent_pass_needs_no_undocumented_backlink",
+        downstream_independent,
+        {"PASS-TRACKED"},
+    )
+
+    unknown_policy = gate_mod.evaluate_certificate(
+        copy.deepcopy(base),
+        downstream_policy="promotion-v2-typo",
+    )
+    unknown_policy_reasons = summarize(unknown_policy)
+    cases.append(
+        {
+            "name": "unknown_downstream_policy_fails_closed",
+            "status": unknown_policy.get("status"),
+            "expected_any": ["INVALID_INPUT"],
+            "passed": (
+                unknown_policy.get("status") == "INVALID_INPUT"
+                and any(
+                    "unknown downstream policy" in reason
+                    for reason in unknown_policy_reasons
+                )
+            ),
+            "reasons": unknown_policy_reasons,
+        }
+    )
+
+    promotion_missing_review = copy.deepcopy(base)
+    add(
+        "promotion_policy_requires_downstream_review",
+        promotion_missing_review,
+        {"FAIL"},
+        downstream_policy="promotion-v2",
+    )
+
+    promotion_missing_none_reason = copy.deepcopy(base)
+    promotion_missing_none_reason["downstream_review"] = {
+        "performed": True,
+        "claims_identified": [],
+    }
+    add(
+        "promotion_policy_empty_review_requires_reason",
+        promotion_missing_none_reason,
+        {"FAIL"},
+        downstream_policy="promotion-v2",
+    )
+
+    promotion_clean_review = copy.deepcopy(base)
+    promotion_clean_review["downstream_review"] = {
+        "performed": True,
+        "claims_identified": [],
+        "none_identified_reason": (
+            "The explicit downstream review found no derived claims."
+        ),
+    }
+    add(
+        "promotion_policy_clean_empty_review_allowed",
+        promotion_clean_review,
+        {"PASS-TRACKED"},
+        downstream_policy="promotion-v2",
+    )
 
     downstream_unverified = copy.deepcopy(base)
     downstream_unverified["derived_or_downstream_claims"] = [{

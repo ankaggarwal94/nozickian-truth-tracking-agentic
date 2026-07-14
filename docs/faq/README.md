@@ -10,7 +10,7 @@ Some directories are runtime component locations. Adding Markdown files there ca
 
 ## Why is the status still PASS-SCOPED?
 
-The deterministic checks can run without Claude Code, but PASS-TRACKED requires live runtime transcripts and trace authentication. A local pass without live runtime evidence does not track the runtime claim.
+The deterministic checks can run without Claude Code, but PASS-TRACKED requires live runtime transcripts and trace authentication. A local pass without live runtime evidence does not track the runtime claim. Independently, v1.0.3 has a mandatory certifier-only Issue #5 cap: even a complete modeled promotion-v2 profile remains non-authorizing `PASS-SCOPED` / `CAPPED` until both parent-enforced charter obligations are mechanically implemented. Satisfying the live-evidence requirement does not discharge that separate cap.
 
 ## Can a passing trace prove the final answer is correct?
 

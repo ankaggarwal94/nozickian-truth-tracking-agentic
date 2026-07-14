@@ -1,25 +1,31 @@
 #!/usr/bin/env python3
-"""Certify a PASS-SCOPED to PASS-TRACKED upgrade bundle.
+"""Evaluate a promotion-v2 modeled-profile audit bundle.
 
 This script is deliberately conservative. It does not run Claude Code itself; it
 checks an external audit bundle produced by the documented upgrade workflow. It
 rejects dry-runs, missing official validators, missing live fixture evidence,
 missing formal artifact evidence, missing strict-gate PASS-TRACKED status,
 missing native stream-json trace authentication, and downstream automatic
-closure. It is intended to be the final machine-readable guard before a human or
-CI system records a PASS-TRACKED promotion.
+closure. For every complete modeled profile, v1.0.3 always emits a non-authorizing PASS-SCOPED/CAPPED result
+with promotion_authorized false and exit status 2 while the two Issue #5 charter
+obligations remain unresolved. It does not enable a human or CI system to
+record PASS-TRACKED.
 """
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import importlib.util
+import io
 import json
 import os
 import re
+import shutil
 import stat
 import subprocess
 import sys
+import uuid
 from collections import Counter
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
@@ -31,6 +37,51 @@ PASS_SCOPED = "PASS-SCOPED"
 UNVERIFIED_RUNTIME = "UNVERIFIED_RUNTIME"
 FAIL_STATUSES = {"FAIL", "LIMITED", "UNVERIFIED", UNVERIFIED_RUNTIME}
 PASSISH = {PASS_TRACKED, PASS_SCOPED, "PASS"}
+PROMOTION_PROFILE = "promotion-contract-v2-complete"
+PROMOTION_CERTIFICATE_SCHEMA = "2.0"
+PROMOTION_EVIDENCE_SCHEMA = "promotion-evidence-v2"
+DETERMINISTIC_CAPTURE_SCHEMA = "deterministic-capture-v2"
+OFFICIAL_POLICY_SCHEMA = "official-validator-policy-v1"
+FORMAL_RESULT_SCHEMA = "2.0"
+MAX_EVIDENCE_NODES = 16
+MAX_EVIDENCE_DEPENDENCIES = 8
+MAX_EVIDENCE_GRAPH_DEPTH = 8
+MAX_CAPTURE_BYTES = 64 * 1024 * 1024
+PUBLIC_STREAM_BOUND_BYTES = 2048
+ISSUE_5_UNRESOLVED_OBLIGATIONS = [
+    "Issue #5 consistency-sweep activation and resolution mechanics remain parent-enforced.",
+    "Issue #5 REMOTE_GROUND_TRUTH_REQUIRED escalation mechanics remain parent-enforced.",
+]
+PROMOTION_CERTIFICATE_REQUIRED_FIELD_TYPES = {
+    "upgrade_from_status": str,
+    "requested_status": str,
+    "package_version": str,
+    "package_tree_sha256": str,
+    "method_m_upgrade": dict,
+    "live_result_bindings": dict,
+    "evidence": dict,
+    "claims": list,
+    "derived_or_downstream_claims": list,
+    "downstream_review": dict,
+}
+PROMOTION_CERTIFICATE_OPTIONAL_FIELD_TYPES = {
+    "origin": str,
+    "scope_limitations": list,
+}
+PROMOTION_CLAIM_REQUIRED_FIELD_TYPES = {
+    "id": str,
+    "text": str,
+    "importance": str,
+    "artifact_location": str,
+    "truth_status": str,
+    "method_m": dict,
+    "evidence_refs": list,
+    "false_world_tests": list,
+    "true_world_tests": list,
+    "unresolved_contradictions": list,
+    "residual_risks": list,
+}
+PROMOTION_CLAIM_ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_.:-]{0,127}$")
 LIVE_PROVENANCE_SCHEMA_VERSION = "1.0"
 CLAUDE_VERSION_RE = re.compile(r"\b\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?\b")
 REQUIRED_NATIVE_AGENTS = [
@@ -42,27 +93,71 @@ REQUIRED_NATIVE_AGENTS = [
     "ntt-true-world-adherence",
     "ntt-gate-auditor",
 ]
-DETERMINISTIC_FILES = {
-    "package_validation": "deterministic/package_validation.json",
-    "gate_result": "deterministic/gate_result.json",
-    "regression": "deterministic/regression_eval_result.json",
-    "gate_contract": "deterministic/gate_contract_results.json",
-    "formal_contract": "deterministic/formal_runner_contract_results.json",
-    "manifest_check": "deterministic/manifest_check.txt",
+PROMOTION_EVIDENCE_SPECS: Dict[str, Dict[str, Any]] = {
+    "deterministic.package_validation": {
+        "kind": "deterministic",
+        "suite": "package_validation",
+        "path": "deterministic/package_validation.json",
+        "depends_on": (),
+    },
+    "deterministic.gate_result": {
+        "kind": "deterministic",
+        "suite": "gate_result",
+        "path": "deterministic/gate_result.json",
+        "depends_on": ("deterministic.package_validation",),
+    },
+    "deterministic.regression": {
+        "kind": "deterministic",
+        "suite": "regression",
+        "path": "deterministic/regression_eval_result.json",
+        "depends_on": ("deterministic.package_validation",),
+    },
+    "deterministic.gate_contract": {
+        "kind": "deterministic",
+        "suite": "gate_contract",
+        "path": "deterministic/gate_contract_results.json",
+        "depends_on": ("deterministic.gate_result",),
+    },
+    "deterministic.formal_contract": {
+        "kind": "deterministic",
+        "suite": "formal_contract",
+        "path": "deterministic/formal_runner_contract_results.json",
+        "depends_on": ("deterministic.gate_contract",),
+    },
+    "official.claude_plugin_validate": {
+        "kind": "official-policy",
+        "validator_id": "claude_plugin_validate",
+        "executable": "claude",
+        "executable_label": "<claude-cli>",
+        "path": "official_validators/claude_plugin_validate.policy.json",
+        "depends_on": ("deterministic.package_validation",),
+    },
+    "official.skills_ref_validate": {
+        "kind": "official-policy",
+        "validator_id": "skills_ref_validate",
+        "executable": "skills-ref",
+        "executable_label": "<skills-ref-cli>",
+        "path": "official_validators/skills_ref_validate.policy.json",
+        "depends_on": ("deterministic.package_validation",),
+    },
+    "live.runtime": {
+        "kind": "live",
+        "path": "live_fixtures/live_runtime_eval_result.json",
+        "depends_on": (
+            "deterministic.package_validation",
+            "official.claude_plugin_validate",
+        ),
+    },
+    "formal.result": {
+        "kind": "formal",
+        "path": None,
+        "depends_on": ("live.runtime", "deterministic.gate_result"),
+    },
 }
-OFFICIAL_VALIDATOR_CANDIDATES = {
-    "claude_plugin_validate": [
-        "official_validators/claude_plugin_validate.json",
-        "official_validators/claude_plugin_validate.txt",
-        "official_validators/plugin_validate.json",
-        "official_validators/plugin_validate.txt",
-    ],
-    "skills_ref_validate": [
-        "official_validators/skills_ref_validate.json",
-        "official_validators/skills_ref_validate.txt",
-        "official_validators/skill_validate.json",
-        "official_validators/skill_validate.txt",
-    ],
+DETERMINISTIC_FILES = {
+    str(spec["suite"]): str(spec["path"])
+    for spec in PROMOTION_EVIDENCE_SPECS.values()
+    if spec["kind"] == "deterministic"
 }
 
 
@@ -72,6 +167,7 @@ class Check:
     passed: bool
     severity: str = "critical"
     details: Any = None
+    failure_kind: str = "CHECK_FAILED"
 
 
 def sha256_path(path: Path) -> str:
@@ -110,6 +206,70 @@ def directory_error(path: Path) -> Optional[str]:
     return None
 
 
+def lexical_directory_ancestor_error(path: Path) -> Optional[str]:
+    """Reject existing non-directory or symlink ancestors without resolving."""
+    absolute = Path(os.path.abspath(path))
+    for ancestor in reversed(absolute.parents):
+        try:
+            mode = ancestor.lstat().st_mode
+        except FileNotFoundError:
+            break
+        except OSError as exc:
+            return f"{type(exc).__name__} while inspecting output ancestors"
+        if stat.S_ISLNK(mode):
+            return "output path has a symbolic link ancestor"
+        if not stat.S_ISDIR(mode):
+            return "output path has a non-directory ancestor"
+    return None
+
+
+def atomic_replace_regular_text(path: Path, text: str) -> None:
+    """Atomically create or replace one private regular output."""
+    # SECURITY-REVIEW: CLI output paths are caller-controlled. Every existing
+    # lexical ancestor plus the final target is lstat-checked without resolving
+    # links. Replacing an explicitly supplied existing private regular file is
+    # intentional CLI regeneration behavior: payload bytes are written to a
+    # same-directory O_EXCL/O_NOFOLLOW temporary and os.replace swaps directory
+    # entries without opening or following the final target.
+    ancestor_error = lexical_directory_ancestor_error(path)
+    if ancestor_error is not None:
+        raise ValueError(f"unsafe output path: {ancestor_error}")
+    parent_error = directory_error(path.parent)
+    if parent_error is not None:
+        raise ValueError(f"unsafe output parent: {parent_error}")
+    if os.path.lexists(path):
+        metadata = path.lstat()
+        if stat.S_ISLNK(metadata.st_mode):
+            raise ValueError("unsafe output target is a symbolic link")
+        if not stat.S_ISREG(metadata.st_mode):
+            raise ValueError("unsafe output target is not a regular file")
+        if metadata.st_nlink != 1:
+            raise ValueError("unsafe output target is a hardlink alias")
+    temporary = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor: Optional[int] = None
+    try:
+        descriptor = os.open(temporary, flags, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            descriptor = None
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        metadata = path.lstat()
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+            raise ValueError("installed output is not a private regular file")
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+
+
 def read_regular_text(
     path: Path,
     *,
@@ -132,15 +292,11 @@ def try_load_json(path: Path) -> Tuple[Optional[Any], Optional[str]]:
     try:
         return load_json(path), None
     except Exception as exc:
-        return None, repr(exc)
+        return None, f"{type(exc).__name__}: invalid or unreadable JSON"
 
 
 def relpath(root: Path, path: Path) -> str:
     return os.path.relpath(path, root).replace(os.sep, "/")
-
-
-def path_lexists(path: Path) -> bool:
-    return os.path.lexists(path)
 
 
 def walk_tree_no_follow(
@@ -160,7 +316,11 @@ def walk_tree_no_follow(
             with os.scandir(current) as scan:
                 entries = sorted(scan, key=lambda entry: entry.name)
         except OSError as exc:
-            yield current, "unreadable-directory", repr(exc)
+            yield (
+                current,
+                "unreadable-directory",
+                f"{type(exc).__name__}: directory unreadable",
+            )
             continue
         child_dirs: List[Path] = []
         for entry in entries:
@@ -168,7 +328,11 @@ def walk_tree_no_follow(
             try:
                 mode = entry.stat(follow_symlinks=False).st_mode
             except OSError as exc:
-                yield path, "unreadable", repr(exc)
+                yield (
+                    path,
+                    "unreadable",
+                    f"{type(exc).__name__}: entry unreadable",
+                )
                 continue
             if stat.S_ISLNK(mode):
                 yield path, "symlink", "symbolic link"
@@ -213,6 +377,10 @@ TEXT_NONZERO_FAILURE_SUMMARY_RE = re.compile(
     re.I,
 )
 TEXT_ZERO_FAILED_RE = re.compile(r"^\s*0\s+failed(?:\s|$)", re.I)
+ANSI_ESCAPE_RE = re.compile(
+    r"(?:\x1B[@-_][0-?]*[ -/]*[@-~]|\x1B\][^\x07]*(?:\x07|\x1B\\))"
+)
+CLAUDE_PLUGIN_SUCCESS_RE = re.compile(r"^\s*✔\s+Validation passed\s*$")
 
 
 def returncode_is_integer_zero(value: Any) -> bool:
@@ -252,35 +420,638 @@ def load_module(name: str, path: Path) -> Any:
         raise RuntimeError(f"cannot import {path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[name] = module
-    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    previous_dont_write = sys.dont_write_bytecode
+    import_stdout = io.StringIO()
+    try:
+        # Package verification must not mutate the tree it is measuring.
+        sys.dont_write_bytecode = True
+        # SECURITY-REVIEW: Fixed package-local validators execute at import
+        # time. Contain stdout so certification emits one JSON document.
+        with contextlib.redirect_stdout(import_stdout):
+            spec.loader.exec_module(module)  # type: ignore[union-attr]
+    finally:
+        sys.dont_write_bytecode = previous_dont_write
     return module
+
+
+def _captured_stream_fields(raw: bytes, name: str) -> Dict[str, Any]:
+    return {
+        name: raw.decode("utf-8", errors="replace"),
+        f"_{name}_bytes": raw,
+        f"{name}_bytes": len(raw),
+        f"{name}_sha256": f"sha256:{hashlib.sha256(raw).hexdigest()}",
+        f"{name}_truncated": len(raw) > PUBLIC_STREAM_BOUND_BYTES,
+    }
 
 
 def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None, timeout: int = 900) -> Dict[str, Any]:
     try:
         # SECURITY-REVIEW: The certifier constructs fixed argv for the
-        # package-local validator and never invokes a shell.
-        proc = subprocess.run(list(cmd), cwd=str(cwd) if cwd else None, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
-        return {"cmd": list(cmd), "returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr[-50000:]}
+        # package-local validator and never invokes a shell. Full raw streams
+        # remain in-memory for decisions and exact hashes; no untrusted stream
+        # content is copied into the final machine result.
+        process_env = os.environ.copy()
+        process_env["PYTHONDONTWRITEBYTECODE"] = "1"
+        proc = subprocess.run(
+            list(cmd),
+            cwd=str(cwd) if cwd else None,
+            env=process_env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=timeout,
+            check=False,
+        )
+        stdout_raw = bytes(proc.stdout or b"")
+        stderr_raw = bytes(proc.stderr or b"")
+        capture_limit_exceeded = (
+            len(stdout_raw) > MAX_CAPTURE_BYTES
+            or len(stderr_raw) > MAX_CAPTURE_BYTES
+        )
+        return {
+            "cmd": list(cmd),
+            "returncode": proc.returncode,
+            **_captured_stream_fields(stdout_raw, "stdout"),
+            **_captured_stream_fields(stderr_raw, "stderr"),
+            "capture_limit_exceeded": capture_limit_exceeded,
+        }
     except subprocess.TimeoutExpired as exc:
-        return {"cmd": list(cmd), "returncode": 124, "stdout": str(exc.stdout or "")[-50000:], "stderr": "timeout"}
+        stdout_raw = (
+            exc.stdout
+            if isinstance(exc.stdout, bytes)
+            else str(exc.stdout or "").encode("utf-8", errors="replace")
+        )
+        stderr_raw = (
+            exc.stderr
+            if isinstance(exc.stderr, bytes)
+            else str(exc.stderr or "").encode("utf-8", errors="replace")
+        )
+        return {
+            "cmd": list(cmd),
+            "returncode": 124,
+            **_captured_stream_fields(stdout_raw, "stdout"),
+            **_captured_stream_fields(stderr_raw, "stderr"),
+            "capture_limit_exceeded": (
+                len(stdout_raw) > MAX_CAPTURE_BYTES
+                or len(stderr_raw) > MAX_CAPTURE_BYTES
+            ),
+            "timed_out": True,
+        }
     except Exception as exc:
-        return {"cmd": list(cmd), "returncode": 125, "stdout": "", "stderr": repr(exc)}
+        stderr_raw = (
+            f"{type(exc).__name__}: command execution failed"
+        ).encode("utf-8")
+        return {
+            "cmd": list(cmd),
+            "returncode": 125,
+            **_captured_stream_fields(b"", "stdout"),
+            **_captured_stream_fields(stderr_raw, "stderr"),
+            "capture_limit_exceeded": False,
+        }
 
 
-def status_of(data: Any) -> str:
-    if isinstance(data, Mapping):
-        raw = data.get("status") or data.get("result") or data.get("gate_status")
-        return str(raw or "").strip().upper()
-    text = str(data or "")
-    for token in (PASS_TRACKED, PASS_SCOPED, UNVERIFIED_RUNTIME, "LIMITED", "FAIL", "PASS", "UNVERIFIED"):
-        if re.search(r"\b" + re.escape(token) + r"\b", text, flags=re.I):
-            return token
-    return ""
+def canonical_json_sha256(value: Any) -> str:
+    payload = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
 
 
-def file_status_from_text(path: Path) -> Tuple[bool, str]:
-    text = read_regular_text(path, errors="replace")
+def exact_json_equal(left: Any, right: Any) -> bool:
+    """Compare JSON values without Python bool/int equality aliases."""
+    if type(left) is not type(right):
+        return False
+    if type(left) is dict:
+        return (
+            set(left) == set(right)
+            and all(exact_json_equal(left[key], right[key]) for key in left)
+        )
+    if type(left) is list:
+        return len(left) == len(right) and all(
+            exact_json_equal(left_item, right_item)
+            for left_item, right_item in zip(left, right)
+        )
+    return left == right
+
+
+def _string_list(value: Any) -> bool:
+    return type(value) is list and all(type(item) is str for item in value)
+
+
+def trace_authentication_schema_valid(
+    value: Any,
+    expected_fields: Sequence[str],
+) -> bool:
+    if type(value) is not dict or set(value) != set(expected_fields):
+        return False
+    string_list_fields = (
+        "agent_calls_authenticated",
+        "agent_results_authenticated",
+        "missing_agents",
+        "missing_result_agents",
+        "reasons",
+    )
+    event_list_fields = (
+        "unexpected_native_tool_calls",
+        "role_violations",
+        "evidence_events",
+    )
+    return (
+        type(value.get("authenticated")) is bool
+        and type(value.get("events_seen")) is int
+        and value.get("events_seen") >= 0
+        and type(value.get("saw_general_purpose")) is bool
+        and all(_string_list(value.get(field)) for field in string_list_fields)
+        and all(
+            type(value.get(field)) is list
+            and all(type(item) is dict for item in value.get(field))
+            for field in event_list_fields
+        )
+        and type(value.get("duplicate_tool_use_ids")) is dict
+        and all(
+            type(tool_id) is str and _string_list(agents)
+            for tool_id, agents in value.get("duplicate_tool_use_ids").items()
+        )
+        and type(value.get("result_before_call_ids")) is dict
+        and all(
+            type(tool_id) is str and type(record) is dict
+            for tool_id, record in value.get("result_before_call_ids").items()
+        )
+    )
+
+
+def _formal_command_record_typed(value: Any) -> bool:
+    return (
+        type(value) is dict
+        and set(value)
+        == {
+            "argv",
+            "returncode",
+            "stdout_sha256",
+            "stderr_sha256",
+            "stdout_bytes",
+            "stderr_bytes",
+            "stdout_truncated",
+            "stderr_truncated",
+            "capture_limit_exceeded",
+        }
+        and _string_list(value.get("argv"))
+        and type(value.get("returncode")) is int
+        and type(value.get("stdout_bytes")) is int
+        and value.get("stdout_bytes") >= 0
+        and type(value.get("stderr_bytes")) is int
+        and value.get("stderr_bytes") >= 0
+        and type(value.get("stdout_truncated")) is bool
+        and type(value.get("stderr_truncated")) is bool
+        and type(value.get("capture_limit_exceeded")) is bool
+        and all(
+            type(value.get(field)) is str
+            and bool(re.fullmatch(r"sha256:[0-9a-f]{64}", value.get(field)))
+            for field in ("stdout_sha256", "stderr_sha256")
+        )
+    )
+
+
+def formal_projected_fields_typed(
+    data: Mapping[str, Any],
+    required_agents: Sequence[str],
+) -> bool:
+    expected_keys = {
+        "formal_result_schema_version",
+        "run_id",
+        "status",
+        "reason",
+        "formal_coordinator",
+        "required_native_agents",
+        "package_tree_identity",
+        "target_snapshot_identity",
+        "verification_context",
+        "evidence_root",
+        "companions",
+        "prechecks",
+        "precheck_summary",
+        "commands",
+        "output_checks",
+        "gate_status",
+        "trace_authentication",
+        "output_dir",
+        "plugin_root",
+        "target_artifact",
+    }
+    summary = data.get("precheck_summary")
+    output_checks = data.get("output_checks")
+    return (
+        set(data) == expected_keys
+        and all(
+            type(data.get(field)) is str
+            for field in (
+                "formal_result_schema_version",
+                "run_id",
+                "status",
+                "reason",
+                "formal_coordinator",
+                "evidence_root",
+                "gate_status",
+                "output_dir",
+                "plugin_root",
+                "target_artifact",
+            )
+        )
+        and _string_list(data.get("required_native_agents"))
+        and exact_json_equal(
+            data.get("required_native_agents"),
+            list(required_agents),
+        )
+        and type(data.get("prechecks")) is list
+        and all(
+            _formal_command_record_typed(record)
+            for record in data.get("prechecks")
+        )
+        and type(data.get("commands")) is list
+        and all(
+            _formal_command_record_typed(record)
+            for record in data.get("commands")
+        )
+        and type(summary) is dict
+        and set(summary) == {"total", "failed", "passed", "failed_commands"}
+        and all(
+            type(summary.get(field)) is int
+            for field in ("total", "failed", "passed")
+        )
+        and type(summary.get("failed_commands")) is list
+        and type(output_checks) is list
+        and all(
+            type(check) is dict
+            and type(check.get("name")) is str
+            and type(check.get("passed")) is bool
+            for check in output_checks
+        )
+    )
+
+
+def normalized_argv(
+    cmd: Sequence[str],
+    package_root: Path,
+    executable_label: str = "<python>",
+) -> List[str]:
+    root_text = str(package_root.resolve())
+    normalized: List[str] = []
+    for index, value in enumerate(cmd):
+        item = str(value)
+        if index == 0:
+            normalized.append(executable_label)
+            continue
+        normalized.append(
+            re.sub(
+                re.escape(root_text) + r"(?=$|[\\/])",
+                lambda _match: "<package-root>",
+                item,
+            )
+        )
+    return normalized
+
+
+def command_evidence(
+    result: Mapping[str, Any],
+    package_root: Path,
+    *,
+    executable_label: str = "<python>",
+) -> Dict[str, Any]:
+    stdout = result.get("stdout")
+    stderr = result.get("stderr")
+    cmd = result.get("cmd")
+    stdout_raw = result.get("_stdout_bytes")
+    stderr_raw = result.get("_stderr_bytes")
+    stdout_bytes = (
+        bytes(stdout_raw)
+        if isinstance(stdout_raw, (bytes, bytearray))
+        else stdout.encode("utf-8")
+        if isinstance(stdout, str)
+        else b""
+    )
+    stderr_bytes = (
+        bytes(stderr_raw)
+        if isinstance(stderr_raw, (bytes, bytearray))
+        else stderr.encode("utf-8")
+        if isinstance(stderr, str)
+        else b""
+    )
+    return {
+        "argv": normalized_argv(
+            cmd if isinstance(cmd, list) else [],
+            package_root,
+            executable_label=executable_label,
+        ),
+        "returncode": (
+            result.get("returncode")
+            if type(result.get("returncode")) is int
+            else None
+        ),
+        "stdout_sha256": f"sha256:{hashlib.sha256(stdout_bytes).hexdigest()}",
+        "stderr_sha256": f"sha256:{hashlib.sha256(stderr_bytes).hexdigest()}",
+        "stdout_bytes": len(stdout_bytes),
+        "stderr_bytes": len(stderr_bytes),
+        "stdout_truncated": len(stdout_bytes) > PUBLIC_STREAM_BOUND_BYTES,
+        "stderr_truncated": len(stderr_bytes) > PUBLIC_STREAM_BOUND_BYTES,
+        "capture_limit_exceeded": (
+            result.get("capture_limit_exceeded") is True
+        ),
+    }
+
+
+def _strict_int(
+    data: Mapping[str, Any],
+    field: str,
+    *,
+    minimum: int = 0,
+) -> int:
+    value = data.get(field)
+    if type(value) is not int or value < minimum:
+        raise ValueError(f"{field} is not an integer >= {minimum}")
+    return value
+
+
+def _check_projection(data: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    checks = data.get("checks")
+    if not isinstance(checks, list):
+        raise ValueError("checks is not a list")
+    projection: List[Dict[str, Any]] = []
+    for index, check in enumerate(checks, start=1):
+        if not isinstance(check, Mapping):
+            raise ValueError(f"checks[{index}] is not an object")
+        name = check.get("name")
+        passed = check.get("passed")
+        if type(name) is not str or type(passed) is not bool:
+            raise ValueError(
+                f"checks[{index}] name/passed has an invalid JSON type"
+            )
+        row = {"name": name, "passed": passed}
+        severity = check.get("severity")
+        if severity is not None:
+            if type(severity) is not str:
+                raise ValueError(
+                    f"checks[{index}].severity is not a string"
+                )
+            row["severity"] = severity
+        projection.append(row)
+    return projection
+
+
+CHECK_SUITE_PROJECTION_SPECS = {
+    "package_validation": {
+        "count_fields": (
+            "checks_total",
+            "checks_passed",
+            "critical_failed",
+        ),
+        "failure_count": "critical_failed",
+        "critical_only": True,
+    },
+    "regression": {
+        "count_fields": (
+            "checks_total",
+            "checks_passed",
+            "checks_failed",
+        ),
+        "failure_count": "checks_failed",
+        "critical_only": False,
+    },
+}
+
+
+def deterministic_semantic_projection(
+    suite: str,
+    data: Any,
+) -> Dict[str, Any]:
+    if not isinstance(data, Mapping):
+        raise ValueError(f"{suite} result is not an object")
+    if suite in CHECK_SUITE_PROJECTION_SPECS:
+        spec = CHECK_SUITE_PROJECTION_SPECS[suite]
+        status = data.get("status")
+        if type(status) is not str:
+            raise ValueError(f"{suite}.status is not a string")
+        checks = _check_projection(data)
+        counts = {
+            field: _strict_int(data, field)
+            for field in spec["count_fields"]
+        }
+        if counts["checks_total"] != len(checks):
+            raise ValueError(f"{suite}.checks_total does not match checks")
+        if counts["checks_passed"] != sum(
+            1 for check in checks if check["passed"]
+        ):
+            raise ValueError(f"{suite}.checks_passed does not match checks")
+        expected_failures = sum(
+            1
+            for check in checks
+            if not check["passed"]
+            and (
+                not spec["critical_only"]
+                or check.get("severity") == "critical"
+            )
+        )
+        failure_field = spec["failure_count"]
+        if counts[failure_field] != expected_failures:
+            raise ValueError(
+                f"{suite}.{failure_field} does not match checks"
+            )
+        return {
+            "status": status,
+            "counts": counts,
+            "checks": checks,
+        }
+    if suite == "gate_result":
+        status = data.get("status")
+        summary = data.get("summary")
+        claims = data.get("claim_results")
+        if type(status) is not str or not isinstance(summary, Mapping):
+            raise ValueError("gate result status/summary has invalid type")
+        if not isinstance(claims, list):
+            raise ValueError("gate result claim_results is not a list")
+        summary_fields = {}
+        for field in (
+            "claims",
+            "failed_claims",
+            "critical_failed",
+            "major_failed",
+            "scope_limitations",
+            "certificate_method_unknowns",
+            "derived_or_downstream_claims",
+            "downstream_nonclosure_violations",
+        ):
+            summary_fields[field] = _strict_int(summary, field)
+        claim_projection: List[Dict[str, Any]] = []
+        for index, claim in enumerate(claims, start=1):
+            if not isinstance(claim, Mapping):
+                raise ValueError(
+                    f"gate claim_results[{index}] is not an object"
+                )
+            claim_id = claim.get("claim_id")
+            claim_status = claim.get("status")
+            if type(claim_id) is not str or type(claim_status) is not str:
+                raise ValueError(
+                    f"gate claim_results[{index}] id/status has invalid type"
+                )
+            count_fields = {}
+            for field in (
+                "evidence_count",
+                "structured_evidence_count",
+                "unique_evidence_count",
+                "unique_structured_evidence_count",
+                "unique_artifact_count",
+                "false_world_tests",
+                "true_world_tests",
+            ):
+                count_fields[field] = _strict_int(claim, field)
+            rate_fields: Dict[str, float | int] = {}
+            for field in (
+                "sensitivity_rate",
+                "adherence_rate",
+                "method_completeness",
+            ):
+                value = claim.get(field)
+                if type(value) not in {int, float}:
+                    raise ValueError(
+                        f"gate claim_results[{index}].{field} is not numeric"
+                    )
+                rate_fields[field] = value
+            raw_tests = claim.get("test_results")
+            if not isinstance(raw_tests, list):
+                raise ValueError(
+                    f"gate claim_results[{index}].test_results is not a list"
+                )
+            test_projection: List[Dict[str, Any]] = []
+            for test_index, test in enumerate(raw_tests, start=1):
+                if not isinstance(test, Mapping):
+                    raise ValueError(
+                        "gate claim_results"
+                        f"[{index}].test_results[{test_index}] is not an object"
+                    )
+                test_id = test.get("test_id")
+                kind = test.get("kind")
+                test_status = test.get("status")
+                if not all(
+                    type(value) is str
+                    for value in (test_id, kind, test_status)
+                ):
+                    raise ValueError(
+                        "gate test result id/kind/status has invalid type"
+                    )
+                raw_evidence = test.get("evidence_checks")
+                if not isinstance(raw_evidence, list):
+                    raise ValueError(
+                        "gate test result evidence_checks is not a list"
+                    )
+                evidence_projection: List[Dict[str, Any]] = []
+                for evidence_index, evidence in enumerate(
+                    raw_evidence,
+                    start=1,
+                ):
+                    if not isinstance(evidence, Mapping):
+                        raise ValueError(
+                            "gate evidence check "
+                            f"{index}.{test_index}.{evidence_index} "
+                            "is not an object"
+                        )
+                    ref = evidence.get("ref")
+                    exists = evidence.get("exists")
+                    structured = evidence.get("structured")
+                    artifact_sha = evidence.get("artifact_sha256")
+                    if (
+                        type(ref) is not str
+                        or type(exists) is not bool
+                        or type(structured) is not bool
+                        or (
+                            artifact_sha is not None
+                            and (
+                                type(artifact_sha) is not str
+                                or not re.fullmatch(
+                                    r"[0-9a-f]{64}",
+                                    artifact_sha,
+                                )
+                            )
+                        )
+                    ):
+                        raise ValueError(
+                            "gate evidence check fields have invalid types"
+                        )
+                    evidence_projection.append(
+                        {
+                            "ref": ref,
+                            "exists": exists,
+                            "structured": structured,
+                            "artifact_sha256": artifact_sha,
+                        }
+                    )
+                test_projection.append(
+                    {
+                        "test_id": test_id,
+                        "kind": kind,
+                        "status": test_status,
+                        "evidence": evidence_projection,
+                    }
+                )
+            claim_projection.append(
+                {
+                    "claim_id": claim_id,
+                    "status": claim_status,
+                    "counts": count_fields,
+                    "rates": rate_fields,
+                    "tests": test_projection,
+                }
+            )
+        if summary_fields["claims"] != len(claim_projection):
+            raise ValueError("gate summary claims does not match claim_results")
+        if summary_fields["failed_claims"] != sum(
+            1 for claim in claim_projection if claim["status"] == "FAIL"
+        ):
+            raise ValueError(
+                "gate summary failed_claims does not match claim_results"
+            )
+        return {
+            "status": status,
+            "summary": summary_fields,
+            "claims": claim_projection,
+        }
+    if suite in {"gate_contract", "formal_contract"}:
+        total = _strict_int(data, "total", minimum=1)
+        passed = _strict_int(data, "passed")
+        cases = data.get("cases")
+        if not isinstance(cases, list):
+            raise ValueError(f"{suite}.cases is not a list")
+        projected_cases: List[Dict[str, Any]] = []
+        for index, case in enumerate(cases, start=1):
+            if not isinstance(case, Mapping):
+                raise ValueError(f"{suite}.cases[{index}] is not an object")
+            name = case.get("name")
+            case_passed = case.get("passed")
+            if type(name) is not str or type(case_passed) is not bool:
+                raise ValueError(
+                    f"{suite}.cases[{index}] name/passed has invalid type"
+                )
+            projected = {"name": name, "passed": case_passed}
+            if "status" in case:
+                if type(case.get("status")) is not str:
+                    raise ValueError(
+                        f"{suite}.cases[{index}].status is not a string"
+                    )
+                projected["status"] = case.get("status")
+            projected_cases.append(projected)
+        if total != len(projected_cases):
+            raise ValueError(f"{suite}.total does not match cases")
+        if passed != sum(1 for case in projected_cases if case["passed"]):
+            raise ValueError(f"{suite}.passed does not match cases")
+        return {
+            "total": total,
+            "passed": passed,
+            "cases": projected_cases,
+        }
+    raise ValueError(f"unknown deterministic suite {suite}")
+
+
+def text_validator_status(text: str) -> Tuple[bool, str]:
     lines = text.splitlines()
     if any(TEXT_NEGATIVE_STATUS_RE.match(line) for line in lines):
         return False, "text contains an anchored negative status"
@@ -293,18 +1064,75 @@ def file_status_from_text(path: Path) -> Tuple[bool, str]:
     return False, "no anchored positive status or explicit 0 failed line"
 
 
+def deterministic_suite_commands(
+    package_root: Path,
+) -> Dict[str, List[str]]:
+    scripts = package_root / "skills/nozickian-verify/scripts"
+    validator_cmd = [
+        sys.executable,
+        str(scripts / "validate_package.py"),
+        str(package_root),
+        "--skip-release-idempotence",
+    ]
+    return {
+        "package_validation": validator_cmd,
+        "gate_result": [
+            sys.executable,
+            str(scripts / "ntt_gate.py"),
+            str(package_root / "self_validation/self_certificate.json"),
+            "--evidence-root",
+            str(package_root),
+            "--strict-evidence",
+        ],
+        "regression": [
+            sys.executable,
+            str(scripts / "run_regression_evals.py"),
+            str(package_root),
+        ],
+        "gate_contract": [
+            sys.executable,
+            str(scripts / "run_gate_contract_tests.py"),
+            str(package_root),
+        ],
+        "formal_contract": [
+            sys.executable,
+            str(scripts / "run_formal_runner_contract_tests.py"),
+            str(package_root),
+        ],
+    }
+
+
 def deterministic_checks(
     package_root: Path,
     bundle: Path,
     _run_fresh_compat: bool,
+    execution_evidence: Optional[Dict[str, Any]] = None,
 ) -> List[Check]:
-    """Check bundled outputs and always rerun the current basic validator.
-
-    ``_run_fresh_compat`` preserves the public call/CLI shape used by older
-    automation. It no longer disables the fresh validator because promotion
-    must never rely only on a captured package-validation artifact.
-    """
+    """Freshly execute every deterministic lane and compare typed captures."""
     checks: List[Check] = []
+    commands = deterministic_suite_commands(package_root)
+    tree = package_tree_sha256(package_root)
+    tree_identity = {
+        "algorithm": tree.get("algorithm"),
+        "sha256": (
+            f"sha256:{tree.get('sha256')}"
+            if isinstance(tree.get("sha256"), str)
+            else None
+        ),
+    }
+    checks.append(
+        Check(
+            "fresh deterministic package tree is valid",
+            tree.get("valid") is True,
+            details=tree_identity,
+        )
+    )
+    run_cache: Dict[Tuple[str, ...], Dict[str, Any]] = {}
+    fresh_package_passed = False
+    fresh_package_details: Dict[str, Any] = {
+        "compatibility_flag_requested": bool(_run_fresh_compat),
+        "fresh_validation_unconditional": True,
+    }
     for name, rel in DETERMINISTIC_FILES.items():
         path = bundle / rel
         file_error = regular_file_error(path)
@@ -316,114 +1144,467 @@ def deterministic_checks(
             )
         )
         if file_error is not None:
-            continue
-        if path.suffix == ".json":
-            data, err = try_load_json(path)
-            checks.append(Check(f"deterministic artifact parses: {name}", err is None, details=err or rel))
-            if data is None:
-                continue
-            if name == "package_validation":
-                checks.append(Check("package validation status PASS", data.get("status") == "PASS" and int(data.get("critical_failed", 1)) == 0, details={"status": data.get("status"), "critical_failed": data.get("critical_failed"), "checks": [data.get("checks_passed"), data.get("checks_total")]}))
-            elif name == "gate_result":
-                checks.append(Check("package self-gate does not fail", data.get("status") in {PASS_TRACKED, PASS_SCOPED}, details={"status": data.get("status"), "summary": data.get("summary")}))
-            elif name == "regression":
-                checks.append(Check("regression evals pass", data.get("status") == "PASS" and int(data.get("checks_failed", 0)) == 0, details={"status": data.get("status"), "checks_failed": data.get("checks_failed")}))
-            elif name in {"gate_contract", "formal_contract"}:
-                total = int(data.get("total", 0) or 0)
-                passed = int(data.get("passed", 0) or 0)
-                checks.append(Check(f"{name} suite all cases pass", total > 0 and passed == total, details={"passed": passed, "total": total}))
+            capture: Any = None
+            capture_error = file_error
         else:
-            text = read_regular_text(path, errors="replace")
-            checks.append(Check("behavior manifest check says OK", "FAILED" not in text and "No such file" not in text and bool(text.strip()), details=text[-500:]))
-    validator = package_root / "skills/nozickian-verify/scripts/validate_package.py"
-    validator_error = regular_file_error(validator)
-    if validator_error is None:
-        cmd = [
-            sys.executable,
-            str(validator),
-            str(package_root),
-            "--skip-release-idempotence",
-        ]
-        result = run_cmd(cmd, cwd=package_root)
-        ok = returncode_is_integer_zero(result.get("returncode"))
-        try:
-            parsed = json.loads(result.get("stdout", "{}"))
-            ok = (
-                ok
-                and parsed.get("status") == "PASS"
-                and int(parsed.get("critical_failed", 1)) == 0
+            capture, capture_error = try_load_json(path)
+        checks.append(
+            Check(
+                f"deterministic capture parses as object: {name}",
+                capture_error is None and isinstance(capture, Mapping),
+                details=capture_error,
+                failure_kind="INVALID_INPUT",
             )
-            details: Any = {
-                "returncode": result.get("returncode"),
-                "status": parsed.get("status"),
-                "critical_failed": parsed.get("critical_failed"),
-                "compatibility_flag_requested": bool(_run_fresh_compat),
-                "fresh_validation_unconditional": True,
+        )
+
+        cmd = commands[name]
+        key = tuple(cmd)
+        if key not in run_cache:
+            run_cache[key] = run_cmd(cmd, cwd=package_root)
+        fresh_run = run_cache[key]
+        public_run = command_evidence(fresh_run, package_root)
+        if execution_evidence is not None:
+            execution_evidence[name] = {
+                **public_run,
+                "package_tree_identity": tree_identity,
             }
-        except Exception:
-            details = {
-                "returncode": result.get("returncode"),
-                "stderr": result.get("stderr")[-1000:],
-                "compatibility_flag_requested": bool(_run_fresh_compat),
-                "fresh_validation_unconditional": True,
+        fresh_parsed: Any = None
+        fresh_parse_error: Optional[str] = None
+        try:
+            stdout = fresh_run.get("stdout")
+            if not isinstance(stdout, str):
+                raise ValueError("fresh stdout is not text")
+            fresh_parsed = json.loads(stdout)
+            fresh_projection = deterministic_semantic_projection(
+                name,
+                fresh_parsed,
+            )
+        except Exception as exc:
+            fresh_projection = None
+            fresh_parse_error = f"{type(exc).__name__}: invalid fresh result"
+        fresh_ok = (
+            returncode_is_integer_zero(fresh_run.get("returncode"))
+            and fresh_run.get("capture_limit_exceeded") is False
+            and fresh_projection is not None
+        )
+        if name == "package_validation":
+            fresh_ok = (
+                fresh_ok
+                and fresh_projection.get("status") == "PASS"
+                and fresh_projection.get("counts", {}).get(
+                    "critical_failed"
+                )
+                == 0
+            )
+        elif name == "gate_result":
+            fresh_ok = fresh_ok and fresh_projection.get("status") in {
+                PASS_TRACKED,
+                PASS_SCOPED,
             }
-    else:
-        ok = False
-        details = {
-            "error": validator_error,
-            "compatibility_flag_requested": bool(_run_fresh_compat),
-            "fresh_validation_unconditional": True,
+        elif name == "regression":
+            fresh_ok = (
+                fresh_ok
+                and fresh_projection.get("status") == "PASS"
+                and fresh_projection.get("counts", {}).get("checks_failed")
+                == 0
+            )
+        else:
+            fresh_ok = (
+                fresh_ok
+                and fresh_projection.get("total")
+                == fresh_projection.get("passed")
+            )
+        checks.append(
+            Check(
+                f"fresh deterministic suite passes: {name}",
+                bool(fresh_ok),
+                details={
+                    **public_run,
+                    "projection_error": fresh_parse_error,
+                },
+            )
+        )
+        if name == "package_validation":
+            fresh_package_passed = bool(fresh_ok)
+            fresh_package_details.update(
+                {
+                    "returncode": public_run.get("returncode"),
+                    "status": (
+                        fresh_projection.get("status")
+                        if isinstance(fresh_projection, Mapping)
+                        else None
+                    ),
+                    "critical_failed": (
+                        fresh_projection.get("counts", {}).get(
+                            "critical_failed"
+                        )
+                        if isinstance(fresh_projection, Mapping)
+                        else None
+                    ),
+                }
+            )
+
+        if not isinstance(capture, Mapping):
+            continue
+        capture_keys = {
+            "capture_schema_version",
+            "suite",
+            "argv",
+            "returncode",
+            "package_tree_identity",
+            "stdout_sha256",
+            "result_sha256",
+            "result",
         }
+        captured_tree = capture.get("package_tree_identity")
+        capture_shape_ok = (
+            set(capture) == capture_keys
+            and capture.get("capture_schema_version")
+            == DETERMINISTIC_CAPTURE_SCHEMA
+            and capture.get("suite") == name
+            and isinstance(capture.get("argv"), list)
+            and all(
+                type(item) is str for item in capture.get("argv", [])
+            )
+            and capture.get("argv")
+            == normalized_argv(cmd, package_root)
+            and returncode_is_integer_zero(capture.get("returncode"))
+            and isinstance(captured_tree, Mapping)
+            and set(captured_tree) == {"algorithm", "sha256"}
+            and type(captured_tree.get("algorithm")) is str
+            and type(captured_tree.get("sha256")) is str
+            and capture.get("package_tree_identity") == tree_identity
+            and isinstance(capture.get("result"), Mapping)
+            and isinstance(capture.get("result_sha256"), str)
+            and capture.get("result_sha256")
+            == f"sha256:{canonical_json_sha256(capture.get('result'))}"
+            and isinstance(capture.get("stdout_sha256"), str)
+            and bool(
+                re.fullmatch(
+                    r"sha256:[0-9a-f]{64}",
+                    capture.get("stdout_sha256"),
+                )
+            )
+        )
+        checks.append(
+            Check(
+                f"deterministic capture v2 metadata valid: {name}",
+                capture_shape_ok,
+                details={
+                    "schema": capture.get("capture_schema_version"),
+                    "suite": capture.get("suite"),
+                    "argv": capture.get("argv"),
+                    "package_tree_identity": capture.get(
+                        "package_tree_identity"
+                    ),
+                },
+                failure_kind="INVALID_INPUT",
+            )
+        )
+        if not capture_shape_ok:
+            continue
+        try:
+            capture_projection = deterministic_semantic_projection(
+                name,
+                capture.get("result"),
+            )
+            projection_error = None
+        except Exception as exc:
+            capture_projection = None
+            projection_error = f"{type(exc).__name__}: invalid capture result"
+        checks.append(
+            Check(
+                f"deterministic capture semantic projection matches fresh: {name}",
+                capture_shape_ok
+                and fresh_projection is not None
+                and capture_projection == fresh_projection,
+                details={
+                    "projection_error": projection_error,
+                    "captured_projection_sha256": (
+                        f"sha256:{canonical_json_sha256(capture_projection)}"
+                        if capture_projection is not None
+                        else None
+                    ),
+                    "fresh_projection_sha256": (
+                        f"sha256:{canonical_json_sha256(fresh_projection)}"
+                        if fresh_projection is not None
+                        else None
+                    ),
+                },
+            )
+        )
     checks.append(
         Check(
             "fresh deterministic package validator still passes",
-            ok,
-            details=details,
+            fresh_package_passed,
+            details=fresh_package_details,
         )
     )
     return checks
 
 
-def official_validator_checks(bundle: Path, allow_scope_exclusion: bool) -> List[Check]:
-    checks: List[Check] = []
-    for name, rels in OFFICIAL_VALIDATOR_CANDIDATES.items():
-        found = next((bundle / rel for rel in rels if path_lexists(bundle / rel)), None)
-        if found is None:
-            checks.append(Check(f"official validator present: {name}", allow_scope_exclusion, severity="major" if allow_scope_exclusion else "critical", details="missing official validator output; retaining scope limitation if allowed"))
+def validator_contradiction(text: str) -> Optional[str]:
+    lines = text.splitlines()
+    if any(TEXT_NEGATIVE_STATUS_RE.match(line) for line in lines):
+        return "contains an anchored negative status"
+    if any(TEXT_NONZERO_FAILURE_SUMMARY_RE.match(line) for line in lines):
+        return "contains an anchored nonzero failure summary"
+    return None
+
+
+def json_line_validator_semantics(data: Any) -> Tuple[str, str]:
+    """Classify one top-level JSONL event without trusting nested statuses."""
+    if not isinstance(data, Mapping):
+        return "neutral", "JSON line is not an object"
+    status_values = [
+        value.strip()
+        for field in ("status", "result")
+        for value in [data.get(field)]
+        if type(value) is str
+    ]
+    if any(JSON_NEGATIVE_STATUS_RE.match(value) for value in status_values):
+        return "contradiction", "explicit negative JSON status"
+    if "returncode" in data and not returncode_is_integer_zero(
+        data.get("returncode")
+    ):
+        return "contradiction", "validator JSON returncode is not integer zero"
+    if (
+        any(JSON_POSITIVE_STATUS_RE.fullmatch(value) for value in status_values)
+        and returncode_is_integer_zero(data.get("returncode"))
+    ):
+        return "positive", "returncode zero and anchored positive JSON status"
+    return "neutral", "JSON line has no strict positive or negative result"
+
+
+def normalize_validator_stream(text: str) -> str:
+    """Remove terminal control sequences before strict line classification."""
+    return ANSI_ESCAPE_RE.sub("", text)
+
+
+def validator_stream_semantics(
+    text: str,
+    *,
+    validator_id: Optional[str] = None,
+) -> Tuple[str, str]:
+    """Classify one validator stream through shared strict semantics."""
+    text = normalize_validator_stream(text)
+    if not text.strip():
+        return "neutral", "stream is empty"
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        parsed = None
+    else:
+        positive, reason, _details = json_validator_status(parsed)
+        return ("positive" if positive else "contradiction"), reason
+
+    positive_reasons: List[str] = []
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if not line.strip():
             continue
-        file_error = regular_file_error(found)
-        checks.append(
-            Check(
-                f"official validator is regular file: {name}",
-                file_error is None,
-                details=file_error or relpath(bundle, found),
+        try:
+            line_json = json.loads(line)
+        except json.JSONDecodeError:
+            contradiction = validator_contradiction(line)
+            if contradiction is not None:
+                return (
+                    "contradiction",
+                    f"line {line_number} {contradiction}",
+                )
+            positive, reason = text_validator_status(line)
+            if (
+                not positive
+                and validator_id == "claude_plugin_validate"
+                and CLAUDE_PLUGIN_SUCCESS_RE.fullmatch(line)
+            ):
+                positive = True
+                reason = "exact Claude plugin validation success line"
+            if positive:
+                positive_reasons.append(f"line {line_number} {reason}")
+            continue
+        line_kind, line_reason = json_line_validator_semantics(line_json)
+        if line_kind == "contradiction":
+            return (
+                "contradiction",
+                f"line {line_number} {line_reason}",
             )
-        )
-        if file_error is not None:
-            continue
-        if found.suffix == ".json":
-            data, err = try_load_json(found)
-            checks.append(Check(f"official validator parses: {name}", err is None, details=err or relpath(bundle, found)))
-            if data is None:
-                continue
-            ok, reason, status_details = json_validator_status(data)
+        if line_kind == "positive":
+            positive_reasons.append(f"line {line_number} {line_reason}")
+    if positive_reasons:
+        return "positive", "; ".join(positive_reasons)
+    return "neutral", "stream has no strict positive or negative result"
+
+
+def official_validator_status(
+    stdout: str,
+    stderr: str,
+    *,
+    validator_id: str,
+) -> Tuple[bool, str]:
+    stdout_kind, stdout_reason = validator_stream_semantics(
+        stdout,
+        validator_id=validator_id,
+    )
+    stderr_kind, stderr_reason = validator_stream_semantics(
+        stderr,
+        validator_id=validator_id,
+    )
+    if stderr_kind == "contradiction":
+        return False, f"stderr contradiction: {stderr_reason}"
+    if stdout_kind == "contradiction":
+        return False, f"stdout contradiction: {stdout_reason}"
+    if stdout_kind != "positive":
+        return False, f"stdout is not a strict positive result: {stdout_reason}"
+    return True, "stdout is positive and stderr has no contradiction"
+
+
+def _resolved_executable(name: str) -> Tuple[Optional[Path], Optional[str]]:
+    found = shutil.which(name)
+    if not found:
+        return None, None
+    try:
+        resolved = Path(found).resolve(strict=True)
+    except OSError as exc:
+        return None, f"{type(exc).__name__}: executable resolution failed"
+    error = regular_file_error(resolved)
+    if error:
+        return None, error
+    return resolved, None
+
+
+def official_validator_checks(
+    package_root: Path,
+    _bundle: Path,
+    allow_scope_exclusion: bool,
+    execution_evidence: Optional[Dict[str, Any]] = None,
+) -> List[Check]:
+    checks: List[Check] = []
+    tree = package_tree_sha256(package_root)
+    tree_identity = {
+        "algorithm": tree.get("algorithm"),
+        "sha256": (
+            f"sha256:{tree.get('sha256')}"
+            if isinstance(tree.get("sha256"), str)
+            else None
+        ),
+    }
+    specs = {
+        str(spec["validator_id"]): spec
+        for spec in PROMOTION_EVIDENCE_SPECS.values()
+        if spec.get("kind") == "official-policy"
+    }
+    for name, spec in sorted(specs.items()):
+        if name == "claude_plugin_validate":
+            args = [
+                "plugin",
+                "validate",
+                str(package_root),
+                "--strict",
+            ]
+        elif name == "skills_ref_validate":
+            args = [
+                "validate",
+                str(package_root / "skills/nozickian-verify"),
+            ]
+        else:
             checks.append(
                 Check(
-                    f"official validator passed: {name}",
-                    ok,
-                    details={
-                        "file": relpath(bundle, found),
-                        "reason": reason,
-                        **status_details,
-                    },
+                    f"official validator specification recognized: {name}",
+                    False,
+                    failure_kind="INTERNAL_ERROR",
                 )
             )
-        else:
-            try:
-                ok, reason = file_status_from_text(found)
-            except (OSError, ValueError) as exc:
-                ok, reason = False, repr(exc)
-            checks.append(Check(f"official validator passed: {name}", ok, details={"file": relpath(bundle, found), "reason": reason}))
+            continue
+        executable, executable_error = _resolved_executable(
+            spec["executable"]
+        )
+        if executable is None and executable_error is None:
+            if execution_evidence is not None:
+                execution_evidence[name] = {
+                    "available": False,
+                    "scope_excluded": bool(allow_scope_exclusion),
+                    "package_tree_identity": tree_identity,
+                }
+            checks.append(
+                Check(
+                    f"official validator executable available: {name}",
+                    allow_scope_exclusion,
+                    severity=(
+                        "major" if allow_scope_exclusion else "critical"
+                    ),
+                    details=(
+                        "tool absent and explicitly scope-excluded"
+                        if allow_scope_exclusion
+                        else "tool absent without scope exclusion"
+                    ),
+                )
+            )
+            continue
+        if executable is None:
+            checks.append(
+                Check(
+                    f"official validator executable valid: {name}",
+                    False,
+                    details=executable_error,
+                    failure_kind="INVALID_INPUT",
+                )
+            )
+            continue
+        try:
+            fingerprint_pre = sha256_path(executable)
+        except (OSError, ValueError) as exc:
+            checks.append(
+                Check(
+                    f"official validator executable fingerprinted: {name}",
+                    False,
+                    details=f"{type(exc).__name__}: fingerprint failed",
+                )
+            )
+            continue
+        cmd = [str(executable), *args]
+        # SECURITY-REVIEW: Only allowlisted validator names and fixed argv are
+        # executed. The resolved regular executable is invoked directly with
+        # no shell, and untrusted bundle values never influence argv.
+        fresh = run_cmd(cmd, cwd=package_root)
+        try:
+            fingerprint_post = sha256_path(executable)
+        except (OSError, ValueError):
+            fingerprint_post = None
+        public = command_evidence(
+            fresh,
+            package_root,
+            executable_label=spec["executable_label"],
+        )
+        stdout = fresh.get("stdout")
+        stderr = fresh.get("stderr")
+        status_ok, status_reason = (
+            official_validator_status(stdout, stderr, validator_id=name)
+            if isinstance(stdout, str) and isinstance(stderr, str)
+            else (False, "validator stdout/stderr is not text")
+        )
+        fresh_ok = (
+            returncode_is_integer_zero(fresh.get("returncode"))
+            and fresh.get("capture_limit_exceeded") is False
+            and fingerprint_pre == fingerprint_post
+            and status_ok
+        )
+        fresh_record = {
+            "available": True,
+            **public,
+            "executable_sha256": f"sha256:{fingerprint_pre}",
+            "fingerprint_stable": fingerprint_pre == fingerprint_post,
+            "package_tree_identity": tree_identity,
+            "status_reason": status_reason,
+        }
+        if execution_evidence is not None:
+            execution_evidence[name] = fresh_record
+        checks.append(
+            Check(
+                f"fresh official validator passes: {name}",
+                fresh_ok,
+                details=fresh_record,
+            )
+        )
     return checks
 
 
@@ -497,7 +1678,7 @@ def live_fixture_checks(package_root: Path, bundle: Path) -> List[Check]:
     plugin_name = str(
         plugin.get("name") or "nozickian-truth-tracking-agentic"
     )
-    path = bundle / "live_fixtures/live_runtime_eval_result.json"
+    path = bundle / PROMOTION_EVIDENCE_SPECS["live.runtime"]["path"]
     result_file_error = regular_file_error(path)
     checks.append(
         Check(
@@ -542,7 +1723,9 @@ def live_fixture_checks(package_root: Path, bundle: Path) -> List[Check]:
                     artifact_path
                 )
         except Exception as exc:
-            artifact_error = repr(exc)
+            artifact_error = (
+                f"{type(exc).__name__}: fixture artifact resolution failed"
+            )
         checks.append(
             Check(
                 f"current live fixture artifact is regular and hashable: {fixture_id}",
@@ -615,7 +1798,30 @@ def live_fixture_checks(package_root: Path, bundle: Path) -> List[Check]:
         )
     )
     status = data.get("status")
-    checks.append(Check("live runtime was executed", status not in {None, "", UNVERIFIED_RUNTIME, "UNVERIFIED", "FAIL", "LIMITED"}, details={"status": status, "reason": data.get("reason")}))
+    runtime_status_valid = type(status) is str
+    checks.append(
+        Check(
+            "live runtime status has an exact string type",
+            runtime_status_valid,
+            details=type(status).__name__,
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    checks.append(
+        Check(
+            "live runtime was executed",
+            runtime_status_valid
+            and status
+            not in {
+                "",
+                UNVERIFIED_RUNTIME,
+                "UNVERIFIED",
+                "FAIL",
+                "LIMITED",
+            },
+            details={"status": status, "reason": data.get("reason")},
+        )
+    )
     checks.append(Check("live runtime status is PASS-SCOPED", status == PASS_SCOPED, details=status))
     provenance = data.get("provenance")
     checks.append(
@@ -657,7 +1863,10 @@ def live_fixture_checks(package_root: Path, bundle: Path) -> List[Check]:
             and bool(re.fullmatch(r"[0-9a-f]{64}", executable_sha256_post))
             and executable_sha256 == executable_sha256_pre == executable_sha256_post
             and identity_mapping.get("fingerprint_stable") is True
-            and identity_mapping.get("executable_fingerprint_error") in {None, ""},
+            and (
+                identity_mapping.get("executable_fingerprint_error") is None
+                or identity_mapping.get("executable_fingerprint_error") == ""
+            ),
             details={
                 "executable_sha256": executable_sha256,
                 "executable_sha256_pre": executable_sha256_pre,
@@ -918,7 +2127,9 @@ def live_fixture_checks(package_root: Path, bundle: Path) -> List[Check]:
                 artifact_path = (
                     package_root / "skills/nozickian-verify/evals"
                 )
-                artifact_error = repr(exc)
+                artifact_error = (
+                    f"{type(exc).__name__}: fixture artifact resolution failed"
+                )
             checks.append(
                 Check(
                     f"live fixture {idx} current artifact is a regular file",
@@ -1153,156 +2364,628 @@ def live_fixture_checks(package_root: Path, bundle: Path) -> List[Check]:
     return checks
 
 
-def find_formal_results(bundle: Path) -> Tuple[List[Path], List[Dict[str, Any]]]:
-    root = bundle / "formal_artifacts"
-    paths: Dict[str, Path] = {}
-    unsafe: List[Dict[str, Any]] = []
-    for path, kind, error in walk_tree_no_follow(root):
-        if kind == "regular":
-            if path.name == "formal_result.json" or (
-                "formal_result" in path.name and path.suffix == ".json"
-            ):
-                paths[relpath(bundle, path)] = path
-        elif kind in {"symlink", "special", "unreadable", "unreadable-directory", "invalid"}:
-            unsafe.append(
-                {
-                    "path": relpath(bundle, path),
-                    "kind": kind,
-                    "error": error,
-                }
-            )
-    return [paths[key] for key in sorted(paths)], unsafe
+def formal_result_locator(
+    bundle: Path,
+) -> Tuple[Optional[Path], Optional[str]]:
+    certificate = bundle / "promotion_certificate.json"
+    data, error = try_load_json(certificate)
+    if error is not None or not isinstance(data, Mapping):
+        return None, "promotion certificate is not a parseable object"
+    node = promotion_evidence_nodes(data).get("formal.result")
+    if not isinstance(node, Mapping):
+        return None, "typed promotion locator formal.result is missing"
+    path, path_error, _identity = bundle_regular_file(
+        bundle,
+        node.get("path"),
+    )
+    if path_error is not None:
+        return None, path_error
+    return path, None
 
 
-def matching_regular_files(directory: Path, pattern: str) -> Tuple[List[Path], List[str]]:
-    matches: List[Path] = []
-    errors: List[str] = []
-    try:
-        entries = sorted(directory.iterdir(), key=lambda path: path.name)
-    except OSError as exc:
-        return [], [repr(exc)]
-    for path in entries:
-        if not path.match(pattern):
-            continue
-        file_error = regular_file_error(path)
-        if file_error:
-            errors.append(file_error)
-        else:
-            matches.append(path)
-    return matches, errors
+def _reserved_formal_role(
+    name: str,
+    companion_specs: Mapping[str, str],
+) -> Optional[str]:
+    if name == "formal_result.json":
+        return "formal_result"
+    for role, suffix in companion_specs.items():
+        if len(name) > len(suffix) and name.endswith(suffix):
+            return role
+    return None
 
 
-def formal_artifact_checks(package_root: Path, bundle: Path) -> List[Check]:
+def _expected_formal_companion_name(
+    source_name: Any,
+    role: str,
+    companion_specs: Mapping[str, str],
+) -> Optional[str]:
+    if (
+        type(source_name) is not str
+        or not source_name
+        or Path(source_name).name != source_name
+    ):
+        return None
+    stem = Path(source_name).stem
+    if not stem:
+        return None
+    suffix = companion_specs.get(role)
+    return f"{stem}{suffix}" if suffix is not None else None
+
+
+def formal_artifact_checks(
+    package_root: Path,
+    bundle: Path,
+) -> List[Check]:
+    """Validate exactly one formal-result v2 selected by its typed locator."""
     checks: List[Check] = []
-    results, unsafe = find_formal_results(bundle)
+    result_path, locator_error = formal_result_locator(bundle)
     checks.append(
         Check(
-            "formal artifact tree has no symlink, special, or unreadable inputs",
-            not unsafe,
-            details=unsafe,
+            "typed promotion locator selects one formal_result.json",
+            locator_error is None and result_path is not None,
+            details=locator_error,
+            failure_kind="INVALID_INPUT",
         )
     )
-    checks.append(Check("at least one formal artifact result present", bool(results), details=[relpath(bundle, p) for p in results]))
-    if not results:
+    if result_path is None:
         return checks
-    runner_path = package_root / "skills/nozickian-verify/scripts/run_formal_artifact_verification.py"
-    gate_path = package_root / "skills/nozickian-verify/scripts/ntt_gate.py"
+    data, parse_error = try_load_json(result_path)
+    checks.append(
+        Check(
+            "typed formal result parses as object",
+            parse_error is None and isinstance(data, Mapping),
+            details=parse_error,
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    if not isinstance(data, Mapping):
+        return checks
+    result_dir = result_path.parent
+    checks.append(
+        Check(
+            "formal result schema is v2",
+            data.get("formal_result_schema_version")
+            == FORMAL_RESULT_SCHEMA,
+            details=data.get("formal_result_schema_version"),
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    run_id = data.get("run_id")
+    checks.append(
+        Check(
+            "formal result has typed run_id",
+            type(run_id) is str
+            and bool(re.fullmatch(r"[A-Za-z0-9._-]{8,128}", run_id)),
+            details=run_id,
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    checks.append(
+        Check(
+            "formal result status PASS-TRACKED",
+            data.get("status") == PASS_TRACKED,
+            details=data.get("status"),
+        )
+    )
+    checks.append(
+        Check(
+            "formal result gate_status PASS-TRACKED",
+            data.get("gate_status") == PASS_TRACKED,
+            details=data.get("gate_status"),
+        )
+    )
+    checks.append(
+        Check(
+            "formal result uses one bundle-local evidence root",
+            data.get("evidence_root") == ".",
+            details=data.get("evidence_root"),
+            failure_kind="INVALID_INPUT",
+        )
+    )
+
+    current_tree = package_tree_sha256(package_root)
+    expected_tree = {
+        "algorithm": current_tree.get("algorithm"),
+        "sha256": (
+            f"sha256:{current_tree.get('sha256')}"
+            if isinstance(current_tree.get("sha256"), str)
+            else None
+        ),
+        "valid": current_tree.get("valid") is True,
+    }
+    recorded_tree = data.get("package_tree_identity")
+    tree_schema_ok = (
+        isinstance(recorded_tree, Mapping)
+        and set(recorded_tree) == {"algorithm", "sha256", "valid"}
+        and type(recorded_tree.get("algorithm")) is str
+        and bool(recorded_tree.get("algorithm"))
+        and type(recorded_tree.get("sha256")) is str
+        and bool(
+            re.fullmatch(
+                r"sha256:[0-9a-f]{64}",
+                recorded_tree.get("sha256"),
+            )
+        )
+        and type(recorded_tree.get("valid")) is bool
+    )
+    checks.append(
+        Check(
+            "formal result package-tree identity has exact JSON schema",
+            tree_schema_ok,
+            details=recorded_tree,
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    checks.append(
+        Check(
+            "formal result package-tree identity matches current package",
+            tree_schema_ok and exact_json_equal(recorded_tree, expected_tree),
+            details={
+                "recorded": recorded_tree,
+                "expected": expected_tree,
+            },
+        )
+    )
+
+    runner_path = (
+        package_root
+        / "skills/nozickian-verify/scripts/run_formal_artifact_verification.py"
+    )
     runner_error = regular_file_error(runner_path)
-    gate_error = regular_file_error(gate_path)
-    checks.append(Check("formal runner source is a regular file", runner_error is None, details=runner_error))
-    checks.append(Check("strict gate source is a regular file", gate_error is None, details=gate_error))
-    if runner_error is not None or gate_error is not None:
+    checks.append(
+        Check(
+            "current formal runner is a regular file",
+            runner_error is None,
+            details=runner_error,
+        )
+    )
+    if runner_error is not None:
         return checks
-    runner = load_module("ntt_formal_runner_for_promotion", runner_path)
-    gate = load_module("ntt_gate_for_promotion", gate_path)
-    for idx, path in enumerate(results, start=1):
-        data, err = try_load_json(path)
-        checks.append(Check(f"formal result {idx} parses", err is None, details=err or relpath(bundle, path)))
-        if not isinstance(data, Mapping):
-            continue
-        checks.append(Check(f"formal result {idx} status PASS-TRACKED", data.get("status") == PASS_TRACKED, details={"status": data.get("status"), "reason": data.get("reason")}))
-        checks.append(Check(f"formal result {idx} gate_status PASS-TRACKED", data.get("gate_status") == PASS_TRACKED, details=data.get("gate_status")))
-        auth = data.get("trace_authentication") or {}
-        checks.append(Check(f"formal result {idx} trace authenticated", isinstance(auth, Mapping) and auth.get("authenticated") is True, details=auth))
-        if isinstance(auth, Mapping):
-            missing = list(auth.get("missing_agents") or []) + list(auth.get("missing_result_agents") or [])
-            checks.append(Check(f"formal result {idx} no missing native lane events", not missing, details=missing))
-            calls = set(auth.get("agent_calls_authenticated") or [])
-            results_auth = set(auth.get("agent_results_authenticated") or [])
-            checks.append(Check(f"formal result {idx} all required native lanes authenticated", set(REQUIRED_NATIVE_AGENTS).issubset(calls) and set(REQUIRED_NATIVE_AGENTS).issubset(results_auth), details={"calls": sorted(calls), "results": sorted(results_auth)}))
-            checks.append(Check(f"formal result {idx} no general-purpose fallback", auth.get("saw_general_purpose") is False, details=auth.get("saw_general_purpose")))
-            checks.append(Check(f"formal result {idx} no role violations", not auth.get("role_violations"), details=auth.get("role_violations")))
-        result_dir = path.parent
-        transcript_pointer = data.get("transcript_file")
-        transcript_name = (
-            PurePosixPath(str(transcript_pointer).replace("\\", "/")).name
-            if isinstance(transcript_pointer, str) and transcript_pointer.strip()
-            else ""
+    try:
+        runner = load_module(
+            "ntt_formal_runner_for_promotion_v2",
+            runner_path,
         )
-        transcript = result_dir / transcript_name if transcript_name else Path("")
-        transcript_error = (
-            regular_file_error(transcript)
-            if transcript_name
-            else "formal result does not name a transcript"
+        companion_specs = getattr(runner, "FORMAL_COMPANION_SPECS", None)
+        verification_context_spec = getattr(
+            runner,
+            "FORMAL_VERIFICATION_CONTEXT",
+            None,
         )
-        checks.append(
-            Check(
-                f"formal result {idx} transcript is self-contained regular file",
-                transcript_error is None,
-                details={
-                    "bundle_path": relpath(bundle, transcript) if transcript_name else None,
-                    "ignored_pointer": transcript_pointer,
-                    "error": transcript_error,
-                },
-            )
+        trace_authentication_fields = getattr(
+            runner,
+            "TRACE_AUTHENTICATION_FIELDS",
+            None,
         )
-        if transcript_error is None:
-            parsed_auth = runner.authenticate_trace(transcript)
-            checks.append(Check(f"formal result {idx} transcript re-authenticates", parsed_auth.get("authenticated") is True, details=parsed_auth))
-        certs, cert_errors = matching_regular_files(
-            result_dir,
-            "*_NOZICKIAN_certificate.json",
+        runner_required_agents = getattr(
+            runner,
+            "REQUIRED_NATIVE_AGENTS",
+            None,
         )
-        checks.append(
-            Check(
-                f"formal result {idx} generated certificate is self-contained regular file",
-                bool(certs) and not cert_errors,
-                details={
-                    "files": [relpath(bundle, item) for item in certs],
-                    "errors": cert_errors,
-                },
-            )
+    except Exception:
+        companion_specs = None
+        verification_context_spec = None
+        trace_authentication_fields = None
+        runner_required_agents = None
+    specs_typed = (
+        isinstance(companion_specs, Mapping)
+        and bool(companion_specs)
+        and all(
+            type(role) is str
+            and type(suffix) is str
+            and role
+            and suffix
+            for role, suffix in companion_specs.items()
         )
-        for cert in certs[:1]:
-            try:
-                cert_data = load_json(cert)
-                gate_result = gate.evaluate_certificate(
-                    cert_data,
-                    evidence_root=result_dir,
-                    strict_evidence=True,
+    )
+    checks.append(
+        Check(
+            "formal companion specifications load from current runner",
+            specs_typed,
+            details=(
+                sorted(companion_specs)
+                if isinstance(companion_specs, Mapping)
+                else None
+            ),
+            failure_kind="INTERNAL_ERROR",
+        )
+    )
+    if not specs_typed or not isinstance(companion_specs, Mapping):
+        return checks
+    runner_schema_specs_typed = (
+        type(verification_context_spec) is dict
+        and all(
+            type(key) is str and type(value) is str
+            for key, value in verification_context_spec.items()
+        )
+        and type(trace_authentication_fields) in {tuple, list}
+        and all(
+            type(field) is str and field
+            for field in trace_authentication_fields
+        )
+        and len(set(trace_authentication_fields))
+        == len(trace_authentication_fields)
+        and _string_list(runner_required_agents)
+    )
+    checks.append(
+        Check(
+            "formal runner exports exact result schema specifications",
+            runner_schema_specs_typed,
+            details={
+                "verification_context": verification_context_spec,
+                "trace_authentication_fields": trace_authentication_fields,
+                "required_native_agents": runner_required_agents,
+            },
+            failure_kind="INTERNAL_ERROR",
+        )
+    )
+    if not runner_schema_specs_typed:
+        return checks
+    checks.append(
+        Check(
+            "formal result projected fields have exact JSON types",
+            formal_projected_fields_typed(
+                data,
+                runner_required_agents,
+            ),
+            details={
+                "keys": sorted(str(key) for key in data),
+                "trace_authentication_present": (
+                    "trace_authentication" in data
+                ),
+            },
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    checks.append(
+        Check(
+            "formal result declares standalone immutable snapshot context",
+            type(data.get("verification_context")) is dict
+            and exact_json_equal(
+                data.get("verification_context"),
+                verification_context_spec,
+            ),
+            details=data.get("verification_context"),
+            failure_kind="INVALID_INPUT",
+        )
+    )
+
+    target_identity = data.get("target_snapshot_identity")
+    target_source_name = (
+        target_identity.get("source_name")
+        if isinstance(target_identity, Mapping)
+        else None
+    )
+    companions = data.get("companions")
+    required_roles = set(companion_specs)
+    companions_typed = (
+        isinstance(companions, Mapping)
+        and set(companions) == required_roles
+        and "formal_result" not in companions
+    )
+    checks.append(
+        Check(
+            "formal result declares exact required typed companions",
+            companions_typed,
+            details={
+                "roles": (
+                    sorted(companions) if isinstance(companions, Mapping) else []
                 )
-                checks.append(Check(f"formal result {idx} generated certificate strict gate PASS-TRACKED", gate_result.get("status") == PASS_TRACKED, details={"status": gate_result.get("status"), "summary": gate_result.get("summary"), "reasons": gate_result.get("reasons")}))
-                downstream_violations = gate_result.get("summary", {}).get("downstream_nonclosure_violations", 0)
-                checks.append(Check(f"formal result {idx} no downstream non-closure violations", downstream_violations == 0, details=gate_result.get("summary")))
-            except Exception as exc:
-                checks.append(Check(f"formal result {idx} generated certificate strict gate evaluates", False, details=repr(exc)))
-        ledgers, ledger_errors = matching_regular_files(
-            result_dir,
-            "*_NOZICKIAN_INVOCATION_LEDGER.md",
+            },
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    if not isinstance(companions, Mapping):
+        return checks
+
+    declared_paths: Dict[str, str] = {}
+    resolved_by_role: Dict[str, Path] = {}
+    identities: Dict[Tuple[int, int], str] = {}
+    for role in sorted(required_roles):
+        record = companions.get(role)
+        if not isinstance(record, Mapping):
+            checks.append(
+                Check(
+                    f"formal companion record is typed: {role}",
+                    False,
+                    details="companion is not an object",
+                    failure_kind="INVALID_INPUT",
+                )
+            )
+            continue
+        path_value = record.get("path")
+        claimed_sha = record.get("sha256")
+        claimed_bytes = record.get("bytes")
+        fields_typed = (
+            set(record) == {"path", "sha256", "bytes", "present"}
+            and type(path_value) is str
+            and type(claimed_sha) is str
+            and bool(re.fullmatch(r"sha256:[0-9a-f]{64}", claimed_sha))
+            and type(claimed_bytes) is int
+            and claimed_bytes >= 0
+            and record.get("present") is True
         )
         checks.append(
             Check(
-                f"formal result {idx} invocation ledger is self-contained regular file",
-                bool(ledgers) and not ledger_errors,
+                f"formal companion fields are typed and present: {role}",
+                fields_typed,
                 details={
-                    "files": [relpath(bundle, item) for item in ledgers],
-                    "errors": ledger_errors,
+                    "path": path_value,
+                    "sha256": claimed_sha,
+                    "bytes": claimed_bytes,
+                    "present": record.get("present"),
+                    "keys": sorted(str(key) for key in record),
+                },
+                failure_kind="INVALID_INPUT",
+            )
+        )
+        if type(path_value) is not str:
+            continue
+        expected_name = _expected_formal_companion_name(
+            target_source_name,
+            role,
+            companion_specs,
+        )
+        checks.append(
+            Check(
+                f"formal companion path is canonical for role: {role}",
+                expected_name is not None and path_value == expected_name,
+                details={
+                    "recorded": path_value,
+                    "expected": expected_name,
+                },
+                failure_kind="INVALID_INPUT",
+            )
+        )
+        path, path_error, identity = bundle_regular_file(
+            result_dir,
+            path_value,
+        )
+        checks.append(
+            Check(
+                f"formal companion is bundle-local regular file: {role}",
+                path_error is None and path is not None,
+                details=path_error or path_value,
+                failure_kind="INVALID_INPUT",
+            )
+        )
+        if path is None:
+            continue
+        if path == result_path:
+            checks.append(
+                Check(
+                    f"formal companion does not hash formal_result itself: {role}",
+                    False,
+                    details=path_value,
+                    failure_kind="INVALID_INPUT",
+                )
+            )
+            continue
+        resolved_by_role[role] = path
+        declared_paths[relpath(result_dir, path)] = role
+        identity_alias = identities.get(identity) if identity else None
+        checks.append(
+            Check(
+                f"formal companion has distinct path/file identity: {role}",
+                identity_alias is None,
+                details=(
+                    f"aliases {identity_alias}"
+                    if identity_alias is not None
+                    else path_value
+                ),
+                failure_kind="INVALID_INPUT",
+            )
+        )
+        if identity is not None:
+            identities[identity] = role
+        actual_sha = f"sha256:{sha256_path(path)}"
+        actual_bytes = path.stat().st_size
+        checks.append(
+            Check(
+                f"formal companion exact bytes and sha256 match: {role}",
+                claimed_sha == actual_sha
+                and claimed_bytes == actual_bytes,
+                details={
+                    "claimed_sha256": claimed_sha,
+                    "actual_sha256": actual_sha,
+                    "claimed_bytes": claimed_bytes,
+                    "actual_bytes": actual_bytes,
                 },
             )
         )
-        if ledgers:
-            text = read_regular_text(ledgers[0], errors="replace").lower()
-            checks.append(Check(f"formal result {idx} ledger says no substitution", "substitution used: none" in text and "formal_subagent_failure" not in text, details=ledgers[0].name))
+
+    reserved_undeclared: List[str] = []
+    for entry, kind, entry_error in walk_tree_no_follow(
+        result_dir,
+        skip_dir_names=("__pycache__",),
+    ):
+        if kind == "directory":
+            continue
+        entry_relative = relpath(result_dir, entry)
+        reserved_role = _reserved_formal_role(
+            entry.name,
+            companion_specs,
+        )
+        if reserved_role is None or entry == result_path:
+            continue
+        if (
+            kind != "regular"
+            or entry_error is not None
+            or declared_paths.get(entry_relative) != reserved_role
+        ):
+            reserved_undeclared.append(entry_relative)
+    checks.append(
+        Check(
+            "formal result directory has no undeclared reserved companions",
+            not reserved_undeclared,
+            details=sorted(reserved_undeclared),
+            failure_kind="INVALID_INPUT",
+        )
+    )
+
+    target_record = companions.get("target_snapshot")
+    target_sha = (
+        target_record.get("sha256")
+        if isinstance(target_record, Mapping)
+        else None
+    )
+    target_ok = (
+        isinstance(target_identity, Mapping)
+        and set(target_identity)
+        == {
+            "source_name",
+            "companion_role",
+            "snapshot_sha256",
+            "pre_sha256",
+            "post_sha256",
+            "stable",
+            "digest_stable",
+            "source_metadata_stable",
+            "snapshot_metadata_stable",
+        }
+        and type(target_identity.get("source_name")) is str
+        and bool(target_identity.get("source_name"))
+        and Path(target_identity["source_name"]).name
+        == target_identity["source_name"]
+        and type(target_identity.get("companion_role")) is str
+        and target_identity.get("companion_role") == "target_snapshot"
+        and all(
+            type(target_identity.get(field)) is str
+            and bool(
+                re.fullmatch(
+                    r"sha256:[0-9a-f]{64}",
+                    target_identity.get(field),
+                )
+            )
+            for field in (
+                "snapshot_sha256",
+                "pre_sha256",
+                "post_sha256",
+            )
+        )
+        and target_identity.get("snapshot_sha256") == target_sha
+        and target_identity.get("pre_sha256") == target_sha
+        and target_identity.get("post_sha256") == target_sha
+        and all(
+            type(target_identity.get(field)) is bool
+            and target_identity.get(field) is True
+            for field in (
+                "stable",
+                "digest_stable",
+                "source_metadata_stable",
+                "snapshot_metadata_stable",
+            )
+        )
+    )
+    checks.append(
+        Check(
+            "formal target snapshot binds stable pre/post digest",
+            target_ok,
+            details=target_identity,
+        )
+    )
+
+    gate_path = package_root / "skills/nozickian-verify/scripts/ntt_gate.py"
+    gate_error = regular_file_error(gate_path)
+    checks.append(
+        Check(
+            "current formal gate is a regular file",
+            gate_error is None,
+            details=gate_error,
+        )
+    )
+    if gate_error is not None:
+        return checks
+    gate = load_module("ntt_gate_for_promotion_v2", gate_path)
+    transcript = resolved_by_role.get("transcript")
+    if transcript is not None:
+        parsed_auth = runner.authenticate_trace(transcript)
+        recorded_auth = data.get("trace_authentication")
+        recorded_auth_schema_ok = trace_authentication_schema_valid(
+            recorded_auth,
+            trace_authentication_fields,
+        )
+        parsed_auth_schema_ok = trace_authentication_schema_valid(
+            parsed_auth,
+            trace_authentication_fields,
+        )
+        checks.append(
+            Check(
+                "formal trace authentication has exact JSON schema",
+                recorded_auth_schema_ok,
+                details={
+                    "keys": (
+                        sorted(str(key) for key in recorded_auth)
+                        if isinstance(recorded_auth, Mapping)
+                        else []
+                    ),
+                    "authenticated": (
+                        recorded_auth.get("authenticated")
+                        if isinstance(recorded_auth, Mapping)
+                        else None
+                    ),
+                    "authenticated_type": (
+                        type(recorded_auth.get("authenticated")).__name__
+                        if isinstance(recorded_auth, Mapping)
+                        else None
+                    ),
+                },
+                failure_kind="INVALID_INPUT",
+            )
+        )
+        checks.append(
+            Check(
+                "formal transcript re-authenticates and matches recorded semantics",
+                recorded_auth_schema_ok
+                and parsed_auth_schema_ok
+                and parsed_auth.get("authenticated") is True
+                and exact_json_equal(recorded_auth, parsed_auth),
+                details={
+                    "parsed_authenticated": parsed_auth.get("authenticated"),
+                    "recorded_authenticated": (
+                        recorded_auth.get("authenticated")
+                        if isinstance(recorded_auth, Mapping)
+                        else None
+                    ),
+                },
+            )
+        )
+    certificate = resolved_by_role.get("certificate")
+    if certificate is not None:
+        certificate_data, certificate_error = try_load_json(certificate)
+        if isinstance(certificate_data, Mapping):
+            gate_result = gate.evaluate_certificate(
+                certificate_data,
+                evidence_root=result_dir,
+                strict_evidence=True,
+            )
+        else:
+            gate_result = {
+                "status": "INVALID_INPUT",
+                "reasons": [certificate_error],
+            }
+        checks.append(
+            Check(
+                "formal generated certificate strict gate PASS-TRACKED",
+                gate_result.get("status") == PASS_TRACKED,
+                details={
+                    "status": gate_result.get("status"),
+                    "reasons": gate_result.get("reasons"),
+                },
+            )
+        )
+    ledger = resolved_by_role.get("ledger")
+    if ledger is not None:
+        text = read_regular_text(ledger, errors="replace").lower()
+        checks.append(
+            Check(
+                "formal ledger says no substitution",
+                "substitution used: none" in text
+                and "formal_subagent_failure" not in text,
+                details=ledger.name,
+            )
+        )
     return checks
 
 
@@ -1310,8 +2993,10 @@ URI_SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.\-]*:")
 
 
 def safe_relative_posix_path(value: Any) -> Tuple[Optional[PurePosixPath], Optional[str]]:
-    if not isinstance(value, str) or not value:
+    if type(value) is not str or not value:
         return None, "path is not a nonempty string"
+    if value != value.strip():
+        return None, "path has surrounding whitespace"
     if "\\" in value:
         return None, "path uses a non-canonical separator"
     if URI_SCHEME_RE.match(value):
@@ -1319,9 +3004,414 @@ def safe_relative_posix_path(value: Any) -> Tuple[Optional[PurePosixPath], Optio
     posix = PurePosixPath(value)
     if posix.is_absolute():
         return None, "path is absolute"
-    if not posix.parts or any(part in {"", ".", ".."} for part in posix.parts):
+    if (
+        not posix.parts
+        or any(part in {"", ".", ".."} for part in posix.parts)
+        or posix.as_posix() != value
+    ):
         return None, "path is empty, dotted, or traverses"
     return posix, None
+
+
+def bundle_regular_file(
+    bundle: Path,
+    value: Any,
+) -> Tuple[Optional[Path], Optional[str], Optional[Tuple[int, int]]]:
+    posix, path_error = safe_relative_posix_path(value)
+    if path_error is not None or posix is None:
+        return None, path_error, None
+    current = bundle
+    for index, part in enumerate(posix.parts):
+        current = current / part
+        try:
+            mode = current.lstat().st_mode
+        except OSError as exc:
+            return (
+                None,
+                f"{type(exc).__name__} while inspecting bundle path",
+                None,
+            )
+        final = index == len(posix.parts) - 1
+        if stat.S_ISLNK(mode):
+            return None, "bundle path contains a symbolic link", None
+        if final:
+            if not stat.S_ISREG(mode):
+                return None, "bundle path is not a regular file", None
+        elif not stat.S_ISDIR(mode):
+            return None, "bundle path parent is not a directory", None
+    try:
+        stat_result = current.stat(follow_symlinks=False)
+    except OSError as exc:
+        return None, f"{type(exc).__name__} while inspecting bundle file", None
+    return current, None, (stat_result.st_dev, stat_result.st_ino)
+
+
+def required_promotion_roles(
+    _allow_official_scope_exclusion: bool,
+) -> set[str]:
+    """Return the fixed promotion-v2 semantic role set.
+
+    Official executable availability changes only fresh execution evidence. It
+    never changes the certificate's evidence schema, role inventory, or DAG.
+    """
+    return set(PROMOTION_EVIDENCE_SPECS)
+
+
+def required_promotion_dependencies(
+    _allow_official_scope_exclusion: bool,
+) -> Dict[str, List[str]]:
+    """Return the fixed canonical dependency DAG for promotion certificate v2."""
+    roles = set(PROMOTION_EVIDENCE_SPECS)
+    return {
+        role: list(PROMOTION_EVIDENCE_SPECS[role]["depends_on"])
+        for role in sorted(roles)
+    }
+
+
+def promotion_evidence_nodes(
+    data: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    evidence = data.get("evidence")
+    if type(evidence) is not dict:
+        return {}
+    nodes = evidence.get("nodes")
+    return nodes if isinstance(nodes, Mapping) else {}
+
+
+def iterative_evidence_graph_analysis(
+    dependency_map: Mapping[str, Sequence[str]],
+) -> Tuple[List[str], int]:
+    """Return cyclic roles and maximum depth without recursive traversal."""
+    indegree = {
+        role: sum(
+            1 for dependency in dependencies if dependency in dependency_map
+        )
+        for role, dependencies in dependency_map.items()
+    }
+    dependents: Dict[str, List[str]] = {
+        role: [] for role in dependency_map
+    }
+    for role, dependencies in dependency_map.items():
+        for dependency in dependencies:
+            if dependency in dependents:
+                dependents[dependency].append(role)
+    queue = sorted(role for role, degree in indegree.items() if degree == 0)
+    depths = {role: 1 for role in queue}
+    visited: List[str] = []
+    while queue:
+        role = queue.pop(0)
+        visited.append(role)
+        for dependent in sorted(dependents[role]):
+            depths[dependent] = max(
+                depths.get(dependent, 1),
+                depths[role] + 1,
+            )
+            indegree[dependent] -= 1
+            if indegree[dependent] == 0:
+                queue.append(dependent)
+                queue.sort()
+    cyclic = sorted(set(dependency_map) - set(visited))
+    return cyclic, max(depths.values(), default=0)
+
+
+def promotion_evidence_checks(
+    bundle: Path,
+    data: Mapping[str, Any],
+    allow_official_scope_exclusion: bool,
+) -> List[Check]:
+    checks: List[Check] = []
+    checks.append(
+        Check(
+            "legacy flat evidence_refs are rejected by promotion v2",
+            "evidence_refs" not in data,
+            details=(
+                "remove evidence_refs and use evidence.nodes typed by semantic role"
+                if "evidence_refs" in data
+                else None
+            ),
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    evidence = data.get("evidence")
+    if not isinstance(evidence, Mapping):
+        checks.append(
+            Check(
+                "promotion certificate has typed evidence map",
+                False,
+                details="evidence is not an object",
+                failure_kind="INVALID_INPUT",
+            )
+        )
+        return checks
+    checks.append(
+        Check(
+            "promotion evidence schema is v2",
+            type(evidence.get("schema_version")) is str
+            and evidence.get("schema_version") == PROMOTION_EVIDENCE_SCHEMA,
+            details=evidence.get("schema_version"),
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    checks.append(
+        Check(
+            "promotion evidence map has only schema_version and nodes",
+            set(evidence) == {"schema_version", "nodes"},
+            details=sorted(str(key) for key in evidence),
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    nodes = evidence.get("nodes")
+    if type(nodes) is not dict:
+        checks.append(
+            Check(
+                "promotion evidence nodes is a typed map",
+                False,
+                details="nodes is not an object",
+                failure_kind="INVALID_INPUT",
+            )
+        )
+        return checks
+    node_count_ok = len(nodes) <= MAX_EVIDENCE_NODES
+    checks.append(
+        Check(
+            "promotion evidence node count is bounded",
+            node_count_ok,
+            details={"count": len(nodes), "maximum": MAX_EVIDENCE_NODES},
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    if not node_count_ok:
+        return checks
+
+    required_roles = required_promotion_roles(
+        allow_official_scope_exclusion
+    )
+    actual_roles = set(nodes) if all(type(key) is str for key in nodes) else set()
+    checks.append(
+        Check(
+            "promotion evidence roles exactly match required semantic roles",
+            actual_roles == required_roles,
+            details={
+                "missing": sorted(required_roles - actual_roles),
+                "unexpected": sorted(actual_roles - required_roles),
+            },
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    if actual_roles != required_roles:
+        return checks
+
+    nodes_typed = True
+    for role in sorted(required_roles):
+        node_typed = type(nodes.get(role)) is dict
+        checks.append(
+            Check(
+                f"promotion evidence node is typed: {role}",
+                node_typed,
+                details=(
+                    None if node_typed else "node is not an object"
+                ),
+                failure_kind="INVALID_INPUT",
+            )
+        )
+        nodes_typed = nodes_typed and node_typed
+    if not nodes_typed:
+        return checks
+
+    canonical_paths: Dict[str, str] = {}
+    file_identities: Dict[Tuple[int, int], str] = {}
+    dependency_map: Dict[str, List[str]] = {}
+    for role, node in nodes.items():
+        path_value = node.get("path")
+        claimed_sha = node.get("sha256")
+        depends_on = node.get("depends_on")
+        dependencies_valid = (
+            isinstance(depends_on, list)
+            and len(depends_on) <= MAX_EVIDENCE_DEPENDENCIES
+            and all(type(item) is str and item for item in depends_on)
+            and len(set(depends_on)) == len(depends_on)
+        )
+        node_keys_valid = set(node) == {
+            "path",
+            "sha256",
+            "depends_on",
+        }
+        dependency_map[role] = list(depends_on) if dependencies_valid else []
+        checks.append(
+            Check(
+                f"promotion evidence node fields are typed: {role}",
+                node_keys_valid
+                and type(path_value) is str
+                and type(claimed_sha) is str
+                and bool(re.fullmatch(r"sha256:[0-9a-f]{64}", claimed_sha))
+                and dependencies_valid,
+                details={
+                    "path": path_value,
+                    "sha256": claimed_sha,
+                    "depends_on": depends_on,
+                    "keys": sorted(str(key) for key in node),
+                },
+                failure_kind="INVALID_INPUT",
+            )
+        )
+        if type(path_value) is not str:
+            continue
+        path, path_error, file_identity = bundle_regular_file(
+            bundle,
+            path_value,
+        )
+        checks.append(
+            Check(
+                f"promotion evidence role resolves to bundle-local regular file: {role}",
+                path_error is None and path is not None,
+                details=path_error or path_value,
+                failure_kind="INVALID_INPUT",
+            )
+        )
+        if path is None:
+            continue
+        canonical = relpath(bundle, path)
+        alias_role = canonical_paths.get(canonical)
+        identity_role = (
+            file_identities.get(file_identity)
+            if file_identity is not None
+            else None
+        )
+        alias_error = (
+            f"path aliases role {alias_role}"
+            if alias_role is not None
+            else (
+                f"file identity aliases role {identity_role}"
+                if identity_role is not None
+                else None
+            )
+        )
+        checks.append(
+            Check(
+                f"promotion evidence role has distinct path/file identity: {role}",
+                alias_error is None,
+                details=alias_error or canonical,
+                failure_kind="INVALID_INPUT",
+            )
+        )
+        canonical_paths[canonical] = role
+        if file_identity is not None:
+            file_identities[file_identity] = role
+        try:
+            actual_sha = f"sha256:{sha256_path(path)}"
+        except (OSError, ValueError):
+            actual_sha = None
+        checks.append(
+            Check(
+                f"promotion evidence role exact bytes match sha256: {role}",
+                actual_sha is not None and claimed_sha == actual_sha,
+                details={"claimed": claimed_sha, "actual": actual_sha},
+            )
+        )
+
+        expected_path = PROMOTION_EVIDENCE_SPECS[role].get("path")
+        if expected_path is not None:
+            lane_path_ok = canonical == expected_path
+        elif role == "formal.result":
+            parts = PurePosixPath(canonical).parts
+            lane_path_ok = (
+                len(parts) == 3
+                and parts[0] == "formal_artifacts"
+                and parts[1] not in {"", ".", ".."}
+                and parts[2] == "formal_result.json"
+            )
+        else:
+            lane_path_ok = False
+        checks.append(
+            Check(
+                f"promotion evidence role points to canonical lane: {role}",
+                lane_path_ok,
+                details=canonical,
+                failure_kind="INVALID_INPUT",
+            )
+        )
+        spec = PROMOTION_EVIDENCE_SPECS[role]
+        if spec.get("kind") == "official-policy":
+            policy, policy_error = try_load_json(path)
+            expected_validator = spec.get("validator_id")
+            policy_ok = (
+                policy_error is None
+                and isinstance(policy, Mapping)
+                and set(policy) == {
+                    "policy_schema_version",
+                    "required_validator_id",
+                }
+                and type(policy.get("policy_schema_version")) is str
+                and policy.get("policy_schema_version")
+                == OFFICIAL_POLICY_SCHEMA
+                and type(policy.get("required_validator_id")) is str
+                and policy.get("required_validator_id")
+                == expected_validator
+            )
+            checks.append(
+                Check(
+                    f"official validator policy declares required id: {expected_validator}",
+                    policy_ok,
+                    details=policy_error or policy,
+                    failure_kind="INVALID_INPUT",
+                )
+            )
+
+    unknown_dependencies = sorted(
+        {
+            dependency
+            for dependencies in dependency_map.values()
+            for dependency in dependencies
+            if dependency not in nodes
+        }
+    )
+    checks.append(
+        Check(
+            "promotion evidence dependencies name declared roles",
+            not unknown_dependencies,
+            details=unknown_dependencies,
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    expected_dependencies = required_promotion_dependencies(
+        allow_official_scope_exclusion
+    )
+    dependency_contract_ok = (
+        actual_roles == required_roles
+        and dependency_map == expected_dependencies
+    )
+    checks.append(
+        Check(
+            "promotion evidence dependencies match canonical role DAG",
+            dependency_contract_ok,
+            details={
+                "recorded": dependency_map,
+                "expected": expected_dependencies,
+            },
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    cycle, graph_depth = iterative_evidence_graph_analysis(dependency_map)
+    checks.append(
+        Check(
+            "promotion evidence dependency graph is acyclic",
+            not cycle,
+            details=cycle,
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    checks.append(
+        Check(
+            "promotion evidence dependency depth is bounded",
+            not cycle and graph_depth <= MAX_EVIDENCE_GRAPH_DEPTH,
+            details={
+                "depth": graph_depth,
+                "maximum": MAX_EVIDENCE_GRAPH_DEPTH,
+            },
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    return checks
 
 
 def package_tree_sha256(package_root: Path) -> Dict[str, Any]:
@@ -1367,49 +3457,78 @@ def package_tree_sha256(package_root: Path) -> Dict[str, Any]:
             "valid": False,
             "sha256": None,
             "errors": [
-                "shared package-tree computation failed: " + repr(exc)
+                "shared package-tree computation failed: "
+                f"{type(exc).__name__}"
             ],
         }
 
 
-def bundle_evidence_ref_errors(bundle: Path, refs: Any) -> List[str]:
-    if not isinstance(refs, list):
-        return ["evidence_refs is not a list"]
+def promotion_claim_validation_errors(data: Mapping[str, Any]) -> List[str]:
+    """Validate every promotion claim before invoking the shared gate."""
+    claims = data.get("claims")
+    if type(claims) is not list:
+        return ["claims is not an array"]
     errors: List[str] = []
-    seen_raw: set[str] = set()
-    seen_canonical: set[str] = set()
-    bundle_root = bundle.resolve()
-    for index, ref in enumerate(refs, start=1):
-        posix, path_error = safe_relative_posix_path(ref)
-        if path_error is not None or posix is None:
-            errors.append(f"evidence_refs[{index}]: {path_error}")
-            continue
-        raw = posix.as_posix()
-        if raw in seen_raw:
-            errors.append(f"evidence_refs[{index}]: duplicate path {raw}")
-            continue
-        seen_raw.add(raw)
-        candidate = bundle.joinpath(*posix.parts)
-        file_error = regular_file_error(candidate)
-        if file_error:
-            errors.append(f"evidence_refs[{index}]: {file_error}")
-            continue
-        try:
-            resolved = candidate.resolve(strict=True)
-            canonical = resolved.relative_to(bundle_root).as_posix()
-        except (OSError, ValueError):
-            errors.append(f"evidence_refs[{index}]: path resolves outside audit bundle")
-            continue
-        if canonical in seen_canonical:
-            errors.append(
-                f"evidence_refs[{index}]: duplicate canonical path {canonical}"
+    if not claims:
+        errors.append("claims must contain at least one promotion claim")
+    claim_ids: set[str] = set()
+    for index, claim in enumerate(claims):
+        label = f"claims[{index}]"
+        if type(claim) is not dict:
+            json_type = (
+                "null"
+                if claim is None
+                else "boolean"
+                if type(claim) is bool
+                else "number"
+                if type(claim) in {int, float}
+                else type(claim).__name__
             )
+            errors.append(f"{label} is not an object ({json_type})")
             continue
-        seen_canonical.add(canonical)
+        missing = sorted(
+            field
+            for field in PROMOTION_CLAIM_REQUIRED_FIELD_TYPES
+            if field not in claim
+        )
+        if missing:
+            errors.append(f"{label} missing required fields: {missing}")
+        wrong_types = sorted(
+            field
+            for field, expected_type in PROMOTION_CLAIM_REQUIRED_FIELD_TYPES.items()
+            if field in claim and type(claim.get(field)) is not expected_type
+        )
+        if wrong_types:
+            errors.append(f"{label} fields have invalid exact types: {wrong_types}")
+        claim_id = claim.get("id")
+        if type(claim_id) is not str or not PROMOTION_CLAIM_ID_RE.fullmatch(
+            claim_id
+        ):
+            errors.append(f"{label}.id is not a canonical claim identifier")
+        elif claim_id in claim_ids:
+            errors.append(f"duplicate promotion claim id: {claim_id}")
+        else:
+            claim_ids.add(claim_id)
+        for field in ("evidence_refs",):
+            value = claim.get(field)
+            if type(value) is list and not all(
+                type(item) is str and bool(item) for item in value
+            ):
+                errors.append(f"{label}.{field} contains a non-string/empty entry")
+        if "method_completeness" in claim and type(
+            claim.get("method_completeness")
+        ) not in {int, float}:
+            errors.append(
+                f"{label}.method_completeness is not an exact JSON number"
+            )
     return errors
 
 
-def promotion_certificate_checks(package_root: Path, bundle: Path) -> List[Check]:
+def promotion_certificate_checks(
+    package_root: Path,
+    bundle: Path,
+    allow_official_scope_exclusion: bool = False,
+) -> List[Check]:
     checks: List[Check] = []
     path = bundle / "promotion_certificate.json"
     certificate_error = regular_file_error(path)
@@ -1426,11 +3545,72 @@ def promotion_certificate_checks(package_root: Path, bundle: Path) -> List[Check
     checks.append(Check("promotion certificate parses", err is None, details=err))
     if not isinstance(data, Mapping):
         return checks
-    checks.append(Check("promotion certificate records upgrade_from_status PASS-SCOPED", data.get("upgrade_from_status") == PASS_SCOPED, details=data.get("upgrade_from_status")))
-    checks.append(Check("promotion certificate requests PASS-TRACKED", data.get("requested_status") == PASS_TRACKED, details=data.get("requested_status")))
+    schema_value = data.get("promotion_schema_version")
+    checks.append(
+        Check(
+            "promotion certificate schema version is exact string 2.0",
+            type(schema_value) is str
+            and schema_value == PROMOTION_CERTIFICATE_SCHEMA,
+            details={
+                "recorded": schema_value,
+                "recorded_type": type(schema_value).__name__,
+                "expected": PROMOTION_CERTIFICATE_SCHEMA,
+            },
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    missing_required_fields = sorted(
+        field
+        for field in PROMOTION_CERTIFICATE_REQUIRED_FIELD_TYPES
+        if field not in data
+    )
+    wrong_required_field_types = {
+        field: {
+            "recorded": type(data.get(field)).__name__,
+            "expected": expected_type.__name__,
+        }
+        for field, expected_type
+        in PROMOTION_CERTIFICATE_REQUIRED_FIELD_TYPES.items()
+        if field in data and type(data.get(field)) is not expected_type
+    }
+    wrong_optional_field_types = {
+        field: {
+            "recorded": type(data.get(field)).__name__,
+            "expected": expected_type.__name__,
+        }
+        for field, expected_type
+        in PROMOTION_CERTIFICATE_OPTIONAL_FIELD_TYPES.items()
+        if field in data and type(data.get(field)) is not expected_type
+    }
+    checks.append(
+        Check(
+            "promotion certificate required top-level fields have exact JSON types",
+            not missing_required_fields
+            and not wrong_required_field_types
+            and not wrong_optional_field_types,
+            details={
+                "missing": missing_required_fields,
+                "wrong_required_types": wrong_required_field_types,
+                "wrong_optional_types": wrong_optional_field_types,
+            },
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    claim_errors = promotion_claim_validation_errors(data)
+    claims_shape_valid = not claim_errors
+    checks.append(
+        Check(
+            "promotion claims have required exact types and unique canonical ids",
+            claims_shape_valid,
+            details=claim_errors,
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    checks.append(Check("promotion certificate records upgrade_from_status PASS-SCOPED", type(data.get("upgrade_from_status")) is str and data.get("upgrade_from_status") == PASS_SCOPED, details=data.get("upgrade_from_status"), failure_kind="INVALID_INPUT"))
+    checks.append(Check("promotion certificate requests PASS-TRACKED", type(data.get("requested_status")) is str and data.get("requested_status") == PASS_TRACKED, details=data.get("requested_status"), failure_kind="INVALID_INPUT"))
     plugin = try_load_json(package_root / ".claude-plugin/plugin.json")[0] or {}
     current_version = str(plugin.get("version") or "")
-    checks.append(Check("promotion certificate package version matches plugin", str(data.get("package_version") or data.get("plugin_version") or "") == current_version, details={"certificate": data.get("package_version") or data.get("plugin_version"), "plugin": current_version}))
+    checks.append(Check("promotion certificate package version matches plugin", type(data.get("package_version")) is str and data.get("package_version") == current_version, details={"certificate": data.get("package_version"), "plugin": current_version, "plugin_version_alias_ignored": data.get("plugin_version")}, failure_kind="INVALID_INPUT"))
     tree = package_tree_sha256(package_root)
     checks.append(
         Check(
@@ -1456,20 +3636,97 @@ def promotion_certificate_checks(package_root: Path, bundle: Path) -> List[Check
             },
         )
     )
-    refs = data.get("evidence_refs")
-    checks.append(Check("promotion certificate has evidence refs", isinstance(refs, list) and len(refs) >= 5, details=f"count={len(refs) if isinstance(refs, list) else 'n/a'}"))
-    ref_errors = bundle_evidence_ref_errors(bundle, refs)
-    checks.append(
-        Check(
-            "promotion certificate evidence refs are unique bundle-local regular files",
-            not ref_errors,
-            details=ref_errors,
+    checks.extend(
+        promotion_evidence_checks(
+            bundle,
+            data,
+            allow_official_scope_exclusion,
         )
     )
-    downstream = data.get("derived_or_downstream_claims") or []
-    if downstream:
-        bad = [r for r in downstream if isinstance(r, Mapping) and str(r.get("status") or "").upper() in {PASS_TRACKED, PASS_SCOPED, "PASS", "VERIFIED"} and not r.get("own_claim_id")]
-        checks.append(Check("promotion certificate has no automatic downstream pass inheritance", not bad, details=bad[:3]))
+    gate_path = (
+        package_root / "skills/nozickian-verify/scripts/ntt_gate.py"
+    )
+    downstream_reasons: List[str] = []
+    downstream_count = 0
+    try:
+        gate = load_module(
+            "ntt_gate_for_promotion_downstream_policy",
+            gate_path,
+        )
+        if claims_shape_valid:
+            gate_result = gate.evaluate_certificate(
+                data,
+                evidence_root=bundle,
+                strict_evidence=True,
+                downstream_policy="promotion-v2",
+            )
+            raw_claim_results = gate_result.get("claim_results")
+            claim_results = (
+                {
+                    result["claim_id"]: result
+                    for result in raw_claim_results
+                    if type(result) is dict
+                    and type(result.get("claim_id")) is str
+                }
+                if type(raw_claim_results) is list
+                else {}
+            )
+            claims = data.get("claims")
+            claims_pass = (
+                type(raw_claim_results) is list
+                and bool(raw_claim_results)
+                and type(claims) is list
+                and len(raw_claim_results) == len(claims)
+                and all(
+                    type(result) is dict
+                    and result.get("status") == "PASS"
+                    for result in raw_claim_results
+                )
+            )
+            checks.append(
+                Check(
+                    "promotion claims pass canonical strict gate evaluation",
+                    claims_pass,
+                    details={
+                        "gate_status": gate_result.get("status"),
+                        "claim_statuses": {
+                            claim_id: result.get("status")
+                            for claim_id, result in claim_results.items()
+                        },
+                        "evidence_root": ".",
+                        "downstream_policy": "promotion-v2",
+                    },
+                )
+            )
+            downstream_reasons, downstream_count = (
+                gate.evaluate_downstream_nonclosure(
+                    data,
+                    claim_results,
+                    policy="promotion-v2",
+                )
+            )
+        else:
+            downstream_reasons = [
+                "promotion claims failed pre-evaluation schema validation"
+            ]
+    except Exception as exc:
+        downstream_reasons = [
+            "shared downstream evaluator unavailable: "
+            f"{type(exc).__name__}"
+        ]
+        downstream_count = 0
+    if claims_shape_valid:
+        checks.append(
+            Check(
+                "promotion v2 downstream review prevents automatic closure",
+                not downstream_reasons,
+                details={
+                    "records": downstream_count,
+                    "reasons": downstream_reasons,
+                },
+                failure_kind="INVALID_INPUT",
+            )
+        )
     return checks
 
 
@@ -1527,14 +3784,22 @@ def stale_token_checks(package_root: Path, bundle: Path) -> List[Check]:
                         "root": root_label,
                         "path": rel,
                         "kind": "unreadable",
-                        "error": repr(exc),
+                        "error": (
+                            f"{type(exc).__name__}: regular file unreadable"
+                        ),
                     }
                 )
                 continue
             for pat in stale_patterns:
                 m = re.search(pat, text)
                 if m:
-                    hits.append({"root": root_label, "path": rel, "pattern": pat, "excerpt": text[max(0, m.start()-60):m.end()+60].replace("\n", " ")})
+                    hits.append(
+                        {
+                            "root": root_label,
+                            "path": rel,
+                            "pattern": pat,
+                        }
+                    )
                     break
     for item in unsafe:
         checks.append(
@@ -1549,17 +3814,10 @@ def stale_token_checks(package_root: Path, bundle: Path) -> List[Check]:
     return checks
 
 
-def summarize(checks: List[Check], allow_official_scope_exclusion: bool) -> Dict[str, Any]:
+def summarize(checks: List[Check]) -> Dict[str, Any]:
     critical_failed = [c for c in checks if c.severity == "critical" and not c.passed]
     major_failed = [c for c in checks if c.severity == "major" and not c.passed]
-    if critical_failed:
-        status = "FAIL"
-    elif major_failed or allow_official_scope_exclusion:
-        status = PASS_SCOPED
-    else:
-        status = PASS_TRACKED
     return {
-        "status": status,
         "checks_total": len(checks),
         "checks_passed": sum(1 for c in checks if c.passed),
         "critical_failed": len(critical_failed),
@@ -1569,12 +3827,220 @@ def summarize(checks: List[Check], allow_official_scope_exclusion: bool) -> Dict
     }
 
 
+def finalize_promotion_result(
+    checks: List[Check],
+    *,
+    allow_official_scope_exclusion: bool,
+    execution_evidence: Mapping[str, Any],
+    synthetic_origin: bool,
+) -> Dict[str, Any]:
+    base = summarize(checks)
+    failed = [check for check in checks if not check.passed]
+    invalid = [
+        check for check in failed if check.failure_kind == "INVALID_INPUT"
+    ]
+    internal = [
+        check for check in failed if check.failure_kind == "INTERNAL_ERROR"
+    ]
+    modeled_passed = not failed
+    result = {
+        **base,
+        "status": PASS_SCOPED if modeled_passed else "FAIL",
+        "modeled_promotion_checks_passed": modeled_passed,
+        "promotion_authorized": False,
+        "synthetic_origin": synthetic_origin,
+        "official_validator_scope_exclusion_requested": bool(
+            allow_official_scope_exclusion
+        ),
+        "execution_evidence": dict(execution_evidence),
+    }
+    if modeled_passed:
+        # v1.0.3 cannot satisfy the still-unimplemented Issue #5 charter
+        # mechanics. The certifier alone is capped; generic gate/formal PASS
+        # semantics remain unchanged.
+        result.update({
+            "outcome": "CAPPED",
+            "satisfied_profile": PROMOTION_PROFILE,
+            "unresolved_charter_obligations": list(
+                ISSUE_5_UNRESOLVED_OBLIGATIONS
+            ),
+            "scope_cap_reason": (
+                "v1.0.3 Issue #5 charter mechanics are not implemented"
+            ),
+        })
+    else:
+        result.update({
+            "outcome": "FAILED",
+            "failure_kind": (
+                "INTERNAL_ERROR"
+                if internal
+                else "INVALID_INPUT"
+                if invalid
+                else "CHECK_FAILED"
+            ),
+        })
+    return result
+
+
+def normalize_result_paths(
+    value: Any,
+    replacements: Sequence[Tuple[str, str]],
+) -> Any:
+    if isinstance(value, str):
+        normalized = value
+        for raw, display in sorted(
+            replacements,
+            key=lambda item: len(item[0]),
+            reverse=True,
+        ):
+            if raw:
+                normalized = re.sub(
+                    re.escape(raw) + r"(?=$|[\\/])",
+                    lambda _match, replacement=display: replacement,
+                    normalized,
+                )
+        return normalized
+    if isinstance(value, list):
+        return [normalize_result_paths(item, replacements) for item in value]
+    if isinstance(value, tuple):
+        return [normalize_result_paths(item, replacements) for item in value]
+    if isinstance(value, Mapping):
+        return {
+            key: normalize_result_paths(item, replacements)
+            for key, item in value.items()
+        }
+    return value
+
+
 def to_markdown(result: Mapping[str, Any]) -> str:
     lines = ["# PASS-TRACKED upgrade certification", "", f"Status: **{result.get('status')}**", "", "| Check | Severity | Result | Details |", "|---|---|---:|---|"]
     for c in result.get("checks", []):
         details = json.dumps(c.get("details"), sort_keys=True)[:600] if c.get("details") is not None else ""
         lines.append(f"| {c.get('name')} | {c.get('severity')} | {'PASS' if c.get('passed') else 'FAIL'} | {details} |")
     return "\n".join(lines) + "\n"
+
+
+def certify_bundle(
+    package_root: Path,
+    bundle: Path,
+    *,
+    run_fresh_compat: bool = False,
+    allow_official_scope_exclusion: bool = False,
+) -> Dict[str, Any]:
+    checks: List[Check] = []
+    execution_evidence: Dict[str, Any] = {
+        "deterministic": {},
+        "official_validators": {},
+    }
+    synthetic_origin = False
+    package_root_error = directory_error(package_root)
+    bundle_error = directory_error(bundle)
+    checks.append(
+        Check(
+            "package root exists as regular directory",
+            package_root_error is None,
+            details=package_root_error or str(package_root),
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    checks.append(
+        Check(
+            "audit bundle exists as regular directory",
+            bundle_error is None,
+            details=bundle_error or str(bundle),
+            failure_kind="INVALID_INPUT",
+        )
+    )
+    try:
+        if package_root_error is None and bundle_error is None:
+            plugin_data, plugin_error = try_load_json(
+                package_root / ".claude-plugin/plugin.json"
+            )
+            plugin_version = (
+                plugin_data.get("version")
+                if isinstance(plugin_data, Mapping)
+                else None
+            )
+            checks.append(
+                Check(
+                    "promotion certifier profile applies to package v1.0.3",
+                    plugin_error is None and plugin_version == "1.0.3",
+                    details=plugin_version,
+                    failure_kind="INVALID_INPUT",
+                )
+            )
+            certificate_data, _certificate_error = try_load_json(
+                bundle / "promotion_certificate.json"
+            )
+            synthetic_origin = (
+                isinstance(certificate_data, Mapping)
+                and certificate_data.get("origin") == "synthetic-contract"
+            )
+            checks.extend(
+                deterministic_checks(
+                    package_root,
+                    bundle,
+                    run_fresh_compat,
+                    execution_evidence["deterministic"],
+                )
+            )
+            checks.extend(
+                official_validator_checks(
+                    package_root,
+                    bundle,
+                    allow_official_scope_exclusion,
+                    execution_evidence["official_validators"],
+                )
+            )
+            checks.extend(live_fixture_checks(package_root, bundle))
+            promotion_checks = promotion_certificate_checks(
+                package_root,
+                bundle,
+                allow_official_scope_exclusion,
+            )
+            checks.extend(promotion_checks)
+            formal_locator_blocked = any(
+                not check.passed
+                and (
+                    check.name
+                    == (
+                        "promotion evidence roles exactly match required "
+                        "semantic roles"
+                    )
+                    or check.name.startswith(
+                        "promotion evidence node is typed:"
+                    )
+                )
+                for check in promotion_checks
+            )
+            if not formal_locator_blocked:
+                checks.extend(formal_artifact_checks(package_root, bundle))
+            checks.extend(stale_token_checks(package_root, bundle))
+        return finalize_promotion_result(
+            checks,
+            allow_official_scope_exclusion=(
+                allow_official_scope_exclusion
+            ),
+            execution_evidence=execution_evidence,
+            synthetic_origin=synthetic_origin,
+        )
+    except Exception:
+        return {
+            "status": "FAIL",
+            "outcome": "FAILED",
+            "failure_kind": "INTERNAL_ERROR",
+            "promotion_authorized": False,
+            "reason": (
+                "unexpected certifier implementation failure; "
+                "internal details omitted"
+            ),
+            "checks": [asdict(check) for check in checks],
+            "failed_checks": [
+                asdict(check) for check in checks if not check.passed
+            ],
+        }
+
+
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -1594,29 +4060,59 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--allow-official-validator-scope-exclusion", action="store_true", help="do not fail when official Claude Code validators are missing; the result remains PASS-SCOPED rather than PASS-TRACKED")
     args = parser.parse_args(argv)
 
-    package_root = args.package_root.resolve()
-    bundle = args.audit_bundle.resolve()
-    checks: List[Check] = []
-    package_root_error = directory_error(package_root)
-    bundle_error = directory_error(bundle)
-    checks.append(Check("package root exists as regular directory", package_root_error is None, details=package_root_error or str(package_root)))
-    checks.append(Check("audit bundle exists as regular directory", bundle_error is None, details=bundle_error or str(bundle)))
-    if package_root_error is None and bundle_error is None:
-        checks.extend(deterministic_checks(package_root, bundle, args.run_fresh_package_validator))
-        checks.extend(official_validator_checks(bundle, args.allow_official_validator_scope_exclusion))
-        checks.extend(live_fixture_checks(package_root, bundle))
-        checks.extend(formal_artifact_checks(package_root, bundle))
-        checks.extend(promotion_certificate_checks(package_root, bundle))
-        checks.extend(stale_token_checks(package_root, bundle))
-    result = summarize(checks, args.allow_official_validator_scope_exclusion)
+    package_root = Path(os.path.abspath(args.package_root))
+    bundle = Path(os.path.abspath(args.audit_bundle))
+    result = certify_bundle(
+        package_root,
+        bundle,
+        run_fresh_compat=args.run_fresh_package_validator,
+        allow_official_scope_exclusion=(
+            args.allow_official_validator_scope_exclusion
+        ),
+    )
+    display_result = normalize_result_paths(
+        result,
+        (
+            (str(package_root), "<package-root>"),
+            (str(bundle), "<audit-bundle>"),
+        ),
+    )
     if args.json:
-        args.json.parent.mkdir(parents=True, exist_ok=True)
-        args.json.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
+        json_path = Path(os.path.abspath(args.json))
+        try:
+            atomic_replace_regular_text(
+                json_path,
+                json.dumps(display_result, indent=2, sort_keys=True) + "\n",
+            )
+        except (OSError, ValueError):
+            invalid = {
+                "status": "FAIL",
+                "outcome": "FAILED",
+                "failure_kind": "INVALID_INPUT",
+                "promotion_authorized": False,
+                "reason": "unsafe --json output path was rejected",
+            }
+            print(json.dumps(invalid, indent=2, sort_keys=True))
+            return 2
     if args.markdown:
-        args.markdown.parent.mkdir(parents=True, exist_ok=True)
-        args.markdown.write_text(to_markdown(result), encoding="utf-8")
-    print(json.dumps(result, indent=2, sort_keys=True))
-    return 0 if result["status"] == PASS_TRACKED else 2
+        markdown_path = Path(os.path.abspath(args.markdown))
+        try:
+            atomic_replace_regular_text(
+                markdown_path,
+                to_markdown(display_result),
+            )
+        except (OSError, ValueError):
+            invalid = {
+                "status": "FAIL",
+                "outcome": "FAILED",
+                "failure_kind": "INVALID_INPUT",
+                "promotion_authorized": False,
+                "reason": "unsafe --markdown output path was rejected",
+            }
+            print(json.dumps(invalid, indent=2, sort_keys=True))
+            return 2
+    print(json.dumps(display_result, indent=2, sort_keys=True))
+    return 2
 
 
 if __name__ == "__main__":

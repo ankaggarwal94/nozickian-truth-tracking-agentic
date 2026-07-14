@@ -10,6 +10,39 @@
       "status": "PASS-TRACKED"
     },
     {
+      "expected_any": [
+        "INVALID_INPUT"
+      ],
+      "name": "non_object_certificate_is_invalid_input",
+      "passed": true,
+      "reasons": [
+        "certificate JSON root is not an object"
+      ],
+      "status": "INVALID_INPUT"
+    },
+    {
+      "expected_any": [
+        "INVALID_INPUT"
+      ],
+      "name": "non_list_claims_is_invalid_input",
+      "passed": true,
+      "reasons": [
+        "certificate claims is not a list"
+      ],
+      "status": "INVALID_INPUT"
+    },
+    {
+      "expected_any": [
+        "INVALID_INPUT"
+      ],
+      "name": "non_object_claim_entry_is_invalid_input",
+      "passed": true,
+      "reasons": [
+        "certificate claims contains a non-object entry"
+      ],
+      "status": "INVALID_INPUT"
+    },
+    {
       "evidence_root": "<temporary strict-evidence root>",
       "expected_any": [
         "PASS-TRACKED"
@@ -168,7 +201,7 @@
       "outside_root": "<temporary outside-root probe>",
       "passed": true,
       "reasons": [
-        "C-001: invalid evidence refs: self_validation/evidence/run-gate-contract-tests.json::A: evidence ref is not an existing local file; self_validation/evidence/run-gate-contract-tests.json::B: evidence ref is not an existing local file",
+        "C-001: invalid evidence refs: self_validation/evidence/run-gate-contract-tests.json::A: evidence ref uses an unsupported alias suffix; self_validation/evidence/run-gate-contract-tests.json::B: evidence ref uses an unsupported alias suffix",
         "C-001: unique evidence refs 0 < required 2",
         "C-001: unique structured evidence refs 0 < required 1"
       ],
@@ -372,7 +405,7 @@
       "outside_root": "<temporary outside-root probe>",
       "passed": true,
       "reasons": [
-        "C-001: invalid evidence refs: ../ntt_gate_external_valid_ref/evidence.json: evidence ref escapes evidence_root"
+        "C-001: invalid evidence refs: ../ntt_gate_external_valid_ref/evidence.json: evidence ref is not a canonical relative POSIX path"
       ],
       "status": "FAIL"
     },
@@ -398,8 +431,116 @@
       "outside_root": "<temporary outside-root probe>",
       "passed": true,
       "reasons": [
-        "C-001: invalid evidence refs: ../ntt_gate_external_valid_ref/evidence.json: evidence ref escapes evidence_root",
+        "C-001: invalid evidence refs: ../ntt_gate_external_valid_ref/evidence.json: evidence ref is not a canonical relative POSIX path",
         "C-001: unique evidence refs 1 < required 2"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "noncanonical_evidence_ref_dot_component_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: ./self_validation/evidence/run-gate-contract-tests.json: evidence ref is not a canonical relative POSIX path",
+        "C-001: unique evidence refs 1 < required 2"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "noncanonical_evidence_ref_repeated_separator_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: self_validation//evidence/run-gate-contract-tests.json: evidence ref is not a canonical relative POSIX path",
+        "C-001: unique evidence refs 1 < required 2"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "noncanonical_evidence_ref_trailing_separator_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: self_validation/evidence/run-gate-contract-tests.json/: evidence ref is not a canonical relative POSIX path",
+        "C-001: unique evidence refs 1 < required 2"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "noncanonical_evidence_ref_backslash_separator_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: self_validation\\evidence/run-gate-contract-tests.json: evidence ref uses a non-canonical separator",
+        "C-001: unique evidence refs 1 < required 2"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "noncanonical_artifact_path_dot_component_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: self_validation/evidence/run-gate-contract-tests.json: artifact_path is not a canonical relative POSIX path"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "noncanonical_artifact_path_repeated_separator_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: self_validation/evidence/run-gate-contract-tests.json: artifact_path is not a canonical relative POSIX path"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "noncanonical_artifact_path_trailing_separator_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: self_validation/evidence/run-gate-contract-tests.json: artifact_path is not a canonical relative POSIX path"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "evidence_root": "<temporary strict-evidence root>",
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "noncanonical_artifact_path_backslash_separator_rejected",
+      "outside_root": "<temporary outside-root probe>",
+      "passed": true,
+      "reasons": [
+        "C-001: invalid evidence refs: self_validation/evidence/run-gate-contract-tests.json: artifact_path uses a non-canonical separator"
       ],
       "status": "FAIL"
     },
@@ -412,7 +553,7 @@
       "outside_root": "<temporary outside-root probe>",
       "passed": true,
       "reasons": [
-        "C-001: invalid evidence refs: https://example.invalid/nozickian/evidence.json: remote evidence refs are not allowed in strict local evidence mode"
+        "C-001: invalid evidence refs: https://example.invalid/nozickian/evidence.json: evidence ref URI schemes are not allowed in strict local evidence mode"
       ],
       "status": "FAIL"
     },
@@ -425,7 +566,7 @@
       "outside_root": "<temporary outside-root probe>",
       "passed": true,
       "reasons": [
-        "C-001: invalid evidence refs: HTTPS://example.invalid/nozickian/evidence.json: remote evidence refs are not allowed in strict local evidence mode"
+        "C-001: invalid evidence refs: HTTPS://example.invalid/nozickian/evidence.json: evidence ref URI schemes are not allowed in strict local evidence mode"
       ],
       "status": "FAIL"
     },
@@ -438,7 +579,7 @@
       "outside_root": "<temporary outside-root probe>",
       "passed": true,
       "reasons": [
-        "C-001: invalid evidence refs: hTtPs://example.invalid/nozickian/evidence.json: remote evidence refs are not allowed in strict local evidence mode"
+        "C-001: invalid evidence refs: hTtPs://example.invalid/nozickian/evidence.json: evidence ref URI schemes are not allowed in strict local evidence mode"
       ],
       "status": "FAIL"
     },
@@ -451,7 +592,7 @@
       "outside_root": "<temporary outside-root probe>",
       "passed": true,
       "reasons": [
-        "C-001: invalid evidence refs: DOI:10.5555/nozickian-test: remote evidence refs are not allowed in strict local evidence mode"
+        "C-001: invalid evidence refs: DOI:10.5555/nozickian-test: evidence ref URI schemes are not allowed in strict local evidence mode"
       ],
       "status": "FAIL"
     },
@@ -464,7 +605,7 @@
       "outside_root": "<temporary outside-root probe>",
       "passed": true,
       "reasons": [
-        "C-001: invalid evidence refs: nozickian-scheme:evidence.json: remote evidence refs are not allowed in strict local evidence mode"
+        "C-001: invalid evidence refs: nozickian-scheme:evidence.json: evidence ref URI schemes are not allowed in strict local evidence mode"
       ],
       "status": "FAIL"
     },
@@ -478,6 +619,113 @@
         "downstream claim D-001 attempts automatic closure/status inheritance without an independent claim record"
       ],
       "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "downstream_pass_cannot_alias_source_claim",
+      "passed": true,
+      "reasons": [
+        "downstream claim D-OWN-SOURCE aliases source claim C-001 instead of a distinct independent claim"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "downstream_non_string_own_claim_id_rejected",
+      "passed": true,
+      "reasons": [
+        "downstream claim D-SCALAR-OWN has a non-string or empty own_claim_id",
+        "downstream claim D-SCALAR-OWN attempts automatic closure/status inheritance without an independent claim record"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "downstream_unknown_status_success_rejected",
+      "passed": true,
+      "reasons": [
+        "downstream claim D-UNKNOWN-SUCCESS uses unsupported status: 'SUCCESS'"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "downstream_unknown_status_valid_rejected",
+      "passed": true,
+      "reasons": [
+        "downstream claim D-UNKNOWN-VALID uses unsupported status: 'VALID'"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "downstream_unknown_status_accepted_rejected",
+      "passed": true,
+      "reasons": [
+        "downstream claim D-UNKNOWN-ACCEPTED uses unsupported status: 'ACCEPTED'"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "PASS-TRACKED"
+      ],
+      "name": "downstream_independent_pass_needs_no_undocumented_backlink",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-TRACKED"
+    },
+    {
+      "expected_any": [
+        "INVALID_INPUT"
+      ],
+      "name": "unknown_downstream_policy_fails_closed",
+      "passed": true,
+      "reasons": [
+        "unknown downstream policy: 'promotion-v2-typo'"
+      ],
+      "status": "INVALID_INPUT"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "promotion_policy_requires_downstream_review",
+      "passed": true,
+      "reasons": [
+        "promotion downstream_review is not an object"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "FAIL"
+      ],
+      "name": "promotion_policy_empty_review_requires_reason",
+      "passed": true,
+      "reasons": [
+        "promotion downstream_review.none_identified_reason is required when no claims are identified"
+      ],
+      "status": "FAIL"
+    },
+    {
+      "expected_any": [
+        "PASS-TRACKED"
+      ],
+      "name": "promotion_policy_clean_empty_review_allowed",
+      "passed": true,
+      "reasons": [],
+      "status": "PASS-TRACKED"
     },
     {
       "expected_any": [
@@ -701,6 +949,6 @@
       "status": "PASS-TRACKED"
     }
   ],
-  "passed": 57,
-  "total": 57
+  "passed": 78,
+  "total": 78
 }

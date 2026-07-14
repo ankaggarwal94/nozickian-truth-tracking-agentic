@@ -22,6 +22,7 @@ python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certifi
 python3 skills/nozickian-verify/scripts/run_regression_evals.py .
 python3 skills/nozickian-verify/scripts/run_gate_contract_tests.py .
 python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py .
+python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .
 ```
 
 ## Run live checks when Claude Code is available
@@ -35,3 +36,5 @@ A machine without the `claude` executable cannot certify runtime tracking. In th
 ## Expected result language
 
 Use **PASS-SCOPED** for deterministic/static assurance with explicitly retained runtime limitations. Use **PASS-TRACKED** only when the upgrade audit bundle proves live runtime tracking, formal trace authentication, strict gate success, and downstream non-closure discipline.
+
+The aggregate command should report `36/36`. That result proves the synthetic promotion contract exercised the production certifier CLI, including nonempty canonical claim evaluation, complete-stream failure detection, and safe output-path handling; it does not prove live runtime authentication. In v1.0.3, even its complete modeled baseline exits nonzero with `PASS-SCOPED`, `CAPPED`, and `promotion_authorized: false` because the two Issue #5 charter mechanics remain parent-enforced.

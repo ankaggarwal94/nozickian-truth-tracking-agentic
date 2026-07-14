@@ -11,7 +11,7 @@ Status: **PASS-SCOPED**
 | failed_claims | 0 |
 | critical_failed | 0 |
 | major_failed | 0 |
-| scope_limitations | 35 |
+| scope_limitations | 36 |
 | certificate_method_unknowns | 2 |
 | certificate_method_completeness | 1.0 |
 | evidence_root_checked | True |
@@ -19,6 +19,7 @@ Status: **PASS-SCOPED**
 | structured_evidence_required | True |
 | derived_or_downstream_claims | 3 |
 | downstream_nonclosure_violations | 0 |
+| downstream_policy | generic |
 
 ## Claim results
 

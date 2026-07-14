@@ -13,10 +13,10 @@ it prevents a bare README, LICENSE, or unrelated nonempty file from counting as
 claim evidence for PASS-TRACKED.
 """
 from __future__ import annotations
-import argparse, hashlib, json, math, re
+import argparse, hashlib, json, math, os, re, uuid
 from urllib.parse import urlparse
 from dataclasses import dataclass, asdict
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 PASS_TRUTH = {"confirmed", "executed_confirmed", "formal_confirmed", "independently_confirmed"}
@@ -41,6 +41,47 @@ UNKNOWN = {"", "unknown", "inferred_unknown", "n/a", "none"}
 STRUCTURED_EVIDENCE_FIELDS = ("evidence_schema_version", "claim_id", "artifact_path", "command_or_source", "observed_result", "support_summary", "timestamp_utc", "hash_or_version")
 STRUCTURED_TEST_FIELDS = ("test_id",)
 DOWNSTREAM_PASS_STATUSES = {"pass", "passed", "verified", "confirmed", "pass-tracked", "pass-scoped", "pass_tracked", "pass_scoped"}
+DOWNSTREAM_NONPASS_STATUSES = {
+    "unverified",
+    "unknown",
+    "fail",
+    "failed",
+    "rejected",
+    "limited",
+    "blocked",
+    "withheld",
+    "not-certified",
+    "not_certified",
+}
+DOWNSTREAM_STATUSES = DOWNSTREAM_PASS_STATUSES | DOWNSTREAM_NONPASS_STATUSES
+
+
+@dataclass(frozen=True)
+class DownstreamPolicy:
+    """Policy controls for the shared non-closure evaluator."""
+
+    name: str = "generic"
+    require_records: bool = False
+    require_review: bool = False
+    require_own_claim_field: bool = False
+
+
+DOWNSTREAM_POLICIES = {
+    "generic": DownstreamPolicy(),
+    "package-self": DownstreamPolicy(
+        name="package-self",
+        require_records=True,
+    ),
+    "promotion-v2": DownstreamPolicy(
+        name="promotion-v2",
+        require_review=True,
+        require_own_claim_field=True,
+    ),
+}
+
+
+class InvalidInputError(ValueError):
+    """Expected malformed-input error safe to expose without a traceback."""
 
 @dataclass
 class EvidenceCheck:
@@ -151,9 +192,13 @@ def _collect_method_unknowns(cert: Mapping[str, Any], max_depth: int = 6) -> Lis
     return found
 
 
-def load_json(path: Path) -> Dict[str, Any]:
-    try: return json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc: raise SystemExit(f"Could not load JSON {path}: {exc}") from exc
+def load_json(path: Path) -> Any:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise InvalidInputError(
+            f"certificate JSON could not be read: {type(exc).__name__}"
+        ) from None
 
 
 def sha256_path(path: Path) -> str:
@@ -178,18 +223,16 @@ def _canonical_claimed_sha256(value: Any) -> Optional[str]:
 def _artifact_under_root(artifact_path: Any, evidence_root: Optional[Path]) -> Tuple[Optional[Path], Optional[str]]:
     if evidence_root is None:
         return None, "evidence_root unavailable for artifact hash verification"
-    rel = str(artifact_path or "").strip()
-    if not rel:
-        return None, "artifact_path is empty"
-    try:
-        scheme = (urlparse(rel).scheme or "").strip()
-    except Exception:
-        scheme = ""
+    rel, canonical_error = _canonical_relative_path(
+        artifact_path,
+        "artifact_path",
+    )
+    if canonical_error is not None or rel is None:
+        return None, canonical_error
+    scheme = (urlparse(rel).scheme or "").strip()
     if scheme:
         return None, "artifact_path URI schemes are not allowed in strict local evidence mode"
     candidate = Path(rel)
-    if candidate.is_absolute():
-        return None, "artifact_path must be relative to evidence_root"
     root = evidence_root.resolve()
     path = (root / candidate).resolve()
     try:
@@ -223,8 +266,37 @@ def _verify_artifact_sha256(data: Mapping[str, Any], evidence_root: Optional[Pat
         reasons.append(f"hash_or_version does not match artifact_path SHA-256: claimed={claimed} actual={actual}")
     return reasons, str(artifact.resolve()), actual
 
+def _canonical_relative_path(
+    value: Any,
+    field: str,
+) -> Tuple[Optional[str], Optional[str]]:
+    """Require an already-canonical relative POSIX path before resolution."""
+    if type(value) is not str or not value:
+        return None, f"{field} is empty or not a string"
+    if value != value.strip():
+        return None, f"{field} has surrounding whitespace"
+    if "\\" in value:
+        return None, f"{field} uses a non-canonical separator"
+    if "::" in value:
+        return None, f"{field} uses an unsupported alias suffix"
+    if _is_remote_ref(value):
+        return None, (
+            f"{field} URI schemes are not allowed in strict local evidence mode"
+        )
+    posix = PurePosixPath(value)
+    if posix.is_absolute():
+        return None, f"{field} must be relative to evidence_root"
+    if (
+        not posix.parts
+        or any(part in {"", ".", ".."} for part in posix.parts)
+        or posix.as_posix() != value
+    ):
+        return None, f"{field} is not a canonical relative POSIX path"
+    return value, None
+
+
 def _raw_ref(ref: Any) -> str:
-    return str(ref or "").split("::", 1)[0].strip()
+    return ref if type(ref) is str else ""
 
 
 def _is_remote_ref(raw: str) -> bool:
@@ -235,10 +307,7 @@ def _is_remote_ref(raw: str) -> bool:
     evidence, reject any non-empty URI scheme rather than maintaining an
     allowlist that can be bypassed by case or obscure schemes.
     """
-    try:
-        parsed = urlparse(str(raw or ""))
-    except Exception:
-        return False
+    parsed = urlparse(str(raw or ""))
     scheme = (parsed.scheme or "").strip().lower()
     if scheme:
         return True
@@ -268,11 +337,9 @@ def _ref_to_path_checked(ref: Any, evidence_root: Path) -> Tuple[Optional[Path],
     boundary; strict local evidence rejects remote refs, absolute paths, path
     traversal, directories, and missing/empty files.
     """
-    raw = _raw_ref(ref)
-    if not raw:
-        return None, "evidence ref is empty"
-    if _is_remote_ref(raw):
-        return None, "remote evidence refs are not allowed in strict local evidence mode"
+    raw, canonical_error = _canonical_relative_path(ref, "evidence ref")
+    if canonical_error is not None or raw is None:
+        return None, canonical_error
     p = Path(raw)
     if p.is_absolute():
         return None, "evidence ref must be relative to evidence_root"
@@ -349,8 +416,17 @@ def _load_structured_evidence(ref: Any, evidence_root: Optional[Path], claim_id:
     canonical_ref = str(path.resolve())
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        return EvidenceCheck(ref_s, True, False, [f"structured evidence must be JSON: {exc}"], canonical_ref=canonical_ref)
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        return EvidenceCheck(
+            ref_s,
+            True,
+            False,
+            [
+                "structured evidence must be JSON: "
+                f"{type(exc).__name__}"
+            ],
+            canonical_ref=canonical_ref,
+        )
     if not isinstance(data, Mapping):
         return EvidenceCheck(ref_s, True, False, ["structured evidence JSON is not an object"], canonical_ref=canonical_ref)
     for field in STRUCTURED_EVIDENCE_FIELDS:
@@ -373,9 +449,6 @@ def _load_structured_evidence(ref: Any, evidence_root: Optional[Path], claim_id:
         reasons.append("observed_result too short to evidence an observation")
     artifact_reasons, artifact_path_resolved, artifact_sha256 = _verify_artifact_sha256(data, evidence_root)
     reasons.extend(artifact_reasons)
-    artifact_identity = ""
-    if artifact_path_resolved and artifact_sha256:
-        artifact_identity = f"{artifact_path_resolved}::sha256:{artifact_sha256}"
     return EvidenceCheck(
         ref_s,
         True,
@@ -402,6 +475,8 @@ def _unique_valid_artifacts(checks: Sequence[EvidenceCheck]) -> List[str]:
 def merge_thresholds(supplied: Mapping[str, Any] | None) -> Tuple[Dict[str, Dict[str, float]], List[str]]:
     merged = {k: dict(v) for k, v in DEFAULT_THRESHOLDS.items()}
     notes: List[str] = []
+    if supplied is not None and not isinstance(supplied, Mapping):
+        return merged, ["gate_thresholds is not an object"]
     for imp_raw, vals in (supplied or {}).items():
         imp = _lower(imp_raw)
         if imp not in DEFAULT_THRESHOLDS or not isinstance(vals, Mapping):
@@ -410,7 +485,7 @@ def merge_thresholds(supplied: Mapping[str, Any] | None) -> Tuple[Dict[str, Dict
             if key not in DEFAULT_THRESHOLDS[imp]:
                 notes.append(f"ignored invalid threshold key {imp}.{key}"); continue
             try: val = float(raw)
-            except Exception:
+            except (TypeError, ValueError, OverflowError):
                 notes.append(f"ignored non-numeric threshold {imp}.{key}={raw!r}"); continue
             if not math.isfinite(val) or not (0 <= val <= 1):
                 notes.append(f"ignored out-of-range threshold {imp}.{key}={raw!r}"); continue
@@ -561,7 +636,7 @@ def evaluate_claim(claim: Mapping[str, Any], thresholds: Mapping[str, Mapping[st
     method_score = computed_method
     if claim.get("method_completeness") is not None:
         try: method_score = min(computed_method, max(0.0, min(1.0, float(claim.get("method_completeness")))))
-        except Exception: reasons.append(f"non-numeric method_completeness {claim.get('method_completeness')!r}")
+        except (TypeError, ValueError, OverflowError): reasons.append(f"non-numeric method_completeness {claim.get('method_completeness')!r}")
     if missing_method and imp in {"critical", "major"}: reasons.append(f"missing method components: {missing_method}")
     th = thresholds[imp]
     if method_score < th["method_completeness"]: reasons.append(f"method completeness {method_score:.3f} < threshold {th['method_completeness']:.3f}")
@@ -620,53 +695,281 @@ def evaluate_claim(claim: Mapping[str, Any], thresholds: Mapping[str, Mapping[st
 
 
 
-def evaluate_downstream_nonclosure(cert: Mapping[str, Any], claim_ids: set[str]) -> Tuple[List[str], int]:
-    """Reject automatic closure from verified source claims to downstream claims.
+def _resolve_downstream_policy(
+    policy: str | DownstreamPolicy,
+) -> DownstreamPolicy:
+    if isinstance(policy, DownstreamPolicy):
+        return policy
+    if type(policy) is not str or policy not in DOWNSTREAM_POLICIES:
+        raise InvalidInputError(f"unknown downstream policy: {policy!r}")
+    return DOWNSTREAM_POLICIES[policy]
 
-    This is deliberately claim-local: if the certificate chooses to discuss
-    entailed, summarized, deployment, safety, compliance, or action-authorizing
-    conclusions in derived_or_downstream_claims, they may not inherit a pass
-    label from source claims unless they are also represented as their own claim
-    records with independent method/evidence/modal tests. Absent records remain
-    backward-compatible for older certificates; the package validator requires
-    this package's own certificate to include such a record.
-    """
-    records = [r for r in _as_list(cert.get("derived_or_downstream_claims"))]
+
+def evaluate_downstream_nonclosure(
+    cert: Mapping[str, Any],
+    claim_results: Optional[Mapping[str, Any] | set[str]] = None,
+    policy: str | DownstreamPolicy = "generic",
+) -> Tuple[List[str], int]:
+    """Apply the shared policy-aware downstream non-closure contract."""
+    selected_policy = _resolve_downstream_policy(policy)
     reasons: List[str] = []
+    raw_claims = cert.get("claims")
+    claims = (
+        [claim for claim in raw_claims if isinstance(claim, Mapping)]
+        if isinstance(raw_claims, list)
+        else []
+    )
+    claim_records: Dict[str, Mapping[str, Any]] = {}
+    for claim in claims:
+        raw_id = claim.get("id")
+        if type(raw_id) is not str or not raw_id.strip():
+            continue
+        claim_id = raw_id.strip()
+        if claim_id in claim_records:
+            reasons.append(
+                f"duplicate claim id used by downstream policy: {claim_id}"
+            )
+        else:
+            claim_records[claim_id] = claim
+
+    evaluated_status: Dict[str, Optional[str]] = {}
+    if isinstance(claim_results, Mapping):
+        for claim_id, result in claim_results.items():
+            if isinstance(result, ClaimResult):
+                evaluated_status[str(claim_id)] = result.status
+            elif isinstance(result, Mapping):
+                status = result.get("status")
+                evaluated_status[str(claim_id)] = (
+                    status if isinstance(status, str) else None
+                )
+    elif isinstance(claim_results, set):
+        evaluated_status = {str(claim_id): None for claim_id in claim_results}
+
+    raw_records = cert.get("derived_or_downstream_claims")
+    if raw_records is None:
+        records: List[Any] = []
+    elif isinstance(raw_records, list):
+        records = list(raw_records)
+    else:
+        records = []
+        reasons.append("derived_or_downstream_claims is not a list")
+    if selected_policy.require_records and not records:
+        reasons.append(
+            "certificate lacks derived_or_downstream_claims non-closure records"
+        )
+
+    record_ids: List[str] = []
     for idx, record in enumerate(records, start=1):
         if not isinstance(record, Mapping):
-            reasons.append(f"derived_or_downstream_claims[{idx}] is not an object")
+            reasons.append(
+                f"derived_or_downstream_claims[{idx}] is not an object"
+            )
             continue
-        did = str(record.get("id") or f"derived-{idx}")
+        raw_did = record.get("id")
+        if type(raw_did) is not str or not raw_did.strip():
+            did = f"derived-{idx}"
+            reasons.append(
+                f"downstream claim {did} has a non-string or empty id"
+            )
+        else:
+            did = raw_did.strip()
+            if did in record_ids:
+                reasons.append(f"duplicate downstream claim id: {did}")
+            record_ids.append(did)
+
         derived_claim = record.get("derived_claim", record.get("claim"))
-        status = _lower(record.get("status"))
-        reason = record.get("reason")
-        from_ids = [str(x) for x in _as_list(record.get("from_claim_ids")) if _nonempty(x)]
-        own_claim_id = str(record.get("own_claim_id") or record.get("claim_id") or "").strip()
-        if not _nonempty(derived_claim):
+        if type(derived_claim) is not str or not derived_claim.strip():
             reasons.append(f"downstream claim {did} lacks derived_claim text")
-        if not from_ids:
+
+        raw_from_ids = record.get("from_claim_ids")
+        if not isinstance(raw_from_ids, list) or not raw_from_ids:
+            from_ids: List[str] = []
             reasons.append(f"downstream claim {did} lacks from_claim_ids")
-        elif not set(from_ids).issubset(claim_ids):
-            reasons.append(f"downstream claim {did} cites unknown source claim ids: {sorted(set(from_ids) - claim_ids)}")
-        if status in DOWNSTREAM_PASS_STATUSES and own_claim_id not in claim_ids:
-            reasons.append(f"downstream claim {did} attempts automatic closure/status inheritance without an independent claim record")
-        if status in {"", "unverified", "unknown"} and not _nonempty(reason):
-            reasons.append(f"downstream claim {did} is unverified but lacks a reason")
+        elif not all(
+            type(item) is str and item.strip() for item in raw_from_ids
+        ):
+            from_ids = []
+            reasons.append(
+                f"downstream claim {did} has non-string or empty from_claim_ids"
+            )
+        else:
+            from_ids = [item.strip() for item in raw_from_ids]
+            unknown_sources = sorted(set(from_ids) - set(claim_records))
+            if unknown_sources:
+                reasons.append(
+                    f"downstream claim {did} cites unknown source claim ids: "
+                    f"{unknown_sources}"
+                )
+
+        raw_status = record.get("status")
+        if type(raw_status) is not str:
+            status = ""
+            reasons.append(f"downstream claim {did} has a non-string status")
+        else:
+            status = raw_status.strip().lower()
+        if status not in DOWNSTREAM_STATUSES:
+            reasons.append(
+                f"downstream claim {did} uses unsupported status: "
+                f"{raw_status!r}"
+            )
+
+        own_field_present = "own_claim_id" in record
+        raw_own_claim_id = (
+            record.get("own_claim_id")
+            if own_field_present
+            else record.get("claim_id")
+        )
+        if raw_own_claim_id is not None and (
+            type(raw_own_claim_id) is not str
+            or not raw_own_claim_id.strip()
+        ):
+            reasons.append(
+                f"downstream claim {did} has a non-string or empty own_claim_id"
+            )
+            own_claim_id = ""
+        else:
+            own_claim_id = (
+                raw_own_claim_id.strip()
+                if isinstance(raw_own_claim_id, str)
+                else ""
+            )
+
+        if status in DOWNSTREAM_PASS_STATUSES:
+            if selected_policy.require_own_claim_field and not own_field_present:
+                reasons.append(
+                    f"downstream claim {did} pass status requires own_claim_id"
+                )
+            if not own_claim_id:
+                reasons.append(
+                    f"downstream claim {did} attempts automatic closure/status "
+                    "inheritance without an independent claim record"
+                )
+            elif own_claim_id in from_ids:
+                reasons.append(
+                    f"downstream claim {did} aliases source claim "
+                    f"{own_claim_id} instead of a distinct independent claim"
+                )
+            elif own_claim_id not in claim_records:
+                reasons.append(
+                    f"downstream claim {did} cites missing independent claim "
+                    f"{own_claim_id}"
+                )
+            else:
+                if evaluated_status.get(own_claim_id) != "PASS":
+                    reasons.append(
+                        f"downstream claim {did} independent claim "
+                        f"{own_claim_id} did not evaluate PASS"
+                    )
+        if status in DOWNSTREAM_NONPASS_STATUSES:
+            reason = record.get("reason")
+            if type(reason) is not str or not reason.strip():
+                reasons.append(
+                    f"downstream claim {did} is non-passing but lacks a reason"
+                )
+
+    if selected_policy.require_review:
+        review = cert.get("downstream_review")
+        if not isinstance(review, Mapping):
+            reasons.append("promotion downstream_review is not an object")
+        else:
+            if review.get("performed") is not True:
+                reasons.append(
+                    "promotion downstream_review.performed is not true"
+                )
+            identified = review.get("claims_identified")
+            if not isinstance(identified, list) or not all(
+                type(item) is str and item.strip() for item in identified
+            ):
+                reasons.append(
+                    "promotion downstream_review.claims_identified is not a "
+                    "list of nonempty strings"
+                )
+            else:
+                normalized = [item.strip() for item in identified]
+                if len(set(normalized)) != len(normalized):
+                    reasons.append(
+                        "promotion downstream_review.claims_identified "
+                        "contains duplicates"
+                    )
+                if set(normalized) != set(record_ids):
+                    reasons.append(
+                        "promotion downstream_review.claims_identified does "
+                        "not match downstream records"
+                    )
+                if not normalized:
+                    none_reason = review.get("none_identified_reason")
+                    if (
+                        type(none_reason) is not str
+                        or not none_reason.strip()
+                    ):
+                        reasons.append(
+                            "promotion downstream_review."
+                            "none_identified_reason is required when no "
+                            "claims are identified"
+                        )
     return reasons, len(records)
 
-def evaluate_certificate(cert: Mapping[str, Any], evidence_root: Optional[Path] = None, strict_evidence: bool = False, max_unknown_depth: int = 6) -> Dict[str, Any]:
-    thresholds, notes = merge_thresholds(cert.get("gate_thresholds") if isinstance(cert, Mapping) else None)
+def _invalid_certificate_result(reason: str) -> Dict[str, Any]:
+    return {
+        "status": "INVALID_INPUT",
+        "summary": {
+            "claims": 0,
+            "failed_claims": 0,
+            "critical_failed": 0,
+            "major_failed": 0,
+            "downstream_nonclosure_violations": 0,
+        },
+        "reasons": [reason],
+        "claim_results": [],
+    }
+
+
+def evaluate_certificate(
+    cert: Any,
+    evidence_root: Optional[Path] = None,
+    strict_evidence: bool = False,
+    max_unknown_depth: int = 6,
+    downstream_policy: str | DownstreamPolicy = "generic",
+) -> Dict[str, Any]:
+    try:
+        selected_downstream_policy = _resolve_downstream_policy(
+            downstream_policy
+        )
+    except InvalidInputError as exc:
+        return _invalid_certificate_result(str(exc))
+    if not isinstance(cert, Mapping):
+        return _invalid_certificate_result(
+            "certificate JSON root is not an object"
+        )
+    raw_claims = cert.get("claims")
+    if raw_claims is not None and not isinstance(raw_claims, list):
+        return _invalid_certificate_result("certificate claims is not a list")
+    if isinstance(raw_claims, list) and any(
+        not isinstance(claim, Mapping) for claim in raw_claims
+    ):
+        return _invalid_certificate_result(
+            "certificate claims contains a non-object entry"
+        )
+
+    thresholds, notes = merge_thresholds(cert.get("gate_thresholds"))
     reasons: List[str] = list(notes)
-    claims = [c for c in _as_list(cert.get("claims") if isinstance(cert, Mapping) else None) if isinstance(c, Mapping)]
+    claims = list(raw_claims or [])
     if not claims: reasons.append("no claims in certificate")
     method_score, method_missing = method_completeness(cert.get("method_manifest") if isinstance(cert.get("method_manifest"), Mapping) else None)
     if method_score < DEFAULT_THRESHOLDS["major"]["method_completeness"]: reasons.append(f"certificate-level method_manifest incomplete: missing {method_missing}")
     effective_evidence_root = evidence_root if (strict_evidence or evidence_root is not None) else None
-    claim_ids = {str(c.get("id")) for c in claims if _nonempty(c.get("id"))}
-    downstream_reasons, downstream_count = evaluate_downstream_nonclosure(cert, claim_ids)
-    reasons.extend(downstream_reasons)
     results = [evaluate_claim(c, thresholds, evidence_root=effective_evidence_root) for c in claims]
+    result_by_id = {
+        result.claim_id: result
+        for result in results
+        if result.claim_id != "<missing-id>"
+    }
+    downstream_reasons, downstream_count = evaluate_downstream_nonclosure(
+        cert,
+        result_by_id,
+        policy=selected_downstream_policy,
+    )
+    reasons.extend(downstream_reasons)
     fail_count = sum(r.status == "FAIL" for r in results)
     critical_fail = sum(r.status == "FAIL" and r.importance == "critical" for r in results)
     major_fail = sum(r.status == "FAIL" and r.importance == "major" for r in results)
@@ -682,7 +985,25 @@ def evaluate_certificate(cert: Mapping[str, Any], evidence_root: Optional[Path] 
         status = "PASS-TRACKED"
     return {
         "status": status,
-        "summary": {"claims": len(claims), "failed_claims": fail_count, "critical_failed": critical_fail, "major_failed": major_fail, "scope_limitations": len(scope_unknowns), "certificate_method_unknowns": len(cert_method_unknowns), "certificate_method_completeness": round(method_score,4), "evidence_root_checked": bool(evidence_root), "strict_evidence": bool(strict_evidence or evidence_root is not None), "structured_evidence_required": bool(strict_evidence or evidence_root is not None), "derived_or_downstream_claims": downstream_count, "downstream_nonclosure_violations": len(downstream_reasons)},
+        "summary": {
+            "claims": len(claims),
+            "failed_claims": fail_count,
+            "critical_failed": critical_fail,
+            "major_failed": major_fail,
+            "scope_limitations": len(scope_unknowns),
+            "certificate_method_unknowns": len(cert_method_unknowns),
+            "certificate_method_completeness": round(method_score, 4),
+            "evidence_root_checked": bool(evidence_root),
+            "strict_evidence": bool(
+                strict_evidence or evidence_root is not None
+            ),
+            "structured_evidence_required": bool(
+                strict_evidence or evidence_root is not None
+            ),
+            "derived_or_downstream_claims": downstream_count,
+            "downstream_nonclosure_violations": len(downstream_reasons),
+            "downstream_policy": selected_downstream_policy.name,
+        },
         "reasons": reasons,
         "claim_results": [{"claim_id": r.claim_id, "importance": r.importance, "status": r.status, "reasons": r.reasons, "evidence_count": r.evidence_count, "structured_evidence_count": r.structured_evidence_count, "unique_evidence_count": r.unique_evidence_count, "unique_structured_evidence_count": r.unique_structured_evidence_count, "unique_artifact_count": r.unique_artifact_count, "false_world_tests": r.false_world_tests, "true_world_tests": r.true_world_tests, "sensitivity_rate": round(r.sensitivity_rate,4), "adherence_rate": round(r.adherence_rate,4), "method_completeness": round(r.method_completeness,4), "test_results": [asdict(t) for t in r.test_results]} for r in results]
     }
@@ -701,19 +1022,74 @@ def to_markdown(result: Mapping[str, Any], cert_path: Path) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _atomic_write_new_text(path: Path, text: str) -> None:
+    # SECURITY-REVIEW: The caller-selected report path is installed only when
+    # absent via O_EXCL/O_NOFOLLOW plus an atomic hard-link operation. Existing
+    # symlinks, special files, regular files, and hardlink sentinels are never
+    # opened or overwritten.
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor: Optional[int] = None
+    try:
+        descriptor = os.open(temporary, flags, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            descriptor = None
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.link(temporary, path, follow_symlinks=False)
+        temporary.unlink()
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Evaluate a Nozickian truth-tracking certificate JSON")
     ap.add_argument("certificate", type=Path); ap.add_argument("--markdown", type=Path); ap.add_argument("--evidence-root", type=Path); ap.add_argument("--strict-evidence", "--require-structured-evidence", dest="strict_evidence", action="store_true", help="Require structured local evidence binding when --evidence-root is supplied")
     ap.add_argument("--max-unknown-depth", type=int, default=6, help="Max recursion depth for collecting certificate-scope method unknowns; negative means unbounded (default: 6).")
+    ap.add_argument(
+        "--downstream-policy",
+        choices=sorted(DOWNSTREAM_POLICIES),
+        default="generic",
+    )
     args = ap.parse_args(argv)
     evidence_root = args.evidence_root.resolve() if args.evidence_root else None
-    result = evaluate_certificate(load_json(args.certificate), evidence_root=evidence_root, strict_evidence=(args.strict_evidence or evidence_root is not None), max_unknown_depth=args.max_unknown_depth)
+    try:
+        result = evaluate_certificate(
+            load_json(args.certificate),
+            evidence_root=evidence_root,
+            strict_evidence=(args.strict_evidence or evidence_root is not None),
+            max_unknown_depth=args.max_unknown_depth,
+            downstream_policy=args.downstream_policy,
+        )
+    except InvalidInputError as exc:
+        result = _invalid_certificate_result(str(exc))
+    except Exception:  # pylint: disable=broad-exception-caught
+        result = {
+            "status": "INTERNAL_ERROR",
+            "summary": {},
+            "reasons": [
+                "unexpected gate implementation failure; internal details omitted"
+            ],
+            "claim_results": [],
+        }
     display_result = normalize_cli_display(result, evidence_root)
     print(json.dumps(display_result, indent=2, sort_keys=True))
     if args.markdown:
         report = to_markdown(display_result, args.certificate)
         report = normalize_cli_display(report, evidence_root)
-        args.markdown.parent.mkdir(parents=True, exist_ok=True); args.markdown.write_text(report, encoding="utf-8")
+        try:
+            _atomic_write_new_text(args.markdown, report)
+        except (OSError, ValueError):
+            return 2
     return 0 if result["status"] in {"PASS-TRACKED", "PASS-SCOPED"} else 2
 
 if __name__ == "__main__":

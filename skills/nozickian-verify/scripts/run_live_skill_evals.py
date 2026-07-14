@@ -7,10 +7,10 @@ Claude Code CLI is installed. If the runtime cannot be exercised, it records
 UNVERIFIED_RUNTIME rather than treating a version check as a pass.
 """
 from __future__ import annotations
-import argparse, hashlib, importlib.util, json, os, re, shutil, stat, subprocess, sys, time
+import argparse, contextlib, hashlib, importlib.util, io, json, re, shutil, stat, subprocess, sys, time
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Any, Dict, List, Mapping, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Sequence, Tuple, cast
 
 STATUS_TOKENS = ("PASS-TRACKED", "PASS-SCOPED", "LIMITED", "FAIL", "UNVERIFIED")
 ACCEPTABLE_PASS_STATUSES = {"PASS-TRACKED", "PASS-SCOPED"}
@@ -215,19 +215,29 @@ def current_package_tree(root: Path) -> Dict[str, Any]:
             raise RuntimeError("cannot load current package validator")
         module = importlib.util.module_from_spec(spec)
         sys.modules[spec.name] = module
-        spec.loader.exec_module(module)
+        previous_dont_write = sys.dont_write_bytecode
+        import_stdout = io.StringIO()
+        try:
+            # Live validation must not mutate the package tree it measures.
+            sys.dont_write_bytecode = True
+            # SECURITY-REVIEW: The fixed package-local validator executes at
+            # import time. Contain stdout so this CLI emits one JSON document.
+            with contextlib.redirect_stdout(import_stdout):
+                spec.loader.exec_module(module)
+        finally:
+            sys.dont_write_bytecode = previous_dont_write
         shared_tree = getattr(module, "compute_stable_release_tree", None)
         if not callable(shared_tree):
             raise AttributeError(
                 "compute_stable_release_tree is not callable"
             )
-        result = shared_tree(root)
+        result = cast(Callable[[Path], Any], shared_tree)(root)
         if not isinstance(result, Mapping):
             raise TypeError(
                 "compute_stable_release_tree did not return an object"
             )
         return dict(result)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-exception-caught
         return {
             "algorithm": None,
             "valid": False,

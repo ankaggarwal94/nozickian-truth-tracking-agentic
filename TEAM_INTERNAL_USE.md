@@ -19,6 +19,7 @@ Before sharing a changed package internally:
 python3 skills/nozickian-verify/scripts/validate_package.py . --self-test --markdown self_validation/SELF_VALIDATION_REPORT.md
 python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --markdown self_validation/GATE_RESULT.md
 python3 skills/nozickian-verify/scripts/run_regression_evals.py . --json self_validation/regression_eval_result.json
+python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .
 ```
 
 3. On machines with Claude Code installed, run live fixture checks:
@@ -27,7 +28,7 @@ python3 skills/nozickian-verify/scripts/run_regression_evals.py . --json self_va
 python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures --json self_validation/live_runtime_eval_result.json
 ```
 
-4. Treat `PASS-SCOPED` as the normal team-internal release label until live runtime fixture transcripts are present and reviewed.
+4. Treat `PASS-SCOPED` as the v1.0.3 team-internal release label. Live runtime fixture transcripts remain necessary evidence, but the certifier's two Issue #5 obligations still prevent authorization.
 
 Manifest refreshes are fail-closed. `--update-manifest` first checks the no-follow physical surface plus Git index stage and mode evidence; symlinks, FIFOs, gitlinks/submodules, conflict stages, and other non-regular modes block the refresh. Manifest output is written through a fresh same-directory temporary file and atomically replaces the fixed destination.
 
@@ -87,9 +88,17 @@ Do not treat `PASS-SCOPED` or `PASS-TRACKED` for a source claim as inherited pro
 
 ## PASS-TRACKED promotion protocol
 
-Do not label a run `PASS-TRACKED` merely because this package validates or because a previous release was `PASS-SCOPED`. For promotion, create an external `pass_tracked_audit_bundle/` using `skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md`, run live Claude Code fixture evals, run at least one formal artifact verification with `--require-claude` and `--require-trace-auth`, capture official validator outputs, and use a promotion certificate whose exact `package_tree_sha256` binds the current-validator-derived stable inventory and whose five-or-more unique evidence refs are regular bundle-local files. The live result's package-tree, fixture-spec, and per-artifact digests must still equal current exact bytes, and every preflight/fixture transcript command must have the documented exact normalized argv. The manifest inventory and volatile exclusions must exactly match the current validator's executable policy. Formal transcript/certificate/ledger/evidence companions must be self-contained under each result directory before running `certify_pass_tracked_upgrade.py`, which reruns the current basic validator unconditionally.
+Do not label a run `PASS-TRACKED` merely because this package validates or because a previous release was `PASS-SCOPED`. Promotion certificate v2 requires `promotion_schema_version: "2.0"`, a `promotion-evidence-v2` typed role map/DAG, exact bytes and SHA-256 for canonical bundle-local regular non-symlink files, role-specific deterministic/official/live/formal validation, and an explicit `downstream_review`. Ordinary gate claim `evidence_refs` remain unchanged; the typed DAG is specific to the promotion certificate.
 
-If the certifier returns anything other than `PASS-TRACKED`, retain the returned downgrade status. Missing or partial live fixtures, stale/carried provenance, changed executable fingerprints, stale package/evals/artifact bytes after manifest refresh, prompt-only argv, missing `--plugin-dir`, wrong output format, wrong `max_turns`, extra or reordered fixture arguments, wrong preflight argv, shared/swapped/unhashed transcripts, wrong prompt/fixture/artifact binding, fabricated check summaries, contradictory official-validator status, manifest-authored inventory/exclusion drift, fresh-validator failure, package-tree mismatch, unsafe evidence refs, nonregular inputs, external-only formal companions, missing native `ntt-*` trace authentication, dry-run-only formal results, or automatic downstream pass inheritance are promotion blockers.
+The certifier reruns deterministic suites and allowlisted official validators. Claude validation uses exact strict argv and accepts the real ANSI-normalized `✔ Validation passed` form only when neither complete output stream contradicts it. Full captured bytes determine status, byte counts, and SHA-256; bounded excerpts and truncation flags are presentation metadata, not an authentication substitute. Prewritten text captures do not authorize. Missing official tools may be scoped only through the explicit flag; installed failures fail. Formal result `2.0` is selected only through its typed locator and binds the immutable standalone target snapshot, complete transcript, exact companion manifest, package tree, run, and target identities. Unrelated nonreserved files may remain, but basename substitution, glob-first selection, and tail-only transcript authentication are forbidden.
+
+Promotion requires at least one well-formed claim and a nonempty all-passing canonical strict-gate result set. Malformed, duplicate, invalid, or empty claims return canonical `FAIL` plus `failure_kind`. A performed downstream review may explicitly identify no downstream conclusions only when it records a substantive reason.
+
+Caller-controlled output destinations reject links, special files, hardlink aliases, and symlinked ancestors with bounded structured failures. Existing private regular `--json` files are intentionally regenerated by same-directory exclusive temporary plus atomic replacement; an output directory must be a real directory or safely created new directory.
+
+For v1.0.3, a complete modeled result is deliberately capped at `status: PASS-SCOPED`, `outcome: CAPPED`, `promotion_authorized: false`, and `satisfied_profile: promotion-contract-v2-complete`, with a nonzero exit and both unresolved Issue #5 obligations: consistency-sweep activation/resolution mechanics and `REMOTE_GROUND_TRUTH_REQUIRED` escalation mechanics remain parent-enforced. This cap applies only to `certify_pass_tracked_upgrade.py`; generic gate and formal-runner `PASS-TRACKED` semantics remain unchanged.
+
+The 36-case aggregate suite invokes the production certifier CLI for the baseline and all negative cases. Treat `36/36` as synthetic contract evidence, never as live runtime authentication.
 
 
 ## GitHub README documentation review

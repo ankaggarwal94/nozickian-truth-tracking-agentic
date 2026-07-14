@@ -6,6 +6,13 @@ This document is the normative audit plan for upgrading a Nozickian verification
 
 Do not promote `PASS-SCOPED` to `PASS-TRACKED` by interpretation, confidence, human approval, transcript presence, or source plausibility. Promotion requires a separate PASS-TRACKED upgrade audit bundle with machine-readable artifacts. A `PASS-SCOPED` result for package structure, trace authentication, source verification, or fixture success does not automatically verify a downstream production, safety, compliance, or action-authorizing claim.
 
+For v1.0.3, this audit models the complete promotion contract but does not authorize promotion. Even when every modeled check passes, `certify_pass_tracked_upgrade.py` returns `status: PASS-SCOPED`, `outcome: CAPPED`, `promotion_authorized: false`, `satisfied_profile: promotion-contract-v2-complete`, both unresolved Issue #5 obligations, and a nonzero exit. This cap applies only to the v1.0.3 certifier; generic `ntt_gate.py` and `run_formal_artifact_verification.py` retain their ordinary `PASS-TRACKED` semantics.
+
+The emitted `unresolved_charter_obligations` array is ordered and exact:
+
+1. `Issue #5 consistency-sweep activation and resolution mechanics remain parent-enforced.`
+2. `Issue #5 REMOTE_GROUND_TRUTH_REQUIRED escalation mechanics remain parent-enforced.`
+
 ## Required environment
 
 Run the upgrade audit in a clean checkout or unpacked release tree. Record the package-tree hash, exact fixture-specification byte hash, each fixture artifact's exact byte hash, Python version, operating system, Claude Code version output, observed executable SHA-256 fingerprints before and after all fixtures, fingerprint stability, authentication status, model, effort level, exact normalized argv, and all output paths. Resolve `claude` once, fingerprint the absolute regular non-symlink target, and execute that exact target for version, plugin validation, and every fixture even when subprocess working directories change. The executable fingerprints are observational evidence only (`authentication_status=observed-not-cryptographically-authenticated`), not cryptographic proof that a binary is an official Claude build. Load the package explicitly with `--plugin-dir`; do not rely on ambient user or project configuration. Use `--output-format stream-json` and `--include-hook-events` for formal runs so the runtime transcript contains auditable event boundaries.
@@ -35,8 +42,8 @@ pass_tracked_audit_bundle/
     formal_runner_contract_results.json
     manifest_check.txt
   official_validators/
-    claude_plugin_validate.json
-    skills_ref_validate.json
+    claude_plugin_validate.policy.json
+    skills_ref_validate.policy.json
   live_fixtures/
     live_runtime_eval_result.json
     transcripts/
@@ -48,11 +55,13 @@ pass_tracked_audit_bundle/
       *_NOZICKIAN_GATE.md
       *_NOZICKIAN_INVOCATION_LEDGER.md
       *_NOZICKIAN_FORMAL_TRANSCRIPT.stream.jsonl
+      *_NOZICKIAN_FORMAL_PROMPT.md
+      *_NOZICKIAN_TARGET_SNAPSHOT.bin
   promotion_certificate.json
   promotion_gate.md
 ```
 
-The directory may contain additional files, but the promotion certifier must be able to find every required artifact without relying on prose-only claims.
+The directory may contain additional nonreserved files, but typed promotion locators must select every required artifact without relying on prose-only claims, basename substitution, or glob-first selection. The promotion evidence role inventory and dependencies are fixed: all five deterministic roles, both official-policy roles, `live.runtime`, and `formal.result` remain present in every certificate.
 
 ## Required command sequence
 
@@ -69,20 +78,22 @@ python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --
 sha256sum -c MANIFEST.sha256 > pass_tracked_audit_bundle/deterministic/manifest_check.txt
 ```
 
-Required result: every deterministic check passes. These commands are necessary but not sufficient for `PASS-TRACKED`. During final certification, `certify_pass_tracked_upgrade.py` unconditionally reruns the current package's basic `validate_package.py`; a captured passing JSON file cannot substitute for that fresh run. The legacy `--run-fresh-package-validator` certifier flag remains accepted for command compatibility but no longer controls whether validation runs.
+Wrap each captured result in `deterministic-capture-v2` metadata: exact normalized argv, exact integer-zero return code, current package-tree identity, stdout SHA-256, canonical result SHA-256, and the structured result. During certification, the certifier reruns every deterministic suite with fixed argv and compares suite-specific semantic projections. Captures cannot authorize alone, and presentation-only fields are not treated as semantics.
 
 ### 2. Official Claude Code validators
 
-When the relevant validator commands are installed, capture their raw JSON or text output and exit codes:
+Create the typed official-policy nodes required by `promotion-evidence-v2`. During certification, the certifier resolves and executes each allowlisted validator itself:
 
 ```bash
-claude plugin validate . --strict > pass_tracked_audit_bundle/official_validators/claude_plugin_validate.txt 2>&1
-skills-ref validate skills/nozickian-verify > pass_tracked_audit_bundle/official_validators/skills_ref_validate.txt 2>&1
+claude plugin validate . --strict
+skills-ref validate skills/nozickian-verify
 ```
 
-If an official validator is unavailable, the upgrade audit cannot certify global runtime compatibility. Record the missing validator as a scope limitation and retain `PASS-SCOPED`.
+Prewritten text or minimal JSON captures never authorize. Claude is invoked with the exact ordered argv `claude plugin validate <package-root> --strict`; losing, moving, or changing `--strict` fails. After ANSI normalization, the observed real success form `✔ Validation passed` is accepted, while negative or contradictory output anywhere on either stream dominates. `skills-ref` remains strict to its observed contract without inventing unobserved success formats. The final result records fresh normalized argv, exact integer return code, resolved executable fingerprint, package tree, and separate full-stream stdout/stderr hashes and byte counts.
 
-For JSON captures, success requires `type(returncode) is int and returncode == 0` plus an explicit status field equal, case-insensitively, to `pass`, `passed`, `valid`, or `success`; booleans, floats, strings, nulls, and any explicit `fail`, `failed`, `failure`, `invalid`, `error`, or `not-ok` status fail. For text captures, anchored negative statuses and anchored nonzero numeric summaries such as `1 error`, `2 errors`, `1 failure`, or `3 failed` are rejected before positive markers. Only an anchored standalone positive status line (optionally prefixed by `validation`, `validator`, `status`, or `result`) or an explicit `0 failed` line can pass. Zero summaries may accompany an anchored pass, while substrings such as `valid` inside `invalid` never count.
+All status decisions and SHA-256 values use the complete captured bytes, never a bounded excerpt or tail. Public machine results may expose sanitized bounded excerpts with explicit `stdout_truncated` / `stderr_truncated` flags and full byte/hash metadata. If a capture exceeds the explicit safety ceiling, certification fails closed; it does not discard an early failure and authenticate a valid-looking tail.
+
+If an allowlisted validator executable is absent, certification may scope its fresh execution out only when the caller supplies the explicit official-scope-exclusion flag. This changes only the fresh execution record to unavailable/scoped: both official-policy evidence nodes and the fixed canonical dependencies remain mandatory. If the executable is installed, every nonzero return, negative/ambiguous output, or execution failure remains a failure and cannot be scoped away.
 
 ### 3. Live plugin fixture evals
 
@@ -131,24 +142,29 @@ python3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py \
   --json pass_tracked_audit_bundle/formal_artifacts/artifact-001/formal_result.json
 ```
 
-Required result: the formal result status is `PASS-TRACKED`, the strict gate result for the generated certificate is `PASS-TRACKED`, the runtime transcript authenticates every required native `ntt-*` lane, and the invocation ledger says no substitution was used. Each formal result directory must be self-contained under `formal_artifacts/...`: the transcript, generated certificate, invocation ledger, and all strict-gate evidence must be regular non-symlink files in that result directory. The certifier ignores producer-machine `output_dir`, `transcript_file`, and `evidence_root` parents; an external-only companion never satisfies promotion.
+Required result: `formal_result_schema_version` is `2.0`; the generic formal result and generated strict gate are `PASS-TRACKED`; the runtime transcript authenticates every required native `ntt-*` lane; and no substitution was used. The result binds an immutable standalone target snapshot, exact companion manifest (report, gate, certificate, ledger, complete transcript, prompt, and target snapshot), package-tree identity, run ID, target snapshot identity, and target pre/post stability. The complete stream-json transcript is written and hashed before authentication; neither tail truncation nor a display excerpt can establish a lane. Relative sibling context from the mutable source location is explicitly unavailable in this mode.
+
+The promotion certificate points to the canonical `formal_result.json` through its typed `formal.result` node. The certifier does not substitute a basename or choose a first glob match. Undeclared reserved companions fail, while unrelated nonreserved files may remain.
 
 ### 5. Promotion certificate and machine certification
 
 Create `promotion_certificate.json` describing the exact upgrade claim. It must not merely copy the package self-certificate. It must include:
 
+- Exact-string `promotion_schema_version: "2.0"`.
 - `upgrade_from_status: PASS-SCOPED`.
 - `requested_status: PASS-TRACKED`.
-- Package version, exact `package_tree_sha256`, and release tree path.
-- Deterministic command evidence refs.
-- Official validator evidence refs.
-- Live fixture evidence refs.
-- Formal artifact evidence refs.
-- Trace-authentication evidence refs.
+- Package version and exact `package_tree_sha256`.
+- Object-valued `method_m_upgrade`, `live_result_bindings`, `evidence`, and `downstream_review`; array-valued `claims` and `derived_or_downstream_claims`; and string-valued status/version/hash fields.
+- `evidence.schema_version: promotion-evidence-v2`.
+- A typed `evidence.nodes` map whose fixed nine semantic roles contain exactly `path`, `sha256`, and `depends_on`.
+- Canonical role dependencies forming a bounded acyclic graph.
+- Exact byte/SHA-256 binding and role-specific validation for every deterministic, official-policy, live, and formal node.
+- At least one promotion claim. Every `claims` entry is an object with exact required field types, a unique canonical ID, a complete method manifest, local evidence, false-world tests, true-world tests, contradiction review, and residual-risk review.
+- `downstream_review` with `performed: true`, `claims_identified`, and `none_identified_reason` when the list is empty.
 - Claim-local scope limitations, if any.
 - Derived/downstream claims with `UNVERIFIED` status unless independently verified.
 
-`evidence_refs` must contain at least five unique relative paths. Every ref must resolve to an existing regular non-symlink file inside the audit bundle. Absolute paths, URI schemes, traversal, missing files, and duplicate raw or canonical paths fail certification.
+Legacy flat promotion `evidence_refs` fail. Missing/wrong-type top-level schema fields, non-object claim entries, null or boolean aliases, duplicate/invalid IDs, and an empty claims array fail with canonical `FAIL` plus `INVALID_INPUT`. The certifier evaluates every well-formed claim through the canonical `ntt_gate.evaluate_certificate` path using the bundle evidence root and promotion policy. Modeled completion requires a nonempty claim-result set whose entries all pass before the actual results are passed to promotion-strict downstream non-closure evaluation. An explicitly empty downstream-conclusions list remains valid when the certificate has a real passing promotion claim and a substantive performed-review reason. Every typed node path must be canonical, relative, bundle-local, regular, and non-symlink. Absolute paths, URI schemes, traversal, aliases by canonical path or file identity, missing files, wrong bytes, wrong hashes, wrong role paths, and noncanonical dependencies fail. Distinct semantic roles may contain equal bytes, but they may not alias the same path or file identity.
 
 ### Deterministic package-tree hash
 
@@ -189,24 +205,40 @@ python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py \
   --json pass_tracked_audit_bundle/pass_tracked_certification_result.json
 ```
 
-Required result: `status: PASS-TRACKED`. Anything else must retain `PASS-SCOPED`, `LIMITED`, `FAIL`, or `UNVERIFIED_RUNTIME` as reported.
+Required v1.0.3 result for a complete modeled bundle: `status: PASS-SCOPED`, `outcome: CAPPED`, `promotion_authorized: false`, `satisfied_profile: promotion-contract-v2-complete`, both exact unresolved Issue #5 obligations, and exit code `2`. Any malformed or failed modeled check returns canonical `status: FAIL` plus `failure_kind`; untrusted bundle values must not produce an unhandled traceback.
 
 ## PASS-TRACKED promotion criteria
 
 The upgrade certifier must reject promotion unless all of the following are true:
 
-1. The captured package validator, strict evidence gate, regression evals, gate contracts, formal-runner contracts, and manifest check all pass, and a fresh current basic package validator rerun also passes unconditionally during certification.
-2. Official Claude Code validators pass or the declared certification scope explicitly excludes official runtime compatibility. If excluded, the result is not a full PASS-TRACKED upgrade for runtime compatibility.
+1. The captured package validator, strict evidence gate, regression evals, gate contracts, and formal-runner contracts all match fresh fixed-argv executions through suite-specific semantic projections.
+2. Fresh allowlisted official validators pass. Only absent executables may be explicitly scoped; scoped absence retains both official-policy nodes and the same fixed role DAG, while installed failures fail.
 3. Live fixture evals executed through the one fingerprinted absolute Claude target rather than being skipped or dry-run, after exact normalized version/plugin preflight argv, with current-run provenance, stable pre/post fingerprints, the current shared package-tree digest, exact current `evals.json` bytes, exact current fixture-ID coverage, each current artifact's exact bytes, distinct canonical bundle-local transcripts, exact transcript-byte hashes, exact normalized fixture argv using recorded `max_turns`, and canonical prompt text/hash binding to each exact fixture ID and expected artifact before independent transcript replay. These observations do not cryptographically authenticate the executable as official.
-4. Formal artifact verification executed through Claude Code, not a hand-written report, with every companion and strict-gate evidence file self-contained under its bundle result directory.
+4. Formal result `2.0` executed through Claude Code against the immutable standalone target snapshot, with exact package/run/target identities and every typed companion self-contained under its bundle result directory.
 5. The runtime transcript is `stream-json` or equivalent structured event output and includes authentic assistant-origin tool-use events plus matching user-origin tool-result/completion events for every required native `ntt-*` lane.
 6. The generated formal certificate is evaluated by `ntt_gate.py` in strict local evidence mode and returns `PASS-TRACKED`.
 7. No critical or major claim has method unknowns, unresolved contradictions, wrong hashes, missing evidence, missing modal tests, bad evidence refs, or unsupported pass labels.
 8. No downstream, deployment, safety, compliance, or action-authorizing claim inherits pass status from an upstream claim without its own method, evidence, false-world tests, true-world tests, contradiction review, and residual-risk assessment.
-9. The promotion certificate's exact `package_tree_sha256` matches the current-validator-derived package tree; manifest inventory paths and volatile exclusion arrays exactly match the executable current policy; and all unique evidence refs are relative regular non-symlink files inside the audit bundle.
+9. The promotion certificate's exact `package_tree_sha256` matches the current-validator-derived package tree; manifest inventory paths and volatile exclusion arrays exactly match executable policy; and every typed evidence role binds a distinct canonical regular non-symlink bundle file by exact bytes and SHA-256.
 10. All audit inputs are regular no-follow files; unreadable, symlink, FIFO, socket, device, or other special inputs fail checks and are never followed.
 11. All audit artifacts are package-local or bundle-local with stable SHA-256 provenance; absolute machine-local build paths and stale release-version references are not accepted as evidence.
 12. The final certification result includes a negative-control review explaining which nearby false-worlds would have been rejected and a true-world adherence review explaining which benign variations were retained.
+13. The promotion certificate supplies explicit `downstream_review` and does not use a fake or self-referential independent claim ID.
+14. v1.0.3 applies the mandatory certifier-only cap after all modeled checks pass; it does not implement or claim closure of Issue #5.
+
+### Safe output destinations
+
+Caller-supplied certifier `--json`, formal `--output-dir`, and formal compatibility `--json` paths are validated lexically component by component without resolving through attacker-controlled links. Symlinked ancestors, direct symlinks, special files, and hardlink aliases fail with bounded structured invalid-input output and no external overwrite. An explicitly supplied existing private regular `--json` file is intentionally replaceable for normal regeneration: bytes are written to a same-directory exclusive no-follow temporary and installed with atomic replacement. An existing regular file is never accepted as `--output-dir`; that path must be a real directory or a safely created new directory.
+
+## Aggregate contract evidence
+
+Run:
+
+```bash
+python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .
+```
+
+The expected result is `36/36`. The suite invokes the production certifier CLI for the complete synthetic baseline and every negative case. It verifies exact top-level schema types, the fixed typed DAG under both validator-available and explicitly scoped-unavailable states, exact strict-validator argv and real ANSI-normalized success output, early official failure after more than 50KB of neutral output, fresh deterministic/official execution policy, a real distinct independently passing downstream claim, malformed and empty claims, formal v2 bindings including an early disallowed event before more than 50KB of valid-looking tail, complete transcript hashes/byte counts, output-path safety and atomic regular-file replacement, structured failures, the exact ordered Issue #5 obligations, and the mandatory cap. Synthetic origin is fully evaluated and then capped; this suite is not real runtime authentication.
 
 ## Downgrade rules
 

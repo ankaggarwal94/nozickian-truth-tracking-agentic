@@ -6,7 +6,7 @@
   "claim_id": "C-charter-caps",
   "command_or_source": "v1.0.3 charter-caps probes (rerun at finalization): deterministic validator runs on mutated and intact package copies, recorded in self_validation/v102_charter_caps_probe_results.json",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:3e5517ed7233420cf3c2b10f443e8bd7f893ff349d41875d1fa5f2092ad86566",
+  "hash_or_version": "sha256:1ea2af7d5b7897058659fab82f61fade88e224d34ce5afa3f0e74d3d41a1185c",
   "observed_result": "Observed v1.0.3 deterministic evidence for C-charter-caps",
   "support_summary": "Binds C-charter-caps to the ported STANDARD.md carrying the 'Charter-level caps (parent-enforced; not checked by ntt_gate.py)' subsection (PASS-SCOPED cap for unswept corrected artifacts; LIMITED cap for unresolved critical REMOTE_GROUND_TRUTH_REQUIRED escalations), with exact SHA-256 provenance under strict local evidence mode.",
   "timestamp": "1970-01-01T00:00:00Z",
