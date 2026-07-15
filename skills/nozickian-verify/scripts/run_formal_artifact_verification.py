@@ -25,14 +25,16 @@ import io
 import json
 import os
 import re
+import signal
 import shutil
 import stat
 import subprocess
 import sys
+import threading
 import time
 import tempfile
 import uuid
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
 
 PASS_STATUSES = {"PASS-TRACKED", "PASS-SCOPED"}
@@ -80,6 +82,11 @@ TRACE_AUTHENTICATION_FIELDS = (
     "missing_result_agents",
     "saw_general_purpose",
     "duplicate_tool_use_ids",
+    "duplicate_agent_calls",
+    "duplicate_tool_result_ids",
+    "invalid_result_bindings",
+    "malformed_stream_records",
+    "trace_bound_violations",
     "result_before_call_ids",
     "unexpected_native_tool_calls",
     "role_violations",
@@ -88,6 +95,11 @@ TRACE_AUTHENTICATION_FIELDS = (
 )
 MAX_CAPTURE_BYTES = 64 * 1024 * 1024
 PUBLIC_STREAM_BOUND_BYTES = 2048
+CLAUDE_VERSION_PATTERN = r"\b\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?(?:\s+\(Claude Code\))?\b"
+PIPE_CLOSE_GRACE_SEC = 0.5
+READER_JOIN_GRACE_SEC = 1.0
+MAX_TRACE_ITEMS_PER_RECORD = 10_000
+MAX_TRACE_DEPTH = 64
 
 def _debug(msg: str) -> None:
     if os.environ.get("NTT_DEBUG_FORMAL_RUNNER"):
@@ -414,6 +426,91 @@ def sha256_regular_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def resolve_regular_executable(which_value: str) -> Path:
+    candidate = Path(which_value)
+    if not candidate.is_absolute():
+        candidate = Path.cwd() / candidate
+    resolved = candidate.resolve(strict=True)
+    error = regular_file_error(resolved)
+    if error is not None:
+        raise ValueError(f"resolved executable: {error}")
+    return resolved
+
+
+def initial_runtime_identity() -> Dict[str, Any]:
+    return {
+        "resolved_executable_path": None,
+        "version_output": None,
+        "version_pattern": CLAUDE_VERSION_PATTERN,
+        "version_pattern_match": False,
+        "executable_sha256_pre": None,
+        "executable_sha256_post": None,
+        "executable_identity_pre": None,
+        "executable_identity_post": None,
+        "fingerprint_stable": False,
+        "error": None,
+    }
+
+
+def finalize_runtime_identity(
+    identity: Dict[str, Any],
+    executable: Optional[Path],
+) -> Dict[str, Any]:
+    finalized = dict(identity)
+    if executable is None:
+        return finalized
+    try:
+        post_identity = file_snapshot_identity(executable)
+        post = str(post_identity["sha256"])[len("sha256:") :]
+    except (OSError, ValueError) as exc:
+        finalized["error"] = f"{type(exc).__name__} while re-hashing executable"
+        return finalized
+    finalized["executable_sha256_post"] = post
+    finalized["executable_identity_post"] = post_identity
+    finalized["fingerprint_stable"] = (
+        isinstance(finalized.get("executable_sha256_pre"), str)
+        and finalized.get("executable_sha256_pre") == post
+        and finalized.get("executable_identity_pre") == post_identity
+    )
+    return finalized
+
+
+def runtime_identity_is_valid(identity: Any) -> bool:
+    return (
+        isinstance(identity, dict)
+        and isinstance(identity.get("resolved_executable_path"), str)
+        and Path(identity["resolved_executable_path"]).is_absolute()
+        and bool(
+            re.fullmatch(
+                r"[0-9a-f]{64}",
+                str(identity.get("executable_sha256_pre") or ""),
+            )
+        )
+        and identity.get("executable_sha256_pre")
+        == identity.get("executable_sha256_post")
+        and identity.get("executable_identity_pre")
+        == identity.get("executable_identity_post")
+        and identity.get("fingerprint_stable") is True
+        and identity.get("version_pattern_match") is True
+        and bool(
+            re.search(
+                CLAUDE_VERSION_PATTERN,
+                str(identity.get("version_output") or ""),
+            )
+        )
+        and identity.get("error") in (None, "")
+    )
+
+
+def cap_status_by_runtime_identity(
+    status: str,
+    identity: Any,
+) -> Tuple[str, Optional[str]]:
+    if status in PASS_STATUSES and not runtime_identity_is_valid(identity):
+        return "FAIL", "formal Claude executable identity was not stable"
+    return status, None
+
+
 def package_tree_identity(root: Path) -> Dict[str, Any]:
     validator = root / SKILL_PATH / "scripts/validate_package.py"
     if regular_file_error(validator):
@@ -443,6 +540,150 @@ def package_tree_identity(root: Path) -> Dict[str, Any]:
         }
     except Exception:
         return {"algorithm": None, "sha256": None, "valid": False}
+
+
+def _canonical_release_path(value: Any) -> PurePosixPath:
+    if not isinstance(value, str) or not value or "\\" in value:
+        raise ValueError("release inventory path is not canonical")
+    posix = PurePosixPath(value)
+    if (
+        posix.is_absolute()
+        or any(part in {"", ".", ".."} for part in posix.parts)
+        or posix.as_posix() != value
+    ):
+        raise ValueError("release inventory path traverses or is non-canonical")
+    return posix
+
+
+def _read_release_file_no_follow(root: Path, relative: PurePosixPath) -> bytes:
+    current = root
+    for index, part in enumerate(relative.parts):
+        current = current / part
+        try:
+            mode = current.lstat().st_mode
+        except OSError as exc:
+            raise ValueError("release inventory entry is unavailable") from exc
+        final = index == len(relative.parts) - 1
+        if stat.S_ISLNK(mode):
+            raise ValueError("release inventory path contains a symbolic link")
+        if final and not stat.S_ISREG(mode):
+            raise ValueError("release inventory entry is not a regular file")
+        if not final and not stat.S_ISDIR(mode):
+            raise ValueError("release inventory ancestor is not a directory")
+    return current.read_bytes()
+
+
+def materialize_execution_package_snapshot(
+    root: Path,
+) -> Tuple[tempfile.TemporaryDirectory[str], Path, Dict[str, Any]]:
+    """Copy the manifest-bound release surface into a private read-only tree."""
+    source_pre = package_tree_identity(root)
+    if not package_tree_identity_is_valid(source_pre):
+        raise ValueError("source package tree is invalid")
+    manifest_path = root / "STABLE_RELEASE_MANIFEST.json"
+    if regular_file_error(manifest_path) is not None:
+        raise ValueError("stable release manifest is not a regular file")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("stable release manifest is unreadable") from exc
+    inventory = manifest.get("file_inventory") if isinstance(manifest, dict) else None
+    if not isinstance(inventory, list) or not inventory:
+        raise ValueError("stable release inventory is unavailable")
+    records: List[Tuple[PurePosixPath, bytes, int]] = []
+    seen: Set[str] = set()
+    for record in inventory:
+        if not isinstance(record, dict):
+            raise ValueError("release inventory record is not an object")
+        relative = _canonical_release_path(record.get("path"))
+        if relative.as_posix() in seen:
+            raise ValueError("release inventory contains duplicate paths")
+        seen.add(relative.as_posix())
+        payload = _read_release_file_no_follow(root, relative)
+        expected_sha = record.get("sha256")
+        expected_bytes = record.get("bytes")
+        if (
+            not isinstance(expected_sha, str)
+            or hashlib.sha256(payload).hexdigest() != expected_sha
+            or type(expected_bytes) is not int
+            or len(payload) != expected_bytes
+        ):
+            raise ValueError("release inventory bytes do not match the manifest")
+        source_mode = (root.joinpath(*relative.parts)).lstat().st_mode
+        records.append((relative, payload, source_mode))
+    manifest_payload = _read_release_file_no_follow(
+        root,
+        PurePosixPath("STABLE_RELEASE_MANIFEST.json"),
+    )
+    holder: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory(
+        prefix="ntt_execution_package_"
+    )
+    snapshot = Path(holder.name) / "package"
+    snapshot.mkdir(mode=0o700)
+    try:
+        for relative, payload, source_mode in records + [
+            (PurePosixPath("STABLE_RELEASE_MANIFEST.json"), manifest_payload, 0o600)
+        ]:
+            destination = snapshot.joinpath(*relative.parts)
+            destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            atomic_write_new(
+                destination,
+                payload,
+                mode=0o500 if source_mode & 0o111 else 0o400,
+            )
+        snapshot_pre = package_tree_identity(snapshot)
+        if snapshot_pre != source_pre:
+            raise ValueError("execution snapshot identity differs from source")
+        for directory in sorted(
+            (path for path in snapshot.rglob("*") if path.is_dir()),
+            key=lambda path: len(path.parts),
+            reverse=True,
+        ):
+            directory.chmod(0o500)
+        snapshot.chmod(0o500)
+    except Exception:
+        holder.cleanup()
+        raise
+    return holder, snapshot, {
+        "mode": "private-read-only-stable-release-snapshot",
+        "source_pre": source_pre,
+        "snapshot_pre": snapshot_pre,
+        "source_post": None,
+        "snapshot_post": None,
+        "stable": False,
+    }
+
+
+def finalize_execution_package_snapshot(
+    root: Path,
+    snapshot: Path,
+    identity: Dict[str, Any],
+) -> Dict[str, Any]:
+    finalized = dict(identity)
+    finalized["source_post"] = package_tree_identity(root)
+    finalized["snapshot_post"] = package_tree_identity(snapshot)
+    comparable = [
+        finalized.get("source_pre"),
+        finalized.get("source_post"),
+        finalized.get("snapshot_pre"),
+        finalized.get("snapshot_post"),
+    ]
+    finalized["stable"] = (
+        all(package_tree_identity_is_valid(item) for item in comparable)
+        and all(item == comparable[0] for item in comparable[1:])
+    )
+    return finalized
+
+
+def cap_status_by_execution_package_snapshot(
+    status: str,
+    identity: Any,
+) -> Tuple[str, Optional[str]]:
+    if status in PASS_STATUSES and (
+        not isinstance(identity, dict) or identity.get("stable") is not True
+    ):
+        return "FAIL", "execution package snapshot identity was not stable"
+    return status, None
 
 
 def _blocked_package_output_result(root: Path, target: Path, output_dir: Path, json_path: Optional[Path]) -> Dict[str, Any]:
@@ -606,60 +847,199 @@ def _captured_stream_fields(raw: bytes, name: str) -> Dict[str, Any]:
     }
 
 
+def _bounded_process_capture(
+    cmd: List[str],
+    *,
+    cwd: Optional[Path],
+    timeout: int,
+    env: Dict[str, str],
+) -> Dict[str, Any]:
+    """Run one process while bounding each captured stream during execution.
+
+    ``subprocess.run(..., PIPE)`` applies no size limit until after both streams
+    have already been accumulated.  Two reader threads instead drain the pipes
+    concurrently, retain at most ``MAX_CAPTURE_BYTES`` per stream, and ask the
+    parent loop to terminate the child as soon as either stream crosses that
+    boundary.  Hashes cover every byte actually drained; a limit crossing is
+    always fail-closed and therefore the retained prefix is never used for an
+    authentication decision.
+    """
+    proc = subprocess.Popen(
+        cmd,
+        cwd=str(cwd) if cwd else None,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+        start_new_session=(os.name == "posix"),
+    )
+    stop = threading.Event()
+    states: Dict[str, Dict[str, Any]] = {}
+
+    def drain(name: str, stream: Any) -> None:
+        retained = bytearray()
+        digest = hashlib.sha256()
+        observed = 0
+        exceeded = False
+        try:
+            while True:
+                chunk = stream.read(64 * 1024)
+                if not chunk:
+                    break
+                raw_chunk = bytes(chunk)
+                observed += len(raw_chunk)
+                digest.update(raw_chunk)
+                remaining = max(0, MAX_CAPTURE_BYTES - len(retained))
+                if remaining:
+                    retained.extend(raw_chunk[:remaining])
+                if observed > MAX_CAPTURE_BYTES:
+                    exceeded = True
+                    stop.set()
+        except (OSError, ValueError):
+            pass
+        finally:
+            try:
+                stream.close()
+            except Exception:
+                pass
+            states[name] = {
+                "raw": bytes(retained),
+                "observed": observed,
+                "sha256": f"sha256:{digest.hexdigest()}",
+                "exceeded": exceeded,
+            }
+
+    assert proc.stdout is not None and proc.stderr is not None
+    readers = [
+        threading.Thread(target=drain, args=("stdout", proc.stdout), daemon=True),
+        threading.Thread(target=drain, args=("stderr", proc.stderr), daemon=True),
+    ]
+    for reader in readers:
+        reader.start()
+    deadline = time.monotonic() + timeout
+    timed_out = False
+    descendant_pipe_leak = False
+    process_group_terminated = False
+    leader_exited_at: Optional[float] = None
+
+    def terminate_group() -> None:
+        nonlocal process_group_terminated
+        process_group_terminated = True
+        try:
+            if os.name == "posix":
+                os.killpg(proc.pid, signal.SIGKILL)
+            else:
+                proc.kill()
+        except ProcessLookupError:
+            pass
+        except OSError:
+            try:
+                proc.kill()
+            except OSError:
+                pass
+
+    while True:
+        if stop.is_set():
+            terminate_group()
+            break
+        if proc.poll() is not None:
+            if not any(reader.is_alive() for reader in readers):
+                break
+            if leader_exited_at is None:
+                leader_exited_at = time.monotonic()
+            if time.monotonic() - leader_exited_at >= PIPE_CLOSE_GRACE_SEC:
+                descendant_pipe_leak = True
+                terminate_group()
+                break
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            timed_out = True
+            terminate_group()
+            break
+        time.sleep(min(0.01, remaining))
+    try:
+        proc.wait(timeout=READER_JOIN_GRACE_SEC)
+    except subprocess.TimeoutExpired:
+        terminate_group()
+        try:
+            proc.wait(timeout=READER_JOIN_GRACE_SEC)
+        except subprocess.TimeoutExpired:
+            pass
+    join_deadline = time.monotonic() + READER_JOIN_GRACE_SEC
+    for reader in readers:
+        reader.join(timeout=max(0.0, join_deadline - time.monotonic()))
+    if any(reader.is_alive() for reader in readers):
+        for stream in (proc.stdout, proc.stderr):
+            try:
+                os.close(stream.fileno())
+            except OSError:
+                pass
+        for reader in readers:
+            reader.join(timeout=max(0.0, join_deadline - time.monotonic()))
+    reader_join_timed_out = any(reader.is_alive() for reader in readers)
+    stdout = states.get("stdout", {"raw": b"", "observed": 0, "sha256": f"sha256:{hashlib.sha256(b'').hexdigest()}", "exceeded": False})
+    stderr = states.get("stderr", {"raw": b"", "observed": 0, "sha256": f"sha256:{hashlib.sha256(b'').hexdigest()}", "exceeded": False})
+    exceeded = bool(stdout["exceeded"] or stderr["exceeded"])
+    return {
+        "returncode": (
+            124
+            if timed_out
+            else 126
+            if exceeded
+            else 125
+            if descendant_pipe_leak or reader_join_timed_out
+            else proc.returncode
+        ),
+        "stdout_state": stdout,
+        "stderr_state": stderr,
+        "capture_limit_exceeded": exceeded,
+        "timed_out": timed_out,
+        "descendant_pipe_leak": descendant_pipe_leak,
+        "reader_join_timed_out": reader_join_timed_out,
+        "process_group_terminated": process_group_terminated,
+    }
+
+
+def _bounded_stream_fields(state: Mapping[str, Any], name: str) -> Dict[str, Any]:
+    raw = bytes(state.get("raw") or b"")
+    observed = int(state.get("observed") or 0)
+    return {
+        name: raw.decode("utf-8", errors="replace"),
+        f"_{name}_bytes": raw,
+        f"{name}_bytes": observed,
+        f"{name}_sha256": str(state.get("sha256")),
+        f"{name}_truncated": observed > PUBLIC_STREAM_BOUND_BYTES,
+    }
+
+
 def run_cmd(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300, env: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     started = time.time()
     try:
         # SECURITY-REVIEW: Callers construct fixed argv and invoke executables
-        # directly with shell parsing disabled. Full raw streams remain
-        # in-memory for status/authentication decisions and exact byte hashes.
+        # directly with shell parsing disabled. Capture is bounded while the
+        # child runs, rather than checked only after unbounded PIPE buffering.
         process_env = os.environ.copy() if env is None else dict(env)
         process_env["PYTHONDONTWRITEBYTECODE"] = "1"
-        proc = subprocess.run(
+        captured = _bounded_process_capture(
             cmd,
-            cwd=str(cwd) if cwd else None,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            cwd=cwd,
             timeout=timeout,
             env=process_env,
         )
-        stdout_raw = bytes(proc.stdout or b"")
-        stderr_raw = bytes(proc.stderr or b"")
-        return {
+        result = {
             "cmd": cmd,
             "cwd": str(cwd) if cwd else None,
-            "returncode": proc.returncode,
-            **_captured_stream_fields(stdout_raw, "stdout"),
-            **_captured_stream_fields(stderr_raw, "stderr"),
-            "capture_limit_exceeded": (
-                len(stdout_raw) > MAX_CAPTURE_BYTES
-                or len(stderr_raw) > MAX_CAPTURE_BYTES
-            ),
+            "returncode": captured["returncode"],
+            **_bounded_stream_fields(captured["stdout_state"], "stdout"),
+            **_bounded_stream_fields(captured["stderr_state"], "stderr"),
+            "capture_limit_exceeded": captured["capture_limit_exceeded"],
+            "descendant_pipe_leak": captured["descendant_pipe_leak"],
+            "reader_join_timed_out": captured["reader_join_timed_out"],
+            "process_group_terminated": captured["process_group_terminated"],
             "duration_sec": round(time.time() - started, 3),
         }
-    except subprocess.TimeoutExpired as exc:
-        stdout_raw = (
-            exc.stdout
-            if isinstance(exc.stdout, bytes)
-            else str(exc.stdout or "").encode("utf-8", errors="replace")
-        )
-        stderr_raw = (
-            exc.stderr
-            if isinstance(exc.stderr, bytes)
-            else str(exc.stderr or "").encode("utf-8", errors="replace")
-        )
-        return {
-            "cmd": cmd,
-            "cwd": str(cwd) if cwd else None,
-            "returncode": 124,
-            **_captured_stream_fields(stdout_raw, "stdout"),
-            **_captured_stream_fields(stderr_raw, "stderr"),
-            "capture_limit_exceeded": (
-                len(stdout_raw) > MAX_CAPTURE_BYTES
-                or len(stderr_raw) > MAX_CAPTURE_BYTES
-            ),
-            "timed_out": True,
-            "duration_sec": round(time.time() - started, 3),
-        }
+        if captured["timed_out"]:
+            result["timed_out"] = True
+        return result
     except Exception as exc:
         stderr_raw = repr(exc).encode("utf-8", errors="replace")
         return {
@@ -834,17 +1214,35 @@ def parse_gate_status(stdout: str, markdown_path: Optional[Path] = None) -> Opti
     return None
 
 
+class TraceFormatError(ValueError):
+    """A nonblank stream record is not one JSON object."""
+
+    def __init__(self, line: int, reason: str):
+        super().__init__(f"line {line}: {reason}")
+        self.line = line
+        self.reason = reason
+
+
+class TraceBoundError(ValueError):
+    """One JSONL record exceeds the parser's explicit structural budget."""
+
+
 def _iter_json_lines(text: str) -> Iterable[Tuple[int, Dict[str, Any]]]:
+    """Yield every nonblank JSONL object, rejecting the stream on first defect."""
     for idx, line in enumerate(text.splitlines(), start=1):
         line = line.strip()
         if not line:
             continue
         try:
             obj = json.loads(line)
-        except Exception:
-            continue
-        if isinstance(obj, dict):
-            yield idx, obj
+        except json.JSONDecodeError as exc:
+            raise TraceFormatError(idx, "malformed JSON") from exc
+        if not isinstance(obj, dict):
+            raise TraceFormatError(
+                idx,
+                f"top-level record is {type(obj).__name__}, not an object",
+            )
+        yield idx, obj
 
 
 def _candidate_trace_nodes(event: Dict[str, Any]) -> Iterable[Tuple[int, Dict[str, Any], str, Optional[str]]]:
@@ -858,7 +1256,21 @@ def _candidate_trace_nodes(event: Dict[str, Any]) -> Iterable[Tuple[int, Dict[st
     inside tool_result.data/payload from authenticating PASS-TRACKED.
     """
     index = 0
+    visited = 0
     seen: Set[int] = set()
+    expanded: Set[int] = set()
+
+    def account(depth: int) -> None:
+        nonlocal visited
+        if depth > MAX_TRACE_DEPTH:
+            raise TraceBoundError(
+                f"record nesting depth exceeds {MAX_TRACE_DEPTH}"
+            )
+        visited += 1
+        if visited > MAX_TRACE_ITEMS_PER_RECORD:
+            raise TraceBoundError(
+                f"record item count exceeds {MAX_TRACE_ITEMS_PER_RECORD}"
+            )
 
     def event_type(container: Any) -> str:
         if not isinstance(container, dict):
@@ -885,16 +1297,24 @@ def _candidate_trace_nodes(event: Dict[str, Any]) -> Iterable[Tuple[int, Dict[st
                 yield index, node, path, role
                 index += 1
 
-    def emit_child(child: Any, path: str, role: Optional[str]):
+    def emit_child(child: Any, path: str, role: Optional[str], depth: int):
         if isinstance(child, dict):
-            yield from emit_container(child, path, role)
+            yield from emit_container(child, path, role, depth)
         elif isinstance(child, list):
+            account(depth)
             for i, item in enumerate(child):
-                yield from emit_container(item, f"{path}[{i}]", role)
+                yield from emit_container(item, f"{path}[{i}]", role, depth + 1)
+        else:
+            account(depth)
 
-    def emit_container(container: Any, path: str, inherited_role: Optional[str] = None):
+    def emit_container(container: Any, path: str, inherited_role: Optional[str] = None, depth: int = 0):
+        account(depth)
         if not isinstance(container, dict):
             return
+        ident = id(container)
+        if ident in expanded:
+            return
+        expanded.add(ident)
         role = role_from(container, inherited_role)
         yield from emit(container, path, role)
         typ = event_type(container)
@@ -907,13 +1327,17 @@ def _candidate_trace_nodes(event: Dict[str, Any]) -> Iterable[Tuple[int, Dict[st
         # is propagated to its content blocks so role-inverted traces can be rejected.
         for key in ("message", "delta", "data", "payload"):
             if key in container:
-                yield from emit_child(container.get(key), f"{path}.{key}", role)
+                yield from emit_child(
+                    container.get(key), f"{path}.{key}", role, depth + 1
+                )
 
         for key in ("content", "blocks"):
             if key in container:
-                yield from emit_child(container.get(key), f"{path}.{key}", role)
+                yield from emit_child(
+                    container.get(key), f"{path}.{key}", role, depth + 1
+                )
 
-    yield from emit_container(event, "$", None)
+    yield from emit_container(event, "$", None, 0)
 
 def _stringify(obj: Any) -> str:
     try:
@@ -935,18 +1359,39 @@ def _tool_call_ids(node: Dict[str, Any]) -> List[str]:
 
 
 def _tool_result_ids(node: Dict[str, Any]) -> List[str]:
-    """Return IDs that explicitly bind a result/completion to a tool-use call.
+    """Return the single ID that binds a result to one tool-use call.
 
     A result authenticates a native lane only through tool_use_id / tool_call_id
-    style fields. The result object's own id, and text mentioning an agent name,
-    are not evidence of a successful matching native subagent completion.
+    style fields. Exactly one recognized binding field must be present; aliases
+    may not be fanned out, even when their values happen to agree. The result
+    object's own id and textual agent mentions are never matching evidence.
     """
-    vals: List[str] = []
-    for key in ("tool_use_id", "toolUseId", "tool_call_id", "toolCallId"):
-        v = node.get(key)
-        if isinstance(v, str) and v:
-            vals.append(v)
-    return vals
+    present = [
+        key
+        for key in ("tool_use_id", "toolUseId", "tool_call_id", "toolCallId")
+        if key in node
+    ]
+    if len(present) != 1:
+        return []
+    value = node.get(present[0])
+    return [value] if isinstance(value, str) and value.strip() else []
+
+
+def _tool_result_binding_error(node: Dict[str, Any]) -> Optional[str]:
+    present = [
+        key
+        for key in ("tool_use_id", "toolUseId", "tool_call_id", "toolCallId")
+        if key in node
+    ]
+    if len(present) != 1:
+        return (
+            "tool-result must contain exactly one recognized binding field; "
+            f"observed {present!r}"
+        )
+    value = node.get(present[0])
+    if not isinstance(value, str) or not value.strip():
+        return f"tool-result binding {present[0]} is not a nonempty string"
+    return None
 
 
 def _normalized_event_type(node: Dict[str, Any]) -> str:
@@ -976,7 +1421,7 @@ def _is_tool_result_node(node: Dict[str, Any]) -> bool:
     text or top-level assistant messages authenticated native lanes.
     """
     typ = _normalized_event_type(node)
-    return typ in TOOL_RESULT_TYPES and bool(_tool_result_ids(node))
+    return typ in TOOL_RESULT_TYPES
 
 
 def _result_content(node: Dict[str, Any]) -> Any:
@@ -1027,12 +1472,95 @@ def _result_is_success(node: Dict[str, Any]) -> bool:
     """
     if node.get("is_error") is True:
         return False
-    status = str(node.get("status") or node.get("outcome") or "").strip().lower()
-    if status in {"error", "failed", "failure", "timeout", "cancelled", "canceled"}:
+    negative_statuses = {
+        "error",
+        "failed",
+        "failure",
+        "timeout",
+        "timed-out",
+        "aborted",
+        "killed",
+        "terminated",
+        "unsuccessful",
+        "cancelled",
+        "canceled",
+        "not-executed",
+        "not-invoked",
+        "not-run",
+        "skipped",
+    }
+    status_values = [
+        re.sub(
+            r"[-_\s]+",
+            "-",
+            str(node.get(field) or "").strip().lower(),
+        )
+        for field in ("status", "outcome", "completion_status")
+    ]
+    if any(value in negative_statuses for value in status_values):
+        return False
+    if any(node.get(field) is False for field in ("executed", "completed", "success")):
+        return False
+    if any(node.get(field) is True for field in ("aborted", "killed", "cancelled", "canceled")):
+        return False
+    for field in ("exit_code", "returncode", "return_code", "error_code"):
+        value = node.get(field)
+        if (
+            isinstance(value, (int, float))
+            and not isinstance(value, bool)
+            and value != 0
+        ):
+            return False
+        if isinstance(value, str) and value.strip() and value.strip() not in {"0", "none", "null"}:
+            return False
+    status = re.sub(
+        r"[-_\s]+",
+        "-",
+        str(node.get("status") or node.get("outcome") or "").strip().lower(),
+    )
+    if status in negative_statuses:
         return False
     content = _result_content(node)
     body = _stringify(content).lower()
-    if any(term in body for term in ("formal_subagent_failure", "failed", "failure", "timeout", "cancelled", "canceled", "exception", "traceback")):
+    # Explicit contradiction markers dominate every success signal. Ordinary
+    # negative-test prose needs narrower treatment: "0 failures", "no tests
+    # failed", and "mutation failed as expected" describe successful evidence,
+    # not failed execution.
+    if any(
+        marker in body
+        for marker in (
+            "formal_subagent_failure",
+            "traceback (most recent call last)",
+            "unhandled exception",
+        )
+    ):
+        return False
+    contradiction_candidate = body
+    benign_patterns = (
+        r"\b(?:0|zero)\s+(?:test\s+)?failures?\b",
+        r"\bno\s+(?:tests?\s+)?failed\b",
+        r"\bno\s+failures?\b",
+        r"\b(?:mutation|negative\s+test|probe|check|command)\s+failed\s+as\s+expected\b",
+        r"\bexpected\s+failures?\b",
+    )
+    for pattern in benign_patterns:
+        contradiction_candidate = re.sub(pattern, " ", contradiction_candidate)
+    explicit_noncompletion_patterns = (
+        r"\b(?:did\s+not|was\s+not|never)\s+(?:execute|executed|run|ran|invoke|invoked|complete|completed)\b",
+        r"\bnot\s+(?:executed|run|invoked|completed|successful)\b",
+        r"\b(?:execution|run|invocation|task|agent|subagent|lane)\s+(?:was\s+)?(?:skipped|aborted|killed|terminated|cancelled|canceled|unsuccessful)\b",
+        r"\b(?:aborted|killed|unsuccessful)\b",
+        r"\b(?:failed\s+(?:to|before|without)|failure\s+before)\b",
+        r"\b(?:agent|subagent|lane|task|execution|run|process)\b.{0,40}\b(?:timed\s+out|failed\s+before|produced\s+no\s+output)\b",
+        r"\bnon[- ]?zero\s+(?:exit|return|error)[ _-]?code\b",
+        r"\b(?:exit|return|error)[ _-]?code\s*(?:[:=]|was|is)?\s*non[- ]?zero\b",
+        r"\b(?:non[- ]?zero\s+)?(?:exit|return|error)[ _-]?code\s*(?:[:=]|was|is)?\s*-?[1-9][0-9]*\b",
+        r"\bwithout\s+producing\s+(?:findings|output|a\s+result)\b",
+    )
+    if any(
+        re.search(pattern, contradiction_candidate)
+        for pattern in explicit_noncompletion_patterns
+    ):
         return False
     explicit_success = status in {"ok", "success", "succeeded", "completed", "done"} or node.get("is_error") is False
     return bool(explicit_success and _has_meaningful_content(content))
@@ -1066,7 +1594,7 @@ def _structured_subagent_selector(node: Dict[str, Any]) -> Optional[str]:
     return None
 
 
-def _extract_trace_events(event: Dict[str, Any]) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, List[Dict[str, Any]]], Set[str], List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
+def _extract_trace_events(event: Dict[str, Any]) -> Tuple[List[Tuple[str, Dict[str, Any]]], Dict[str, List[Dict[str, Any]]], Set[str], List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Extract authentic native Agent/Task calls and matching results.
 
     The parser is intentionally narrow: it reads only top-level stream-json
@@ -1074,12 +1602,13 @@ def _extract_trace_events(event: Dict[str, Any]) -> Tuple[Dict[str, Dict[str, An
     tool-use/tool-result event types. It never treats arbitrary text/message
     objects or nested data in tool inputs as runtime events.
     """
-    calls: Dict[str, Dict[str, Any]] = {}
+    calls: List[Tuple[str, Dict[str, Any]]] = []
     result_success_by_id: Dict[str, List[Dict[str, Any]]] = {}
     saw_general_purpose: Set[str] = set()
     evidence: List[Dict[str, Any]] = []
     unexpected_native_tool_calls: List[Dict[str, Any]] = []
     role_violations: List[Dict[str, Any]] = []
+    invalid_result_bindings: List[Dict[str, Any]] = []
     for node_index, node, path, role in _candidate_trace_nodes(event):
         if _is_tool_call_node(node):
             selector = _structured_subagent_selector(node)
@@ -1096,16 +1625,16 @@ def _extract_trace_events(event: Dict[str, Any]) -> Tuple[Dict[str, Dict[str, An
                 agent = selector
                 if ids:
                     for tool_id in ids:
-                        calls[agent] = {
+                        calls.append((agent, {
                             "id": tool_id,
                             "tool_name": tool_name,
                             "event_type": event_type,
                             "node_index": node_index,
                             "path": path,
-                        }
+                        }))
                         evidence.append({"agent": agent, "tool_id": tool_id, "tool_name": tool_name, "event_type": event_type, "phase": "tool-use", "node_index": node_index, "path": path})
                 else:
-                    calls[agent] = {"id": "", "tool_name": tool_name, "event_type": event_type, "node_index": node_index, "path": path}
+                    calls.append((agent, {"id": "", "tool_name": tool_name, "event_type": event_type, "node_index": node_index, "path": path}))
                     evidence.append({"agent": agent, "tool_id": "", "tool_name": tool_name, "event_type": event_type, "phase": "tool-use", "warning": "tool-use event has no id and cannot authenticate a matching result", "node_index": node_index, "path": path})
             else:
                 # A native Agent/Task call with no recognized ntt-* structured
@@ -1124,6 +1653,22 @@ def _extract_trace_events(event: Dict[str, Any]) -> Tuple[Dict[str, Dict[str, An
             success = _result_is_success(node)
             ids = _tool_result_ids(node)
             event_type = str(node.get("type") or node.get("event") or node.get("kind") or "tool-result")
+            binding_error = _tool_result_binding_error(node)
+            if binding_error is not None:
+                invalid_result_bindings.append({
+                    "error": binding_error,
+                    "event_type": event_type,
+                    "node_index": node_index,
+                    "path": path,
+                })
+                evidence.append({
+                    "event_type": event_type,
+                    "phase": "invalid-result-binding",
+                    "error": binding_error,
+                    "node_index": node_index,
+                    "path": path,
+                })
+                continue
             if role not in (None, "user"):
                 role_violations.append({"phase": "tool-result", "role": role, "tool_ids": ids, "event_type": event_type, "success": success, "node_index": node_index, "path": path})
                 evidence.append({"tool_ids": ids, "event_type": event_type, "phase": "role-violating-tool-result", "role": role, "success": success, "node_index": node_index, "path": path})
@@ -1131,7 +1676,7 @@ def _extract_trace_events(event: Dict[str, Any]) -> Tuple[Dict[str, Dict[str, An
             for tool_id in ids:
                 result_success_by_id.setdefault(tool_id, []).append({"success": success, "node_index": node_index, "path": path})
                 evidence.append({"tool_id": tool_id, "event_type": event_type, "phase": "tool-result", "success": success, "node_index": node_index, "path": path})
-    return calls, result_success_by_id, saw_general_purpose, evidence, unexpected_native_tool_calls, role_violations
+    return calls, result_success_by_id, saw_general_purpose, evidence, unexpected_native_tool_calls, role_violations, invalid_result_bindings
 
 def authenticate_trace(transcript_path: Path) -> Dict[str, Any]:
     if not transcript_path.exists() or transcript_path.stat().st_size == 0:
@@ -1144,65 +1689,124 @@ def authenticate_trace(transcript_path: Path) -> Dict[str, Any]:
             "missing_result_agents": REQUIRED_NATIVE_AGENTS,
             "saw_general_purpose": False,
             "duplicate_tool_use_ids": {},
+            "duplicate_agent_calls": {},
+            "duplicate_tool_result_ids": {},
+            "invalid_result_bindings": [],
+            "malformed_stream_records": [],
+            "trace_bound_violations": [],
             "result_before_call_ids": {},
             "unexpected_native_tool_calls": [],
             "role_violations": [],
             "reasons": ["transcript is missing or empty"],
             "evidence_events": [],
         }
-    text = transcript_path.read_text(encoding="utf-8", errors="replace")
-    calls_found: Dict[str, Dict[str, Any]] = {}
-    tool_id_to_agents: Dict[str, Set[str]] = {}
+    try:
+        text = transcript_path.read_bytes().decode("utf-8", errors="strict")
+    except UnicodeDecodeError as exc:
+        empty = authenticate_trace(Path("/__ntt_missing_trace__"))
+        empty["reasons"] = ["transcript is not valid UTF-8"]
+        empty["malformed_stream_records"] = [
+            {"line": 0, "error": "invalid UTF-8", "offset": exc.start}
+        ]
+        return empty
+    calls_by_agent: Dict[str, List[Dict[str, Any]]] = {}
+    tool_id_to_calls: Dict[str, List[str]] = {}
     saw_general = False
     evidence_events: List[Dict[str, Any]] = []
     unexpected_native_tool_calls: List[Dict[str, Any]] = []
     role_violations: List[Dict[str, Any]] = []
+    invalid_result_bindings: List[Dict[str, Any]] = []
+    malformed_stream_records: List[Dict[str, Any]] = []
+    trace_bound_violations: List[Dict[str, Any]] = []
     events_seen = 0
     all_results: Dict[str, List[Dict[str, Any]]] = {}
-    for line_no, event in _iter_json_lines(text):
-        events_seen += 1
-        calls, results_by_id, general, evidence, unexpected_calls, role_calls = _extract_trace_events(event)
-        saw_general = saw_general or bool(general)
-        for u in unexpected_calls:
-            uu = dict(u)
-            uu["line"] = line_no
-            uu["position"] = line_no * 100000 + int(uu.get("node_index", 0))
-            unexpected_native_tool_calls.append(uu)
-        for rv in role_calls:
-            rr = dict(rv)
-            rr["line"] = line_no
-            rr["position"] = line_no * 100000 + int(rr.get("node_index", 0))
-            role_violations.append(rr)
-        for agent, meta in calls.items():
-            meta = dict(meta)
-            meta["line"] = line_no
-            meta["position"] = line_no * 100000 + int(meta.get("node_index", 0))
-            calls_found[agent] = meta
-            tool_id = str(meta.get("id") or "")
-            if tool_id:
-                tool_id_to_agents.setdefault(tool_id, set()).add(agent)
-        for k, result_list in results_by_id.items():
-            for r in result_list:
-                rr = dict(r)
+    try:
+        for line_no, event in _iter_json_lines(text):
+            events_seen += 1
+            try:
+                calls, results_by_id, general, evidence, unexpected_calls, role_calls, invalid_bindings = _extract_trace_events(event)
+            except TraceBoundError as exc:
+                trace_bound_violations.append(
+                    {"line": line_no, "error": str(exc)}
+                )
+                continue
+            saw_general = saw_general or bool(general)
+            for u in unexpected_calls:
+                uu = dict(u)
+                uu["line"] = line_no
+                uu["position"] = [line_no, int(uu.get("node_index", 0))]
+                unexpected_native_tool_calls.append(uu)
+            for rv in role_calls:
+                rr = dict(rv)
                 rr["line"] = line_no
-                rr["position"] = line_no * 100000 + int(rr.get("node_index", 0))
-                all_results.setdefault(k, []).append(rr)
-        for e in evidence:
-            e["line"] = line_no
-            e["position"] = line_no * 100000 + int(e.get("node_index", 0))
-            evidence_events.append(e)
-    duplicate_ids = {tool_id: sorted(agents) for tool_id, agents in tool_id_to_agents.items() if len(agents) > 1}
+                rr["position"] = [line_no, int(rr.get("node_index", 0))]
+                role_violations.append(rr)
+            for binding in invalid_bindings:
+                record = dict(binding)
+                record["line"] = line_no
+                record["position"] = [line_no, int(record.get("node_index", 0))]
+                invalid_result_bindings.append(record)
+            for agent, raw_meta in calls:
+                meta = dict(raw_meta)
+                meta["line"] = line_no
+                meta["position"] = [line_no, int(meta.get("node_index", 0))]
+                calls_by_agent.setdefault(agent, []).append(meta)
+                tool_id = str(meta.get("id") or "")
+                if tool_id:
+                    tool_id_to_calls.setdefault(tool_id, []).append(agent)
+            for k, result_list in results_by_id.items():
+                for r in result_list:
+                    rr = dict(r)
+                    rr["line"] = line_no
+                    rr["position"] = [line_no, int(rr.get("node_index", 0))]
+                    all_results.setdefault(k, []).append(rr)
+            for e in evidence:
+                e["line"] = line_no
+                e["position"] = [line_no, int(e.get("node_index", 0))]
+                evidence_events.append(e)
+    except TraceFormatError as exc:
+        malformed_stream_records.append({"line": exc.line, "error": exc.reason})
+    duplicate_agent_calls = {
+        agent: len(records)
+        for agent, records in calls_by_agent.items()
+        if len(records) != 1
+    }
+    calls_found = {
+        agent: records[0]
+        for agent, records in calls_by_agent.items()
+        if len(records) == 1
+    }
+    duplicate_ids = {
+        tool_id: sorted(agents)
+        for tool_id, agents in tool_id_to_calls.items()
+        if len(agents) > 1
+    }
+    duplicate_tool_result_ids = {
+        tool_id: len(records)
+        for tool_id, records in all_results.items()
+        if tool_id in tool_id_to_calls and len(records) != 1
+    }
     result_agents: Set[str] = set()
     result_before_call_ids: Dict[str, Dict[str, Any]] = {}
+    def position_key(record: Mapping[str, Any]) -> Tuple[int, int]:
+        value = record.get("position")
+        if (
+            isinstance(value, list)
+            and len(value) == 2
+            and all(type(item) is int for item in value)
+        ):
+            return value[0], value[1]
+        return -1, -1
+
     for agent, meta in calls_found.items():
         tool_id = str(meta.get("id") or "")
         if not tool_id or tool_id in duplicate_ids:
             continue
-        call_pos = int(meta.get("position", 0))
+        call_pos = position_key(meta)
         result_events = all_results.get(tool_id, [])
-        before_or_same = [r for r in result_events if int(r.get("position", 0)) <= call_pos]
-        after_success = [r for r in result_events if int(r.get("position", 0)) > call_pos and bool(r.get("success"))]
-        if after_success:
+        before_or_same = [r for r in result_events if position_key(r) <= call_pos]
+        after_success = [r for r in result_events if position_key(r) > call_pos and bool(r.get("success"))]
+        if len(result_events) == 1 and after_success:
             result_agents.add(agent)
         elif before_or_same:
             result_before_call_ids[tool_id] = {"agent": agent, "call_line": meta.get("line"), "result_lines": sorted({r.get("line") for r in before_or_same})}
@@ -1215,6 +1819,16 @@ def authenticate_trace(transcript_path: Path) -> Dict[str, Any]:
         reasons.append("missing native Agent/Task tool-use events for: " + ", ".join(missing))
     if duplicate_ids:
         reasons.append("duplicate tool-use id used for multiple native lanes: " + "; ".join(f"{tid} -> {', '.join(agents)}" for tid, agents in sorted(duplicate_ids.items())))
+    if duplicate_agent_calls:
+        reasons.append("required native lane was invoked other than exactly once: " + ", ".join(f"{agent}={count}" for agent, count in sorted(duplicate_agent_calls.items())))
+    if duplicate_tool_result_ids:
+        reasons.append("native tool-use id has other than exactly one result: " + ", ".join(f"{tool_id}={count}" for tool_id, count in sorted(duplicate_tool_result_ids.items())))
+    if invalid_result_bindings:
+        reasons.append("tool-result events have invalid or ambiguous binding fields: " + str(len(invalid_result_bindings)))
+    if malformed_stream_records:
+        reasons.append("malformed or non-object stream-json records observed: " + str(len(malformed_stream_records)))
+    if trace_bound_violations:
+        reasons.append("stream-json records exceeded parser bounds: " + str(len(trace_bound_violations)))
     if result_before_call_ids:
         reasons.append("tool-result/completion events appear before their matching tool-use events for: " + ", ".join(sorted(result_before_call_ids)))
     if missing_results:
@@ -1226,7 +1840,7 @@ def authenticate_trace(transcript_path: Path) -> Dict[str, Any]:
     if role_violations:
         reasons.append("role-inverted or role-invalid tool events observed: " + str(len(role_violations)))
     return {
-        "authenticated": not missing and not missing_results and not duplicate_ids and not result_before_call_ids and not saw_general and not unexpected_native_tool_calls and not role_violations and events_seen > 0,
+        "authenticated": not missing and not missing_results and not duplicate_ids and not duplicate_agent_calls and not duplicate_tool_result_ids and not invalid_result_bindings and not malformed_stream_records and not trace_bound_violations and not result_before_call_ids and not saw_general and not unexpected_native_tool_calls and not role_violations and events_seen > 0,
         "events_seen": events_seen,
         "agent_calls_authenticated": sorted(calls_found),
         "agent_results_authenticated": sorted(result_agents),
@@ -1234,6 +1848,11 @@ def authenticate_trace(transcript_path: Path) -> Dict[str, Any]:
         "missing_result_agents": missing_results,
         "saw_general_purpose": saw_general,
         "duplicate_tool_use_ids": duplicate_ids,
+        "duplicate_agent_calls": duplicate_agent_calls,
+        "duplicate_tool_result_ids": duplicate_tool_result_ids,
+        "invalid_result_bindings": invalid_result_bindings[:50],
+        "malformed_stream_records": malformed_stream_records[:50],
+        "trace_bound_violations": trace_bound_violations[:50],
         "result_before_call_ids": result_before_call_ids,
         "unexpected_native_tool_calls": unexpected_native_tool_calls[:50],
         "role_violations": role_violations[:50],
@@ -1368,6 +1987,7 @@ def _normalized_command_record(
     root: Path,
     output_dir: Path,
     target: Path,
+    execution_root: Optional[Path] = None,
 ) -> Dict[str, Any]:
     if not isinstance(record, dict):
         return {
@@ -1382,6 +2002,11 @@ def _normalized_command_record(
             "capture_limit_exceeded": False,
         }
     replacements = (
+        *(
+            ((str(execution_root), "<execution-package-root>"),)
+            if execution_root is not None
+            else ()
+        ),
         (str(root), "<package-root>"),
         (str(output_dir), "<output-dir>"),
         (str(target.parent), "<target-parent>"),
@@ -1514,11 +2139,27 @@ def build_formal_result_v2(
         snapshot_post_identity,
     )
     commands = [
-        _normalized_command_record(item, root, output_dir, target)
+        _normalized_command_record(
+            item,
+            root,
+            output_dir,
+            target,
+            Path(str(result["_execution_root"]))
+            if result.get("_execution_root")
+            else None,
+        )
         for item in result.get("commands", [])
     ]
     prechecks = [
-        _normalized_command_record(item, root, output_dir, target)
+        _normalized_command_record(
+            item,
+            root,
+            output_dir,
+            target,
+            Path(str(result["_execution_root"]))
+            if result.get("_execution_root")
+            else None,
+        )
         for item in result.get("prechecks", [])
     ]
     return {
@@ -1529,6 +2170,10 @@ def build_formal_result_v2(
         "formal_coordinator": FORMAL_COORDINATOR,
         "required_native_agents": list(REQUIRED_NATIVE_AGENTS),
         "package_tree_identity": result.get("package_tree_identity"),
+        "execution_package_snapshot_identity": result.get(
+            "execution_package_snapshot_identity"
+        ),
+        "runtime_identity": result.get("runtime_identity"),
         "target_snapshot_identity": {
             "source_name": target.name,
             "companion_role": "target_snapshot",
@@ -1706,6 +2351,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     source_post_identity: Optional[Dict[str, Any]] = None
     snapshot_pre_identity: Optional[Dict[str, Any]] = None
     snapshot_post_identity: Optional[Dict[str, Any]] = None
+    execution_snapshot_holder: Optional[tempfile.TemporaryDirectory[str]] = None
+    execution_root = root
+    source_package_identity = package_tree_identity(root)
+    execution_package_identity: Dict[str, Any] = {
+        "mode": "not-prepared-dry-run" if args.dry_run else "snapshot-preparation-failed",
+        "source_pre": source_package_identity,
+        "snapshot_pre": None,
+        "source_post": None,
+        "snapshot_post": None,
+        "stable": False,
+    }
+    package_snapshot_error: Optional[str] = None
     if target_error is None:
         try:
             source_pre_identity = file_snapshot_identity(target)
@@ -1727,8 +2384,19 @@ def main(argv: Optional[List[str]] = None) -> int:
                 raise ValueError("target changed while snapshot was created")
         except (OSError, ValueError):
             target_error = "target artifact could not be snapshotted"
+    if not args.dry_run:
+        try:
+            (
+                execution_snapshot_holder,
+                execution_root,
+                execution_package_identity,
+            ) = materialize_execution_package_snapshot(root)
+        except (OSError, ValueError) as exc:
+            package_snapshot_error = (
+                f"{type(exc).__name__} while preparing immutable execution package"
+            )
     prompt = build_formal_prompt(
-        root,
+        execution_root,
         out["target_snapshot"],
         out,
         effective_evidence_root,
@@ -1751,7 +2419,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         "verification_target": str(out["target_snapshot"]),
         "output_dir": str(output_dir),
         "evidence_root": str(effective_evidence_root),
-        "package_tree_identity": package_tree_identity(root),
+        "package_tree_identity": source_package_identity,
+        "execution_package_snapshot_identity": execution_package_identity,
+        "runtime_identity": initial_runtime_identity(),
+        "_execution_root": str(execution_root),
         "formal_coordinator": FORMAL_COORDINATOR,
         "required_native_agents": REQUIRED_NATIVE_AGENTS,
         "prompt_file": str(out["prompt"]),
@@ -1769,13 +2440,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         result.update({"status": "INVALID_INPUT", "reason": "plugin_root does not exist"})
     elif target_error is not None:
         result.update({"status": "INVALID_INPUT", "reason": target_error})
+    elif package_snapshot_error is not None:
+        result.update({"status": "FAIL", "reason": package_snapshot_error})
     else:
         if args.skip_prechecks:
             prechecks = []
             result["prechecks"] = []
             result["precheck_summary"] = {"total": 0, "failed": 0, "passed": 0, "failed_commands": []}
         else:
-            prechecks = run_package_prechecks(root, out, timeout=min(args.timeout_sec, 900), full_self_test=args.full_package_self_test)
+            prechecks = run_package_prechecks(execution_root, out, timeout=min(args.timeout_sec, 900), full_self_test=args.full_package_self_test)
             result["prechecks"] = prechecks
             result["precheck_summary"] = summarize_prechecks(prechecks)
         if result["precheck_summary"]["failed"]:
@@ -1784,10 +2457,45 @@ def main(argv: Optional[List[str]] = None) -> int:
             result.update({"status": "UNVERIFIED_RUNTIME", "reason": "dry-run requested; formal prompt written but Claude Code was not invoked"})
         else:
             claude = shutil.which("claude")
+            resolved_claude: Optional[Path] = None
             if not claude:
                 result.update({"status": "UNVERIFIED_RUNTIME", "reason": "Claude Code CLI not found on PATH; formal coordinator was not invoked"})
             else:
                 try:
+                    resolved_claude = resolve_regular_executable(claude)
+                    runtime_identity = result["runtime_identity"]
+                    runtime_identity["resolved_executable_path"] = str(
+                        resolved_claude
+                    )
+                    executable_identity_pre = file_snapshot_identity(
+                        resolved_claude
+                    )
+                    runtime_identity["executable_identity_pre"] = (
+                        executable_identity_pre
+                    )
+                    runtime_identity["executable_sha256_pre"] = str(
+                        executable_identity_pre["sha256"]
+                    )[len("sha256:") :]
+                    version_probe = run_cmd(
+                        [str(resolved_claude), "--version"],
+                        cwd=execution_root,
+                        timeout=min(args.timeout_sec, 60),
+                    )
+                    result["commands"].append(version_probe)
+                    version_output = str(
+                        version_probe.get("stdout")
+                        or version_probe.get("stderr")
+                        or ""
+                    ).strip()
+                    runtime_identity["version_output"] = version_output
+                    runtime_identity["version_pattern_match"] = bool(
+                        re.search(CLAUDE_VERSION_PATTERN, version_output)
+                    )
+                    if (
+                        version_probe.get("returncode") != 0
+                        or runtime_identity["version_pattern_match"] is not True
+                    ):
+                        raise ValueError("Claude version identity preflight failed")
                     for role in ("report", "certificate", "ledger"):
                         reserve_regular_output(out[role])
                 except (OSError, ValueError):
@@ -1795,11 +2503,11 @@ def main(argv: Optional[List[str]] = None) -> int:
                         "status": "FAIL",
                         "reason": "formal coordinator outputs could not be safely reserved",
                     })
-                    claude = None
-            if claude:
+                    resolved_claude = None
+            if resolved_claude is not None:
                 cmd = [
-                    claude,
-                    "--plugin-dir", str(root),
+                    str(resolved_claude),
+                    "--plugin-dir", str(execution_root),
                     "--agent", FORMAL_COORDINATOR,
                     "-p",
                     "--output-format", "stream-json",
@@ -1858,7 +2566,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 elif args.require_trace_auth and not trace_auth.get("authenticated"):
                     result.update({"status": "FAIL", "reason": "trace authentication was required but native subagent tool events were missing"})
                 else:
-                    gate_cmd = [sys.executable, str(root / SKILL_PATH / "scripts/ntt_gate.py"), str(out["certificate"]), "--evidence-root", str(effective_evidence_root), "--strict-evidence", "--markdown", str(out["gate"])]
+                    gate_cmd = [sys.executable, str(execution_root / SKILL_PATH / "scripts/ntt_gate.py"), str(out["certificate"]), "--evidence-root", str(effective_evidence_root), "--strict-evidence", "--markdown", str(out["gate"])]
                     _debug("before gate " + repr(gate_cmd))
                     gate = run_cmd(
                         gate_cmd,
@@ -1883,6 +2591,17 @@ def main(argv: Optional[List[str]] = None) -> int:
                         capped_status, reason = cap_status_by_trace(str(result["gate_status"]), trace_auth)
                         result.update({"status": capped_status, "reason": reason})
 
+    result["runtime_identity"] = finalize_runtime_identity(
+        result.get("runtime_identity", initial_runtime_identity()),
+        locals().get("resolved_claude"),
+    )
+    if execution_snapshot_holder is not None:
+        execution_package_identity = finalize_execution_package_snapshot(
+            root,
+            execution_root,
+            execution_package_identity,
+        )
+    result["execution_package_snapshot_identity"] = execution_package_identity
     try:
         source_post_identity = file_snapshot_identity(target)
     except (OSError, ValueError):
@@ -1918,6 +2637,24 @@ def main(argv: Optional[List[str]] = None) -> int:
             "status": package_status,
             "reason": package_reason,
         })
+    execution_status, execution_reason = cap_status_by_execution_package_snapshot(
+        str(result.get("status")),
+        result.get("execution_package_snapshot_identity"),
+    )
+    if execution_reason is not None:
+        result.update({
+            "status": execution_status,
+            "reason": execution_reason,
+        })
+    runtime_status, runtime_reason = cap_status_by_runtime_identity(
+        str(result.get("status")),
+        result.get("runtime_identity"),
+    )
+    if runtime_reason is not None:
+        result.update({
+            "status": runtime_status,
+            "reason": runtime_reason,
+        })
 
     _debug("before final write")
     try:
@@ -1948,6 +2685,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         refresh_stable_release_manifest_if_available(root)
     _debug("before final print")
     print(json.dumps(canonical_result, indent=2, sort_keys=True))
+    if execution_snapshot_holder is not None:
+        execution_snapshot_holder.cleanup()
     _debug("after final print")
     if result["status"] in PASS_STATUSES:
         return 0

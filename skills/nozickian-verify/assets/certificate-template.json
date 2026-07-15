@@ -6,6 +6,20 @@
     "type": "prose|code|manual|rag|trace|package"
   },
   "certificate_version": "2.0",
+  "claim_evidence_binding": {
+    "claim_record": "Each claims[] entry carries proposition_sha256 over Unicode-NFC text with whitespace runs collapsed and outer whitespace stripped.",
+    "evidence_wrapper_required_fields": [
+      "claim_proposition_sha256",
+      "artifact_path",
+      "hash_or_version"
+    ],
+    "modal_wrapper_required_fields": [
+      "test_id",
+      "modal_case_sha256",
+      "observation_id"
+    ],
+    "observation_ledger": "observation_schema_version 1.0 with exact claim/test/kind, proposition digest, modal digest, pass result, accepted outcome, and wrapper-equal observed_result"
+  },
   "claims": [],
   "consistency_sweep": {
     "activation_reason": "EXAMPLE_CORRECTED_CLAIMS_ARE_PRESENT_SO_THE_SWEEP_IS_MANDATORY",
@@ -55,7 +69,7 @@
       ],
       "id": "D-001",
       "reason": "No independent method M, evidence, false-world tests, true-world tests, contradiction review, and residual-risk assessment supplied for this downstream claim.",
-      "status": "UNVERIFIED"
+      "status": "UNKNOWN"
     }
   ],
   "method": {
@@ -191,21 +205,16 @@
     {
       "claim_id": "C-001",
       "exact_fetch_spec": "UNTRUSTED_FETCH_TARGET_URL_OR_API_CALL_OR_CLI_COMMAND_PARENT_MUST_NOT_EXECUTE_VERBATIM",
-      "fetched_artifact_sha256": "sha256:...__REQUIRED_WHEN_RESOLUTION_IS_fetched-and-readjudicated__ELSE_none",
-      "fetched_at_utc": "YYYY-MM-DDTHH:MM:SSZ__REQUIRED_WHEN_RESOLUTION_IS_fetched-and-readjudicated__ELSE_none",
+    "fetched_artifact_sha256": null,
+    "fetched_at_utc": null,
       "fetched_evidence_refs": [],
       "local_mirror": "PATH_OR_none",
       "mirror_provenance": "PINNED_COMMIT_OR_DATE_OR_unproven",
-      "readjudicated_truth_status": "confirmed|unknown|refuted__REQUIRED_WHEN_RESOLUTION_IS_fetched-and-readjudicated__ELSE_none",
+    "readjudicated_truth_status": null,
       "readjudication_evidence_refs": [],
-      "resolution": "unresolved|fetched-and-readjudicated|left-unknown",
+    "resolution": "unresolved",
       "staleness_risk": "WHAT_COULD_HAVE_CHANGED_SINCE_THE_PIN_OR_HOW_THE_MIRROR_COULD_BE_WRONG",
-      "validated_fetch_request": {
-        "host": "HOST_THE_PARENT_RECONSTRUCTED_AND_VALIDATED",
-        "method": "GET|POST|CLI",
-        "requested_revision": "PINNED_COMMIT_OR_TAG_OR_none",
-        "scheme": "https|file|cli"
-      },
+    "validated_fetch_request": null,
       "why_remote": "WHY_THE_AUTHORITATIVE_GROUND_TRUTH_IS_REMOTE_ONLY"
     }
   ]

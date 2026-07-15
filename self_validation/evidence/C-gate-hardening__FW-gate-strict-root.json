@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-gate-hardening",
+  "claim_proposition_sha256": "sha256:c943a52556d1e129e758bf16d2a2e89804516e94d1e5c510d81a1b4b4ad9d62c",
+  "command_or_source": "run_gate_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
+  "modal_case_sha256": "sha256:11c009fb1d782e325b9017d2e2d6a8db0b55b9cc7aa0964321e040f22dbe255d",
+  "observation_id": "obs:C-gate-hardening:FW-gate-strict-root",
+  "observed_result": "The gate contract returned INVALID_INPUT because strict evidence requires an evidence root.",
+  "support_summary": "This wrapper binds FW-gate-strict-root to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-gate-strict-root",
+  "timestamp_utc": "2026-07-14T00:00:00Z"
+}

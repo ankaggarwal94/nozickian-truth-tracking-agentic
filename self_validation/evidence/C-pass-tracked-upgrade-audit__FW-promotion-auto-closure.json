@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-pass-tracked-upgrade-audit",
+  "claim_proposition_sha256": "sha256:a158800f4ad4e017c722b9ceff1e29439caffbceda1e627529dfa9cf391da536",
+  "command_or_source": "run_promotion_certifier_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
+  "modal_case_sha256": "sha256:85e844f2f0a12b1cf884d5cab33e054640d897b31a8be499240d712cba300824",
+  "observation_id": "obs:C-pass-tracked-upgrade-audit:FW-promotion-auto-closure",
+  "observed_result": "The promotion contract rejected the fake own-claim authorization and preserved the cap.",
+  "support_summary": "This wrapper binds FW-promotion-auto-closure to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-promotion-auto-closure",
+  "timestamp_utc": "2026-07-14T00:00:00Z"
+}

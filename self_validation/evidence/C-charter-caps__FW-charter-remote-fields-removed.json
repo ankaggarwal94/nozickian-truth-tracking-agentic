@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-charter-caps",
+  "claim_proposition_sha256": "sha256:59845efcc628f15149c6bea69aff553ed1aa99d835f450b9e7e529740c877536",
+  "command_or_source": "focused charter integrity probe",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
+  "modal_case_sha256": "sha256:cabb837e522b1bc4c479834fa62f13ac3536ee92c903703c48ce01ff2b041d74",
+  "observation_id": "obs:C-charter-caps:FW-charter-remote-fields-removed",
+  "observed_result": "The charter integrity probe rejected the package after remote re-adjudication fields were removed.",
+  "support_summary": "This wrapper binds FW-charter-remote-fields-removed to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-charter-remote-fields-removed",
+  "timestamp_utc": "2026-07-14T00:00:00Z"
+}

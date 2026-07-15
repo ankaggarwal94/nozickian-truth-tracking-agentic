@@ -34,7 +34,7 @@ A verified source claim does not automatically verify an entailed or operational
 
 | ID | From claim IDs | Derived/downstream claim | Independent method M supplied? | Independent modal tests supplied? | Status | Reason |
 |---|---|---|---|---|---|---|
-| D-001 | C-001 | Example deployment/safety/action claim inferred from C-001 | no | no | UNVERIFIED | Entailed but untested; requires its own method, evidence, false-world tests, true-world tests, contradiction review, and residual-risk assessment. |
+| D-001 | C-001 | Example deployment/safety/action claim inferred from C-001 | no | no | UNKNOWN | Entailed but untested; requires its own method, evidence, false-world tests, true-world tests, contradiction review, and residual-risk assessment. |
 
 ## Contradictions and residual risks
 
@@ -42,8 +42,8 @@ A verified source claim does not automatically verify an entailed or operational
 - Sweep ran: yes/no (mandatory whenever the artifact is a revision of previously corrected material, or any claim was corrected or refuted during this verification - the activation predicate in SKILL.md activation checklist step 9; if no, state the explicit reason it did not apply and what correction evidence was affirmatively checked)
 - Corrected claims swept:
 
-| Affected claim IDs | Superseded wording | Echo locations | Fragment | In true sentence | Classification | Recommended edit | Resolution |
-|---|---|---|---|---|---|---|---|
+| Affected claim IDs | Superseded wording | Echo locations | Fragment | In true sentence | Classification | Recommended edit | Resolution | Edited locations | Replacement evidence |
+|---|---|---|---|---|---|---|---|---|---|
 
 - Machine mapping: `Affected claim IDs` is `affected_claim_ids` (a nonempty, duplicate-free array of canonical current `claims[].id` values), `Echo locations` is `locations` (a nonempty, duplicate-free array), and `Recommended edit` is `recommended_edit`. An artifact-global intentional reference may enumerate all current claim IDs; do not use a synthetic `"all claims"` ID.
 - Canonical locator strings are `path:line` or `path:start-end` for current text and `git:<40-hex-commit>:<path>` for deleted or binary historical entries. Use one array element per exact location; do not use duplicates, wildcards, parenthetical selectors, semicolon-joined paths, unversioned deleted paths, or fabricated historical line numbers.
@@ -54,6 +54,11 @@ A verified source claim does not automatically verify an entailed or operational
 - `REMOTE_GROUND_TRUTH_REQUIRED` entries raised, or explicit `none`:
 
 | Claim | Why remote | Fetch spec | Local mirror | Mirror provenance | Staleness risk | Resolution (unresolved / fetched-and-readjudicated / left-unknown) |
+|---|---|---|---|---|---|---|
+
+For every `fetched-and-readjudicated` row, include the complete companion-evidence table. For `unresolved` or `left-unknown`, use null/empty companion values and keep the claim `UNKNOWN`.
+
+| Claim | Validated fetch request (scheme / host / method / revision) | Fetched artifact SHA-256 | Fetched at UTC | Fetched evidence refs | Readjudicated truth status | Readjudication evidence refs |
 |---|---|---|---|---|---|---|
 
 ## Gate result
@@ -163,6 +168,7 @@ The template's `consistency_sweep` and `remote_escalations` fields are parent-en
     {
       "id": "C-UPGRADE-001",
       "text": "The exact package snapshot satisfies the independently evaluated promotion contract.",
+      "proposition_sha256": "sha256:<SHA-256 of the canonical claim text>",
       "importance": "critical",
       "artifact_location": "promotion_claims/C-UPGRADE-001",
       "truth_status": "executed_confirmed",
@@ -253,7 +259,7 @@ The template's `consistency_sweep` and `remote_escalations` fields are parent-en
 }
 ```
 
-The certifier requires exact-string `promotion_schema_version: "2.0"` and exact JSON types for every required top-level field. `claims` is a required nonempty array: every entry must be an object with the exact claim field types shown above, a unique canonical ID, complete method M, local evidence, modal tests, contradiction review, and residual-risk review. The certifier evaluates the claim array through the canonical strict gate and requires a nonempty all-passing result set. `claims` remains distinct from `derived_or_downstream_claims`, whose entries cannot inherit verification from an upstream claim. A performed review may use empty `claims_identified` and `derived_or_downstream_claims` arrays only with a substantive `none_identified_reason`. The certifier does not accept `package_sha256` as an alias or flat promotion `evidence_refs`. Each of the fixed nine typed nodes contains exactly `path`, `sha256`, and `depends_on`; it resolves to a distinct canonical bundle-local regular non-symlink file, binds exact bytes, uses the canonical role path, and participates in the one environment-independent bounded acyclic dependency graph. Equal bytes across distinct roles are allowed; path and file-identity aliases are not.
+The certifier requires exact-string `promotion_schema_version: "2.0"` and exact JSON types for every required top-level field. `claims` is a required nonempty array: every entry must be an object with the exact claim field types shown above, a unique canonical ID, `proposition_sha256`, complete method M, local evidence, modal tests, contradiction review, and residual-risk review. Every cited claim wrapper repeats the canonical claim digest; every modal wrapper adds the canonical case digest and a verified observation-ledger record as defined in `EVIDENCE_SCHEMA.md`. The certifier evaluates the claim array through the canonical strict gate and requires a nonempty all-passing result set. `claims` remains distinct from `derived_or_downstream_claims`, whose entries cannot inherit verification from an upstream claim. A performed review may use empty `claims_identified` and `derived_or_downstream_claims` arrays only with a substantive `none_identified_reason`. The certifier does not accept `package_sha256` as an alias or flat promotion `evidence_refs`. Each of the fixed nine typed nodes contains exactly `path`, `sha256`, and `depends_on`; it resolves to a distinct canonical bundle-local regular non-symlink file, binds exact bytes, uses the canonical role path, and participates in the one environment-independent bounded acyclic dependency graph. Equal bytes across distinct roles are allowed; path and file-identity aliases are not.
 
 Deterministic captures cannot authorize by themselves: the certifier runs the fixed suites fresh and compares typed semantic projections. Allowlisted official validators also run fresh. Claude uses the exact strict argv shown above; after ANSI normalization its real `✔ Validation passed` form succeeds only when neither complete output stream contradicts it. Full bytes determine status, byte counts, and SHA-256; bounded excerpts and truncation flags are presentation metadata. Prewritten text captures do not authorize, absent tools scope only through the explicit flag while both official-policy nodes and fixed dependencies remain mandatory, and installed failures fail. Formal result `2.0` binds the immutable standalone target snapshot, exact report/gate/certificate/ledger/complete-transcript/prompt/target-snapshot companion manifest, package-tree identity, run ID, and target identities. Promotion uses the typed `formal.result` path and never basename, glob-first, or tail-only substitution; unrelated nonreserved files may remain.
 

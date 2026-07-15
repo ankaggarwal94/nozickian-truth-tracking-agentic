@@ -162,7 +162,7 @@ Create `promotion_certificate.json` describing the exact upgrade claim. It must 
 - At least one promotion claim. Every `claims` entry is an object with exact required field types, a unique canonical ID, a complete method manifest, local evidence, false-world tests, true-world tests, contradiction review, and residual-risk review.
 - `downstream_review` with `performed: true`, `claims_identified`, and `none_identified_reason` when the list is empty.
 - Claim-local scope limitations, if any.
-- Derived/downstream claims with `UNVERIFIED` status unless independently verified.
+- Derived/downstream claims with `UNKNOWN` status unless independently verified.
 
 Legacy flat promotion `evidence_refs` fail. Missing/wrong-type top-level schema fields, non-object claim entries, null or boolean aliases, duplicate/invalid IDs, and an empty claims array fail with canonical `FAIL` plus `INVALID_INPUT`. The certifier evaluates every well-formed claim through the canonical `ntt_gate.evaluate_certificate` path using the bundle evidence root and promotion policy. Modeled completion requires a nonempty claim-result set whose entries all pass before the actual results are passed to promotion-strict downstream non-closure evaluation. An explicitly empty downstream-conclusions list remains valid when the certificate has a real passing promotion claim and a substantive performed-review reason. Every typed node path must be canonical, relative, bundle-local, regular, and non-symlink. Absolute paths, URI schemes, traversal, aliases by canonical path or file identity, missing files, wrong bytes, wrong hashes, wrong role paths, and noncanonical dependencies fail. Distinct semantic roles may contain equal bytes, but they may not alias the same path or file identity.
 
@@ -261,7 +261,7 @@ Every promotion report must include this table shape:
 | Formal runtime trace auth | formal_artifacts/artifact-001/formal_result.json | sha256:... | PASS-TRACKED/FAIL | explain |
 | Generated formal gate | formal_artifacts/artifact-001/*_GATE.md | sha256:... | PASS-TRACKED/FAIL | explain |
 | Official validators | official_validators/* | sha256:... | PASS/FAIL/MISSING | explain |
-| Downstream claims | promotion_certificate.json | sha256:... | UNVERIFIED or independently verified | explain |
+| Downstream claims | promotion_certificate.json | sha256:... | UNKNOWN or independently verified | explain |
 
 ## Anti-hallucination requirements for Claude Code
 

@@ -19,11 +19,16 @@ import contextlib
 import copy
 import hashlib
 import importlib.util
+import inspect
 import io
 import json
+import os
 import re
+import stat
 import sys
 import tempfile
+import unicodedata
+import uuid
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
 
@@ -39,6 +44,13 @@ ARTIFACT_URI_PATHS = {
     "mixed_case": "hTtPs://example.invalid/nozickian/artifact.txt",
     "arbitrary_scheme": "nozickian-artifact:artifact.txt",
 }
+BASE_CLAIM_TEXT = "The package gate rejects fake Nozickian certificates that omit evidence, tests, method components, contradiction resolution, invalid local evidence refs, or valid structured evidence hashes."
+
+
+def _private_tempdir(prefix: str) -> Path:
+    root = Path(tempfile.mkdtemp(prefix=prefix))
+    root.chmod(0o700)
+    return root
 
 
 def load_gate(gate_path: Path):
@@ -86,6 +98,66 @@ def ev(i: str) -> str:
     return f"self_validation/evidence/{i}.json"
 
 
+def canonical_proposition(value: Any) -> str:
+    normalized = unicodedata.normalize("NFC", str(value or ""))
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
+def proposition_sha256(value: Any) -> str:
+    return hashlib.sha256(
+        canonical_proposition(value).encode("utf-8")
+    ).hexdigest()
+
+
+def modal_case_sha256(
+    test: Mapping[str, Any],
+    claim_text: str,
+    expected_kind: str,
+    evidence_observed_result: Any = None,
+) -> str:
+    target_raw = test.get("target_claim_ids", test.get("target_claim"))
+    targets = target_raw if isinstance(target_raw, list) else [target_raw]
+    if test.get("perturbation"):
+        variation_field = "perturbation"
+        variation = test.get("perturbation")
+    else:
+        variation_field = "variant"
+        variation = test.get("variant")
+    payload = {
+        "claim_proposition": canonical_proposition(claim_text),
+        "kind": str(test.get("kind") or expected_kind).strip().lower(),
+        "test_id": str(test.get("id") or test.get("test_id") or "").strip(),
+        "target_claim_ids": sorted({
+            str(value).strip() for value in targets if str(value or "").strip()
+        }),
+        "variation_field": variation_field,
+        "variation": canonical_proposition(variation),
+        "expected_behavior": canonical_proposition(
+            test.get("expected_behavior")
+        ),
+        "observed_behavior": canonical_proposition(
+            test.get("observed_behavior")
+        ),
+        "observed_result": canonical_proposition(
+            evidence_observed_result
+            if evidence_observed_result is not None
+            else test.get("observed_result")
+        ),
+        "outcome": str(
+            test.get("outcome") or test.get("observed_outcome") or ""
+        ).strip().lower(),
+        "result": str(test.get("result") or "").strip().lower(),
+    }
+    return hashlib.sha256(
+        json.dumps(
+            payload,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+
+
 def false_test(i: str) -> Dict[str, Any]:
     return {
         "id": i,
@@ -116,6 +188,7 @@ def true_test(i: str) -> Dict[str, Any]:
 
 def valid_cert() -> Dict[str, Any]:
     m = method()
+    claim_text = BASE_CLAIM_TEXT
     return {
         "schema_version": "2.0",
         "artifact": {"name": "contract-test-artifact", "version": "2.0.0"},
@@ -123,7 +196,8 @@ def valid_cert() -> Dict[str, Any]:
         "scope_limitations": [],
         "claims": [{
             "id": "C-001",
-            "text": "The package gate rejects fake Nozickian certificates that omit evidence, tests, method components, contradiction resolution, invalid local evidence refs, or valid structured evidence hashes.",
+            "text": claim_text,
+            "proposition_sha256": f"sha256:{proposition_sha256(claim_text)}",
             "importance": "critical",
             "artifact_location": "scripts/ntt_gate.py + scripts/run_gate_contract_tests.py",
             "truth_status": "executed_confirmed",
@@ -137,17 +211,30 @@ def valid_cert() -> Dict[str, Any]:
     }
 
 
-def all_evidence_refs(cert: Mapping[str, Any]) -> Iterable[Tuple[str, Optional[str], Optional[str]]]:
+def all_evidence_refs(
+    cert: Mapping[str, Any],
+) -> Iterable[
+    Tuple[
+        str,
+        Optional[str],
+        Optional[str],
+        str,
+        Optional[Mapping[str, Any]],
+        Optional[str],
+    ]
+]:
     for claim in cert.get("claims", []):
         cid = str(claim.get("id"))
+        claim_text = str(claim.get("text") or "")
         for ref in claim.get("evidence_refs", []):
-            yield str(ref), cid, None
+            yield str(ref), cid, None, claim_text, None, None
         for key in ("false_world_tests", "true_world_tests"):
+            kind = "false_world" if key == "false_world_tests" else "true_world"
             for test in claim.get(key, []):
                 tid_raw = test.get("id", test.get("test_id"))
                 tid = str(tid_raw).strip() if tid_raw is not None else ""
                 for ref in test.get("evidence_refs", []):
-                    yield str(ref), cid, tid
+                    yield str(ref), cid, tid, claim_text, test, kind
 
 
 def _safe_evidence_ref(ref: str) -> bool:
@@ -160,7 +247,21 @@ def _safe_evidence_ref(ref: str) -> bool:
     return ".." not in p.parts
 
 
-def _write_one_evidence(root: Path, ref: str, cid: Optional[str], tid: Optional[str], *, wrong_hash: bool = False, artifact_escape: bool = False, artifact_absolute: bool = False, artifact_uri: Optional[str] = None, outside: Optional[Path] = None) -> None:
+def _write_one_evidence(
+    root: Path,
+    ref: str,
+    cid: Optional[str],
+    tid: Optional[str],
+    claim_text: str,
+    modal_test: Optional[Mapping[str, Any]],
+    test_kind: Optional[str],
+    *,
+    wrong_hash: bool = False,
+    artifact_escape: bool = False,
+    artifact_absolute: bool = False,
+    artifact_uri: Optional[str] = None,
+    outside: Optional[Path] = None,
+) -> None:
     evidence = root / ref
     evidence.parent.mkdir(parents=True, exist_ok=True)
     artifact_rel = f"observations/{Path(ref).stem}.txt"
@@ -194,6 +295,9 @@ def _write_one_evidence(root: Path, ref: str, cid: Optional[str], tid: Optional[
     data: Dict[str, Any] = {
         "evidence_schema_version": "1.0",
         "claim_id": cid,
+        "claim_proposition_sha256": (
+            f"sha256:{proposition_sha256(claim_text)}"
+        ),
         "artifact_path": artifact_rel,
         "command_or_source": "run_gate_contract_tests.py structured evidence fixture",
         "observed_result": f"Structured evidence fixture for {ref} observed a deterministic gate contract case.",
@@ -203,6 +307,16 @@ def _write_one_evidence(root: Path, ref: str, cid: Optional[str], tid: Optional[
     }
     if tid:
         data["test_id"] = tid
+        assert modal_test is not None and test_kind is not None
+        data["modal_case_sha256"] = (
+            "sha256:"
+            + modal_case_sha256(
+                modal_test,
+                claim_text,
+                test_kind,
+                data["observed_result"],
+            )
+        )
     else:
         data["applies_to_tests"] = ["*"]
     evidence.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
@@ -215,6 +329,9 @@ def write_external_evidence(evidence_root: Path, ref_path: Path, *, artifact_rel
     data = {
         "evidence_schema_version": "1.0",
         "claim_id": "C-001",
+        "claim_proposition_sha256": (
+            f"sha256:{proposition_sha256(BASE_CLAIM_TEXT)}"
+        ),
         "applies_to_tests": ["*"],
         "artifact_path": artifact_rel,
         "command_or_source": "external evidence-ref false-world fixture",
@@ -235,14 +352,14 @@ def write_structured_evidence_tree(
     artifact_absolute_refs: Optional[Set[str]] = None,
     artifact_uri_refs: Optional[Mapping[str, str]] = None,
 ) -> Tuple[Path, Path]:
-    root = Path(tempfile.mkdtemp(prefix="ntt_gate_evidence_contract_"))
-    outside = Path(tempfile.mkdtemp(prefix="ntt_gate_evidence_outside_"))
+    root = _private_tempdir("ntt_gate_evidence_contract_")
+    outside = _private_tempdir("ntt_gate_evidence_outside_")
     (root / "observations").mkdir(parents=True, exist_ok=True)
     wrong_refs = wrong_refs or set()
     artifact_escape_refs = artifact_escape_refs or set()
     artifact_absolute_refs = artifact_absolute_refs or set()
     artifact_uri_refs = artifact_uri_refs or {}
-    for ref, cid, tid in all_evidence_refs(cert):
+    for ref, cid, tid, claim_text, modal_test, test_kind in all_evidence_refs(cert):
         if not _safe_evidence_ref(ref):
             continue
         _write_one_evidence(
@@ -250,6 +367,9 @@ def write_structured_evidence_tree(
             ref,
             cid,
             tid,
+            claim_text,
+            modal_test,
+            test_kind,
             wrong_hash=ref in wrong_refs,
             artifact_escape=ref in artifact_escape_refs,
             artifact_absolute=ref in artifact_absolute_refs,
@@ -265,8 +385,16 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     def summarize(result: Mapping[str, Any]) -> List[str]:
         def clean(reason: str) -> str:
             # Keep contract artifacts deterministic even when tempdirs differ.
-            reason = re.sub(r"/tmp/ntt_gate_evidence_outside_[^/\s;]+/[^\s;]+", "<temporary-absolute-evidence-ref>", reason)
-            reason = re.sub(r"/tmp/ntt_gate_evidence_contract_[^/\s;]+/[^\s;]+", "<temporary-evidence-root-ref>", reason)
+            reason = re.sub(
+                r"/(?:[^/\s;]+/)*ntt_gate_evidence_outside_[^/\s;]+/[^\s;]+",
+                "<temporary-absolute-evidence-ref>",
+                reason,
+            )
+            reason = re.sub(
+                r"/(?:[^/\s;]+/)*ntt_gate_evidence_contract_[^/\s;]+/[^\s;]+",
+                "<temporary-evidence-root-ref>",
+                reason,
+            )
             return reason
         out = [clean(str(r)) for r in (result.get("reasons", []) or [])]
         for claim in result.get("claim_results", []) or []:
@@ -343,20 +471,18 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
             external_path = outside_root / "external-valid-evidence.json"
             write_external_evidence(evidence_root, external_path)
             if absolute_ref:
-                ref_value = "/tmp/ntt_gate_absolute_ref_probe.json"
-                try:
-                    Path(ref_value).write_text(external_path.read_text(encoding="utf-8"), encoding="utf-8")
-                except (OSError, UnicodeError):
-                    pass
+                ref_value = str(external_path.resolve())
             else:
-                ref_value = external_ref
-                # Ensure the referenced relative path points to the same file for ../ probes.
-                target = (evidence_root / external_ref).resolve()
-                target.parent.mkdir(parents=True, exist_ok=True)
-                if target != external_path.resolve():
-                    target.write_text(external_path.read_text(encoding="utf-8"), encoding="utf-8")
-            if ref_value not in cert["claims"][0]["evidence_refs"]:
-                cert["claims"][0]["evidence_refs"].append(ref_value)
+                ref_value = Path(
+                    os.path.relpath(external_path, evidence_root)
+                ).as_posix()
+            refs = cert["claims"][0]["evidence_refs"]
+            refs[:] = [
+                ref_value if ref == external_ref else ref
+                for ref in refs
+            ]
+            if ref_value not in refs:
+                refs.append(ref_value)
         result = gate_mod.evaluate_certificate(cert, evidence_root=evidence_root, strict_evidence=True)
         status = result.get("status")
         cases.append({
@@ -381,6 +507,207 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
             second_data["hash_or_version"] = first_data["hash_or_version"]
             second.write_text(json.dumps(second_data, indent=2, sort_keys=True), encoding="utf-8")
         result = gate_mod.evaluate_certificate(cert, evidence_root=evidence_root, strict_evidence=True)
+        status = result.get("status")
+        cases.append({
+            "name": name,
+            "status": status,
+            "expected_any": sorted(allowed),
+            "passed": status in allowed,
+            "evidence_root": "<temporary strict-evidence root>",
+            "outside_root": "<temporary outside-root probe>",
+            "reasons": summarize(result),
+        })
+
+    def add_hardlink_alias(
+        name: str,
+        cert: Dict[str, Any],
+        *,
+        target: str,
+    ) -> None:
+        evidence_root, _outside_root = write_structured_evidence_tree(cert)
+        if target == "evidence-wrapper":
+            refs = list(cert["claims"][0]["evidence_refs"])
+            first = evidence_root / refs[0]
+            second = evidence_root / refs[1]
+        elif target == "claim-artifact":
+            refs = list(cert["claims"][0]["evidence_refs"])
+            wrappers = [evidence_root / ref for ref in refs]
+            data = [json.loads(path.read_text(encoding="utf-8")) for path in wrappers]
+            first = evidence_root / data[0]["artifact_path"]
+            second = evidence_root / data[1]["artifact_path"]
+        elif target == "modal-artifact":
+            wrappers = [
+                evidence_root / ev("FW-001"),
+                evidence_root / ev("FW-002"),
+            ]
+            data = [json.loads(path.read_text(encoding="utf-8")) for path in wrappers]
+            first = evidence_root / data[0]["artifact_path"]
+            second = evidence_root / data[1]["artifact_path"]
+        else:
+            raise AssertionError(f"unknown hardlink target {target}")
+        second.unlink()
+        os.link(first, second)
+        if target != "evidence-wrapper":
+            data[1]["hash_or_version"] = f"sha256:{sha256_path(first)}"
+            wrappers[1].write_text(
+                json.dumps(data[1], indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+        result = gate_mod.evaluate_certificate(
+            cert,
+            evidence_root=evidence_root,
+            strict_evidence=True,
+        )
+        reasons = summarize(result)
+        cases.append({
+            "name": name,
+            "status": result.get("status"),
+            "expected_any": ["FAIL"],
+            "passed": (
+                os.path.samefile(first, second)
+                and result.get("status") == "FAIL"
+            ),
+            "evidence_root": "<temporary strict-evidence root>",
+            "outside_root": "<temporary outside-root probe>",
+            "reasons": reasons,
+        })
+
+    def add_content_copy(
+        name: str,
+        cert: Dict[str, Any],
+        *,
+        target: str,
+    ) -> None:
+        evidence_root, _outside_root = write_structured_evidence_tree(cert)
+        if target == "evidence-wrapper":
+            refs = list(cert["claims"][0]["evidence_refs"])
+            first = evidence_root / refs[0]
+            second = evidence_root / refs[1]
+            wrappers: List[Path] = []
+            data: List[Dict[str, Any]] = []
+        elif target == "claim-artifact":
+            refs = list(cert["claims"][0]["evidence_refs"])
+            wrappers = [evidence_root / ref for ref in refs]
+            data = [
+                json.loads(path.read_text(encoding="utf-8"))
+                for path in wrappers
+            ]
+            first = evidence_root / data[0]["artifact_path"]
+            second = evidence_root / data[1]["artifact_path"]
+        elif target == "modal-artifact":
+            wrappers = [
+                evidence_root / ev("FW-001"),
+                evidence_root / ev("FW-002"),
+            ]
+            data = [
+                json.loads(path.read_text(encoding="utf-8"))
+                for path in wrappers
+            ]
+            first = evidence_root / data[0]["artifact_path"]
+            second = evidence_root / data[1]["artifact_path"]
+        else:
+            raise AssertionError(f"unknown content-copy target {target}")
+        second.write_bytes(first.read_bytes())
+        if target != "evidence-wrapper":
+            data[1]["hash_or_version"] = f"sha256:{sha256_path(second)}"
+            wrappers[1].write_text(
+                json.dumps(data[1], indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+        result = gate_mod.evaluate_certificate(
+            cert,
+            evidence_root=evidence_root,
+            strict_evidence=True,
+        )
+        cases.append({
+            "name": name,
+            "status": result.get("status"),
+            "expected_any": ["FAIL"],
+            "passed": (
+                not os.path.samefile(first, second)
+                and first.read_bytes() == second.read_bytes()
+                and result.get("status") == "FAIL"
+            ),
+            "evidence_root": "<temporary strict-evidence root>",
+            "outside_root": "<temporary outside-root probe>",
+            "reasons": summarize(result),
+        })
+
+    def add_shared_modal_ledger(
+        name: str,
+        cert: Dict[str, Any],
+        *,
+        observation_mode: str,
+        allowed: Set[str],
+    ) -> None:
+        evidence_root, _outside_root = write_structured_evidence_tree(cert)
+        wrappers = [
+            evidence_root / ev("FW-001"),
+            evidence_root / ev("FW-002"),
+        ]
+        wrapper_data = [
+            json.loads(path.read_text(encoding="utf-8")) for path in wrappers
+        ]
+        ledger_rel = "observations/shared-modal-ledger.json"
+        ledger_path = evidence_root / ledger_rel
+        observations: Dict[str, Any] = {}
+        for index, (test_id, data) in enumerate(
+            zip(("FW-001", "FW-002"), wrapper_data),
+            start=1,
+        ):
+            observation_id = f"OBS-FW-{index:03d}"
+            observations[observation_id] = {
+                "claim_id": "C-001",
+                "test_id": test_id,
+                "kind": "false_world",
+                "claim_proposition_sha256": data[
+                    "claim_proposition_sha256"
+                ],
+                "modal_case_sha256": data["modal_case_sha256"],
+                "result": "pass",
+                "outcome": "rejected_false_claim",
+                "observed_result": data["observed_result"],
+            }
+        if observation_mode == "wrong-modal-digest":
+            observations["OBS-FW-002"]["modal_case_sha256"] = (
+                "sha256:" + "0" * 64
+            )
+        ledger = {
+            "observation_schema_version": "1.0",
+            "observations": observations,
+        }
+        ledger_path.write_text(
+            json.dumps(ledger, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        digest = sha256_path(ledger_path)
+        for index, (path, data) in enumerate(
+            zip(wrappers, wrapper_data),
+            start=1,
+        ):
+            data["artifact_path"] = ledger_rel
+            data["hash_or_version"] = f"sha256:{digest}"
+            if observation_mode == "valid":
+                data["observation_id"] = f"OBS-FW-{index:03d}"
+            elif observation_mode == "wrong-modal-digest":
+                data["observation_id"] = f"OBS-FW-{index:03d}"
+            elif observation_mode == "duplicate":
+                data["observation_id"] = "OBS-FW-001"
+            elif observation_mode == "missing":
+                data["observation_id"] = f"ABSENT-{index}"
+            elif observation_mode != "none":
+                raise AssertionError(
+                    f"unknown observation mode {observation_mode}"
+                )
+            path.write_text(
+                json.dumps(data, indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+        result = gate_mod.evaluate_certificate(
+            cert,
+            evidence_root=evidence_root,
+            strict_evidence=True,
+        )
         status = result.get("status")
         cases.append({
             "name": name,
@@ -441,8 +768,313 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         "non_object_claim_entry_is_invalid_input",
         malformed_claim_entry,
     )
+
+    shared_method_cert = copy.deepcopy(base)
+    shared_method_object = method()
+    shared_method_cert["method_manifest"] = shared_method_object
+    shared_method_cert["claims"][0]["method_m"] = shared_method_object
+    shared_method_result = gate_mod.evaluate_certificate(shared_method_cert)
+    cases.append({
+        "name": "shared_noncyclic_method_object_is_allowed",
+        "status": shared_method_result.get("status"),
+        "expected_any": ["PASS-TRACKED"],
+        "passed": shared_method_result.get("status") == "PASS-TRACKED",
+        "reasons": summarize(shared_method_result),
+    })
+
+    cyclic_method_cert = copy.deepcopy(base)
+    cyclic_method = cyclic_method_cert["method_manifest"]
+    cyclic_method["cycle"] = cyclic_method
+    cyclic_method_result = gate_mod.evaluate_certificate(cyclic_method_cert)
+    cases.append({
+        "name": "cyclic_method_object_is_invalid_input",
+        "status": cyclic_method_result.get("status"),
+        "expected_any": ["INVALID_INPUT"],
+        "passed": cyclic_method_result.get("status") == "INVALID_INPUT",
+        "reasons": summarize(cyclic_method_result),
+    })
+
+    aliased_leaf = {"leaf": 1}
+    alias_budget_error = gate_mod._validate_json_bounds(  # pylint: disable=protected-access
+        [aliased_leaf, aliased_leaf],
+        max_depth=4,
+        max_nodes=4,
+        max_fields=4,
+        label="alias budget probe",
+    )
+    cases.append({
+        "name": "shared_object_aliases_each_consume_json_budget",
+        "status": "PASS" if alias_budget_error else "FAIL",
+        "expected_any": ["PASS"],
+        "passed": bool(
+            alias_budget_error
+            and "node count" in alias_budget_error
+        ),
+        "reasons": [alias_budget_error] if alias_budget_error else [],
+    })
+    strict_without_root = gate_mod.evaluate_certificate(
+        copy.deepcopy(base),
+        strict_evidence=True,
+    )
+    strict_without_root_summary = strict_without_root.get("summary") or {}
+    cases.append({
+        "name": "strict_evidence_without_root_is_invalid_input",
+        "status": strict_without_root.get("status"),
+        "expected_any": ["INVALID_INPUT"],
+        "passed": (
+            strict_without_root.get("status") == "INVALID_INPUT"
+            and strict_without_root_summary.get("evidence_root_checked") is False
+            and strict_without_root_summary.get("structured_evidence_checked") is False
+            and strict_without_root.get("claim_results") == []
+        ),
+        "reasons": summarize(strict_without_root),
+    })
+
+    structural_only = gate_mod.evaluate_certificate(copy.deepcopy(base))
+    structural_claim = (structural_only.get("claim_results") or [{}])[0]
+    structural_summary = structural_only.get("summary") or {}
+    cases.append({
+        "name": "unchecked_refs_not_reported_as_structured_evidence",
+        "status": structural_only.get("status"),
+        "expected_any": ["PASS-TRACKED"],
+        "passed": (
+            structural_only.get("status") == "PASS-TRACKED"
+            and structural_claim.get("structured_evidence_count") == 0
+            and structural_summary.get("structured_evidence_checked") is False
+            and structural_summary.get("structured_evidence_required") is False
+        ),
+        "reasons": summarize(structural_only),
+    })
+
+    missing_root = _private_tempdir("ntt_gate_missing_root_") / "missing"
+    missing_root_result = gate_mod.evaluate_certificate(
+        copy.deepcopy(base),
+        evidence_root=missing_root,
+        strict_evidence=True,
+    )
+    cases.append({
+        "name": "missing_evidence_root_is_invalid_input",
+        "status": missing_root_result.get("status"),
+        "expected_any": ["INVALID_INPUT"],
+        "passed": missing_root_result.get("status") == "INVALID_INPUT",
+        "reasons": summarize(missing_root_result),
+    })
     add_strict("valid_structured_evidence_hashes", copy.deepcopy(base), {"PASS-TRACKED"})
+
+    claim_substitution = copy.deepcopy(base)
+    substitution_root, _ = write_structured_evidence_tree(
+        claim_substitution
+    )
+    substituted_text = (
+        "A coordinated certificate-only substitution must not inherit the "
+        "original claim evidence."
+    )
+    claim_substitution["claims"][0]["text"] = substituted_text
+    claim_substitution["claims"][0]["proposition_sha256"] = (
+        f"sha256:{proposition_sha256(substituted_text)}"
+    )
+    substitution_result = gate_mod.evaluate_certificate(
+        claim_substitution,
+        evidence_root=substitution_root,
+        strict_evidence=True,
+    )
+    substitution_reasons = summarize(substitution_result)
+    cases.append({
+        "name": "coordinated_claim_text_digest_substitution_rejected",
+        "status": substitution_result.get("status"),
+        "expected_any": ["FAIL"],
+        "passed": (
+            substitution_result.get("status") == "FAIL"
+            and any(
+                "claim_proposition_sha256 does not match" in reason
+                for reason in substitution_reasons
+            )
+        ),
+        "reasons": substitution_reasons,
+    })
+
+    modal_substitution = copy.deepcopy(base)
+    modal_substitution_root, _ = write_structured_evidence_tree(
+        modal_substitution
+    )
+    modal_substitution["claims"][0]["false_world_tests"][0][
+        "expected_behavior"
+    ] = (
+        "The mutated modal case still expects rejection but is not the case "
+        "that the cited evidence observed."
+    )
+    modal_substitution_result = gate_mod.evaluate_certificate(
+        modal_substitution,
+        evidence_root=modal_substitution_root,
+        strict_evidence=True,
+    )
+    modal_substitution_reasons = summarize(modal_substitution_result)
+    modal_substitution_test_reasons = [
+        str(reason)
+        for claim_result in modal_substitution_result.get(
+            "claim_results", []
+        )
+        for test_result in claim_result.get("test_results", [])
+        for reason in test_result.get("reasons", [])
+    ]
+    cases.append({
+        "name": "certificate_modal_case_substitution_rejected",
+        "status": modal_substitution_result.get("status"),
+        "expected_any": ["FAIL"],
+        "passed": (
+            modal_substitution_result.get("status") == "FAIL"
+            and any(
+                "modal_case_sha256 does not match" in reason
+                for reason in modal_substitution_test_reasons
+            )
+        ),
+        "reasons": (
+            modal_substitution_reasons
+            + modal_substitution_test_reasons[:3]
+        ),
+    })
+
     add_strict("wrong_structured_evidence_hash_rejected", copy.deepcopy(base), {"FAIL"}, wrong_refs={ev("FW-001")})
+
+    oversized_wrapper_cert = copy.deepcopy(base)
+    oversized_wrapper_root, _ = write_structured_evidence_tree(
+        oversized_wrapper_cert
+    )
+    oversized_wrapper = (
+        oversized_wrapper_root
+        / oversized_wrapper_cert["claims"][0]["evidence_refs"][0]
+    )
+    oversized_wrapper.write_bytes(
+        b" " * (gate_mod.MAX_EVIDENCE_WRAPPER_BYTES + 1)
+    )
+    oversized_wrapper_result = gate_mod.evaluate_certificate(
+        oversized_wrapper_cert,
+        evidence_root=oversized_wrapper_root,
+        strict_evidence=True,
+    )
+    cases.append({
+        "name": "oversized_evidence_wrapper_is_invalid_input",
+        "status": oversized_wrapper_result.get("status"),
+        "expected_any": ["INVALID_INPUT"],
+        "passed": oversized_wrapper_result.get("status") == "INVALID_INPUT",
+        "reasons": summarize(oversized_wrapper_result),
+    })
+
+    oversized_ledger_cert = copy.deepcopy(base)
+    oversized_ledger_root, _ = write_structured_evidence_tree(
+        oversized_ledger_cert
+    )
+    oversized_ledger_wrapper = oversized_ledger_root / ev("FW-001")
+    oversized_ledger_data = json.loads(
+        oversized_ledger_wrapper.read_text(encoding="utf-8")
+    )
+    oversized_ledger_path = (
+        oversized_ledger_root / "observations/field-heavy-ledger.json"
+    )
+    oversized_ledger_path.write_text(
+        json.dumps({
+            "observation_schema_version": "1.0",
+            "observations": {},
+            "padding": {
+                f"field-{index}": index
+                for index in range(gate_mod.MAX_EVIDENCE_JSON_FIELDS + 1)
+            },
+        }),
+        encoding="utf-8",
+    )
+    oversized_ledger_data["artifact_path"] = (
+        "observations/field-heavy-ledger.json"
+    )
+    oversized_ledger_data["hash_or_version"] = (
+        f"sha256:{sha256_path(oversized_ledger_path)}"
+    )
+    oversized_ledger_data["observation_id"] = "OBS-FIELD-LIMIT"
+    oversized_ledger_wrapper.write_text(
+        json.dumps(oversized_ledger_data, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    oversized_ledger_result = gate_mod.evaluate_certificate(
+        oversized_ledger_cert,
+        evidence_root=oversized_ledger_root,
+        strict_evidence=True,
+    )
+    cases.append({
+        "name": "observation_ledger_field_bound_is_invalid_input",
+        "status": oversized_ledger_result.get("status"),
+        "expected_any": ["INVALID_INPUT"],
+        "passed": oversized_ledger_result.get("status") == "INVALID_INPUT",
+        "reasons": summarize(oversized_ledger_result),
+    })
+
+    recursive_ledger_cert = copy.deepcopy(base)
+    recursive_ledger_root, _ = write_structured_evidence_tree(
+        recursive_ledger_cert
+    )
+    recursive_ledger_wrapper = recursive_ledger_root / ev("FW-001")
+    recursive_ledger_data = json.loads(
+        recursive_ledger_wrapper.read_text(encoding="utf-8")
+    )
+    recursive_ledger_path = (
+        recursive_ledger_root / "observations/recursive-ledger.json"
+    )
+    recursive_depth = sys.getrecursionlimit() + 100
+    recursive_ledger_path.write_text(
+        '{"nested":' * recursive_depth
+        + "0"
+        + "}" * recursive_depth,
+        encoding="utf-8",
+    )
+    recursive_ledger_data["artifact_path"] = (
+        "observations/recursive-ledger.json"
+    )
+    recursive_ledger_data["hash_or_version"] = (
+        f"sha256:{sha256_path(recursive_ledger_path)}"
+    )
+    recursive_ledger_data["observation_id"] = "OBS-RECURSION-LIMIT"
+    recursive_ledger_wrapper.write_text(
+        json.dumps(recursive_ledger_data, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    recursive_ledger_result = gate_mod.evaluate_certificate(
+        recursive_ledger_cert,
+        evidence_root=recursive_ledger_root,
+        strict_evidence=True,
+    )
+    cases.append({
+        "name": "observation_ledger_recursion_failure_is_invalid_input",
+        "status": recursive_ledger_result.get("status"),
+        "expected_any": ["INVALID_INPUT"],
+        "passed": recursive_ledger_result.get("status") == "INVALID_INPUT",
+        "reasons": summarize(recursive_ledger_result),
+    })
+
+    cache_cert = copy.deepcopy(base)
+    cache_root, _ = write_structured_evidence_tree(cache_cert)
+    cache_path = cache_root / cache_cert["claims"][0]["evidence_refs"][0]
+    json_cache: Dict[Any, Any] = {}
+    cached_first = gate_mod._bounded_json_read(  # pylint: disable=protected-access
+        cache_path,
+        max_bytes=gate_mod.MAX_EVIDENCE_WRAPPER_BYTES,
+        label="structured evidence wrapper",
+        cache=json_cache,
+    )
+    cache_path.write_text("{}", encoding="utf-8")
+    cached_second = gate_mod._bounded_json_read(  # pylint: disable=protected-access
+        cache_path,
+        max_bytes=gate_mod.MAX_EVIDENCE_WRAPPER_BYTES,
+        label="structured evidence wrapper",
+        cache=json_cache,
+    )
+    cases.append({
+        "name": "bounded_evidence_parse_cache_reads_each_path_once",
+        "status": "PASS" if cached_first is cached_second else "FAIL",
+        "expected_any": ["PASS"],
+        "passed": (
+            cached_first is cached_second
+            and cached_first.sha256 != sha256_path(cache_path)
+        ),
+        "reasons": [],
+    })
     add_strict("artifact_path_escape_rejected", copy.deepcopy(base), {"FAIL"}, artifact_escape_refs={ev("FW-002")})
     add_strict("artifact_path_absolute_rejected", copy.deepcopy(base), {"FAIL"}, artifact_absolute_refs={ev("FW-002")})
 
@@ -474,6 +1106,27 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     same_artifact = copy.deepcopy(base)
     add_strict_same_artifact("same_artifact_path_for_all_claim_refs_fails_for_critical_claims", same_artifact, {"FAIL"})
 
+    add_hardlink_alias(
+        "hardlinked_claim_evidence_wrappers_count_once",
+        copy.deepcopy(base),
+        target="evidence-wrapper",
+    )
+    add_hardlink_alias(
+        "hardlinked_claim_artifacts_count_once",
+        copy.deepcopy(base),
+        target="claim-artifact",
+    )
+    add_content_copy(
+        "byte_identical_claim_evidence_copies_count_once",
+        copy.deepcopy(base),
+        target="evidence-wrapper",
+    )
+    add_content_copy(
+        "byte_identical_claim_artifact_copies_count_once",
+        copy.deepcopy(base),
+        target="claim-artifact",
+    )
+
     unique_valid = copy.deepcopy(base)
     add_strict("unique_evidence_refs_with_valid_hashes_still_pass", unique_valid, {"PASS-TRACKED"})
 
@@ -491,6 +1144,47 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     same_false_evidence["claims"][0]["false_world_tests"][0]["evidence_refs"] = [ev("FW-SHARED")]
     same_false_evidence["claims"][0]["false_world_tests"][1]["evidence_refs"] = [ev("FW-SHARED")]
     add_strict("aliased_same_false_world_test_evidence_counted_once", same_false_evidence, {"FAIL"})
+
+    add_shared_modal_ledger(
+        "distinct_wrappers_over_one_artifact_are_one_observation",
+        copy.deepcopy(base),
+        observation_mode="none",
+        allowed={"FAIL"},
+    )
+    add_shared_modal_ledger(
+        "shared_ledger_with_verified_case_observations_passes",
+        copy.deepcopy(base),
+        observation_mode="valid",
+        allowed={"PASS-TRACKED"},
+    )
+    add_shared_modal_ledger(
+        "shared_ledger_duplicate_observation_id_rejected",
+        copy.deepcopy(base),
+        observation_mode="duplicate",
+        allowed={"FAIL"},
+    )
+    add_shared_modal_ledger(
+        "shared_ledger_missing_observation_id_rejected",
+        copy.deepcopy(base),
+        observation_mode="missing",
+        allowed={"FAIL"},
+    )
+    add_shared_modal_ledger(
+        "shared_ledger_modal_case_digest_mismatch_rejected",
+        copy.deepcopy(base),
+        observation_mode="wrong-modal-digest",
+        allowed={"FAIL"},
+    )
+    add_hardlink_alias(
+        "hardlinked_modal_artifacts_are_one_observation",
+        copy.deepcopy(base),
+        target="modal-artifact",
+    )
+    add_content_copy(
+        "byte_identical_modal_artifact_copies_are_one_observation",
+        copy.deepcopy(base),
+        target="modal-artifact",
+    )
 
     unique_false_tests = copy.deepcopy(base)
     add_strict("unique_false_world_tests_with_distinct_ids_still_pass", unique_false_tests, {"PASS-TRACKED"})
@@ -576,6 +1270,80 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
             artifact_path=variant,
         )
 
+    add_noncanonical_path(
+        "evidence_ref_nul_character_rejected_without_exception",
+        evidence_ref=f"{canonical_ref}\0ignored",
+    )
+    add_noncanonical_path(
+        "artifact_path_unicode_control_rejected_without_exception",
+        artifact_path=f"{canonical_artifact}\x85ignored",
+    )
+
+    symlink_loop_cert = copy.deepcopy(base)
+    symlink_loop_root, _ = write_structured_evidence_tree(
+        symlink_loop_cert
+    )
+    symlink_loop_wrapper = (
+        symlink_loop_root
+        / symlink_loop_cert["claims"][0]["evidence_refs"][0]
+    )
+    symlink_loop_wrapper.unlink()
+    symlink_loop_wrapper.symlink_to(symlink_loop_wrapper.name)
+    symlink_loop_result = gate_mod.evaluate_certificate(
+        symlink_loop_cert,
+        evidence_root=symlink_loop_root,
+        strict_evidence=True,
+    )
+    cases.append({
+        "name": "evidence_ref_symlink_loop_fails_closed",
+        "status": symlink_loop_result.get("status"),
+        "expected_any": ["FAIL"],
+        "passed": symlink_loop_result.get("status") == "FAIL",
+        "reasons": summarize(symlink_loop_result),
+    })
+
+    root_loop_parent = _private_tempdir("ntt_gate_root_loop_")
+    root_loop_a = root_loop_parent / "root-a"
+    root_loop_b = root_loop_parent / "root-b"
+    root_loop_a.symlink_to(root_loop_b.name)
+    root_loop_b.symlink_to(root_loop_a.name)
+    root_loop_result = gate_mod.evaluate_certificate(
+        copy.deepcopy(base),
+        evidence_root=root_loop_a,
+        strict_evidence=True,
+    )
+    cases.append({
+        "name": "evidence_root_symlink_loop_is_invalid_input",
+        "status": root_loop_result.get("status"),
+        "expected_any": ["INVALID_INPUT"],
+        "passed": root_loop_result.get("status") == "INVALID_INPUT",
+        "reasons": summarize(root_loop_result),
+    })
+    root_loop_certificate = root_loop_parent / "certificate.json"
+    root_loop_certificate.write_text(
+        json.dumps(base, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    root_loop_stdout = io.StringIO()
+    with contextlib.redirect_stdout(root_loop_stdout):
+        root_loop_exit = gate_mod.main([
+            str(root_loop_certificate),
+            "--evidence-root",
+            str(root_loop_a),
+            "--strict-evidence",
+        ])
+    root_loop_cli_result = json.loads(root_loop_stdout.getvalue())
+    cases.append({
+        "name": "cli_evidence_root_symlink_loop_has_no_traceback",
+        "status": root_loop_cli_result.get("status"),
+        "expected_any": ["INVALID_INPUT"],
+        "passed": (
+            root_loop_exit == 2
+            and root_loop_cli_result.get("status") == "INVALID_INPUT"
+        ),
+        "reasons": summarize(root_loop_cli_result),
+    })
+
     remote = copy.deepcopy(base)
     remote["claims"][0]["evidence_refs"].append(REMOTE_EVIDENCE_REF)
     add_strict("remote_ref_rejected_in_strict_local_mode", remote, {"FAIL"})
@@ -653,11 +1421,23 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
             reason_contains=("uses unsupported status",),
         )
 
+    def proposition_binding(text: str) -> Dict[str, str]:
+        digest = gate_mod._proposition_sha256(text)  # pylint: disable=protected-access
+        assert digest is not None
+        return {
+            "schema_version": "1.0",
+            "canonical_text_sha256": f"sha256:{digest}",
+        }
+
     downstream_independent = copy.deepcopy(base)
     independent_claim = copy.deepcopy(base["claims"][0])
     independent_claim["id"] = "C-DOWNSTREAM-001"
-    independent_claim["text"] = (
-        "The downstream production-readiness claim was independently evaluated."
+    independent_proposition = (
+        "The production-readiness consequence was independently evaluated."
+    )
+    independent_claim["text"] = independent_proposition
+    independent_claim["proposition_sha256"] = (
+        f"sha256:{proposition_sha256(independent_proposition)}"
     )
     for test in (
         independent_claim["false_world_tests"]
@@ -668,16 +1448,97 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     downstream_independent["derived_or_downstream_claims"] = [{
         "id": "D-INDEPENDENT",
         "from_claim_ids": ["C-001"],
-        "derived_claim": (
-            "The production-readiness consequence was independently evaluated."
-        ),
+        "derived_claim": independent_proposition,
         "status": "PASS-TRACKED",
         "own_claim_id": "C-DOWNSTREAM-001",
+        "proposition_binding": proposition_binding(independent_proposition),
         "reason": "The distinct claim record carries its own complete evaluation.",
     }]
     add(
-        "downstream_independent_pass_needs_no_undocumented_backlink",
+        "downstream_independent_pass_is_proposition_bound",
         downstream_independent,
+        {"PASS-TRACKED"},
+    )
+
+    downstream_missing_binding = copy.deepcopy(downstream_independent)
+    downstream_missing_binding["derived_or_downstream_claims"][0].pop(
+        "proposition_binding"
+    )
+    add(
+        "downstream_pass_without_proposition_binding_rejected",
+        downstream_missing_binding,
+        {"FAIL"},
+        reason_contains=("proposition binding is not an object",),
+    )
+
+    downstream_unrelated_claim = copy.deepcopy(downstream_independent)
+    unrelated_claim = downstream_unrelated_claim["claims"][1]
+    unrelated_claim["text"] = "Two plus two equals four."
+    unrelated_claim["proposition_sha256"] = (
+        f"sha256:{proposition_sha256(unrelated_claim['text'])}"
+    )
+    downstream_record = downstream_unrelated_claim[
+        "derived_or_downstream_claims"
+    ][0]
+    downstream_record["derived_claim"] = (
+        "The package is safe for autonomous production deployment."
+    )
+    downstream_record["proposition_binding"] = proposition_binding(
+        downstream_record["derived_claim"]
+    )
+    add(
+        "unrelated_passing_claim_cannot_authorize_downstream_pass",
+        downstream_unrelated_claim,
+        {"FAIL"},
+        reason_contains=(
+            "does not identify the independent claim proposition",
+        ),
+    )
+    promotion_bound = copy.deepcopy(downstream_independent)
+    promotion_bound["downstream_review"] = {
+        "performed": True,
+        "claims_identified": ["D-INDEPENDENT"],
+    }
+    add(
+        "promotion_downstream_pass_is_proposition_bound",
+        promotion_bound,
+        {"PASS-TRACKED"},
+        downstream_policy="promotion-v2",
+    )
+
+    promotion_unrelated = copy.deepcopy(downstream_unrelated_claim)
+    promotion_unrelated["downstream_review"] = {
+        "performed": True,
+        "claims_identified": ["D-INDEPENDENT"],
+    }
+    add(
+        "promotion_unrelated_claim_cannot_authorize_downstream_pass",
+        promotion_unrelated,
+        {"FAIL"},
+        downstream_policy="promotion-v2",
+        reason_contains=(
+            "does not identify the independent claim proposition",
+        ),
+    )
+
+    downstream_wrong_digest = copy.deepcopy(downstream_independent)
+    downstream_wrong_digest["derived_or_downstream_claims"][0][
+        "proposition_binding"
+    ]["canonical_text_sha256"] = "sha256:" + "0" * 64
+    add(
+        "downstream_proposition_digest_mismatch_rejected",
+        downstream_wrong_digest,
+        {"FAIL"},
+        reason_contains=("digest does not match",),
+    )
+
+    downstream_canonical_whitespace = copy.deepcopy(downstream_independent)
+    downstream_canonical_whitespace["claims"][1]["text"] = (
+        "The production-readiness consequence\nwas independently evaluated."
+    )
+    add(
+        "downstream_binding_canonicalizes_whitespace",
+        downstream_canonical_whitespace,
         {"PASS-TRACKED"},
     )
 
@@ -737,15 +1598,19 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         downstream_policy="promotion-v2",
     )
 
-    downstream_unverified = copy.deepcopy(base)
-    downstream_unverified["derived_or_downstream_claims"] = [{
+    downstream_unknown = copy.deepcopy(base)
+    downstream_unknown["derived_or_downstream_claims"] = [{
         "id": "D-002",
         "from_claim_ids": ["C-001"],
         "derived_claim": "The workflow is safe for production deployment because C-001 passed.",
-        "status": "UNVERIFIED",
+        "status": "UNKNOWN",
         "reason": "No independent deployment method M, action-space review, evidence, false-world tests, or true-world tests supplied."
     }]
-    add("downstream_unverified_record_retains_pass", downstream_unverified, {"PASS-TRACKED"})
+    add(
+        "downstream_unknown_record_retains_pass",
+        downstream_unknown,
+        {"PASS-TRACKED"},
+    )
 
     scoped = copy.deepcopy(base)
     scoped["scope_limitations"] = ["Live Claude Code runtime was not executed in this deterministic contract test."]
@@ -820,6 +1685,92 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     nested_manifest_unknowns["method_manifest"]["runtime"] = {"unknowns": ["x"]}
     add("nested_manifest_unknowns_downgrades", nested_manifest_unknowns, {"PASS-SCOPED"})
 
+    deeply_nested_unknowns = copy.deepcopy(base)
+    deeply_nested_unknowns["scope_limitations"] = []
+    nested_node = deeply_nested_unknowns["method_manifest"]
+    for index in range(16):
+        child: Dict[str, Any] = {"level": index}
+        nested_node["nested"] = child
+        nested_node = child
+    nested_node["unknowns"] = ["deep material unknown"]
+    add(
+        "deep_method_unknowns_are_collected_exhaustively",
+        deeply_nested_unknowns,
+        {"PASS-SCOPED"},
+    )
+
+    signature = inspect.signature(gate_mod.evaluate_certificate)
+    cases.append({
+        "name": "unknown_depth_cannot_be_relaxed_by_caller",
+        "status": "PASS" if "max_unknown_depth" not in signature.parameters else "FAIL",
+        "expected_any": ["PASS"],
+        "passed": "max_unknown_depth" not in signature.parameters,
+        "reasons": [],
+    })
+
+    large_shared_observations = [{(0, "shared")}] * 5_000
+    large_capacity = gate_mod._distinct_observation_capacity(  # pylint: disable=protected-access
+        large_shared_observations,
+        2,
+    )
+    cases.append({
+        "name": "large_shared_observation_input_is_bounded_and_counts_once",
+        "status": "PASS" if large_capacity == 1 else "FAIL",
+        "expected_any": ["PASS"],
+        "passed": large_capacity == 1,
+        "reasons": [],
+    })
+
+    repeated_observation_results = []
+    for index in range(2):
+        check = gate_mod.EvidenceCheck(
+            ref=f"wrapper-{index}",
+            exists=True,
+            structured=True,
+            reasons=[],
+            artifact_path_resolved=f"/distinct-ledger-{index}.json",
+            artifact_sha256=str(index) * 64,
+            observation_id="OBS-GLOBAL-001",
+        )
+        repeated_observation_results.append(
+            gate_mod.TestResult(
+                test_id=f"FW-{index}",
+                kind="false_world",
+                status="PASS",
+                reasons=[],
+                evidence_checks=[check],
+            )
+        )
+    repeated_sets = gate_mod._modal_observation_sets(  # pylint: disable=protected-access
+        repeated_observation_results
+    )
+    repeated_capacity = gate_mod._distinct_observation_capacity(  # pylint: disable=protected-access
+        repeated_sets,
+        2,
+    )
+    cases.append({
+        "name": "observation_id_is_global_across_copied_ledgers",
+        "status": "PASS" if repeated_capacity == 1 else "FAIL",
+        "expected_any": ["PASS"],
+        "passed": repeated_capacity == 1,
+        "reasons": [],
+    })
+
+    overdeep_certificate = copy.deepcopy(base)
+    nested_node = overdeep_certificate["method_manifest"]
+    for index in range(gate_mod.MAX_CERTIFICATE_DEPTH + 2):
+        child = {"level": index}
+        nested_node["nested"] = child
+        nested_node = child
+    overdeep_result = gate_mod.evaluate_certificate(overdeep_certificate)
+    cases.append({
+        "name": "overdeep_certificate_is_invalid_input",
+        "status": overdeep_result.get("status"),
+        "expected_any": ["INVALID_INPUT"],
+        "passed": overdeep_result.get("status") == "INVALID_INPUT",
+        "reasons": summarize(overdeep_result),
+    })
+
     nested_clean_manifest = copy.deepcopy(base)
     nested_clean_manifest["scope_limitations"] = []
     nested_clean_manifest["method_manifest"]["runtime"] = {"env": "local", "notes": ["fine"]}
@@ -840,11 +1791,175 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     major_claim_unknowns["claims"][0]["method_m"]["method_unknowns"] = ["x"]
     add("major_claim_method_unknowns_blocks", major_claim_unknowns, {"FAIL"})
 
+    nested_claim_unknowns = copy.deepcopy(base)
+    nested_node = nested_claim_unknowns["claims"][0]["method_m"]
+    for index in range(12):
+        child = {"level": index}
+        nested_node["nested"] = child
+        nested_node = child
+    nested_node["unknowns"] = ["nested claim-method uncertainty"]
+    add(
+        "nested_critical_claim_method_unknowns_block",
+        nested_claim_unknowns,
+        {"FAIL"},
+    )
+
     minor_claim_unknowns = copy.deepcopy(base)
     minor_claim_unknowns["claims"][0]["importance"] = "minor"
     minor_claim_unknowns["claims"][0]["method_m"]["method_unknowns"] = ["x"]
-    add("minor_claim_method_unknowns_still_tracked", minor_claim_unknowns, {"PASS-TRACKED"})
+    add(
+        "minor_claim_method_unknowns_scope_the_certificate",
+        minor_claim_unknowns,
+        {"PASS-SCOPED"},
+    )
+
+    output_root = _private_tempdir("ntt_gate_output_contract_")
+    output_path = output_root / "nested" / "result.json"
+    _atomic_write_json(output_path, '{"generation":1}')
+    _atomic_write_json(output_path, '{"generation":2}')
+    regular_atomic_ok = (
+        output_path.read_text(encoding="utf-8") == '{"generation":2}'
+        and stat.S_IMODE(output_path.stat().st_mode) == 0o600
+    )
+    sentinel = output_root / "sentinel.json"
+    sentinel.write_text('{"sentinel":true}', encoding="utf-8")
+    symlink_output = output_root / "symlink-output.json"
+    symlink_output.symlink_to(sentinel.name)
+    symlink_rejected = False
+    try:
+        _atomic_write_json(symlink_output, '{"overwrite":true}')
+    except (OSError, RuntimeError, ValueError):
+        symlink_rejected = True
+    real_parent = output_root / "real-parent"
+    real_parent.mkdir()
+    parent_symlink = output_root / "parent-symlink"
+    parent_symlink.symlink_to(real_parent.name)
+    parent_symlink_rejected = False
+    try:
+        _atomic_write_json(
+            parent_symlink / "result.json",
+            '{"write":true}',
+        )
+    except (OSError, RuntimeError, ValueError):
+        parent_symlink_rejected = True
+    cases.append({
+        "name": "json_output_is_atomic_and_never_follows_symlinks",
+        "status": "PASS" if (
+            regular_atomic_ok
+            and symlink_rejected
+            and parent_symlink_rejected
+        ) else "FAIL",
+        "expected_any": ["PASS"],
+        "passed": (
+            regular_atomic_ok
+            and symlink_rejected
+            and parent_symlink_rejected
+            and sentinel.read_text(encoding="utf-8")
+            == '{"sentinel":true}'
+            and not (real_parent / "result.json").exists()
+        ),
+        "reasons": [],
+    })
     return cases
+
+
+def _open_output_parent(path: Path) -> Tuple[int, str]:
+    """Open/create an output parent by dirfd without following symlinks."""
+    raw = str(path)
+    if (
+        not raw
+        or any(
+            ord(character) < 32
+            or ord(character) == 127
+            or unicodedata.category(character) == "Cc"
+            for character in raw
+        )
+    ):
+        raise ValueError("output path contains a control character")
+    if path.name in {"", ".", ".."} or ".." in path.parts:
+        raise ValueError("output path is not canonical")
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory = getattr(os, "O_DIRECTORY", 0)
+    if not nofollow or not directory:
+        raise OSError("platform lacks no-follow directory traversal")
+    if path.is_absolute():
+        descriptor = os.open(path.anchor, os.O_RDONLY | directory)
+        parts = path.parent.parts[1:]
+    else:
+        descriptor = os.open(".", os.O_RDONLY | directory)
+        parts = path.parent.parts
+    try:
+        for part in parts:
+            if part in {"", "."}:
+                continue
+            try:
+                child = os.open(
+                    part,
+                    os.O_RDONLY | directory | nofollow,
+                    dir_fd=descriptor,
+                )
+            except FileNotFoundError:
+                os.mkdir(part, mode=0o700, dir_fd=descriptor)
+                child = os.open(
+                    part,
+                    os.O_RDONLY | directory | nofollow,
+                    dir_fd=descriptor,
+                )
+            os.close(descriptor)
+            descriptor = child
+        return descriptor, path.name
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _atomic_write_json(path: Path, text: str) -> None:
+    """Atomically install JSON without following target/ancestor symlinks."""
+    parent_fd, target_name = _open_output_parent(path)
+    temporary_name = f".{target_name}.{uuid.uuid4().hex}.tmp"
+    temporary_created = False
+    try:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+        descriptor = os.open(
+            temporary_name,
+            flags,
+            0o600,
+            dir_fd=parent_fd,
+        )
+        temporary_created = True
+        try:
+            payload = text.encode("utf-8")
+            offset = 0
+            while offset < len(payload):
+                offset += os.write(descriptor, payload[offset:])
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+        try:
+            target_stat = os.stat(
+                target_name,
+                dir_fd=parent_fd,
+                follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            target_stat = None
+        if target_stat is not None and not stat.S_ISREG(target_stat.st_mode):
+            raise OSError("JSON output target is not a regular file")
+        os.replace(
+            temporary_name,
+            target_name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+        )
+        temporary_created = False
+        os.fsync(parent_fd)
+    finally:
+        if temporary_created:
+            try:
+                os.unlink(temporary_name, dir_fd=parent_fd)
+            except FileNotFoundError:
+                pass
+        os.close(parent_fd)
 
 
 def main(argv=None) -> int:
@@ -859,8 +1974,10 @@ def main(argv=None) -> int:
     text = json.dumps(out, indent=2, sort_keys=True)
     print(text)
     if args.json:
-        args.json.parent.mkdir(parents=True, exist_ok=True)
-        args.json.write_text(text, encoding="utf-8")
+        try:
+            _atomic_write_json(args.json, text)
+        except (OSError, RuntimeError, ValueError):
+            return 2
     return 0 if out["passed"] == out["total"] else 2
 
 
@@ -887,4 +2004,9 @@ if __name__ == "__main__":
 
 # v1.0.1 padding: wrong_false_world_target_claim_rejected / wrong_true_world_target_claim_rejected / missing_false_world_test_id_rejected / missing_true_world_test_id_rejected / wildcard_applies_to_tests_does_not_replace_test_id / valid_target_claim_ids_list_still_passes / modal tests must target the evaluated claim / stable modal test ids required
 
-# v1.0.1 padding: downstream_claim_auto_pass_rejected downstream_unverified_record_retains_pass derived_or_downstream_claims no automatic epistemic closure downstream non-closure
+# v1.0.3 hardening: strict_evidence_without_root_is_invalid_input unchecked_refs_not_reported_as_structured_evidence missing_evidence_root_is_invalid_input
+# v1.0.3 hardening: hardlinked_claim_evidence_wrappers_count_once hardlinked_claim_artifacts_count_once hardlinked_modal_artifacts_are_one_observation
+# v1.0.3 hardening: distinct_wrappers_over_one_artifact_are_one_observation shared_ledger_with_verified_case_observations_passes shared_ledger_duplicate_observation_id_rejected shared_ledger_missing_observation_id_rejected observation_id_is_global_across_copied_ledgers
+# v1.0.3 hardening: downstream_independent_pass_is_proposition_bound downstream_pass_without_proposition_binding_rejected unrelated_passing_claim_cannot_authorize_downstream_pass promotion_downstream_pass_is_proposition_bound promotion_unrelated_claim_cannot_authorize_downstream_pass downstream_proposition_digest_mismatch_rejected downstream_binding_canonicalizes_whitespace
+# v1.0.3 hardening: deep_method_unknowns_are_collected_exhaustively nested_critical_claim_method_unknowns_block minor_claim_method_unknowns_scope_the_certificate unknown_depth_cannot_be_relaxed_by_caller overdeep_certificate_is_invalid_input large_shared_observation_input_is_bounded_and_counts_once
+# v1.0.3 vocabulary: downstream_claim_auto_pass_rejected downstream_unknown_record_retains_pass derived_or_downstream_claims no automatic epistemic closure downstream non-closure

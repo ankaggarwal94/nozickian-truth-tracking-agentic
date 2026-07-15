@@ -1,0 +1,11 @@
+{
+  "artifact_path": ".claude-plugin/plugin.json",
+  "claim_id": "C-structure",
+  "claim_proposition_sha256": "sha256:e39cd26592f8c552b3f3720ff85adf034ee97f2b2843fa7fe6c833e46c7baa51",
+  "command_or_source": "current v1.0.3 reviewed package source",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:8e16ce008bbc7f71b2fe428342b1189d3862cf3b392e56773660cf26c634b10a",
+  "observed_result": "Current source bytes support the scoped proposition for C-structure.",
+  "support_summary": "This wrapper binds C-structure to current package artifact .claude-plugin/plugin.json by exact SHA-256 and to the canonical claim proposition digest.",
+  "timestamp_utc": "2026-07-14T00:00:00Z"
+}

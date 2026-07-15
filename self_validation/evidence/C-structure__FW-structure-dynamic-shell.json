@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-structure",
+  "claim_proposition_sha256": "sha256:e39cd26592f8c552b3f3720ff85adf034ee97f2b2843fa7fe6c833e46c7baa51",
+  "command_or_source": "validate_package.py --self-test",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
+  "modal_case_sha256": "sha256:d48fa9349ff716e4ccdaaf3fc8c3c31f52bde156b4fc1ff0a4bc0763ae00e4a8",
+  "observation_id": "obs:C-structure:FW-structure-dynamic-shell",
+  "observed_result": "The validator mutation lane rejected dynamic skill shell substitution after manifest refresh.",
+  "support_summary": "This wrapper binds FW-structure-dynamic-shell to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-structure-dynamic-shell",
+  "timestamp_utc": "2026-07-14T00:00:00Z"
+}

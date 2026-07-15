@@ -101,7 +101,7 @@ When (and only when) the parent updates `resolution` to `fetched-and-readjudicat
 - `readjudicated_truth_status`: `confirmed` | `unknown` | `refuted` - the claim's status after re-adjudication against the fetched evidence.
 - `readjudication_evidence_refs`: refs to the re-adjudication record/tests.
 
-For `unresolved` or `left-unknown` these companion fields are `none`/empty.
+All six companion fields are mandatory for `fetched-and-readjudicated`: none is optional or merely advisory. `validated_fetch_request` has exactly `scheme`, `host`, `method`, and `requested_revision`; the artifact digest is lowercase SHA-256; `fetched_at_utc` is a UTC timestamp; both evidence-ref arrays are nonempty and canonical; and `readjudicated_truth_status` is exactly `confirmed`, `unknown`, or `refuted` and must agree with the affected claim's current truth label. For `unresolved` or `left-unknown`, these companion fields are null/empty, and the affected claim remains `UNKNOWN`. The gate auditor rejects invalid enums, missing base or companion fields, contradictory claim labels, and a pinned mirror used for a claim about newer/current state.
 
 Vocabulary (canonical mapping, use consistently everywhere): a claim's status is UNKNOWN - claims are never labeled `UNVERIFIED`. `UNVERIFIED` is the GATE status word, one of the whole-artifact results. An unresolved escalation therefore leaves the claim UNKNOWN and is reflected in the gate result, where the applicable gate word may be `UNVERIFIED`.
 

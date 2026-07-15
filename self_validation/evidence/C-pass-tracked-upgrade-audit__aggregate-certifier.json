@@ -1,16 +1,11 @@
 {
-  "applies_to_tests": [
-    "FW-pass-tracked-auto-closure",
-    "FW-pass-tracked-missing-trace-auth",
-    "FW-pass-tracked-unbound-promotion-evidence",
-    "TW-pass-tracked-valid-bundle-retained"
-  ],
   "artifact_path": "skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py",
   "claim_id": "C-pass-tracked-upgrade-audit",
-  "command_or_source": "python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .",
+  "claim_proposition_sha256": "sha256:a158800f4ad4e017c722b9ceff1e29439caffbceda1e627529dfa9cf391da536",
+  "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:d88bf2f0a21699de5bffd866f47565b2f4a3102b571b356945abf19fce43d6e2",
-  "observed_result": "The current 36/36 synthetic aggregate invokes the production certifier CLI for the complete baseline and every executed negative. Its 244-check baseline canonically evaluates a real promotion claim, returns nonzero PASS-SCOPED/CAPPED, sets promotion_authorized false, satisfies promotion-contract-v2-complete, and preserves the two exact ordered Issue #5 obligations.",
-  "support_summary": "The aggregate covers exact Claude strict argv and real ANSI-normalized success output; an early official failure before more than 50KB of neutral output; complete stream hashes/byte counts; the fixed nine-role DAG in both validator states; a distinct independently passing downstream claim before the cap; malformed, duplicate, invalid, and empty claim sets; complete formal transcript binding with an early disallowed event before a large valid-looking tail; symlink/special/ancestor output-path rejection; intentional atomic regular --json replacement; structured failures; and the certifier-only cap. It is synthetic contract evidence, not live runtime authentication.",
-  "timestamp_utc": "2026-07-13T00:00:00Z"
+  "hash_or_version": "sha256:4a5e3b9a697a773091d0fc52f0231b6ea4604a8b0211dfc7a06043102cd1fcff",
+  "observed_result": "Current source bytes support the scoped proposition for C-pass-tracked-upgrade-audit.",
+  "support_summary": "This wrapper binds C-pass-tracked-upgrade-audit to current package artifact skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py by exact SHA-256 and to the canonical claim proposition digest.",
+  "timestamp_utc": "2026-07-14T00:00:00Z"
 }

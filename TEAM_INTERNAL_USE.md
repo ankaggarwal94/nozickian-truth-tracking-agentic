@@ -16,16 +16,16 @@ Before sharing a changed package internally:
 2. Run deterministic validation:
 
 ```bash
-python3 skills/nozickian-verify/scripts/validate_package.py . --self-test --markdown self_validation/SELF_VALIDATION_REPORT.md
-python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --markdown self_validation/GATE_RESULT.md
-python3 skills/nozickian-verify/scripts/run_regression_evals.py . --json self_validation/regression_eval_result.json
+python3 skills/nozickian-verify/scripts/validate_package.py . --self-test --markdown /tmp/ntt_SELF_VALIDATION_REPORT.md
+python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --markdown /tmp/ntt_GATE_RESULT.md
+python3 skills/nozickian-verify/scripts/run_regression_evals.py . --json /tmp/ntt_regression_eval_result.json
 python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .
 ```
 
 3. On machines with Claude Code installed, run live fixture checks:
 
 ```bash
-python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures --json self_validation/live_runtime_eval_result.json
+python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures --json /tmp/ntt_live_runtime_eval_result.json
 ```
 
 4. Treat `PASS-SCOPED` as the v1.0.3 team-internal release label. Live runtime fixture transcripts remain necessary evidence, but the certifier's two Issue #5 obligations still prevent authorization.
@@ -55,12 +55,12 @@ That regeneration closed the remaining trace-authentication and URI-scheme edge 
 
 ## Release idempotence addendum
 
-Normal release-lock validation must not write generated formal-runner artifacts into the package tree. Use the external `../ntt_release_formal_invocation_dry_run` paths from `RELEASE_LOCK.json`, or choose another out-of-tree directory. In-tree generated outputs are allowed only when `run_formal_artifact_verification.py` is invoked with `--refresh-release-manifest`, after which the stable release manifest must be reviewed again.
+Normal release-lock validation must not write generated formal-runner artifacts into the package tree. Use the `mktemp`-created external `../ntt_release_formal_invocation_dry_run.XXXXXX` workspace from `RELEASE_LOCK.json`, or choose another unique out-of-tree directory. In-tree generated outputs are allowed only when `run_formal_artifact_verification.py` is invoked with `--refresh-release-manifest`, after which the stable release manifest must be reviewed again.
 
 
-## Release-lock idempotence note
+## Release-lock stable-tree note
 
-The release-lock command chain invokes `validate_package.py . --self-test` inside the idempotence regression so the command list can be replayed without recursively spawning another release-lock replay. A normal maintainer self-test without that flag still exercises the release-lock idempotence check.
+The validator reports `release-lock stable-tree property holds for the actual self-test and two literal deterministic CLI passes`. The outer maintainer invocation is the actual `validate_package.py . --self-test` run and is bound by complete no-follow non-cruft path/type/mode/link-target/hardlink/byte snapshots. Two non-recursive subprocess passes then invoke the reviewed deterministic CLIs with unique external outputs, name the optional/runtime commands they exclude, and compare the package entry tree before, between, and after. A self-test Markdown destination must resolve outside the package and is atomically replaced, so even an external hardlink cannot modify a package inode after the completion snapshot.
 
 
 ### Trace-authentication addendum
@@ -84,7 +84,7 @@ This package remains deliberately closed-surface. It is not a general validator 
 
 ## No automatic downstream closure
 
-Do not treat `PASS-SCOPED` or `PASS-TRACKED` for a source claim as inherited proof of an entailed deployment, safety, compliance, production-readiness, or action-authorizing claim. Record each such downstream conclusion as its own claim or as a `derived_or_downstream_claims` record. Untested downstream claims are `UNVERIFIED`.
+Do not treat `PASS-SCOPED` or `PASS-TRACKED` for a source claim as inherited proof of an entailed deployment, safety, compliance, production-readiness, or action-authorizing claim. Record each such downstream conclusion as its own claim or as a `derived_or_downstream_claims` record. Untested downstream claims are `UNKNOWN`; `UNVERIFIED` is a whole-artifact gate status.
 
 ## PASS-TRACKED promotion protocol
 

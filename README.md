@@ -7,7 +7,7 @@ A closed-surface Claude Code plugin for method-relative, Nozickian truth-trackin
 **Intended audience:** trusted team/internal reviewers  
 **Runtime posture:** closed by default; no hooks, MCP servers, commands, monitors, bins, or broad skill tool grants
 
-Final checked-in release evidence records 1724/1724 package self-test checks, 78/78 gate contracts, 73/73 formal-runner contracts, 166/166 regression checks, and the 36/36 synthetic promotion aggregate whose complete baseline traverses 244 certifier checks. The self-test rejects 63/63 false worlds, including statically disabled CI jobs and exact aggregate commands hidden inside `if false`. Every machine-readable release CLI is also checked to emit exactly one directly parseable JSON document.
+Final checked-in release evidence records 1459/1459 package self-test checks, 119/119 gate contracts, 119/119 formal-runner contracts, 166/166 regression checks, and the 36/36 synthetic promotion aggregate whose complete baseline traverses 248 certifier checks. The self-test rejects 76/76 false worlds and retains 12/12 nearby true worlds. Every machine-readable release CLI is also checked to emit exactly one directly parseable JSON document.
 
 ## Documentation map
 
@@ -28,7 +28,7 @@ Final checked-in release evidence records 1724/1724 package self-test checks, 78
 
 The package operationalizes a narrow truth-tracking standard for factual artifacts. A claim is verified only when the specified method **M** identifies the claim, binds it to local evidence, rejects nearby false worlds, retains nearby true worlds, and survives a strict gate with no unresolved critical contradictions.
 
-The package also explicitly rejects automatic epistemic closure. A pass for claim `p` does not automatically verify an entailed, summarized, downstream, deployment, safety, compliance, or action-authorizing claim `q`. Downstream claims must be represented independently or remain `UNVERIFIED`.
+The package also explicitly rejects automatic epistemic closure. A pass for claim `p` does not automatically verify an entailed, summarized, downstream, deployment, safety, compliance, or action-authorizing claim `q`. Downstream claims must be represented independently or remain `UNKNOWN`; `UNVERIFIED` is reserved for a whole-artifact gate result.
 
 ## Install / load locally
 
@@ -47,11 +47,11 @@ Invoke the skill:
 Run from the package root:
 
 ```bash
-python3 skills/nozickian-verify/scripts/validate_package.py . --self-test --markdown self_validation/SELF_VALIDATION_REPORT.md
-python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --markdown self_validation/GATE_RESULT.md
-python3 skills/nozickian-verify/scripts/run_regression_evals.py . --json self_validation/regression_eval_result.json
-python3 skills/nozickian-verify/scripts/run_gate_contract_tests.py . --json self_validation/gate_contract_results.json
-python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json self_validation/formal_runner_contract_results.json
+python3 skills/nozickian-verify/scripts/validate_package.py . --self-test --markdown /tmp/ntt_SELF_VALIDATION_REPORT.md
+python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --markdown /tmp/ntt_GATE_RESULT.md
+python3 skills/nozickian-verify/scripts/run_regression_evals.py . --json /tmp/ntt_regression_eval_result.json
+python3 skills/nozickian-verify/scripts/run_gate_contract_tests.py . --json /tmp/ntt_gate_contract_results.json
+python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json /tmp/ntt_formal_runner_contract_results.json
 python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .
 ```
 

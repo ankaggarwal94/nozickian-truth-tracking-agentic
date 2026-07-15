@@ -1,17 +1,11 @@
 {
-  "applies_to_tests": [
-    "FW-pass-tracked-dry-run-promotion",
-    "FW-pass-tracked-auto-closure",
-    "FW-pass-tracked-missing-trace-auth",
-    "FW-pass-tracked-unbound-promotion-evidence",
-    "TW-pass-tracked-valid-bundle-retained"
-  ],
   "artifact_path": "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
   "claim_id": "C-pass-tracked-upgrade-audit",
-  "command_or_source": "Current v1.0.3 promotion certificate v2 normative contract reviewed on 2026-07-13",
+  "claim_proposition_sha256": "sha256:a158800f4ad4e017c722b9ceff1e29439caffbceda1e627529dfa9cf391da536",
+  "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:4fa9034000a8fb0492af7c518b62ca45f40c029daa8c9a8b92f8ffe3ec4fcee3",
-  "observed_result": "The current reference requires exact-string promotion_schema_version 2.0, exact top-level types, a nonempty independently gate-evaluated promotion claim set, the fixed nine-role promotion-evidence-v2 DAG in both official-validator availability states, and formal result 2.0 with a complete transcript plus standalone target-snapshot companions.",
-  "support_summary": "The reference keeps ordinary gate evidence_refs separate; requires exact Claude strict argv, real ANSI-normalized success parsing, complete-stream decisions/hashes/byte counts, fresh deterministic and official execution, and both official-policy nodes under explicit unavailable-tool scope; evaluates actual promotion claims through the canonical gate before downstream non-closure; rejects malformed or empty claims; documents no-follow output-path failures and intentional atomic regular --json replacement; and enumerates the exact ordered Issue #5 obligations without overclaiming live runtime authentication or remote Issue #8 closure.",
-  "timestamp_utc": "2026-07-13T00:00:00Z"
+  "hash_or_version": "sha256:366130075ac9d1e45c624f14cc72b330719166c1f418d8e229df0b0cfc8ed314",
+  "observed_result": "Current source bytes support the scoped proposition for C-pass-tracked-upgrade-audit.",
+  "support_summary": "This wrapper binds C-pass-tracked-upgrade-audit to current package artifact skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md by exact SHA-256 and to the canonical claim proposition digest.",
+  "timestamp_utc": "2026-07-14T00:00:00Z"
 }

@@ -196,6 +196,7 @@ def write_fake_official_tools(bin_dir: Path) -> None:
     claude_script = (
         "#!/usr/bin/env python3\n"
         "from pathlib import Path\n"
+        "import os\n"
         "import sys\n"
         "root = Path.cwd().resolve()\n"
         "args = sys.argv[1:]\n"
@@ -204,9 +205,21 @@ def write_fake_official_tools(bin_dir: Path) -> None:
         "if not argv_ok:\n"
         "    print('Validation failed: unexpected argv', file=sys.stderr)\n"
         "    raise SystemExit(2)\n"
+        "mode = os.environ.get('NTT_CONTRACT_CLAUDE_OUTPUT_MODE')\n"
+        "if mode == 'early-failure-large-tail':\n"
+        "    sys.stdout.write('Validation failed: synthetic early failure\\n')\n"
+        "    sys.stdout.write('neutral validator progress\\n' * 2200)\n"
+        "    raise SystemExit(0)\n"
         "print(f'Validating plugin manifest: {root / \".claude-plugin/plugin.json\"}')\n"
         "print()\n"
         "print('✔ Validation passed')\n"
+        "if mode == 'stderr-text-failure':\n"
+        "    print('Status: failed', file=sys.stderr)\n"
+        "elif mode == 'stderr-json-failure':\n"
+        "    print('{\"status\":\"failed\"}', file=sys.stderr)\n"
+        "elif mode == 'stderr-jsonl-failure':\n"
+        "    print('{\"event\":\"start\"}', file=sys.stderr)\n"
+        "    print('{\"status\":\"failed\"}', file=sys.stderr)\n"
         "raise SystemExit(0)\n"
     )
     skills_ref_script = (
@@ -340,6 +353,11 @@ def write_live_bundle(
         )
         transcript_checks.append(replay)
     executable_sha = certifier.sha256_path(fake_claude)
+    live_tree_identity = {
+        "algorithm": tree["algorithm"],
+        "sha256": tree["sha256"],
+        "valid": True,
+    }
     write_json(
         bundle / "live_fixtures/live_runtime_eval_result.json",
         {
@@ -348,6 +366,14 @@ def write_live_bundle(
             "package_tree_algorithm": tree["algorithm"],
             "package_tree_sha256": tree["sha256"],
             "fixture_spec_sha256": certifier.sha256_path(evals_path),
+            "execution_package_snapshot_identity": {
+                "mode": "private-read-only-stable-release-snapshot",
+                "source_pre": live_tree_identity,
+                "source_post": live_tree_identity,
+                "snapshot_pre": live_tree_identity,
+                "snapshot_post": live_tree_identity,
+                "stable": True,
+            },
             "run_config": {
                 "max_fixtures": len(fixture_results),
                 "max_turns": 20,
@@ -416,20 +442,132 @@ def synthetic_method() -> Dict[str, Any]:
     }
 
 
+def write_strict_gate_evidence(
+    gate: Any,
+    evidence_root: Path,
+    *,
+    claim_id: str,
+    claim_text: str,
+    records_dir: str,
+    observations_dir: str,
+    modal_cases: Sequence[Tuple[str, Dict[str, Any], str]],
+) -> Tuple[List[str], str]:
+    """Write proposition- and modal-bound evidence for one synthetic claim."""
+    claim_digest = gate._proposition_sha256(  # pylint: disable=protected-access
+        claim_text
+    )
+    if type(claim_digest) is not str:
+        raise RuntimeError("synthetic claim proposition could not be hashed")
+    prefixed_claim_digest = f"sha256:{claim_digest}"
+
+    claim_refs: List[str] = []
+    for name in ("claim-a", "claim-b"):
+        artifact_rel = f"{observations_dir}/{name}.txt"
+        artifact = evidence_root / artifact_rel
+        artifact.parent.mkdir(parents=True, exist_ok=True)
+        artifact.write_text(
+            f"Independent synthetic claim evidence {name} for {claim_id}.\n",
+            encoding="utf-8",
+        )
+        record_rel = f"{records_dir}/{name}.json"
+        write_json(
+            evidence_root / record_rel,
+            {
+                "evidence_schema_version": "1.0",
+                "claim_id": claim_id,
+                "claim_proposition_sha256": prefixed_claim_digest,
+                "artifact_path": artifact_rel,
+                "command_or_source": "fixed aggregate contract producer",
+                "observed_result": (
+                    f"Claim evidence {name} independently supported {claim_id}."
+                ),
+                "support_summary": (
+                    "This record binds exact synthetic claim bytes and the "
+                    "canonical claim proposition."
+                ),
+                "timestamp_utc": "2026-07-13T00:00:00Z",
+                "hash_or_version": f"sha256:{gate.sha256_path(artifact)}",
+            },
+        )
+        claim_refs.append(record_rel)
+
+    ledger_rel = f"{observations_dir}/modal-observation-ledger.json"
+    observations: Dict[str, Dict[str, Any]] = {}
+    modal_wrappers: List[Tuple[str, Dict[str, Any]]] = []
+    for name, test, observed_result in modal_cases:
+        test_id = str(test["id"])
+        test_kind = str(test["kind"])
+        record_rel = f"{records_dir}/{name}.json"
+        test["evidence_refs"] = [record_rel]
+        modal_digest = gate._modal_case_sha256(  # pylint: disable=protected-access
+            test,
+            claim_text,
+            test_kind,
+            observed_result,
+        )
+        if type(modal_digest) is not str:
+            raise RuntimeError("synthetic modal case could not be hashed")
+        prefixed_modal_digest = f"sha256:{modal_digest}"
+        observation_id = f"OBS-{claim_id}-{test_id}"
+        observations[observation_id] = {
+            "claim_id": claim_id,
+            "test_id": test_id,
+            "kind": test_kind,
+            "claim_proposition_sha256": prefixed_claim_digest,
+            "modal_case_sha256": prefixed_modal_digest,
+            "result": test["result"],
+            "outcome": test["outcome"],
+            "observed_result": observed_result,
+        }
+        modal_wrappers.append(
+            (
+                record_rel,
+                {
+                    "evidence_schema_version": "1.0",
+                    "claim_id": claim_id,
+                    "claim_proposition_sha256": prefixed_claim_digest,
+                    "test_id": test_id,
+                    "modal_case_sha256": prefixed_modal_digest,
+                    "observation_id": observation_id,
+                    "artifact_path": ledger_rel,
+                    "command_or_source": "fixed aggregate contract producer",
+                    "observed_result": observed_result,
+                    "support_summary": (
+                        "This record binds the exact synthetic modal case to "
+                        "a dedicated observation."
+                    ),
+                    "timestamp_utc": "2026-07-13T00:00:00Z",
+                },
+            )
+        )
+
+    ledger = evidence_root / ledger_rel
+    write_json(
+        ledger,
+        {
+            "observation_schema_version": "1.0",
+            "observations": observations,
+        },
+    )
+    ledger_digest = f"sha256:{gate.sha256_path(ledger)}"
+    for record_rel, wrapper in modal_wrappers:
+        wrapper["hash_or_version"] = ledger_digest
+        write_json(evidence_root / record_rel, wrapper)
+    return claim_refs, prefixed_claim_digest
+
+
 def write_formal_bundle(
     certifier: Any,
     package_root: Path,
     bundle: Path,
+    fake_claude: Path,
+    gate: Any,
 ) -> Path:
     formal = load_module(
         "ntt_formal_for_promotion_contract",
         package_root
         / SKILL_SCRIPTS
         / "run_formal_artifact_verification.py",
-    )
-    gate = load_module(
-        "ntt_gate_for_promotion_contract",
-        package_root / SKILL_SCRIPTS / "ntt_gate.py",
     )
     result_dir = bundle / "formal_artifacts/artifact-001"
     result_dir.mkdir(parents=True, exist_ok=True)
@@ -444,40 +582,64 @@ def write_formal_bundle(
     snapshot_pre = formal.file_snapshot_identity(out["target_snapshot"])
     method = synthetic_method()
 
-    def evidence(ref: str, test_id: Optional[str] = None) -> str:
-        artifact_rel = f"observations/{Path(ref).stem}.txt"
-        artifact = result_dir / artifact_rel
-        artifact.parent.mkdir(parents=True, exist_ok=True)
-        artifact.write_text(
-            f"Observed aggregate contract evidence for {ref}.\n",
-            encoding="utf-8",
-        )
-        record: Dict[str, Any] = {
-            "evidence_schema_version": "1.0",
-            "claim_id": "C-SYNTHETIC",
-            "artifact_path": artifact_rel,
-            "command_or_source": "fixed aggregate contract producer",
-            "observed_result": "Production evaluation observed a passing lane.",
-            "support_summary": "This record binds exact synthetic bytes.",
-            "timestamp_utc": "2026-07-13T00:00:00Z",
-            "hash_or_version": (
-                f"sha256:{certifier.sha256_path(artifact)}"
+    claim_text = "Every synthetic formal lane is independently checked."
+    false_tests = [
+        {
+            "id": "FW-A",
+            "kind": "false_world",
+            "target_claim": "C-SYNTHETIC",
+            "perturbation": "Replace one artifact with stale bytes.",
+            "expected_behavior": "The strict gate rejects stale bytes.",
+            "observed_behavior": "The gate rejected the false claim.",
+            "outcome": "rejected_false_claim",
+            "result": "pass",
+        },
+        {
+            "id": "FW-B",
+            "kind": "false_world",
+            "target_claim": "C-SYNTHETIC",
+            "perturbation": "Swap one typed companion role.",
+            "expected_behavior": "The strict gate rejects the swap.",
+            "observed_behavior": "The gate blocked the false claim.",
+            "outcome": "blocked",
+            "result": "pass",
+        },
+    ]
+    true_tests = [{
+        "id": "TW-A",
+        "kind": "true_world",
+        "target_claim": "C-SYNTHETIC",
+        "variant": "Retain equivalent bytes.",
+        "expected_behavior": "The gate retains the true claim.",
+        "observed_behavior": "The gate retained the true claim.",
+        "outcome": "retained_true_claim",
+        "result": "pass",
+    }]
+    claim_refs, proposition_digest = write_strict_gate_evidence(
+        gate,
+        result_dir,
+        claim_id="C-SYNTHETIC",
+        claim_text=claim_text,
+        records_dir="evidence",
+        observations_dir="observations",
+        modal_cases=[
+            (
+                "fw-a",
+                false_tests[0],
+                "The strict gate observed and rejected stale artifact bytes.",
             ),
-        }
-        if test_id is not None:
-            record["test_id"] = test_id
-        write_json(result_dir / ref, record)
-        return ref
-
-    claim_refs = [
-        evidence("evidence/claim-a.json"),
-        evidence("evidence/claim-b.json"),
-    ]
-    false_refs = [
-        evidence("evidence/fw-a.json", "FW-A"),
-        evidence("evidence/fw-b.json", "FW-B"),
-    ]
-    true_ref = evidence("evidence/tw-a.json", "TW-A")
+            (
+                "fw-b",
+                false_tests[1],
+                "The strict gate observed and blocked the companion role swap.",
+            ),
+            (
+                "tw-a",
+                true_tests[0],
+                "The strict gate observed and retained the equivalent bytes.",
+            ),
+        ],
+    )
     certificate = {
         "schema_version": "2.0",
         "method_manifest": method,
@@ -485,49 +647,15 @@ def write_formal_bundle(
         "claims": [
             {
                 "id": "C-SYNTHETIC",
-                "text": "Every synthetic formal lane is independently checked.",
+                "text": claim_text,
+                "proposition_sha256": proposition_digest,
                 "importance": "critical",
                 "artifact_location": "synthetic-target.md",
                 "truth_status": "executed_confirmed",
                 "method_m": method,
                 "evidence_refs": claim_refs,
-                "false_world_tests": [
-                    {
-                        "id": "FW-A",
-                        "kind": "false_world",
-                        "target_claim": "C-SYNTHETIC",
-                        "perturbation": "Replace one artifact with stale bytes.",
-                        "expected_behavior": "The strict gate rejects stale bytes.",
-                        "observed_behavior": "The gate rejected the false claim.",
-                        "outcome": "rejected_false_claim",
-                        "result": "pass",
-                        "evidence_refs": [false_refs[0]],
-                    },
-                    {
-                        "id": "FW-B",
-                        "kind": "false_world",
-                        "target_claim": "C-SYNTHETIC",
-                        "perturbation": "Swap one typed companion role.",
-                        "expected_behavior": "The strict gate rejects the swap.",
-                        "observed_behavior": "The gate blocked the false claim.",
-                        "outcome": "blocked",
-                        "result": "pass",
-                        "evidence_refs": [false_refs[1]],
-                    },
-                ],
-                "true_world_tests": [
-                    {
-                        "id": "TW-A",
-                        "kind": "true_world",
-                        "target_claim": "C-SYNTHETIC",
-                        "variant": "Retain equivalent bytes.",
-                        "expected_behavior": "The gate retains the true claim.",
-                        "observed_behavior": "The gate retained the true claim.",
-                        "outcome": "retained_true_claim",
-                        "result": "pass",
-                        "evidence_refs": [true_ref],
-                    }
-                ],
+                "false_world_tests": false_tests,
+                "true_world_tests": true_tests,
                 "unresolved_contradictions": [],
             }
         ],
@@ -599,19 +727,38 @@ def write_formal_bundle(
         encoding="utf-8",
     )
     trace_auth = formal.authenticate_trace(out["transcript"])
+    formal_tree_identity = {
+        "algorithm": certifier.package_tree_sha256(package_root)["algorithm"],
+        "sha256": (
+            "sha256:" + certifier.package_tree_sha256(package_root)["sha256"]
+        ),
+        "valid": True,
+    }
+    executable_file_identity = formal.file_snapshot_identity(fake_claude)
     result = {
         "run_id": "synthetic-aggregate-run-001",
         "status": certifier.PASS_TRACKED,
         "reason": "synthetic origin exercises production validation only",
-        "package_tree_identity": {
-            "algorithm": certifier.package_tree_sha256(package_root)[
-                "algorithm"
-            ],
-            "sha256": (
-                "sha256:"
-                + certifier.package_tree_sha256(package_root)["sha256"]
-            ),
-            "valid": True,
+        "package_tree_identity": formal_tree_identity,
+        "execution_package_snapshot_identity": {
+            "mode": "private-read-only-stable-release-snapshot",
+            "source_pre": formal_tree_identity,
+            "source_post": formal_tree_identity,
+            "snapshot_pre": formal_tree_identity,
+            "snapshot_post": formal_tree_identity,
+            "stable": True,
+        },
+        "runtime_identity": {
+            "resolved_executable_path": str(fake_claude.resolve()),
+            "version_output": "2.1.205 (Claude Code)",
+            "version_pattern": formal.CLAUDE_VERSION_PATTERN,
+            "version_pattern_match": True,
+            "executable_sha256_pre": certifier.sha256_path(fake_claude),
+            "executable_sha256_post": certifier.sha256_path(fake_claude),
+            "executable_identity_pre": executable_file_identity,
+            "executable_identity_post": executable_file_identity,
+            "fingerprint_stable": True,
+            "error": None,
         },
         "commands": [],
         "prechecks": [],
@@ -645,90 +792,82 @@ def write_formal_bundle(
 
 def write_passing_promotion_claim(
     certifier: Any,
+    gate: Any,
     bundle: Path,
     claim_id: str,
     slug: str,
 ) -> Dict[str, Any]:
     """Write one independently gate-passable promotion claim and evidence."""
     method = synthetic_method()
-
-    def evidence(name: str, test_id: Optional[str] = None) -> str:
-        record_rel = f"promotion_claims/{slug}/records/{name}.json"
-        artifact_rel = f"promotion_claims/{slug}/observations/{name}.txt"
-        artifact = bundle / artifact_rel
-        artifact.parent.mkdir(parents=True, exist_ok=True)
-        artifact.write_text(
-            f"Independent promotion observation {name} for {claim_id}.\n",
-            encoding="utf-8",
-        )
-        record: Dict[str, Any] = {
-            "evidence_schema_version": "1.0",
-            "claim_id": claim_id,
-            "artifact_path": artifact_rel,
-            "command_or_source": "fixed aggregate contract producer",
-            "observed_result": "The independent promotion claim passed.",
-            "support_summary": "This record binds exact isolated claim bytes.",
-            "timestamp_utc": "2026-07-13T00:00:00Z",
-            "hash_or_version": (
-                f"sha256:{certifier.sha256_path(artifact)}"
-            ),
-        }
-        if test_id is not None:
-            record["test_id"] = test_id
-        write_json(bundle / record_rel, record)
-        return record_rel
-
-    claim_refs = [evidence("claim-a"), evidence("claim-b")]
-    false_refs = [
-        evidence("false-a", f"FW-{slug.upper()}-A"),
-        evidence("false-b", f"FW-{slug.upper()}-B"),
+    claim_text = f"Independent promotion claim {claim_id} is tracked."
+    false_tests = [
+        {
+            "id": f"FW-{slug.upper()}-A",
+            "kind": "false_world",
+            "target_claim": claim_id,
+            "perturbation": "Replace the first observation with stale bytes.",
+            "expected_behavior": "The strict gate rejects the stale claim.",
+            "observed_behavior": "The strict gate rejected the stale claim.",
+            "outcome": "rejected_false_claim",
+            "result": "pass",
+        },
+        {
+            "id": f"FW-{slug.upper()}-B",
+            "kind": "false_world",
+            "target_claim": claim_id,
+            "perturbation": "Remove the independent source binding.",
+            "expected_behavior": "The strict gate blocks the claim.",
+            "observed_behavior": "The strict gate blocked the claim.",
+            "outcome": "blocked",
+            "result": "pass",
+        },
     ]
-    true_ref = evidence("true-a", f"TW-{slug.upper()}-A")
+    true_tests = [{
+        "id": f"TW-{slug.upper()}-A",
+        "kind": "true_world",
+        "target_claim": claim_id,
+        "variant": "Retain equivalent independently bound bytes.",
+        "expected_behavior": "The strict gate retains the true claim.",
+        "observed_behavior": "The strict gate retained the true claim.",
+        "outcome": "retained_true_claim",
+        "result": "pass",
+    }]
+    claim_refs, proposition_digest = write_strict_gate_evidence(
+        gate,
+        bundle,
+        claim_id=claim_id,
+        claim_text=claim_text,
+        records_dir=f"promotion_claims/{slug}/records",
+        observations_dir=f"promotion_claims/{slug}/observations",
+        modal_cases=[
+            (
+                "false-a",
+                false_tests[0],
+                "The strict gate observed and rejected the stale claim.",
+            ),
+            (
+                "false-b",
+                false_tests[1],
+                "The strict gate observed and blocked the unbound claim.",
+            ),
+            (
+                "true-a",
+                true_tests[0],
+                "The strict gate observed and retained the true claim.",
+            ),
+        ],
+    )
     return {
         "id": claim_id,
-        "text": f"Independent promotion claim {claim_id} is tracked.",
+        "text": claim_text,
+        "proposition_sha256": proposition_digest,
         "importance": "critical",
         "artifact_location": f"promotion_claims/{slug}",
         "truth_status": "executed_confirmed",
         "method_m": method,
         "evidence_refs": claim_refs,
-        "false_world_tests": [
-            {
-                "id": f"FW-{slug.upper()}-A",
-                "kind": "false_world",
-                "target_claim": claim_id,
-                "perturbation": "Replace the first observation with stale bytes.",
-                "expected_behavior": "The strict gate rejects the stale claim.",
-                "observed_behavior": "The strict gate rejected the stale claim.",
-                "outcome": "rejected_false_claim",
-                "result": "pass",
-                "evidence_refs": [false_refs[0]],
-            },
-            {
-                "id": f"FW-{slug.upper()}-B",
-                "kind": "false_world",
-                "target_claim": claim_id,
-                "perturbation": "Remove the independent source binding.",
-                "expected_behavior": "The strict gate blocks the claim.",
-                "observed_behavior": "The strict gate blocked the claim.",
-                "outcome": "blocked",
-                "result": "pass",
-                "evidence_refs": [false_refs[1]],
-            },
-        ],
-        "true_world_tests": [
-            {
-                "id": f"TW-{slug.upper()}-A",
-                "kind": "true_world",
-                "target_claim": claim_id,
-                "variant": "Retain equivalent independently bound bytes.",
-                "expected_behavior": "The strict gate retains the true claim.",
-                "observed_behavior": "The strict gate retained the true claim.",
-                "outcome": "retained_true_claim",
-                "result": "pass",
-                "evidence_refs": [true_ref],
-            }
-        ],
+        "false_world_tests": false_tests,
+        "true_world_tests": true_tests,
         "unresolved_contradictions": [],
         "residual_risks": [],
     }
@@ -736,6 +875,7 @@ def write_passing_promotion_claim(
 
 def write_promotion_certificate(
     certifier: Any,
+    gate: Any,
     package_root: Path,
     bundle: Path,
     formal_result: Path,
@@ -787,6 +927,7 @@ def write_promotion_certificate(
             "claims": [
                 write_passing_promotion_claim(
                     certifier,
+                    gate,
                     bundle,
                     "C-UPSTREAM",
                     "upstream",
@@ -957,9 +1098,9 @@ EXPECTED_FORMAL_ROLES = (
 EXPECTED_BASELINE_LANE_COUNTS = {
     "deterministic": 30,
     "official": 2,
-    "live": 76,
+    "live": 77,
     "promotion": 77,
-    "formal": 57,
+    "formal": 60,
     "hygiene": 2,
 }
 EXPECTED_CASE_NAMES = (
@@ -1005,122 +1146,122 @@ EXPECTED_POSITIVE_MUTATION_CHECK_INVENTORIES: Dict[
     str, Tuple[int, str]
 ] = {
     "distinct_formal_roles_may_contain_equal_bytes": (
-        244,
-        "f3a917c6979c0b96051b0f29a8c557b2d5e28c1b6ec192d4c169f6b5e0d98540",
+        248,
+        "1434e80fb2ce1a002d30754e9e304dbe76565e69c3e35ce87232d731550a131a",
     ),
     "official_scope_exclusion_retains_fixed_role_dag": (
-        244,
-        "cbf65e956a3e588ba8326d053ad2c1176008b7154252f462c9f8c45b9cedc044",
+        248,
+        "c14c9c71638af1d5d92d81f741f8ca8632e2bd3ebf4eb2ba37bf9584dbbd8e82",
     ),
     "independently_passing_downstream_claim_accepted_before_cap": (
-        244,
-        "f3a917c6979c0b96051b0f29a8c557b2d5e28c1b6ec192d4c169f6b5e0d98540",
+        248,
+        "1434e80fb2ce1a002d30754e9e304dbe76565e69c3e35ce87232d731550a131a",
     ),
 }
 EXPECTED_MUTATION_CHECK_INVENTORIES: Dict[str, Tuple[int, str]] = {
     "missing_promotion_schema_version": (
-        244,
-        "d27f6c570372c0b445f97c81605e7f4540f5506fb78fdaafc64aaa5d857cf57c",
+        248,
+        "dc10831b2f5a77ff28849f2df0f76cd7a10193e28683c28ccac9fb7ac7351eb1",
     ),
     "wrong_type_promotion_schema_version": (
-        244,
-        "d27f6c570372c0b445f97c81605e7f4540f5506fb78fdaafc64aaa5d857cf57c",
+        248,
+        "dc10831b2f5a77ff28849f2df0f76cd7a10193e28683c28ccac9fb7ac7351eb1",
     ),
     "stale_deterministic_capture_wrong_tree": (
-        243,
-        "6d1437dc3827aea7ff9b2908d231d54ba98301d5109d1e1092c030ac27c14592",
+        247,
+        "c332bbed3124a0618cb608e30692c14615c0e90c7545a563359b14b6a341ff89",
     ),
     "fabricated_official_text_policy": (
-        244,
-        "a93acc79f106f3c5afcd99d1af08c26b289a1e0cd8bac4c8c558408e11eb3115",
+        248,
+        "16c653f90403f29ccfb2a74c8c7564437f70c278740595d30b0b068fef7dcc04",
     ),
     "decoy_formal_companion": (
-        244,
-        "403e497c01edb860da7445d88b7d786d87cf5036c43dfd1985cbb9f93222daaf",
+        248,
+        "45f07302bc8c224aa4be995922e849dbd7218bdc1182af70be1f020124db0bd0",
     ),
     "swapped_formal_companions": (
-        244,
-        "3c0f9b3306e383f38908c56e6b0d14f618a772e145f7c7b53d915ac741352137",
+        248,
+        "4919306cc591c504c47ebee43ab32c99353b903ce722b61500278eba2b34b439",
     ),
     "dummy_untyped_evidence": (
-        136,
-        "ab48d8505709dc0721bac0e6e9c19bf3ac47e37c2300a12f8aa016bca8228e2b",
+        137,
+        "a8c9b84d54b814b0bc38cba9e2733fd96c5e7055195a073754c2fae549712cdd",
     ),
     "fake_own_claim_id": (
-        244,
-        "7377049c0e8d9e792fccd415e8f7ea071acb5d18c0abf674c6ee38b4ddf612ee",
+        248,
+        "b9939876216c9b7438c6437b656b9611f031daa5c2b655c432c1af50c2dcfd32",
     ),
     "malformed_claim_nonobject": (
-        242,
-        "285d97ac68fef77cc8cd54a2ac4c8d36579385b4fc2954f96157484fd40dad23",
+        246,
+        "62ee2bfd88f361bc5f6168dbdd8b0c9517020e827fff67f7acffbdde86158b1e",
     ),
     "malformed_claim_null_entry": (
-        242,
-        "285d97ac68fef77cc8cd54a2ac4c8d36579385b4fc2954f96157484fd40dad23",
+        246,
+        "62ee2bfd88f361bc5f6168dbdd8b0c9517020e827fff67f7acffbdde86158b1e",
     ),
     "malformed_claims_null": (
-        242,
-        "c10c523a674d027622f43dcba32e9234a5f6fd65194160584f12c3fcbbb28e6f",
+        246,
+        "52dfc65ed6c92deb8a74cae081ccbc6739b84e96711aefd078b68def77db2d05",
     ),
     "empty_promotion_claims_rejected": (
-        242,
-        "285d97ac68fef77cc8cd54a2ac4c8d36579385b4fc2954f96157484fd40dad23",
+        246,
+        "62ee2bfd88f361bc5f6168dbdd8b0c9517020e827fff67f7acffbdde86158b1e",
     ),
     "malformed_claim_bool_id": (
-        242,
-        "285d97ac68fef77cc8cd54a2ac4c8d36579385b4fc2954f96157484fd40dad23",
+        246,
+        "62ee2bfd88f361bc5f6168dbdd8b0c9517020e827fff67f7acffbdde86158b1e",
     ),
     "malformed_claim_duplicate_id": (
-        242,
-        "285d97ac68fef77cc8cd54a2ac4c8d36579385b4fc2954f96157484fd40dad23",
+        246,
+        "62ee2bfd88f361bc5f6168dbdd8b0c9517020e827fff67f7acffbdde86158b1e",
     ),
     "malformed_claim_invalid_id": (
-        242,
-        "285d97ac68fef77cc8cd54a2ac4c8d36579385b4fc2954f96157484fd40dad23",
+        246,
+        "62ee2bfd88f361bc5f6168dbdd8b0c9517020e827fff67f7acffbdde86158b1e",
     ),
     "malformed_scalar": (
-        244,
-        "b1ff96e4feba7815b80e152a80960dca4a3a2606cc3714d5be9b6abd94badc3e",
+        248,
+        "71b94642bc99aa9ff8d007194b7c5595922ccc858d220310e68a5921f7d97098",
     ),
     "official_stderr_contradiction_dominates_stdout": (
-        244,
-        "bdaea32d1dc8af1001adb993df79d4b7a59956d1a328fa2bf103268e586047ea",
+        248,
+        "80f784a62273ec0ead79259d9f586c08eef911a76c254ef9b53fe641d1c2a2c9",
     ),
     "official_structured_stderr_failure_dominates_stdout": (
-        244,
-        "bdaea32d1dc8af1001adb993df79d4b7a59956d1a328fa2bf103268e586047ea",
+        248,
+        "80f784a62273ec0ead79259d9f586c08eef911a76c254ef9b53fe641d1c2a2c9",
     ),
     "official_mixed_jsonl_stderr_failure_dominates_stdout": (
-        244,
-        "bdaea32d1dc8af1001adb993df79d4b7a59956d1a328fa2bf103268e586047ea",
+        248,
+        "80f784a62273ec0ead79259d9f586c08eef911a76c254ef9b53fe641d1c2a2c9",
     ),
     "official_early_failure_survives_large_neutral_tail": (
-        244,
-        "bdaea32d1dc8af1001adb993df79d4b7a59956d1a328fa2bf103268e586047ea",
+        248,
+        "80f784a62273ec0ead79259d9f586c08eef911a76c254ef9b53fe641d1c2a2c9",
     ),
     "formal_package_identity_bool_int_alias": (
-        244,
-        "a45afb853250c4468df9e47973cafe5dfcca52c55337a0b46663455f7188bba2",
+        248,
+        "107f445ca7a77476394fb11dc0f62e29800e476d7a6d88d26c4841c199492474",
     ),
     "formal_trace_authenticated_bool_int_alias": (
-        244,
-        "67a186007504c3ad50745e975c0740acdb5745aa33dad8b36325cf1790e435c8",
+        248,
+        "3adeca4bc50f722074aa4aad0ef50e498f9e1ff8262ec170ba91b0dd2c56fc6c",
     ),
     "formal_transcript_without_authentic_native_events": (
-        244,
-        "4e9b79ae24dd38399871a2884f67683fa46f4909db864e4e26f2b88c90b39b7c",
+        248,
+        "efdb862db6bf05cb3a41b5523a26a8c8002c66578aa07ce1a7d3eda02833340c",
     ),
     "formal_trace_authentication_missing": (
-        244,
-        "36a92f305fedf4ccdc9c3f016801f1fbfec4aa9293c2a5b00634d49e2ef9a1c5",
+        248,
+        "a2e92b27f3ee285085c3dbec88920d150790d9c6865e5d1b4cb17d44ae000053",
     ),
     "noncanonical_promotion_evidence_path": (
-        241,
-        "042fffa3dd2a90523554d45899f3a05563bfc63229e0ed06b1c7d59b44c5b863",
+        245,
+        "7e07360bd4b80c2887c0a04565107b65e1ef87211a5f10fd93bff572138dc691",
     ),
     "oversized_evidence_graph_is_bounded": (
-        183,
-        "3071e26b1714d3fffd98cb90c97899336a550b26f81836a67222fb5ae8e02140",
+        187,
+        "a5ffa330df71635dc1417c3dccf3de13d5bc6cead624db16c08fe74a917bae0a",
     ),
 }
 
@@ -1168,6 +1309,7 @@ def expected_baseline_lanes() -> Dict[str, List[str]]:
     live.extend([
         "live package-tree algorithm exactly matches current shared algorithm",
         "live package-tree SHA-256 matches current package bytes",
+        "live execution used one stable immutable package snapshot",
         "live fixture specification SHA-256 matches current evals bytes",
         "live runtime status has an exact string type",
         "live runtime was executed",
@@ -1280,6 +1422,12 @@ def expected_baseline_lanes() -> Dict[str, List[str]]:
         "formal result uses one bundle-local evidence root",
         "formal result package-tree identity has exact JSON schema",
         "formal result package-tree identity matches current package",
+        "formal execution package snapshot is stable and current",
+        (
+            "formal Claude executable path, version, and pre/post identity "
+            "are bound"
+        ),
+        "formal and live evidence bind the same Claude runtime",
         "current formal runner is a regular file",
         "formal companion specifications load from current runner",
         "formal runner exports exact result schema specifications",
@@ -1407,6 +1555,12 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
         package_root = root / "package"
         baseline_bundle = root / "baseline"
         prepare_ephemeral_package(certifier, source_root, package_root)
+        gate = load_module(
+            "ntt_gate_for_promotion_contract",
+            package_root / SKILL_SCRIPTS / "ntt_gate.py",
+        )
+        output_mode_variable = "NTT_CONTRACT_CLAUDE_OUTPUT_MODE"
+        previous_output_mode = os.environ.pop(output_mode_variable, None)
         bin_dir = root / "bin"
         write_fake_official_tools(bin_dir)
         previous_path = os.environ.get("PATH", "")
@@ -1428,9 +1582,12 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 certifier,
                 package_root,
                 baseline_bundle,
+                bin_dir / "claude",
+                gate,
             )
             write_promotion_certificate(
                 certifier,
+                gate,
                 package_root,
                 baseline_bundle,
                 formal_result,
@@ -1911,20 +2068,30 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
             downstream_certificate["claims"].append(
                 write_passing_promotion_claim(
                     certifier,
+                    gate,
                     downstream_bundle,
                     "C-INDEPENDENT",
                     "independent",
                 )
             )
+            independently_tested_text = (
+                "Independent promotion claim C-INDEPENDENT is tracked."
+            )
             downstream_certificate["derived_or_downstream_claims"] = [{
                 "id": "D-INDEPENDENT",
                 "from_claim_ids": ["C-UPSTREAM"],
-                "derived_claim": (
-                    "A distinct independently tested claim supports the "
-                    "downstream conclusion."
-                ),
+                "derived_claim": independently_tested_text,
                 "status": certifier.PASS_TRACKED,
                 "own_claim_id": "C-INDEPENDENT",
+                "proposition_binding": {
+                    "schema_version": "1.0",
+                    "canonical_text_sha256": (
+                        "sha256:"
+                        + gate._proposition_sha256(  # pylint: disable=protected-access
+                            independently_tested_text
+                        )
+                    ),
+                },
             }]
             downstream_certificate["downstream_review"] = {
                 "performed": True,
@@ -2024,6 +2191,7 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 outcome_oracle: Optional[
                     Callable[[Mapping[str, Any]], bool]
                 ] = None,
+                env_updates: Optional[Mapping[str, str]] = None,
             ) -> None:
                 mutation_bundle = root / name
                 shutil.copytree(
@@ -2033,9 +2201,14 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 )
                 mutate(mutation_bundle)
                 case_started = time.monotonic()
+                invocation_env = None
+                if env_updates is not None:
+                    invocation_env = dict(os.environ)
+                    invocation_env.update(env_updates)
                 outcome_rc, outcome, invocation = certifier_cli(
                     package_root,
                     mutation_bundle,
+                    env=invocation_env,
                 )
                 duration_sec = round(time.monotonic() - case_started, 3)
                 failed_checks_valid = True
@@ -2572,105 +2745,12 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 )],
             )
 
-            def replace_claude_with_stderr(
-                bundle: Path,
-                stderr_payload: str,
-            ) -> None:
-                script = (
-                    "#!/usr/bin/env python3\n"
-                    "from pathlib import Path\n"
-                    "import sys\n"
-                    "root = Path.cwd().resolve()\n"
-                    "args = sys.argv[1:]\n"
-                    "argv_ok = (len(args) == 4 and args[:2] == ['plugin', 'validate'] "
-                    "and Path(args[2]).resolve() == root and args[3] == '--strict')\n"
-                    "if not argv_ok:\n"
-                    "    print('Validation failed: unexpected argv', file=sys.stderr)\n"
-                    "    raise SystemExit(2)\n"
-                    "print(f'Validating plugin manifest: {root / \".claude-plugin/plugin.json\"}')\n"
-                    "print()\n"
-                    "print('✔ Validation passed')\n"
-                    f"print({stderr_payload!r}, file=sys.stderr)\n"
-                    "raise SystemExit(0)\n"
-                )
-                fake_claude = bin_dir / "claude"
-                fake_claude.write_text(script, encoding="utf-8")
-                fake_claude.chmod(0o755)
-                digest = certifier.sha256_path(fake_claude)
-                live_path = (
-                    bundle / "live_fixtures/live_runtime_eval_result.json"
-                )
-                live_data = json.loads(
-                    live_path.read_text(encoding="utf-8")
-                )
-                for field in (
-                    "executable_sha256",
-                    "executable_sha256_pre",
-                    "executable_sha256_post",
-                ):
-                    live_data["runtime_identity"][field] = digest
-                write_json(live_path, live_data)
-                update_certificate(
-                    bundle,
-                    lambda certificate: refresh_node_hash(
-                        certifier,
-                        bundle,
-                        certificate,
-                        "live.runtime",
-                    ),
-                )
-
-            def replace_claude_with_stdout(
-                bundle: Path,
-                stdout_payload: str,
-            ) -> None:
-                script = (
-                    "#!/usr/bin/env python3\n"
-                    "from pathlib import Path\n"
-                    "import sys\n"
-                    "root = Path.cwd().resolve()\n"
-                    "args = sys.argv[1:]\n"
-                    "argv_ok = (len(args) == 4 and args[:2] == ['plugin', 'validate'] "
-                    "and Path(args[2]).resolve() == root and args[3] == '--strict')\n"
-                    "if not argv_ok:\n"
-                    "    print('Validation failed: unexpected argv', file=sys.stderr)\n"
-                    "    raise SystemExit(2)\n"
-                    f"sys.stdout.write({stdout_payload!r})\n"
-                    "raise SystemExit(0)\n"
-                )
-                fake_claude = bin_dir / "claude"
-                fake_claude.write_text(script, encoding="utf-8")
-                fake_claude.chmod(0o755)
-                digest = certifier.sha256_path(fake_claude)
-                live_path = (
-                    bundle / "live_fixtures/live_runtime_eval_result.json"
-                )
-                live_data = json.loads(
-                    live_path.read_text(encoding="utf-8")
-                )
-                for field in (
-                    "executable_sha256",
-                    "executable_sha256_pre",
-                    "executable_sha256_post",
-                ):
-                    live_data["runtime_identity"][field] = digest
-                write_json(live_path, live_data)
-                update_certificate(
-                    bundle,
-                    lambda certificate: refresh_node_hash(
-                        certifier,
-                        bundle,
-                        certificate,
-                        "live.runtime",
-                    ),
-                )
-
-            def stderr_contradiction(bundle: Path) -> None:
-                replace_claude_with_stderr(bundle, "Status: failed")
+            def preserve_bound_claude(_bundle: Path) -> None:
+                pass
 
             run_mutation(
                 "official_stderr_contradiction_dominates_stdout",
-                stderr_contradiction,
+                preserve_bound_claude,
                 "CHECK_FAILED",
                 [
                     ((
@@ -2678,18 +2758,16 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                         "claude_plugin_validate"
                     ), "CHECK_FAILED", "anchored negative status"),
                 ],
+                env_updates={
+                    "NTT_CONTRACT_CLAUDE_OUTPUT_MODE": (
+                        "stderr-text-failure"
+                    ),
+                },
             )
-            write_fake_official_tools(bin_dir)
-
-            def structured_stderr_contradiction(bundle: Path) -> None:
-                replace_claude_with_stderr(
-                    bundle,
-                    '{"status":"failed"}',
-                )
 
             run_mutation(
                 "official_structured_stderr_failure_dominates_stdout",
-                structured_stderr_contradiction,
+                preserve_bound_claude,
                 "CHECK_FAILED",
                 [((
                     "fresh official validator passes: "
@@ -2697,18 +2775,16 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 ), "CHECK_FAILED",
                     "stderr contradiction: explicit negative JSON status",
                 )],
+                env_updates={
+                    "NTT_CONTRACT_CLAUDE_OUTPUT_MODE": (
+                        "stderr-json-failure"
+                    ),
+                },
             )
-            write_fake_official_tools(bin_dir)
-
-            def mixed_jsonl_stderr_contradiction(bundle: Path) -> None:
-                replace_claude_with_stderr(
-                    bundle,
-                    '{"event":"start"}\n{"status":"failed"}',
-                )
 
             run_mutation(
                 "official_mixed_jsonl_stderr_failure_dominates_stdout",
-                mixed_jsonl_stderr_contradiction,
+                preserve_bound_claude,
                 "CHECK_FAILED",
                 [((
                     "fresh official validator passes: "
@@ -2717,16 +2793,17 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                     "stderr contradiction: line 2 explicit negative "
                     "JSON status",
                 )],
+                env_updates={
+                    "NTT_CONTRACT_CLAUDE_OUTPUT_MODE": (
+                        "stderr-jsonl-failure"
+                    ),
+                },
             )
-            write_fake_official_tools(bin_dir)
 
             large_failure_payload = (
                 "Validation failed: synthetic early failure\n"
                 + ("neutral validator progress\n" * 2200)
             )
-
-            def early_failure_large_tail(bundle: Path) -> None:
-                replace_claude_with_stdout(bundle, large_failure_payload)
 
             large_failure_bytes = large_failure_payload.encode("utf-8")
             large_failure_sha256 = (
@@ -2760,7 +2837,7 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
 
             run_mutation(
                 "official_early_failure_survives_large_neutral_tail",
-                early_failure_large_tail,
+                preserve_bound_claude,
                 "CHECK_FAILED",
                 [((
                     "fresh official validator passes: "
@@ -2770,8 +2847,12 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                     "negative status",
                 )],
                 outcome_oracle=large_failure_oracle,
+                env_updates={
+                    "NTT_CONTRACT_CLAUDE_OUTPUT_MODE": (
+                        "early-failure-large-tail"
+                    ),
+                },
             )
-            write_fake_official_tools(bin_dir)
 
             def bool_int_package_identity(bundle: Path) -> None:
                 result_path = (
@@ -3169,6 +3250,10 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
             })
         finally:
             os.environ["PATH"] = previous_path
+            if previous_output_mode is None:
+                os.environ.pop(output_mode_variable, None)
+            else:
+                os.environ[output_mode_variable] = previous_output_mode
     actual_case_names = tuple(
         str(case.get("name")) for case in cases
     )

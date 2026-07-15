@@ -7,7 +7,7 @@ Claude Code CLI is installed. If the runtime cannot be exercised, it records
 UNVERIFIED_RUNTIME rather than treating a version check as a pass.
 """
 from __future__ import annotations
-import argparse, contextlib, hashlib, importlib.util, io, json, re, shutil, stat, subprocess, sys, time
+import argparse, contextlib, hashlib, importlib.util, io, json, os, re, shutil, signal, stat, subprocess, sys, tempfile, threading, time, uuid
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Dict, List, Mapping, Sequence, Tuple, cast
@@ -23,6 +23,10 @@ RAW_EXTERNAL_TRANSCRIPT_POLICY = (
     "retain literal resolved paths. Bundled and harness-written JSON summaries "
     "use normalized-display values."
 )
+MAX_CAPTURE_BYTES = 64 * 1024 * 1024
+FIXTURE_ID_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
+PIPE_CLOSE_GRACE_SEC = 0.5
+READER_JOIN_GRACE_SEC = 1.0
 
 
 def normalize_display(
@@ -76,24 +80,147 @@ def run_cmd(
     try:
         # SECURITY-REVIEW: Fixed argv invokes the PATH-resolved Claude executable
         # directly; no shell parsing or command-string interpolation is used.
-        proc = subprocess.run(literal_cmd, cwd=str(cwd) if cwd else None, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, check=False)
+        # Each pipe is drained concurrently and bounded while the child runs.
+        proc = subprocess.Popen(
+            literal_cmd,
+            cwd=str(cwd) if cwd else None,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            start_new_session=(os.name == "posix"),
+        )
+        stop = threading.Event()
+        states: Dict[str, Dict[str, Any]] = {}
+
+        def drain(name: str, stream: Any) -> None:
+            retained = bytearray()
+            digest = hashlib.sha256()
+            observed = 0
+            exceeded = False
+            try:
+                while True:
+                    chunk = stream.read(64 * 1024)
+                    if not chunk:
+                        break
+                    raw_chunk = bytes(chunk)
+                    observed += len(raw_chunk)
+                    digest.update(raw_chunk)
+                    remaining = max(0, MAX_CAPTURE_BYTES - len(retained))
+                    if remaining:
+                        retained.extend(raw_chunk[:remaining])
+                    if observed > MAX_CAPTURE_BYTES:
+                        exceeded = True
+                        stop.set()
+            except (OSError, ValueError):
+                pass
+            finally:
+                try:
+                    stream.close()
+                except Exception:
+                    pass
+                states[name] = {
+                    "raw": bytes(retained),
+                    "observed": observed,
+                    "sha256": digest.hexdigest(),
+                    "exceeded": exceeded,
+                }
+
+        assert proc.stdout is not None and proc.stderr is not None
+        readers = [
+            threading.Thread(target=drain, args=("stdout", proc.stdout), daemon=True),
+            threading.Thread(target=drain, args=("stderr", proc.stderr), daemon=True),
+        ]
+        for reader in readers:
+            reader.start()
+        deadline = time.monotonic() + timeout
+        timed_out = False
+        descendant_pipe_leak = False
+        process_group_terminated = False
+        leader_exited_at: float | None = None
+
+        def terminate_group() -> None:
+            nonlocal process_group_terminated
+            process_group_terminated = True
+            try:
+                if os.name == "posix":
+                    os.killpg(proc.pid, signal.SIGKILL)
+                else:
+                    proc.kill()
+            except ProcessLookupError:
+                pass
+            except OSError:
+                try:
+                    proc.kill()
+                except OSError:
+                    pass
+
+        while True:
+            if stop.is_set():
+                terminate_group()
+                break
+            if proc.poll() is not None:
+                if not any(reader.is_alive() for reader in readers):
+                    break
+                if leader_exited_at is None:
+                    leader_exited_at = time.monotonic()
+                if time.monotonic() - leader_exited_at >= PIPE_CLOSE_GRACE_SEC:
+                    descendant_pipe_leak = True
+                    terminate_group()
+                    break
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                timed_out = True
+                terminate_group()
+                break
+            time.sleep(min(0.01, remaining))
+        try:
+            proc.wait(timeout=READER_JOIN_GRACE_SEC)
+        except subprocess.TimeoutExpired:
+            terminate_group()
+            try:
+                proc.wait(timeout=READER_JOIN_GRACE_SEC)
+            except subprocess.TimeoutExpired:
+                pass
+        join_deadline = time.monotonic() + READER_JOIN_GRACE_SEC
+        for reader in readers:
+            reader.join(timeout=max(0.0, join_deadline - time.monotonic()))
+        if any(reader.is_alive() for reader in readers):
+            for stream in (proc.stdout, proc.stderr):
+                try:
+                    os.close(stream.fileno())
+                except OSError:
+                    pass
+            for reader in readers:
+                reader.join(timeout=max(0.0, join_deadline - time.monotonic()))
+        reader_join_timed_out = any(reader.is_alive() for reader in readers)
+        empty_sha = hashlib.sha256(b"").hexdigest()
+        stdout_state = states.get("stdout", {"raw": b"", "observed": 0, "sha256": empty_sha, "exceeded": False})
+        stderr_state = states.get("stderr", {"raw": b"", "observed": 0, "sha256": empty_sha, "exceeded": False})
+        exceeded = bool(stdout_state["exceeded"] or stderr_state["exceeded"])
+        stdout_text = bytes(stdout_state["raw"]).decode("utf-8", errors="replace")
+        stderr_text = bytes(stderr_state["raw"]).decode("utf-8", errors="replace")
         return {
             "cmd": display_cmd,
             "command_metadata": command_metadata,
-            "returncode": proc.returncode,
-            "stdout": normalize_display(proc.stdout[-12000:], display_replacements),
-            "stderr": normalize_display(proc.stderr[-12000:], display_replacements),
-            "duration_sec": round(time.time()-started, 3),
-        }
-    except subprocess.TimeoutExpired as exc:
-        stdout = (exc.stdout or "")[-12000:] if isinstance(exc.stdout, str) else ""
-        stderr = (exc.stderr or "")[-12000:] if isinstance(exc.stderr, str) else "timeout"
-        return {
-            "cmd": display_cmd,
-            "command_metadata": command_metadata,
-            "returncode": 124,
-            "stdout": normalize_display(stdout, display_replacements),
-            "stderr": normalize_display(stderr, display_replacements),
+            "returncode": (
+                124
+                if timed_out
+                else 126
+                if exceeded
+                else 125
+                if descendant_pipe_leak or reader_join_timed_out
+                else proc.returncode
+            ),
+            "stdout": normalize_display(stdout_text, display_replacements),
+            "stderr": normalize_display(stderr_text, display_replacements),
+            "stdout_bytes": stdout_state["observed"],
+            "stderr_bytes": stderr_state["observed"],
+            "stdout_sha256": stdout_state["sha256"],
+            "stderr_sha256": stderr_state["sha256"],
+            "capture_limit_exceeded": exceeded,
+            "timed_out": timed_out,
+            "descendant_pipe_leak": descendant_pipe_leak,
+            "reader_join_timed_out": reader_join_timed_out,
+            "process_group_terminated": process_group_terminated,
             "duration_sec": round(time.time()-started, 3),
         }
     except OSError as exc:
@@ -193,6 +320,67 @@ def fixture_artifact_path(root: Path, value: Any) -> Path:
     )
 
 
+def canonical_fixture_id(value: Any) -> str:
+    if (
+        not isinstance(value, str)
+        or not 8 <= len(value) <= 128
+        or FIXTURE_ID_RE.fullmatch(value) is None
+    ):
+        raise ValueError(
+            "fixture id is not a canonical lowercase ASCII slug of length 8..128"
+        )
+    return value
+
+
+def fixture_transcript_path(out_dir: Path, fixture_id: Any) -> Path:
+    canonical = canonical_fixture_id(fixture_id)
+    candidate = out_dir / f"{canonical}.json"
+    if candidate.parent != out_dir:
+        raise ValueError("fixture transcript path escapes output directory")
+    return candidate
+
+
+def atomic_replace_transcript(path: Path, payload: bytes) -> None:
+    """Replace one private transcript without following a final link."""
+    try:
+        parent_mode = path.parent.lstat().st_mode
+    except OSError as exc:
+        raise ValueError("transcript output parent is unavailable") from exc
+    if stat.S_ISLNK(parent_mode) or not stat.S_ISDIR(parent_mode):
+        raise ValueError("transcript output parent is not a real directory")
+    if os.path.lexists(path):
+        metadata = path.lstat()
+        if (
+            stat.S_ISLNK(metadata.st_mode)
+            or not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_nlink != 1
+        ):
+            raise ValueError("transcript output target is not a private regular file")
+    temporary = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor: int | None = None
+    try:
+        descriptor = os.open(temporary, flags, 0o600)
+        with os.fdopen(descriptor, "wb") as stream:
+            descriptor = None
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        created = path.stat(follow_symlinks=False)
+        if not stat.S_ISREG(created.st_mode) or created.st_nlink != 1:
+            raise OSError("transcript output is not a private regular file")
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+
+
 def current_package_tree(root: Path) -> Dict[str, Any]:
     """Load the current validator and invoke its single-source tree helper."""
     validator_path = (
@@ -244,6 +432,154 @@ def current_package_tree(root: Path) -> Dict[str, Any]:
             "sha256": None,
             "errors": [f"shared package-tree computation failed: {exc!r}"],
         }
+
+
+def _read_release_file_no_follow(root: Path, relative: PurePosixPath) -> bytes:
+    current = root
+    for index, part in enumerate(relative.parts):
+        current = current / part
+        mode = current.lstat().st_mode
+        final = index == len(relative.parts) - 1
+        if stat.S_ISLNK(mode):
+            raise ValueError("release inventory path contains a symbolic link")
+        if final and not stat.S_ISREG(mode):
+            raise ValueError("release inventory entry is not a regular file")
+        if not final and not stat.S_ISDIR(mode):
+            raise ValueError("release inventory ancestor is not a directory")
+    return current.read_bytes()
+
+
+def materialize_execution_package_snapshot(
+    root: Path,
+    source_tree: Mapping[str, Any],
+) -> Tuple[tempfile.TemporaryDirectory[str], Path, Dict[str, Any]]:
+    """Materialize the manifest-bound package used by every live invocation."""
+    if (
+        source_tree.get("valid") is not True
+        or not isinstance(source_tree.get("sha256"), str)
+    ):
+        raise ValueError("source package tree is invalid")
+    manifest_path = root / "STABLE_RELEASE_MANIFEST.json"
+    if regular_file_error(manifest_path) is not None:
+        raise ValueError("stable release manifest is not a regular file")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    inventory = manifest.get("file_inventory") if isinstance(manifest, Mapping) else None
+    if not isinstance(inventory, list) or not inventory:
+        raise ValueError("stable release inventory is unavailable")
+    records: List[Tuple[PurePosixPath, bytes, int]] = []
+    seen = set()
+    for record in inventory:
+        if not isinstance(record, Mapping):
+            raise ValueError("release inventory record is not an object")
+        value = record.get("path")
+        if not isinstance(value, str) or not value or "\\" in value:
+            raise ValueError("release inventory path is not canonical")
+        relative = PurePosixPath(value)
+        if (
+            relative.is_absolute()
+            or any(part in {"", ".", ".."} for part in relative.parts)
+            or relative.as_posix() != value
+            or value in seen
+        ):
+            raise ValueError("release inventory path traverses or is duplicated")
+        seen.add(value)
+        payload = _read_release_file_no_follow(root, relative)
+        if (
+            record.get("sha256") != hashlib.sha256(payload).hexdigest()
+            or type(record.get("bytes")) is not int
+            or record.get("bytes") != len(payload)
+        ):
+            raise ValueError("release inventory bytes do not match the manifest")
+        records.append(
+            (relative, payload, root.joinpath(*relative.parts).lstat().st_mode)
+        )
+    manifest_payload = _read_release_file_no_follow(
+        root,
+        PurePosixPath("STABLE_RELEASE_MANIFEST.json"),
+    )
+    holder: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory(
+        prefix="ntt_live_execution_package_"
+    )
+    snapshot = Path(holder.name) / "package"
+    snapshot.mkdir(mode=0o700)
+    try:
+        for relative, payload, source_mode in records + [
+            (PurePosixPath("STABLE_RELEASE_MANIFEST.json"), manifest_payload, 0o600)
+        ]:
+            destination = snapshot.joinpath(*relative.parts)
+            destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            if hasattr(os, "O_NOFOLLOW"):
+                flags |= os.O_NOFOLLOW
+            descriptor = os.open(
+                destination,
+                flags,
+                0o500 if source_mode & 0o111 else 0o400,
+            )
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(payload)
+        snapshot_pre = current_package_tree(snapshot)
+        if (
+            snapshot_pre.get("valid") is not True
+            or snapshot_pre.get("algorithm") != source_tree.get("algorithm")
+            or snapshot_pre.get("sha256") != source_tree.get("sha256")
+        ):
+            raise ValueError("execution snapshot identity differs from source")
+        for directory in sorted(
+            (path for path in snapshot.rglob("*") if path.is_dir()),
+            key=lambda path: len(path.parts),
+            reverse=True,
+        ):
+            directory.chmod(0o500)
+        snapshot.chmod(0o500)
+    except Exception:
+        holder.cleanup()
+        raise
+    return holder, snapshot, {
+        "mode": "private-read-only-stable-release-snapshot",
+        "source_pre": {
+            "algorithm": source_tree.get("algorithm"),
+            "sha256": source_tree.get("sha256"),
+            "valid": source_tree.get("valid") is True,
+        },
+        "snapshot_pre": {
+            "algorithm": snapshot_pre.get("algorithm"),
+            "sha256": snapshot_pre.get("sha256"),
+            "valid": snapshot_pre.get("valid") is True,
+        },
+        "source_post": None,
+        "snapshot_post": None,
+        "stable": False,
+    }
+
+
+def finalize_execution_package_snapshot(
+    source_root: Path,
+    snapshot_root: Path,
+    identity: Dict[str, Any],
+) -> Dict[str, Any]:
+    finalized = dict(identity)
+    for field, package_root in (
+        ("source_post", source_root),
+        ("snapshot_post", snapshot_root),
+    ):
+        tree = current_package_tree(package_root)
+        finalized[field] = {
+            "algorithm": tree.get("algorithm"),
+            "sha256": tree.get("sha256"),
+            "valid": tree.get("valid") is True,
+        }
+    identities = [
+        finalized.get("source_pre"),
+        finalized.get("source_post"),
+        finalized.get("snapshot_pre"),
+        finalized.get("snapshot_post"),
+    ]
+    finalized["stable"] = (
+        all(isinstance(item, Mapping) and item.get("valid") is True for item in identities)
+        and all(item == identities[0] for item in identities[1:])
+    )
+    return finalized
 
 
 def refresh_runtime_fingerprint(
@@ -474,6 +810,7 @@ def main(argv=None) -> int:
         },
         "fixture_spec_sha256": fixture_spec_sha256,
         "fixture_spec_error": fixture_spec_error,
+        "execution_package_snapshot_identity": None,
         "run_config": {
             "max_fixtures": args.max_fixtures,
             "max_turns": args.max_turns,
@@ -582,6 +919,37 @@ def main(argv=None) -> int:
         print(json.dumps(display_result, indent=2, sort_keys=True))
         return 2
 
+    execution_snapshot_holder: tempfile.TemporaryDirectory[str] | None = None
+    execution_root = root
+    try:
+        (
+            execution_snapshot_holder,
+            execution_root,
+            execution_package_identity,
+        ) = materialize_execution_package_snapshot(root, package_tree)
+        result["execution_package_snapshot_identity"] = (
+            execution_package_identity
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        result["status"] = "FAIL"
+        result["reason"] = (
+            "Immutable live execution package snapshot could not be prepared; "
+            "no subprocess was executed."
+        )
+        result["execution_package_snapshot_error"] = type(exc).__name__
+        display_result = normalize_display(result, display_replacements)
+        if args.json:
+            args.json.parent.mkdir(parents=True, exist_ok=True)
+            args.json.write_text(
+                json.dumps(display_result, indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+        print(json.dumps(display_result, indent=2, sort_keys=True))
+        return 2
+    display_replacements = tuple(
+        [(str(execution_root), "<package-root>"), *replacement_list]
+    )
+
     # Basic CLI and plugin validation attempts. These are not sufficient for PASS.
     executable_argv = str(resolved_claude)
     commands = [
@@ -593,7 +961,7 @@ def main(argv=None) -> int:
     ]
     commands.append(
         run_cmd(
-            [executable_argv, "plugin", "validate", str(root)],
+            [executable_argv, "plugin", "validate", str(execution_root)],
             timeout=300,
             display_replacements=display_replacements,
         )
@@ -637,7 +1005,11 @@ def main(argv=None) -> int:
             try:
                 if not isinstance(item, Mapping):
                     raise ValueError("fixture entry is not an object")
-                artifact = fixture_artifact_path(root, item.get("artifact"))
+                fixture_id = canonical_fixture_id(item.get("id"))
+                artifact = fixture_artifact_path(
+                    execution_root,
+                    item.get("artifact"),
+                )
                 artifact_sha256 = sha256_regular_file(
                     artifact,
                     f"fixture artifact {item.get('id', 'fixture')}",
@@ -647,27 +1019,33 @@ def main(argv=None) -> int:
                     f"{type(exc).__name__} while binding fixture artifact"
                 )
                 break
-            prompt = build_fixture_prompt(plugin_name, item.get('id','fixture'), artifact)
+            prompt = build_fixture_prompt(plugin_name, fixture_id, artifact)
             canonical_prompt = normalize_display(prompt, display_replacements)
             out_dir.mkdir(parents=True, exist_ok=True)
-            cmd = [executable_argv, "--plugin-dir", str(root), "-p", "--output-format", "json", "--max-turns", str(args.max_turns), prompt]
+            cmd = [executable_argv, "--plugin-dir", str(execution_root), "-p", "--output-format", "json", "--max-turns", str(args.max_turns), prompt]
             cmd_result = run_cmd(
                 cmd,
-                cwd=root,
+                cwd=execution_root,
                 timeout=args.timeout_sec,
                 display_replacements=display_replacements,
             )
-            transcript_file = out_dir / f"{item.get('id','fixture')}.json"
+            transcript_file = fixture_transcript_path(out_dir, fixture_id)
             transcript_bytes = json.dumps(
                 cmd_result,
                 indent=2,
                 sort_keys=True,
             ).encode("utf-8")
-            transcript_file.write_bytes(transcript_bytes)
+            try:
+                atomic_replace_transcript(transcript_file, transcript_bytes)
+            except (OSError, ValueError) as exc:
+                fixture_binding_failure = (
+                    f"{type(exc).__name__} while writing fixture transcript"
+                )
+                break
             checks = transcript_checks(str(cmd_result.get("stdout") or ""), item["artifact"])
             fixture_results.append(
                 {
-                    "id": item.get('id'),
+                    "id": fixture_id,
                     "artifact": normalize_display(str(artifact), display_replacements),
                     "artifact_sha256": artifact_sha256,
                     "prompt": canonical_prompt,
@@ -699,10 +1077,26 @@ def main(argv=None) -> int:
         )
     if runtime_identity.get("executable_sha256_post") is None:
         refresh_runtime_fingerprint(runtime_identity, resolved_claude)
+    execution_package_identity = finalize_execution_package_snapshot(
+        root,
+        execution_root,
+        execution_package_identity,
+    )
+    result["execution_package_snapshot_identity"] = execution_package_identity
+    if (
+        result.get("status") in ACCEPTABLE_PASS_STATUSES
+        and execution_package_identity.get("stable") is not True
+    ):
+        result["status"] = "FAIL"
+        result["reason"] = (
+            "Live execution package snapshot or source identity changed during run."
+        )
     display_result = normalize_display(result, display_replacements)
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True); args.json.write_text(json.dumps(display_result, indent=2, sort_keys=True), encoding="utf-8")
     print(json.dumps(display_result, indent=2, sort_keys=True))
+    if execution_snapshot_holder is not None:
+        execution_snapshot_holder.cleanup()
     return 0 if result["status"] == "PASS-SCOPED" or (result["status"] == "UNVERIFIED_RUNTIME" and not args.require_claude) else 2
 
 if __name__ == "__main__":

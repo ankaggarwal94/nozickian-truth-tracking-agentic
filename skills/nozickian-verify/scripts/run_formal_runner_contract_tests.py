@@ -21,6 +21,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -37,6 +38,14 @@ SKILL_PATH = "skills/nozickian-verify"
 # macOS may expose the temp root through /var -> /private/var. Resolve that
 # platform alias so positive controls do not themselves contain a link.
 CANONICAL_TEMP_ROOT = Path(tempfile.gettempdir()).resolve()
+
+
+def raises_value_error(function, *args: Any) -> bool:
+    try:
+        function(*args)
+    except ValueError:
+        return True
+    return False
 
 
 def load_runner(package_root: Path):
@@ -59,6 +68,38 @@ def load_runner(package_root: Path):
     return mod
 
 
+def load_live_runner(package_root: Path):
+    path = package_root / SKILL_PATH / "scripts/run_live_skill_evals.py"
+    spec = importlib.util.spec_from_file_location("live_runner_under_test", str(path))
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot import {path}")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    previous_dont_write = sys.dont_write_bytecode
+    try:
+        sys.dont_write_bytecode = True
+        spec.loader.exec_module(mod)  # type: ignore[attr-defined]
+    finally:
+        sys.dont_write_bytecode = previous_dont_write
+    return mod
+
+
+def load_certifier(package_root: Path):
+    path = package_root / SKILL_PATH / "scripts/certify_pass_tracked_upgrade.py"
+    spec = importlib.util.spec_from_file_location("certifier_under_test", str(path))
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot import {path}")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    previous_dont_write = sys.dont_write_bytecode
+    try:
+        sys.dont_write_bytecode = True
+        spec.loader.exec_module(mod)  # type: ignore[attr-defined]
+    finally:
+        sys.dont_write_bytecode = previous_dont_write
+    return mod
+
+
 def write_transcript(lines: List[Dict[str, Any]]) -> Path:
     tmp = Path(
         tempfile.mkdtemp(
@@ -68,6 +109,18 @@ def write_transcript(lines: List[Dict[str, Any]]) -> Path:
     )
     path = tmp / "transcript.stream.jsonl"
     path.write_text("\n".join(json.dumps(line) for line in lines) + "\n", encoding="utf-8")
+    return path
+
+
+def write_raw_transcript(text: str) -> Path:
+    tmp = Path(
+        tempfile.mkdtemp(
+            prefix="nozickian_raw_trace_contract_",
+            dir=str(CANONICAL_TEMP_ROOT),
+        )
+    )
+    path = tmp / "transcript.stream.jsonl"
+    path.write_text(text, encoding="utf-8")
     return path
 
 
@@ -586,6 +639,30 @@ def call_runner_main(runner, argv: List[str]) -> tuple[int, str]:
 
 def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
     cases: List[Dict[str, Any]] = []
+    live_runner = load_live_runner(package_root)
+    certifier = load_certifier(package_root)
+
+    valid_fixture_id = "mini-code-mutation"
+    cases.append({
+        "name": "live_fixture_id_requires_canonical_slug",
+        "passed": (
+            live_runner.canonical_fixture_id(valid_fixture_id)
+            == valid_fixture_id
+            and all(
+                raises_value_error(
+                    live_runner.canonical_fixture_id,
+                    value,
+                )
+                for value in (
+                    "../escape-id",
+                    "/absolute-id",
+                    "UPPERCASE-ID",
+                    "short",
+                    "trailing-dash-",
+                )
+            )
+        ),
+    })
 
     def bytecode_inventory(root: Path) -> List[str]:
         found: List[str] = []
@@ -775,6 +852,135 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
             "reason": reason,
         })
 
+        oversized_emitter = stream_tmp / "emit-oversized.py"
+        oversized_emitter.write_text(
+            "import sys\nsys.stdout.buffer.write(b'x' * 8192)\n",
+            encoding="utf-8",
+        )
+        original_capture_limit = runner.MAX_CAPTURE_BYTES
+        try:
+            runner.MAX_CAPTURE_BYTES = 4096
+            oversized = runner.run_cmd(
+                [sys.executable, str(oversized_emitter)],
+                cwd=stream_tmp,
+                timeout=30,
+            )
+        finally:
+            runner.MAX_CAPTURE_BYTES = original_capture_limit
+        cases.append({
+            "name": "capture_limit_is_enforced_during_process_execution",
+            "passed": (
+                oversized.get("returncode") == 126
+                and oversized.get("capture_limit_exceeded") is True
+                and oversized.get("stdout_bytes", 0) > 4096
+                and len(oversized.get("_stdout_bytes", b"")) == 4096
+            ),
+        })
+        original_live_capture_limit = live_runner.MAX_CAPTURE_BYTES
+        try:
+            live_runner.MAX_CAPTURE_BYTES = 4096
+            live_oversized = live_runner.run_cmd(
+                [sys.executable, str(oversized_emitter)],
+                cwd=stream_tmp,
+                timeout=30,
+            )
+        finally:
+            live_runner.MAX_CAPTURE_BYTES = original_live_capture_limit
+        cases.append({
+            "name": "live_capture_limit_is_enforced_during_process_execution",
+            "passed": (
+                live_oversized.get("returncode") == 126
+                and live_oversized.get("capture_limit_exceeded") is True
+                and live_oversized.get("stdout_bytes", 0) > 4096
+                and len(live_oversized.get("stdout", "").encode("utf-8"))
+                == 4096
+            ),
+        })
+
+        inherited_parent_exit = stream_tmp / "inherited-parent-exit.py"
+        inherited_parent_exit.write_text(
+            "import subprocess, sys\n"
+            "subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])\n",
+            encoding="utf-8",
+        )
+        inherited_timeout = stream_tmp / "inherited-timeout.py"
+        inherited_timeout.write_text(
+            "import subprocess, sys, time\n"
+            "subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])\n"
+            "time.sleep(60)\n",
+            encoding="utf-8",
+        )
+        inherited_overflow = stream_tmp / "inherited-overflow.py"
+        inherited_overflow.write_text(
+            "import subprocess, sys, time\n"
+            "subprocess.Popen([sys.executable, '-c', \"import sys,time; sys.stdout.buffer.write(b'x'*8192); sys.stdout.flush(); time.sleep(60)\"])\n"
+            "time.sleep(0.2)\n",
+            encoding="utf-8",
+        )
+        for capture_name, capture_module in (
+            ("formal", runner),
+            ("live", live_runner),
+            ("certifier", certifier),
+        ):
+            started = time.monotonic()
+            parent_exit_result = capture_module.run_cmd(
+                [sys.executable, str(inherited_parent_exit)],
+                cwd=stream_tmp,
+                timeout=5,
+            )
+            parent_exit_duration = time.monotonic() - started
+            cases.append({
+                "name": f"{capture_name}_capture_kills_parent_exit_inherited_pipe_group",
+                "passed": (
+                    parent_exit_result.get("returncode") == 125
+                    and parent_exit_result.get("descendant_pipe_leak") is True
+                    and parent_exit_result.get("process_group_terminated") is True
+                    and parent_exit_result.get("reader_join_timed_out") is False
+                    and parent_exit_duration < 3
+                ),
+            })
+
+            started = time.monotonic()
+            timeout_result = capture_module.run_cmd(
+                [sys.executable, str(inherited_timeout)],
+                cwd=stream_tmp,
+                timeout=1,
+            )
+            timeout_duration = time.monotonic() - started
+            cases.append({
+                "name": f"{capture_name}_capture_kills_full_group_on_timeout",
+                "passed": (
+                    timeout_result.get("returncode") == 124
+                    and timeout_result.get("timed_out") is True
+                    and timeout_result.get("process_group_terminated") is True
+                    and timeout_result.get("reader_join_timed_out") is False
+                    and timeout_duration < 3
+                ),
+            })
+
+            original_limit = capture_module.MAX_CAPTURE_BYTES
+            try:
+                capture_module.MAX_CAPTURE_BYTES = 4096
+                started = time.monotonic()
+                overflow_result = capture_module.run_cmd(
+                    [sys.executable, str(inherited_overflow)],
+                    cwd=stream_tmp,
+                    timeout=5,
+                )
+                overflow_duration = time.monotonic() - started
+            finally:
+                capture_module.MAX_CAPTURE_BYTES = original_limit
+            cases.append({
+                "name": f"{capture_name}_capture_kills_full_group_on_descendant_overflow",
+                "passed": (
+                    overflow_result.get("returncode") == 126
+                    and overflow_result.get("capture_limit_exceeded") is True
+                    and overflow_result.get("process_group_terminated") is True
+                    and overflow_result.get("reader_join_timed_out") is False
+                    and overflow_duration < 3
+                ),
+            })
+
     native_calls_only = write_transcript([native_event(agent) for agent in REQUIRED_NATIVE_AGENTS])
     auth = runner.authenticate_trace(native_calls_only)
     capped, reason = runner.cap_status_by_trace("PASS-TRACKED", auth)
@@ -784,6 +990,189 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
     auth = runner.authenticate_trace(native)
     capped, reason = runner.cap_status_by_trace("PASS-TRACKED", auth)
     cases.append({"name": "all_native_tool_use_and_result_events_authenticate", "passed": auth.get("authenticated") is True and capped == "PASS-TRACKED", "auth": auth, "capped_status": capped, "reason": reason})
+
+    malformed_prefix = write_raw_transcript(
+        '{"type":"assistant","message":\n'
+        + "\n".join(json.dumps(item) for item in completed_native_trace(success=True))
+        + "\n"
+    )
+    auth = runner.authenticate_trace(malformed_prefix)
+    cases.append({
+        "name": "malformed_jsonl_record_rejects_entire_trace",
+        "passed": auth.get("authenticated") is False and bool(auth.get("malformed_stream_records")),
+        "auth": auth,
+    })
+
+    scalar_prefix = write_raw_transcript(
+        "42\n"
+        + "\n".join(json.dumps(item) for item in completed_native_trace(success=True))
+        + "\n"
+    )
+    auth = runner.authenticate_trace(scalar_prefix)
+    cases.append({
+        "name": "non_object_jsonl_record_rejects_entire_trace",
+        "passed": auth.get("authenticated") is False and bool(auth.get("malformed_stream_records")),
+        "auth": auth,
+    })
+
+    first_agent = REQUIRED_NATIVE_AGENTS[0]
+    huge_before_call_record = {
+        "type": "user",
+        "message": {
+            "content": [
+                *(
+                    {"type": "text", "text": "bounded neutral node"}
+                    for _ in range(100_001)
+                ),
+                {
+                    "type": "tool_result",
+                    "tool_use_id": f"toolu-{first_agent}",
+                    "status": "success",
+                    "is_error": False,
+                    "content": "This result occurs before its call.",
+                },
+            ]
+        },
+    }
+    huge_before_call_lines = [
+        huge_before_call_record,
+        native_event(first_agent),
+        *[
+            item
+            for agent in REQUIRED_NATIVE_AGENTS[1:]
+            for item in (native_event(agent), native_result(agent))
+        ],
+    ]
+    auth = runner.authenticate_trace(write_transcript(huge_before_call_lines))
+    cases.append({
+        "name": "over_100k_node_result_before_call_is_bounded_and_rejected",
+        "passed": (
+            auth.get("authenticated") is False
+            and bool(auth.get("trace_bound_violations"))
+            and first_agent in auth.get("missing_result_agents", [])
+        ),
+        "auth": auth,
+    })
+
+    deeply_nested: Dict[str, Any] = {"type": "text", "text": "leaf"}
+    for _ in range(runner.MAX_TRACE_DEPTH + 2):
+        deeply_nested = {"message": deeply_nested}
+    deep_lines = [deeply_nested, *completed_native_trace(success=True)]
+    auth = runner.authenticate_trace(write_transcript(deep_lines))
+    cases.append({
+        "name": "over_depth_trace_record_is_bounded_and_rejected",
+        "passed": auth.get("authenticated") is False and bool(auth.get("trace_bound_violations")),
+        "auth": auth,
+    })
+
+    alias_lines = [native_event(agent) for agent in REQUIRED_NATIVE_AGENTS]
+    alias_ids = [f"toolu-{agent}" for agent in REQUIRED_NATIVE_AGENTS]
+    for group in (alias_ids[:4], alias_ids[4:]):
+        payload: Dict[str, Any] = {
+            "type": "tool_result",
+            "status": "success",
+            "is_error": False,
+            "content": "Aliased result must not fan out across calls.",
+        }
+        for key, value in zip(
+            ("tool_use_id", "toolUseId", "tool_call_id", "toolCallId"),
+            group,
+        ):
+            payload[key] = value
+        alias_lines.append({"type": "user", "message": {"content": [payload]}})
+    auth = runner.authenticate_trace(write_transcript(alias_lines))
+    cases.append({
+        "name": "tool_result_alias_fanout_does_not_authenticate",
+        "passed": auth.get("authenticated") is False and len(auth.get("invalid_result_bindings", [])) == 2,
+        "auth": auth,
+    })
+
+    duplicate_result_lines: List[Dict[str, Any]] = []
+    for agent in REQUIRED_NATIVE_AGENTS:
+        duplicate_result_lines.extend(
+            [native_event(agent), native_result(agent), native_result(agent)]
+        )
+    auth = runner.authenticate_trace(write_transcript(duplicate_result_lines))
+    cases.append({
+        "name": "multiple_results_for_one_native_call_do_not_authenticate",
+        "passed": auth.get("authenticated") is False and bool(auth.get("duplicate_tool_result_ids")),
+        "auth": auth,
+    })
+
+    duplicate_call_lines = completed_native_trace(success=True)
+    duplicate_call_lines.insert(1, native_event(REQUIRED_NATIVE_AGENTS[0]))
+    auth = runner.authenticate_trace(write_transcript(duplicate_call_lines))
+    cases.append({
+        "name": "multiple_calls_for_one_required_lane_do_not_authenticate",
+        "passed": auth.get("authenticated") is False and bool(auth.get("duplicate_agent_calls")),
+        "auth": auth,
+    })
+
+    for content, expected, case_name in (
+        ("0 failures; all checks passed.", True, "zero_failures_result_is_success"),
+        ("No tests failed. All checks passed.", True, "no_tests_failed_result_is_success"),
+        ("Mutation failed as expected; verifier passed.", True, "expected_mutation_failure_result_is_success"),
+        ("Analyzed why the prior command failed and documented the failure mode; findings complete.", True, "failure_analysis_result_is_success"),
+        ("0 failures reported, but FORMAL_SUBAGENT_FAILURE occurred.", False, "explicit_contradiction_dominates_benign_failure_phrase"),
+        ("The subagent was not executed, despite this success envelope.", False, "nonexecution_prose_dominates_success_envelope"),
+        ("Subagent not run; cached output only.", False, "short_nonexecution_prose_dominates_success_envelope"),
+        ("Execution aborted by the coordinator.", False, "aborted_prose_dominates_success_envelope"),
+        ("The worker process was killed.", False, "killed_prose_dominates_success_envelope"),
+        ("Completion was unsuccessful.", False, "unsuccessful_prose_dominates_success_envelope"),
+        ("The agent returned nonzero exit code 2.", False, "nonzero_exit_prose_dominates_success_envelope"),
+        ("The agent returned a non-zero exit code.", False, "unnumbered_nonzero_exit_prose_dominates_success_envelope"),
+        ("The agent's exit code was nonzero.", False, "postfixed_nonzero_exit_prose_dominates_success_envelope"),
+        ("The agent returned exit code -1.", False, "negative_exit_code_prose_dominates_success_envelope"),
+        ("The lane failed before producing findings.", False, "failed_before_output_dominates_success_envelope"),
+    ):
+        node = {
+            "type": "tool_result",
+            "tool_use_id": "toolu-test",
+            "status": "success",
+            "is_error": False,
+            "content": content,
+        }
+        cases.append({
+            "name": case_name,
+            "passed": runner._result_is_success(node) is expected,
+        })
+    for structured_field, structured_value, case_name in (
+        ("executed", False, "structured_not_executed_dominates_success"),
+        ("completed", False, "structured_not_completed_dominates_success"),
+        ("aborted", True, "structured_aborted_dominates_success"),
+        ("killed", True, "structured_killed_dominates_success"),
+        ("returncode", 7, "structured_nonzero_returncode_dominates_success"),
+        ("returncode", 1.5, "structured_fractional_nonzero_returncode_dominates_success"),
+    ):
+        node = {
+            "type": "tool_result",
+            "tool_use_id": "toolu-test",
+            "status": "success",
+            "is_error": False,
+            "content": "Structured findings were produced.",
+            structured_field: structured_value,
+        }
+        cases.append({
+            "name": case_name,
+            "passed": runner._result_is_success(node) is False,
+        })
+    for structured_status, status_label in (
+        ("not_executed", "not_executed_underscore"),
+        ("not executed", "not_executed_space"),
+        ("not_run", "not_run_underscore"),
+        ("timed_out", "timed_out_underscore"),
+    ):
+        node = {
+            "type": "tool_result",
+            "tool_use_id": "toolu-test",
+            "status": structured_status,
+            "is_error": False,
+            "content": "A contradictory status must dominate this content.",
+        }
+        cases.append({
+            "name": f"structured_status_{status_label}_dominates_success",
+            "passed": runner._result_is_success(node) is False,
+        })
 
     mismatched_native = write_transcript([item for agent in REQUIRED_NATIVE_AGENTS for item in (native_event(agent), native_mismatched_result(agent))])
     auth = runner.authenticate_trace(mismatched_native)
@@ -979,6 +1368,42 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
         fake_root.mkdir()
         target = fake_root / "target.md"
         target.write_text("target\n", encoding="utf-8")
+        live_output = tmp / "live-output"
+        live_output.mkdir()
+        positive_transcript = live_runner.fixture_transcript_path(
+            live_output,
+            valid_fixture_id,
+        )
+        live_runner.atomic_replace_transcript(
+            positive_transcript,
+            b"positive transcript\n",
+        )
+        cases.append({
+            "name": "live_transcript_write_is_contained_and_regular",
+            "passed": (
+                positive_transcript.parent == live_output
+                and positive_transcript.read_bytes() == b"positive transcript\n"
+                and positive_transcript.is_file()
+            ),
+        })
+        symlink_sentinel = tmp / "live-symlink-sentinel.txt"
+        symlink_sentinel.write_bytes(b"sentinel\n")
+        symlink_transcript = live_runner.fixture_transcript_path(
+            live_output,
+            "symlink-sentinel",
+        )
+        symlink_transcript.symlink_to(symlink_sentinel)
+        cases.append({
+            "name": "live_transcript_write_rejects_symlink_without_following",
+            "passed": (
+                raises_value_error(
+                    live_runner.atomic_replace_transcript,
+                    symlink_transcript,
+                    b"overwrite\n",
+                )
+                and symlink_sentinel.read_bytes() == b"sentinel\n"
+            ),
+        })
         external = tmp / "external"
         external_json = tmp / "external.json"
         inside = fake_root / "self_validation" / "formal"
@@ -1188,11 +1613,13 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
         )
         stability_target.write_text("stable target\n", encoding="utf-8")
         source_after_restore = runner.file_snapshot_identity(stability_target)
-        restore_stability = runner.target_snapshot_stability(
+        stability_snapshot.write_text("mutated immutable snapshot\n", encoding="utf-8")
+        snapshot_after_mutation = runner.file_snapshot_identity(stability_snapshot)
+        snapshot_mutation_stability = runner.target_snapshot_stability(
             source_before,
             source_after_restore,
             snapshot_before,
-            runner.file_snapshot_identity(stability_snapshot),
+            snapshot_after_mutation,
         )
         cases.append({
             "name": "target_mutation_forbids_formal_pass",
@@ -1206,14 +1633,15 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
             ),
         })
         cases.append({
-            "name": "target_mutate_restore_metadata_change_forbids_formal_pass",
+            "name": "target_snapshot_mutation_forbids_formal_pass",
             "passed": (
                 source_before["sha256"] == source_after_restore["sha256"]
-                and restore_stability["stable"] is False
-                and restore_stability["source_metadata_stable"] is False
+                and snapshot_before["sha256"] != snapshot_after_mutation["sha256"]
+                and snapshot_mutation_stability["stable"] is False
+                and snapshot_mutation_stability["snapshot_metadata_stable"] is False
                 and runner.cap_status_by_target_stability(
                     "PASS-TRACKED",
-                    restore_stability,
+                    snapshot_mutation_stability,
                 )[0]
                 == "FAIL"
             ),
@@ -1657,3 +2085,4 @@ if __name__ == "__main__":
 # v1.0.1 padding: tool_use_inside_tool_result_content_does_not_authenticate / tool_result_inside_tool_result_content_does_not_authenticate / fake_tool_use_and_result_inside_tool_result_content_does_not_authenticate / tool_use_inside_tool_use_content_does_not_authenticate / tool_result.content payloads are output data, not nested runtime trace events
 
 # v1.0.1 padding: tool_use_inside_tool_result_payload_does_not_authenticate / tool_result_inside_tool_result_payload_does_not_authenticate / fake_tool_use_and_result_inside_tool_result_data_does_not_authenticate / tool_use_inside_tool_result_delta_does_not_authenticate / user_message_tool_use_does_not_authenticate / assistant_message_tool_result_does_not_authenticate / role_inverted_tool_use_result_trace_does_not_authenticate / valid_assistant_tool_use_user_tool_result_still_authenticates / hard event boundary for data payload delta message children / role-aware tool event authentication
+# Compatibility token retained for validators predating the deterministic snapshot-mutation replacement: target_mutate_restore_metadata_change_forbids_formal_pass.

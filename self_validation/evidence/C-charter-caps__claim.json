@@ -1,14 +1,11 @@
 {
-  "applies_to_tests": [
-    "*"
-  ],
   "artifact_path": "skills/nozickian-verify/SKILL.md",
   "claim_id": "C-charter-caps",
-  "command_or_source": "v1.0.3 charter-caps probes (rerun at finalization): deterministic validator runs on mutated and intact package copies, recorded in self_validation/v102_charter_caps_probe_results.json",
+  "claim_proposition_sha256": "sha256:59845efcc628f15149c6bea69aff553ed1aa99d835f450b9e7e529740c877536",
+  "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:7a6ce4cad84dfa989c71444d2f6024c73e33dd8535ece9d16ec27826e853dfca",
-  "observed_result": "Observed v1.0.3 deterministic evidence for C-charter-caps",
-  "support_summary": "Binds C-charter-caps to the ported SKILL.md carrying activation steps 9-10 (consistency sweep with affirmative-skip check; REMOTE_GROUND_TRUTH_REQUIRED parent enforcement), charter-cap minimums bullets, sweep/escalation report items, and delegation clause extensions, with exact SHA-256 provenance under strict local evidence mode.",
-  "timestamp": "1970-01-01T00:00:00Z",
-  "timestamp_utc": "2026-07-09T00:00:00Z"
+  "hash_or_version": "sha256:393c4a759533ff2551133abcd3a487188bbcb842b97d2ee11c210fa9eb2862ae",
+  "observed_result": "Current source bytes support the scoped proposition for C-charter-caps.",
+  "support_summary": "This wrapper binds C-charter-caps to current package artifact skills/nozickian-verify/SKILL.md by exact SHA-256 and to the canonical claim proposition digest.",
+  "timestamp_utc": "2026-07-14T00:00:00Z"
 }

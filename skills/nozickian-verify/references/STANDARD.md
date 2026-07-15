@@ -27,7 +27,7 @@ Each claim record must include:
 
 A `PASS` result for claim `p` does not automatically verify any entailed, summarized, downstream, deployment, safety, compliance, or action-authorizing claim `q`. Nozickian tracking is claim- and method-relative: a method may track `p` without tracking a later operational or deployment conclusion inferred from `p`.
 
-Any such downstream `q` must be represented as its own claim or as an explicit `derived_or_downstream_claims` record with method `M`, evidence, false-world tests, true-world tests, contradiction review, and residual-risk assessment. Entailed but untested downstream claims are `UNVERIFIED` and must not inherit `PASS-TRACKED` or `PASS-SCOPED` from their source claims.
+Any such downstream `q` must be represented as its own claim or as an explicit `derived_or_downstream_claims` record with method `M`, evidence, false-world tests, true-world tests, contradiction review, and residual-risk assessment. Entailed but untested downstream claims are `UNKNOWN` and must not inherit `PASS-TRACKED` or `PASS-SCOPED` from their source claims. `UNVERIFIED` is reserved for a whole-artifact gate result, not a claim label.
 
 ### 2. Real method M
 

@@ -38,8 +38,8 @@ Before doing nontrivial verification, read these support files as needed:
 7. Run deterministic scripts where applicable:
 
 ```bash
-python3 skills/nozickian-verify/scripts/ntt_gate.py <certificate.json> --markdown <gate.md>
-python3 skills/nozickian-verify/scripts/validate_package.py <plugin-root> --self-test --markdown <report.md>
+python3 skills/nozickian-verify/scripts/ntt_gate.py <certificate.json> --evidence-root <evidence-root> --strict-evidence --markdown <gate.md>
+python3 skills/nozickian-verify/scripts/validate_package.py <plugin-root> --self-test --markdown <report-outside-plugin-root.md>
 ```
 
 8. If the user asks to certify or promote PASS-SCOPED to PASS-TRACKED, require promotion certificate v2 with exact-string `promotion_schema_version: "2.0"`, exact required top-level JSON types, and the fixed nine-role `promotion-evidence-v2` canonical DAG; fresh deterministic suites; fresh allowlisted official validators; live Claude Code fixtures; formal result `2.0` with trace authentication, immutable standalone target snapshot, prompt companion, and target-snapshot companion; and explicit `downstream_review`. Text validator captures never authorize. Absent official tools scope fresh execution only through the explicit flag while both official-policy nodes and the fixed dependencies remain mandatory; installed failures fail. In v1.0.3, `certify_pass_tracked_upgrade.py` alone always caps a complete modeled result at `PASS-SCOPED` / `CAPPED`, `promotion_authorized: false`, `satisfied_profile: promotion-contract-v2-complete`, both explicit unresolved Issue #5 obligations, and a nonzero exit. Generic gate/formal PASS-TRACKED semantics remain unchanged.
@@ -129,9 +129,9 @@ The synthetic promotion aggregate is `python3 skills/nozickian-verify/scripts/ru
 This regeneration hardens formal trace authentication beyond exact tool-use id matching. A `PASS-TRACKED` formal run requires native `ntt-*` Agent/Task tool-use events from recognized stream-json event positions, followed by separate successful result/completion events whose explicit `tool_use_id` or `tool_call_id` matches the tool-use id. Result-shaped objects nested inside `input`, `arguments`, or same-event data do not authenticate a lane, and result-before-call ordering is rejected. Strict local evidence rejects case-insensitive and scheme-like URI refs in addition to lowercase remote refs.
 
 
-## v1.0.1 release-lock idempotence note
+## Release-lock stable-tree note
 
-The release-lock command chain invokes `validate_package.py . --self-test` inside the idempotence regression so the command list can be replayed without recursively spawning another release-lock replay. A normal maintainer self-test without that flag still exercises the release-lock idempotence check.
+The maintainer's actual `validate_package.py . --self-test` invocation is bound from its start through completion by a full package-entry snapshot. The non-recursive stable-tree check then runs the reviewed deterministic CLI entry points twice as subprocesses with unique external outputs. Optional validators, live runtime evaluation, and caller-supplied promotion evidence remain explicit scope exclusions; they are not relabeled as deterministic equivalents. A self-test `--markdown` destination must resolve outside the package root and is written by atomic replacement.
 
 
 ### v1.0.1 trace-authentication addendum

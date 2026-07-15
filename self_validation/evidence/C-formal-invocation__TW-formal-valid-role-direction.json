@@ -1,11 +1,14 @@
 {
-  "artifact_path": "self_validation/v101_targeted_probe_results.json",
+  "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-formal-invocation",
-  "command_or_source": "v1.0.3 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
+  "claim_proposition_sha256": "sha256:ad5a976a1b91c94ca32386a493b58776f54a6fcf63bbdae479de86154acd2e43",
+  "command_or_source": "run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:c7e468e9b1bd106719da03dff50a9b9b2708ab7a4040bfdad3e315259a9b0d1b",
-  "observed_result": "Observed v1.0.3 deterministic evidence for C-formal-invocation / TW-formal-valid-role-direction",
-  "support_summary": "This structured evidence binds TW-formal-valid-role-direction to self_validation/v101_targeted_probe_results.json, a package-local targeted probe artifact. v1.0.3 formal-runner contract evidence for hard event-boundary trace parsing, data/payload/delta event-smuggling rejection, and role-aware tool-use/tool-result direction.",
+  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
+  "modal_case_sha256": "sha256:200309facf8ddfa66fc1e513b33e65024814732cca4382b2f2cc356d98897f46",
+  "observation_id": "obs:C-formal-invocation:TW-formal-valid-role-direction",
+  "observed_result": "The formal contract authenticated every required lane in the valid role-directed trace.",
+  "support_summary": "This wrapper binds TW-formal-valid-role-direction to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "TW-formal-valid-role-direction",
-  "timestamp_utc": "2026-06-04T00:00:00Z"
+  "timestamp_utc": "2026-07-14T00:00:00Z"
 }

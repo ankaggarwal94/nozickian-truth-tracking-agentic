@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-github-readme-documentation",
+  "claim_proposition_sha256": "sha256:7aa3f6e8c7fafe0ac5e9ffe5a65d423e0a8695b381203fad4f74c6e174c64227",
+  "command_or_source": "validate_package.py --self-test",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
+  "modal_case_sha256": "sha256:1512bda907c30be17973a9e7c8f5fcd89ff08ddda9a7fb707bec4051ec5523e2",
+  "observation_id": "obs:C-github-readme-documentation:TW-github-readmes-benign-note",
+  "observed_result": "The validator true-world lane retained the package after a benign GitHub documentation note.",
+  "support_summary": "This wrapper binds TW-github-readmes-benign-note to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "TW-github-readmes-benign-note",
+  "timestamp_utc": "2026-07-14T00:00:00Z"
+}

@@ -7,13 +7,13 @@ optionally missing or semantically unbound evidence artifacts when --evidence-ro
 is supplied.
 
 This gate is intentionally conservative: it checks declared certificate structure,
-local evidence-ref containment, unique canonical evidence-ref and modal-test counting, structured evidence binding for every cited local ref, and exact SHA-256 equality between artifact_path and hash_or_version, and URI-scheme rejection for both evidence refs and artifact_path. In strict local evidence mode, every cited evidence ref must be a valid in-root JSON evidence artifact; one good ref cannot mask a bad cited ref, and duplicate or aliased refs count once for minimum evidence thresholds, and duplicate modal tests count once for sensitivity/adherence thresholds. It is not a substitute
+local evidence-ref containment, hardlink-aware evidence identity, case-bound modal observations, proposition-bound downstream passes, structured evidence binding for every cited local ref, exact SHA-256 equality between artifact_path and hash_or_version, and URI-scheme rejection for both evidence refs and artifact_path. In strict local evidence mode, every cited evidence ref must be a valid in-root JSON evidence artifact; one good ref cannot mask a bad cited ref, duplicate or physically aliased refs count once for minimum evidence thresholds, and duplicate modal observations count once for sensitivity/adherence thresholds. It is not a substitute
 for expert judgment about whether every source semantically proves every claim, but
 it prevents a bare README, LICENSE, or unrelated nonempty file from counting as
 claim evidence for PASS-TRACKED.
 """
 from __future__ import annotations
-import argparse, hashlib, json, math, os, re, uuid
+import argparse, hashlib, json, math, os, re, stat, unicodedata, uuid
 from urllib.parse import urlparse
 from dataclasses import dataclass, asdict
 from pathlib import Path, PurePosixPath
@@ -38,8 +38,19 @@ TRUE_OUTCOMES = {"retained_true_claim", "accepted_equivalent", "passed_benign_va
 NEG_FALSE = ("accepted false", "certified false", "passed false", "ignored contradiction", "hallucinated", "misrepresented", "failed to flag", "did not reject")
 NEG_TRUE = ("rejected equivalent", "overfit", "failed benign", "did not retain", "lost true", "penalized alternate")
 UNKNOWN = {"", "unknown", "inferred_unknown", "n/a", "none"}
-STRUCTURED_EVIDENCE_FIELDS = ("evidence_schema_version", "claim_id", "artifact_path", "command_or_source", "observed_result", "support_summary", "timestamp_utc", "hash_or_version")
+STRUCTURED_EVIDENCE_FIELDS = ("evidence_schema_version", "claim_id", "claim_proposition_sha256", "artifact_path", "command_or_source", "observed_result", "support_summary", "timestamp_utc", "hash_or_version")
 STRUCTURED_TEST_FIELDS = ("test_id",)
+OBSERVATION_SCHEMA_VERSION = "1.0"
+PROPOSITION_BINDING_SCHEMA_VERSION = "1.0"
+MAX_CERTIFICATE_DEPTH = 128
+MAX_CERTIFICATE_NODES = 100_000
+MAX_CERTIFICATE_FIELDS = 100_000
+MAX_CERTIFICATE_BYTES = 8_388_608
+MAX_EVIDENCE_WRAPPER_BYTES = 1_048_576
+MAX_OBSERVATION_LEDGER_BYTES = 8_388_608
+MAX_EVIDENCE_JSON_DEPTH = 64
+MAX_EVIDENCE_JSON_NODES = 100_000
+MAX_EVIDENCE_JSON_FIELDS = 100_000
 DOWNSTREAM_PASS_STATUSES = {"pass", "passed", "verified", "confirmed", "pass-tracked", "pass-scoped", "pass_tracked", "pass_scoped"}
 DOWNSTREAM_NONPASS_STATUSES = {
     "unverified",
@@ -93,6 +104,19 @@ class EvidenceCheck:
     artifact_identity: str = ""
     artifact_path_resolved: Optional[str] = None
     artifact_sha256: Optional[str] = None
+    observation_id: str = ""
+    wrapper_sha256: str = ""
+    modal_case_sha256: str = ""
+
+
+@dataclass(frozen=True)
+class BoundedJsonResult:
+    data: Any = None
+    sha256: str = ""
+    reason: str = ""
+
+
+JsonCacheKey = Tuple[str, int, str, int, int, int]
 
 @dataclass
 class TestResult:
@@ -141,7 +165,10 @@ def normalize_cli_display(value: Any, package_root: Optional[Path]) -> Any:
     """Normalize only serialized CLI/report values, not gate evaluation state."""
     if package_root is None:
         return value
-    root_text = str(package_root.resolve())
+    try:
+        root_text = str(package_root.resolve())
+    except (OSError, RuntimeError, ValueError):
+        root_text = str(package_root)
     if isinstance(value, str):
         return re.sub(
             re.escape(root_text) + r"(?=$|[\\/])",
@@ -166,47 +193,287 @@ def _unknown_item(v: Any) -> bool:
     return _nonempty(v)
 
 
-def _collect_method_unknowns(cert: Mapping[str, Any], max_depth: int = 6) -> List[Any]:
-    """Collect non-placeholder method unknowns recorded at certificate scope.
-    Covers canonical method_manifest.unknowns plus near-miss locations (synonym key
-    method_unknowns, nested sub-objects, top-level cert keys) so a material unknown
-    cannot escape PASS-TRACKED by being recorded off-schema. Per-claim method_unknowns
-    are handled separately in evaluate_claim. max_depth < 0 means unbounded.
+def _validate_json_bounds(
+    root: Any,
+    *,
+    max_depth: int = MAX_CERTIFICATE_DEPTH,
+    max_nodes: int = MAX_CERTIFICATE_NODES,
+    max_fields: int = MAX_CERTIFICATE_FIELDS,
+    label: str = "certificate",
+) -> Optional[str]:
+    """Reject non-JSON, cyclic, over-deep, or oversized input.
+
+    Once this succeeds, security-sensitive walks can be exhaustive without a
+    caller-controlled recursion limit or unbounded resource consumption.
+    Reused object identities are permitted when they are not on the active
+    traversal path; each occurrence still consumes the node/field budget.
     """
-    found: List[Any] = []
-    def walk(node: Any, depth: int = 0) -> None:
-        if max_depth >= 0 and depth > max_depth: return
+    stack: List[Tuple[Any, int, bool]] = [(root, 0, False)]
+    active_containers: set[int] = set()
+    nodes = 0
+    fields = 0
+    while stack:
+        node, depth, exiting = stack.pop()
+        if exiting:
+            active_containers.discard(id(node))
+            continue
+        nodes += 1
+        if nodes > max_nodes:
+            return (
+                f"{label} exceeds maximum JSON node count "
+                f"{max_nodes}"
+            )
+        if depth > max_depth:
+            return (
+                f"{label} exceeds maximum JSON depth "
+                f"{max_depth}"
+            )
         if isinstance(node, Mapping):
-            for k, v in node.items():
-                if k in ("unknowns", "method_unknowns"):
-                    found.extend([u for u in _as_list(v) if _unknown_item(u)])
-                else:
-                    walk(v, depth + 1)
+            identity = id(node)
+            if identity in active_containers:
+                return f"{label} contains a cyclic JSON object"
+            active_containers.add(identity)
+            if any(type(key) is not str for key in node):
+                return f"{label} JSON object contains a non-string key"
+            fields += len(node)
+            if fields > max_fields:
+                return (
+                    f"{label} exceeds maximum JSON field count "
+                    f"{max_fields}"
+                )
+            stack.append((node, depth, True))
+            stack.extend(
+                (value, depth + 1, False) for value in node.values()
+            )
         elif isinstance(node, list):
-            for item in node:
-                walk(item, depth + 1)
-    if isinstance(cert, Mapping):
-        walk(cert.get("method_manifest"))
-        for key in ("unknowns", "method_unknowns"):
-            found.extend([u for u in _as_list(cert.get(key)) if _unknown_item(u)])
+            identity = id(node)
+            if identity in active_containers:
+                return f"{label} contains a cyclic JSON array"
+            active_containers.add(identity)
+            stack.append((node, depth, True))
+            stack.extend((value, depth + 1, False) for value in node)
+        elif node is None or type(node) in {str, bool, int}:
+            continue
+        elif type(node) is float:
+            if not math.isfinite(node):
+                return f"{label} contains a non-finite JSON number"
+        else:
+            return (
+                f"{label} contains a non-JSON value of type "
+                f"{type(node).__name__}"
+            )
+    return None
+
+
+def _collect_unknowns_in_method(root: Any) -> List[Any]:
+    found: List[Any] = []
+    stack: List[Any] = [root]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, Mapping):
+            for key, value in node.items():
+                if key in ("unknowns", "method_unknowns"):
+                    found.extend(
+                        item for item in _as_list(value) if _unknown_item(item)
+                    )
+                else:
+                    stack.append(value)
+        elif isinstance(node, list):
+            stack.extend(node)
+    return found
+
+
+def _collect_method_unknowns(cert: Mapping[str, Any]) -> List[Any]:
+    """Exhaustively collect unknowns from every declared method scope."""
+    found = _collect_unknowns_in_method(cert.get("method_manifest"))
+    raw_claims = cert.get("claims")
+    if isinstance(raw_claims, list):
+        for claim in raw_claims:
+            if isinstance(claim, Mapping):
+                found.extend(
+                    _collect_unknowns_in_method(
+                        claim.get("method_m", claim.get("method"))
+                    )
+                )
+    for key in ("unknowns", "method_unknowns"):
+        found.extend(
+            item for item in _as_list(cert.get(key)) if _unknown_item(item)
+        )
     return found
 
 
 def load_json(path: Path) -> Any:
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise InvalidInputError(
-            f"certificate JSON could not be read: {type(exc).__name__}"
-        ) from None
+    result = _bounded_json_read(
+        path,
+        max_bytes=MAX_CERTIFICATE_BYTES,
+        label="certificate",
+        max_depth=MAX_CERTIFICATE_DEPTH,
+        max_nodes=MAX_CERTIFICATE_NODES,
+        max_fields=MAX_CERTIFICATE_FIELDS,
+    )
+    if result.reason:
+        raise InvalidInputError(result.reason)
+    return result.data
 
 
 def sha256_path(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    """Hash one stable regular file without following a swapped-in symlink."""
+    descriptor: Optional[int] = None
+    before = os.lstat(path)
+    if not stat.S_ISREG(before.st_mode):
+        raise OSError("path is not a regular file")
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags)
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode):
+            raise OSError("opened path is not a regular file")
+        if (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
+            raise OSError("path changed before hash read")
+        digest = hashlib.sha256()
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+        after = os.fstat(descriptor)
+        if (
+            (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
+            != (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns)
+        ):
+            raise OSError("path changed during hash read")
+        return digest.hexdigest()
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
+def _bounded_json_read(
+    path: Path,
+    *,
+    max_bytes: int,
+    label: str,
+    max_depth: int = MAX_EVIDENCE_JSON_DEPTH,
+    max_nodes: int = MAX_EVIDENCE_JSON_NODES,
+    max_fields: int = MAX_EVIDENCE_JSON_FIELDS,
+    cache: Optional[Dict[JsonCacheKey, BoundedJsonResult]] = None,
+) -> BoundedJsonResult:
+    """Read one regular non-symlink JSON file once under explicit bounds."""
+    cache_key = (
+        str(path),
+        max_bytes,
+        label,
+        max_depth,
+        max_nodes,
+        max_fields,
+    )
+    if cache is not None and cache_key in cache:
+        return cache[cache_key]
+
+    def finish(result: BoundedJsonResult) -> BoundedJsonResult:
+        if cache is not None:
+            cache[cache_key] = result
+        return result
+
+    descriptor: Optional[int] = None
+    try:
+        before = os.lstat(path)
+        if not stat.S_ISREG(before.st_mode):
+            return finish(BoundedJsonResult(reason=f"{label} is not a regular file"))
+        if before.st_size > max_bytes:
+            return finish(
+                BoundedJsonResult(
+                    reason=f"{label} exceeds byte limit {max_bytes}"
+                )
+            )
+        flags = os.O_RDONLY
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        descriptor = os.open(path, flags)
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode):
+            return finish(BoundedJsonResult(reason=f"{label} is not a regular file"))
+        if (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
+            return finish(BoundedJsonResult(reason=f"{label} changed before read"))
+        if opened.st_size > max_bytes:
+            return finish(
+                BoundedJsonResult(
+                    reason=f"{label} exceeds byte limit {max_bytes}"
+                )
+            )
+        raw = bytearray()
+        while len(raw) <= max_bytes:
+            chunk = os.read(
+                descriptor,
+                min(1024 * 1024, max_bytes + 1 - len(raw)),
+            )
+            if not chunk:
+                break
+            raw.extend(chunk)
+        after = os.fstat(descriptor)
+        if len(raw) > max_bytes:
+            return finish(
+                BoundedJsonResult(
+                    reason=f"{label} exceeds byte limit {max_bytes}"
+                )
+            )
+        if (
+            (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
+            != (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns)
+        ):
+            return finish(BoundedJsonResult(reason=f"{label} changed during read"))
+        raw_bytes = bytes(raw)
+        try:
+            text = raw_bytes.decode("utf-8")
+            data = json.loads(text)
+        except (
+            UnicodeError,
+            json.JSONDecodeError,
+            RecursionError,
+            MemoryError,
+            OverflowError,
+        ) as exc:
+            return finish(
+                BoundedJsonResult(
+                    reason=f"{label} JSON parse failed: {type(exc).__name__}"
+                )
+            )
+        bounds_error = _validate_json_bounds(
+            data,
+            max_depth=max_depth,
+            max_nodes=max_nodes,
+            max_fields=max_fields,
+            label=label,
+        )
+        if bounds_error is not None:
+            return finish(BoundedJsonResult(reason=bounds_error))
+        return finish(
+            BoundedJsonResult(
+                data=data,
+                sha256=hashlib.sha256(raw_bytes).hexdigest(),
+            )
+        )
+    except (
+        OSError,
+        RuntimeError,
+        ValueError,
+        RecursionError,
+        MemoryError,
+        OverflowError,
+    ) as exc:
+        return finish(
+            BoundedJsonResult(
+                reason=f"{label} read failed: {type(exc).__name__}"
+            )
+        )
+    finally:
+        if descriptor is not None:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
 
 
 def _canonical_claimed_sha256(value: Any) -> Optional[str]:
@@ -232,16 +499,11 @@ def _artifact_under_root(artifact_path: Any, evidence_root: Optional[Path]) -> T
     scheme = (urlparse(rel).scheme or "").strip()
     if scheme:
         return None, "artifact_path URI schemes are not allowed in strict local evidence mode"
-    candidate = Path(rel)
-    root = evidence_root.resolve()
-    path = (root / candidate).resolve()
-    try:
-        path.relative_to(root)
-    except ValueError:
-        return None, "artifact_path escapes evidence_root"
-    if not path.is_file():
-        return None, "artifact_path does not identify an existing file"
-    return path, None
+    return _resolve_regular_under_root(
+        rel,
+        evidence_root,
+        "artifact_path",
+    )
 
 
 def _verify_artifact_sha256(data: Mapping[str, Any], evidence_root: Optional[Path]) -> Tuple[List[str], Optional[str], Optional[str]]:
@@ -260,11 +522,116 @@ def _verify_artifact_sha256(data: Mapping[str, Any], evidence_root: Optional[Pat
     claimed = _canonical_claimed_sha256(data.get("hash_or_version"))
     if claimed is None:
         reasons.append("hash_or_version must be a SHA-256 digest, optionally prefixed by sha256:")
-        return reasons, str(artifact.resolve()), None
-    actual = sha256_path(artifact)
+        return reasons, str(artifact), None
+    try:
+        actual = sha256_path(artifact)
+    except (OSError, RuntimeError, ValueError) as exc:
+        reasons.append(
+            "artifact_path SHA-256 read failed: "
+            f"{type(exc).__name__}"
+        )
+        return reasons, str(artifact), None
     if actual != claimed:
         reasons.append(f"hash_or_version does not match artifact_path SHA-256: claimed={claimed} actual={actual}")
-    return reasons, str(artifact.resolve()), actual
+    return reasons, str(artifact), actual
+
+
+def _verify_observation_binding(
+    data: Mapping[str, Any],
+    artifact_path_resolved: Optional[str],
+    claim_id: Optional[str],
+    test_id: Optional[str],
+    test_kind: Optional[str],
+    claim_proposition_sha256: Optional[str],
+    modal_case_sha256: Optional[str],
+    json_cache: Optional[
+        Dict[JsonCacheKey, BoundedJsonResult]
+    ] = None,
+) -> Tuple[List[str], str]:
+    """Verify an optional case-level observation inside a hashed JSON ledger.
+
+    Distinct evidence wrappers over one aggregate file are not independent by
+    themselves. A wrapper may name an observation only when the hashed artifact
+    contains an exact, passing claim/test/kind-bound observation record.
+    """
+    raw_observation_id = data.get("observation_id")
+    if raw_observation_id is None:
+        return [], ""
+    if (
+        type(raw_observation_id) is not str
+        or raw_observation_id != raw_observation_id.strip()
+        or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}", raw_observation_id)
+    ):
+        return ["observation_id is not a canonical bounded identifier"], ""
+    observation_id = raw_observation_id
+    if not artifact_path_resolved:
+        return ["observation_id cannot be verified without artifact_path"], ""
+    ledger_result = _bounded_json_read(
+        Path(artifact_path_resolved),
+        max_bytes=MAX_OBSERVATION_LEDGER_BYTES,
+        label="observation ledger",
+        cache=json_cache,
+    )
+    if ledger_result.reason:
+        raise InvalidInputError(ledger_result.reason)
+    ledger = ledger_result.data
+    if not isinstance(ledger, Mapping):
+        return ["observation ledger JSON is not an object"], ""
+    if ledger.get("observation_schema_version") != OBSERVATION_SCHEMA_VERSION:
+        return [
+            "observation ledger schema is not "
+            f"{OBSERVATION_SCHEMA_VERSION}"
+        ], ""
+    observations = ledger.get("observations")
+    if not isinstance(observations, Mapping):
+        return ["observation ledger lacks an observations object"], ""
+    record = observations.get(observation_id)
+    if not isinstance(record, Mapping):
+        return [
+            f"observation ledger lacks record {observation_id}"
+        ], ""
+    reasons: List[str] = []
+    expected_bindings = {
+        "claim_id": claim_id,
+        "test_id": test_id,
+        "kind": test_kind,
+    }
+    for field, expected in expected_bindings.items():
+        if expected is not None and record.get(field) != expected:
+            reasons.append(
+                f"observation {observation_id} {field} does not match {expected}"
+            )
+    for field, expected in (
+        ("claim_proposition_sha256", claim_proposition_sha256),
+        ("modal_case_sha256", modal_case_sha256),
+    ):
+        if expected is not None and _canonical_claimed_sha256(
+            record.get(field)
+        ) != expected:
+            reasons.append(
+                f"observation {observation_id} {field} does not match"
+            )
+    if _lower(record.get("result")) != "pass":
+        reasons.append(f"observation {observation_id} result is not pass")
+    outcome = _lower(record.get("outcome"))
+    accepted_outcomes = (
+        FALSE_OUTCOMES if test_kind == "false_world" else TRUE_OUTCOMES
+    )
+    if outcome not in accepted_outcomes:
+        reasons.append(
+            f"observation {observation_id} outcome is not accepted for {test_kind}"
+        )
+    ledger_observed = str(record.get("observed_result") or "").strip()
+    wrapper_observed = str(data.get("observed_result") or "").strip()
+    if len(ledger_observed) < 10:
+        reasons.append(
+            f"observation {observation_id} observed_result is too short"
+        )
+    elif ledger_observed != wrapper_observed:
+        reasons.append(
+            f"observation {observation_id} observed_result does not match evidence wrapper"
+        )
+    return reasons, observation_id if not reasons else ""
 
 def _canonical_relative_path(
     value: Any,
@@ -275,6 +642,13 @@ def _canonical_relative_path(
         return None, f"{field} is empty or not a string"
     if value != value.strip():
         return None, f"{field} has surrounding whitespace"
+    if any(
+        ord(character) < 32
+        or ord(character) == 127
+        or unicodedata.category(character) == "Cc"
+        for character in value
+    ):
+        return None, f"{field} contains a NUL or control character"
     if "\\" in value:
         return None, f"{field} uses a non-canonical separator"
     if "::" in value:
@@ -293,6 +667,37 @@ def _canonical_relative_path(
     ):
         return None, f"{field} is not a canonical relative POSIX path"
     return value, None
+
+
+def _resolve_regular_under_root(
+    relative: str,
+    evidence_root: Path,
+    field: str,
+) -> Tuple[Optional[Path], Optional[str]]:
+    """Resolve a canonical relative path without following in-root symlinks."""
+    try:
+        root = evidence_root.resolve(strict=True)
+        root_stat = os.stat(root, follow_symlinks=False)
+        if not stat.S_ISDIR(root_stat.st_mode):
+            return None, "evidence_root is not a directory"
+        current = root
+        parts = PurePosixPath(relative).parts
+        for index, part in enumerate(parts):
+            current = current / part
+            entry = os.lstat(current)
+            if stat.S_ISLNK(entry.st_mode):
+                return None, f"{field} traverses a symlink"
+            if index < len(parts) - 1 and not stat.S_ISDIR(entry.st_mode):
+                return None, f"{field} parent is not a directory"
+        final = os.lstat(current)
+        if not stat.S_ISREG(final.st_mode):
+            return None, f"{field} does not identify a regular file"
+        current.relative_to(root)
+        return current, None
+    except FileNotFoundError:
+        return None, f"{field} is not an existing local file"
+    except (OSError, RuntimeError, ValueError) as exc:
+        return None, f"{field} resolution failed: {type(exc).__name__}"
 
 
 def _raw_ref(ref: Any) -> str:
@@ -340,21 +745,18 @@ def _ref_to_path_checked(ref: Any, evidence_root: Path) -> Tuple[Optional[Path],
     raw, canonical_error = _canonical_relative_path(ref, "evidence ref")
     if canonical_error is not None or raw is None:
         return None, canonical_error
-    p = Path(raw)
-    if p.is_absolute():
-        return None, "evidence ref must be relative to evidence_root"
-    root = evidence_root.resolve()
-    resolved = (root / p).resolve()
+    resolved, resolution_error = _resolve_regular_under_root(
+        raw,
+        evidence_root,
+        "evidence ref",
+    )
+    if resolution_error is not None or resolved is None:
+        return None, resolution_error
     try:
-        resolved.relative_to(root)
-    except ValueError:
-        return None, "evidence ref escapes evidence_root"
-    if not resolved.exists():
-        return None, "evidence ref is not an existing local file"
-    if not resolved.is_file():
-        return None, "evidence ref is not a local file"
-    if resolved.stat().st_size <= 0:
-        return None, "evidence ref is empty"
+        if os.stat(resolved, follow_symlinks=False).st_size <= 0:
+            return None, "evidence ref is empty"
+    except (OSError, ValueError) as exc:
+        return None, f"evidence ref stat failed: {type(exc).__name__}"
     return resolved, None
 
 
@@ -371,7 +773,7 @@ def _canonical_evidence_key(ref: Any, evidence_root: Optional[Path]) -> str:
     path, err = _ref_to_path_checked(ref, evidence_root)
     if err or path is None:
         return f"<invalid:{str(ref or '')}>"
-    return str(path.resolve())
+    return str(path)
 
 
 def _evidence_exists(ref: Any, evidence_root: Optional[Path]) -> bool:
@@ -401,32 +803,44 @@ def _matches_test(data: Mapping[str, Any], test_id: Optional[str]) -> bool:
     return "*" in applies or test_id in applies
 
 
-def _load_structured_evidence(ref: Any, evidence_root: Optional[Path], claim_id: Optional[str] = None, test_id: Optional[str] = None) -> EvidenceCheck:
+def _load_structured_evidence(
+    ref: Any,
+    evidence_root: Optional[Path],
+    claim_id: Optional[str] = None,
+    claim_proposition: Any = None,
+    test_id: Optional[str] = None,
+    test_kind: Optional[str] = None,
+    modal_test: Optional[Mapping[str, Any]] = None,
+    json_cache: Optional[
+        Dict[JsonCacheKey, BoundedJsonResult]
+    ] = None,
+) -> EvidenceCheck:
     ref_s = str(ref or "")
     reasons: List[str] = []
     if evidence_root is None:
         # Without a local evidence root, the deterministic gate can only check
-        # declared certificate structure. Use --evidence-root for provenance.
-        exists = _nonempty(ref)
-        return EvidenceCheck(ref_s, bool(exists), bool(exists), [] if exists else ["evidence ref is empty"])
+        # declared certificate structure. Do not report existence or structured
+        # verification for an unchecked string.
+        return EvidenceCheck(
+            ref_s,
+            False,
+            False,
+            ["local evidence was not checked without evidence_root"],
+        )
     path, err = _ref_to_path_checked(ref, evidence_root)
     if err:
         return EvidenceCheck(ref_s, False, False, [err])
     assert path is not None
-    canonical_ref = str(path.resolve())
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        return EvidenceCheck(
-            ref_s,
-            True,
-            False,
-            [
-                "structured evidence must be JSON: "
-                f"{type(exc).__name__}"
-            ],
-            canonical_ref=canonical_ref,
-        )
+    canonical_ref = str(path)
+    wrapper_result = _bounded_json_read(
+        path,
+        max_bytes=MAX_EVIDENCE_WRAPPER_BYTES,
+        label="structured evidence wrapper",
+        cache=json_cache,
+    )
+    if wrapper_result.reason:
+        raise InvalidInputError(wrapper_result.reason)
+    data = wrapper_result.data
     if not isinstance(data, Mapping):
         return EvidenceCheck(ref_s, True, False, ["structured evidence JSON is not an object"], canonical_ref=canonical_ref)
     for field in STRUCTURED_EVIDENCE_FIELDS:
@@ -447,8 +861,49 @@ def _load_structured_evidence(ref: Any, evidence_root: Optional[Path], claim_id:
         reasons.append("support_summary too short to evidence semantic support")
     if len(observed.strip()) < 10:
         reasons.append("observed_result too short to evidence an observation")
+    expected_claim_digest = _proposition_sha256(claim_proposition)
+    wrapper_claim_digest = _canonical_claimed_sha256(
+        data.get("claim_proposition_sha256")
+    )
+    if expected_claim_digest is None:
+        reasons.append("claim proposition cannot be canonicalized")
+    elif wrapper_claim_digest != expected_claim_digest:
+        reasons.append(
+            "claim_proposition_sha256 does not match certificate claim text"
+        )
+    expected_modal_digest: Optional[str] = None
+    if test_id is not None:
+        if modal_test is None:
+            reasons.append("modal test binding is unavailable")
+        else:
+            expected_modal_digest = _modal_case_sha256(
+                modal_test,
+                claim_proposition,
+                test_kind or "",
+                data.get("observed_result"),
+            )
+            wrapper_modal_digest = _canonical_claimed_sha256(
+                data.get("modal_case_sha256")
+            )
+            if expected_modal_digest is None:
+                reasons.append("modal case cannot be canonicalized")
+            elif wrapper_modal_digest != expected_modal_digest:
+                reasons.append(
+                    "modal_case_sha256 does not match certificate modal test"
+                )
     artifact_reasons, artifact_path_resolved, artifact_sha256 = _verify_artifact_sha256(data, evidence_root)
     reasons.extend(artifact_reasons)
+    observation_reasons, observation_id = _verify_observation_binding(
+        data,
+        artifact_path_resolved,
+        claim_id,
+        test_id,
+        test_kind,
+        expected_claim_digest,
+        expected_modal_digest,
+        json_cache,
+    )
+    reasons.extend(observation_reasons)
     return EvidenceCheck(
         ref_s,
         True,
@@ -457,19 +912,41 @@ def _load_structured_evidence(ref: Any, evidence_root: Optional[Path], claim_id:
         canonical_ref=canonical_ref,
         artifact_path_resolved=artifact_path_resolved,
         artifact_sha256=artifact_sha256,
+        observation_id=observation_id,
+        wrapper_sha256=wrapper_result.sha256,
+        modal_case_sha256=expected_modal_digest or "",
     )
 
 
 def _unique_valid_evidence_refs(checks: Sequence[EvidenceCheck]) -> List[str]:
-    return sorted({str(c.canonical_ref) for c in checks if c.structured and c.canonical_ref})
+    representatives: Dict[str, str] = {}
+    for check in checks:
+        if check.structured and check.canonical_ref and check.wrapper_sha256:
+            representatives.setdefault(
+                check.wrapper_sha256,
+                str(check.canonical_ref),
+            )
+    return list(representatives.values())
 
 
 def _unique_valid_artifacts(checks: Sequence[EvidenceCheck]) -> List[str]:
-    return sorted({
-        f"{c.artifact_path_resolved}#sha256:{c.artifact_sha256}"
-        for c in checks
-        if c.structured and c.artifact_path_resolved and c.artifact_sha256
-    })
+    valid = [
+        check
+        for check in checks
+        if check.structured
+        and check.artifact_path_resolved
+        and check.artifact_sha256
+    ]
+    representatives: Dict[str, str] = {}
+    for check in valid:
+        representatives.setdefault(
+            str(check.artifact_sha256),
+            str(check.artifact_path_resolved),
+        )
+    return [
+        f"{path}#sha256:{digest}"
+        for digest, path in representatives.items()
+    ]
 
 
 def merge_thresholds(supplied: Mapping[str, Any] | None) -> Tuple[Dict[str, Dict[str, float]], List[str]]:
@@ -501,10 +978,32 @@ def method_completeness(method: Mapping[str, Any] | None) -> Tuple[float, List[s
     return (len(REQ_METHOD) - len(missing)) / len(REQ_METHOD), missing
 
 
-def _test_evidence_checks(t: Mapping[str, Any], evidence_root: Optional[Path], claim_id: Optional[str], test_id: str) -> Tuple[bool, List[str], List[EvidenceCheck]]:
+def _test_evidence_checks(
+    t: Mapping[str, Any],
+    evidence_root: Optional[Path],
+    claim_id: Optional[str],
+    test_id: str,
+    test_kind: str,
+    claim_proposition: Any,
+    json_cache: Optional[
+        Dict[JsonCacheKey, BoundedJsonResult]
+    ] = None,
+) -> Tuple[bool, List[str], List[EvidenceCheck]]:
     refs = [r for r in _as_list(t.get("evidence_refs")) if _nonempty(r)]
     reasons: List[str] = []
-    checks = [_load_structured_evidence(r, evidence_root, claim_id=claim_id, test_id=test_id) for r in refs]
+    checks = [
+        _load_structured_evidence(
+            ref,
+            evidence_root,
+            claim_id=claim_id,
+            claim_proposition=claim_proposition,
+            test_id=test_id,
+            test_kind=test_kind,
+            modal_test=t,
+            json_cache=json_cache,
+        )
+        for ref in refs
+    ]
     if evidence_root is not None:
         invalid = [c for c in checks if c.reasons]
         if invalid:
@@ -518,7 +1017,16 @@ def _test_evidence_checks(t: Mapping[str, Any], evidence_root: Optional[Path], c
     return not reasons, reasons, checks
 
 
-def evaluate_test(t: Mapping[str, Any], expected_kind: str, evidence_root: Optional[Path] = None, claim_id: Optional[str] = None) -> TestResult:
+def evaluate_test(
+    t: Mapping[str, Any],
+    expected_kind: str,
+    evidence_root: Optional[Path] = None,
+    claim_id: Optional[str] = None,
+    claim_proposition: Any = None,
+    json_cache: Optional[
+        Dict[JsonCacheKey, BoundedJsonResult]
+    ] = None,
+) -> TestResult:
     raw_tid = _test_id(t)
     tid = raw_tid or "<missing-test-id>"
     kind = _lower(t.get("kind") or expected_kind)
@@ -534,7 +1042,15 @@ def evaluate_test(t: Mapping[str, Any], expected_kind: str, evidence_root: Optio
     for field in ("expected_behavior", "observed_behavior"):
         if not _nonempty(t.get(field)): reasons.append(f"missing {field}")
     if not (_nonempty(t.get("perturbation")) or _nonempty(t.get("variant"))): reasons.append("missing perturbation/variant")
-    _, ev_reasons, evidence_checks = _test_evidence_checks(t, evidence_root, claim_id=claim_id, test_id=tid)
+    _, ev_reasons, evidence_checks = _test_evidence_checks(
+        t,
+        evidence_root,
+        claim_id=claim_id,
+        test_id=tid,
+        test_kind=expected_kind,
+        claim_proposition=claim_proposition,
+        json_cache=json_cache,
+    )
     reasons.extend(ev_reasons)
     result, outcome, observed = _lower(t.get("result")), _lower(t.get("outcome") or t.get("observed_outcome")), _lower(t.get("observed_behavior"))
     if result != "pass": reasons.append(f"result is {result!r}, not 'pass'")
@@ -549,9 +1065,28 @@ def evaluate_test(t: Mapping[str, Any], expected_kind: str, evidence_root: Optio
     return TestResult(tid, expected_kind, "PASS" if not reasons else "FAIL", reasons, evidence_checks)
 
 
-def evaluate_tests(tests: Sequence[Mapping[str, Any]], expected_kind: str, evidence_root: Optional[Path] = None, claim_id: Optional[str] = None) -> Tuple[float, List[TestResult]]:
+def evaluate_tests(
+    tests: Sequence[Mapping[str, Any]],
+    expected_kind: str,
+    evidence_root: Optional[Path] = None,
+    claim_id: Optional[str] = None,
+    claim_proposition: Any = None,
+    json_cache: Optional[
+        Dict[JsonCacheKey, BoundedJsonResult]
+    ] = None,
+) -> Tuple[float, List[TestResult]]:
     if not tests: return 0.0, []
-    results = [evaluate_test(t, expected_kind, evidence_root=evidence_root, claim_id=claim_id) for t in tests]
+    results = [
+        evaluate_test(
+            test,
+            expected_kind,
+            evidence_root=evidence_root,
+            claim_id=claim_id,
+            claim_proposition=claim_proposition,
+            json_cache=json_cache,
+        )
+        for test in tests
+    ]
     return sum(r.status == "PASS" for r in results) / len(results), results
 
 
@@ -595,14 +1130,76 @@ def _modal_test_key(t: Mapping[str, Any], expected_kind: str, evidence_root: Opt
     return (kind, identifier, variant, expected, evidence_keys)
 
 
-def _modal_test_uniqueness_reasons(tests: Sequence[Mapping[str, Any]], expected_kind: str, required: int, evidence_root: Optional[Path]) -> List[str]:
+def _distinct_observation_capacity(
+    observation_sets: Sequence[set[Tuple[Any, ...]]],
+    required: int,
+) -> int:
+    """Return threshold-capped one-to-one capacity in linear work.
+
+    The fixed policy requires at most two false-world and one true-world
+    observations. For thresholds 0..2, Hall's condition reduces to enough
+    nonempty tests and enough distinct observations across them.
+    """
+    if required not in {0, 1, 2}:
+        raise InvalidInputError(
+            "modal observation threshold exceeds supported bound 2"
+        )
+    if required == 0:
+        return 0
+    nonempty_tests = 0
+    observations: set[Tuple[Any, ...]] = set()
+    for identities in observation_sets:
+        if identities:
+            nonempty_tests = min(required, nonempty_tests + 1)
+        if len(observations) < required:
+            for identity in identities:
+                observations.add(identity)
+                if len(observations) >= required:
+                    break
+    return min(required, nonempty_tests, len(observations))
+
+
+def _modal_observation_sets(
+    results: Sequence[TestResult],
+) -> List[set[Tuple[Any, ...]]]:
+    """Map test evidence to physical artifact plus verified case identity."""
+    output: List[set[Tuple[Any, ...]]] = []
+    for result in results:
+        identities: set[Tuple[Any, ...]] = set()
+        for check in result.evidence_checks:
+            if not check.structured or not check.artifact_path_resolved:
+                continue
+            if check.observation_id:
+                identities.add(("observation", check.observation_id))
+            elif check.artifact_sha256:
+                identities.add(
+                    ("artifact-sha256", check.artifact_sha256)
+                )
+        output.append(identities)
+    return output
+
+
+def _modal_test_uniqueness_reasons(
+    tests: Sequence[Mapping[str, Any]],
+    results: Sequence[TestResult],
+    expected_kind: str,
+    required: int,
+    evidence_root: Optional[Path],
+) -> List[str]:
     reasons: List[str] = []
     label = "false-world" if expected_kind == "false_world" else "true-world"
     if not tests:
         return reasons
     ids = [_test_id(t) for t in tests]
     nonempty_ids = [i for i in ids if i]
-    duplicate_ids = sorted({i for i in nonempty_ids if nonempty_ids.count(i) > 1})
+    id_counts: Dict[str, int] = {}
+    for identifier in nonempty_ids:
+        id_counts[identifier] = id_counts.get(identifier, 0) + 1
+    duplicate_ids = sorted(
+        identifier
+        for identifier, count in id_counts.items()
+        if count > 1
+    )
     missing_count = len(ids) - len(nonempty_ids)
     if missing_count:
         reasons.append(f"missing {label} test IDs present: {missing_count}")
@@ -612,21 +1209,61 @@ def _modal_test_uniqueness_reasons(tests: Sequence[Mapping[str, Any]], expected_
     unique_keys = set(keys)
     if len(unique_keys) < required:
         reasons.append(f"unique {label} tests {len(unique_keys)} < required {required}")
-    evidence_sets = [_canonical_test_evidence_keys(t, evidence_root) for t in tests if _canonical_test_evidence_keys(t, evidence_root)]
-    if evidence_sets:
-        unique_evidence_sets = set(evidence_sets)
-        if len(unique_evidence_sets) < min(required, len(evidence_sets)):
-            reasons.append(f"unique {label} test evidence sets {len(unique_evidence_sets)} < required {min(required, len(evidence_sets))}")
+    if evidence_root is not None:
+        observation_sets = _modal_observation_sets(results)
+        distinct_observations = _distinct_observation_capacity(
+            observation_sets,
+            required,
+        )
+        if distinct_observations < required:
+            reasons.append(
+                f"independent {label} observations {distinct_observations} "
+                f"< required {required}"
+            )
+    else:
+        evidence_sets = [
+            _canonical_test_evidence_keys(test, evidence_root)
+            for test in tests
+            if _canonical_test_evidence_keys(test, evidence_root)
+        ]
+        if evidence_sets:
+            unique_evidence_sets = set(evidence_sets)
+            expected_evidence_sets = min(required, len(evidence_sets))
+            if len(unique_evidence_sets) < expected_evidence_sets:
+                reasons.append(
+                    f"unique {label} test evidence sets "
+                    f"{len(unique_evidence_sets)} < required "
+                    f"{expected_evidence_sets}"
+                )
     return reasons
 
 
-def evaluate_claim(claim: Mapping[str, Any], thresholds: Mapping[str, Mapping[str, float]], evidence_root: Optional[Path] = None) -> ClaimResult:
+def evaluate_claim(
+    claim: Mapping[str, Any],
+    thresholds: Mapping[str, Mapping[str, float]],
+    evidence_root: Optional[Path] = None,
+    json_cache: Optional[
+        Dict[JsonCacheKey, BoundedJsonResult]
+    ] = None,
+) -> ClaimResult:
     cid = str(claim.get("id") or "<missing-id>")
     imp = _lower(claim.get("importance") or "critical")
     if imp not in IMPORTANCE: imp = "critical"
     reasons: List[str] = []
     if not _nonempty(claim.get("id")): reasons.append("missing claim id")
-    if not _nonempty(claim.get("text")): reasons.append("missing claim text")
+    claim_text = claim.get("text")
+    if not _nonempty(claim_text): reasons.append("missing claim text")
+    expected_claim_digest = _proposition_sha256(claim_text)
+    declared_claim_digest = _canonical_claimed_sha256(
+        claim.get("proposition_sha256")
+    )
+    if (
+        evidence_root is not None
+        or _nonempty(claim.get("proposition_sha256"))
+    ) and declared_claim_digest != expected_claim_digest:
+        reasons.append(
+            "proposition_sha256 does not match canonical claim text"
+        )
     if not _nonempty(claim.get("artifact_location")): reasons.append("missing artifact_location")
     truth = _lower(claim.get("truth_status"))
     if imp in {"critical", "major"} and truth not in PASS_TRUTH: reasons.append(f"{imp} truth_status is {truth!r}; required confirmed")
@@ -643,16 +1280,29 @@ def evaluate_claim(claim: Mapping[str, Any], thresholds: Mapping[str, Mapping[st
 
     ev_refs = [e for e in _as_list(claim.get("evidence_refs")) if _nonempty(e)]
     req = MIN_REQ[imp]
-    structured_checks = [_load_structured_evidence(e, evidence_root, claim_id=cid) for e in ev_refs]
+    structured_checks = [
+        _load_structured_evidence(
+            evidence,
+            evidence_root,
+            claim_id=cid,
+            claim_proposition=claim_text,
+            json_cache=json_cache,
+        )
+        for evidence in ev_refs
+    ]
     if evidence_root is not None:
         invalid_refs = [c for c in structured_checks if c.reasons]
         if invalid_refs:
             reasons.append("invalid evidence refs: " + "; ".join(f"{c.ref}: {', '.join(c.reasons)}" for c in invalid_refs))
 
-        valid_ref_keys = [str(c.canonical_ref) for c in structured_checks if c.canonical_ref]
-        unique_ref_keys = sorted(set(valid_ref_keys))
-        duplicate_count = len(valid_ref_keys) - len(unique_ref_keys)
-        ev_count = len(unique_ref_keys)
+        valid_ref_digests = [
+            check.wrapper_sha256
+            for check in structured_checks
+            if check.canonical_ref and check.wrapper_sha256
+        ]
+        unique_ref_digests = set(valid_ref_digests)
+        duplicate_count = len(valid_ref_digests) - len(unique_ref_digests)
+        ev_count = len(unique_ref_digests)
         if ev_count < req["evidence"]:
             reasons.append(f"unique evidence refs {ev_count} < required {req['evidence']}")
         if duplicate_count > 0 and imp in {"critical", "major"}:
@@ -677,10 +1327,40 @@ def evaluate_claim(claim: Mapping[str, Any], thresholds: Mapping[str, Mapping[st
     ttests = [t for t in _as_list(claim.get("true_world_tests")) if isinstance(t, Mapping)]
     if len(ftests) < req["false_tests"]: reasons.append(f"false-world tests {len(ftests)} < required {req['false_tests']}")
     if len(ttests) < req["true_tests"]: reasons.append(f"true-world tests {len(ttests)} < required {req['true_tests']}")
-    reasons.extend(_modal_test_uniqueness_reasons(ftests, "false_world", req["false_tests"], evidence_root))
-    reasons.extend(_modal_test_uniqueness_reasons(ttests, "true_world", req["true_tests"], evidence_root))
-    sens, fr = evaluate_tests(ftests, "false_world", evidence_root=evidence_root, claim_id=cid)
-    adh, tr = evaluate_tests(ttests, "true_world", evidence_root=evidence_root, claim_id=cid)
+    sens, fr = evaluate_tests(
+        ftests,
+        "false_world",
+        evidence_root=evidence_root,
+        claim_id=cid,
+        claim_proposition=claim_text,
+        json_cache=json_cache,
+    )
+    adh, tr = evaluate_tests(
+        ttests,
+        "true_world",
+        evidence_root=evidence_root,
+        claim_id=cid,
+        claim_proposition=claim_text,
+        json_cache=json_cache,
+    )
+    reasons.extend(
+        _modal_test_uniqueness_reasons(
+            ftests,
+            fr,
+            "false_world",
+            req["false_tests"],
+            evidence_root,
+        )
+    )
+    reasons.extend(
+        _modal_test_uniqueness_reasons(
+            ttests,
+            tr,
+            "true_world",
+            req["true_tests"],
+            evidence_root,
+        )
+    )
     fails = [r for r in fr + tr if r.status != "PASS"]
     if fails: reasons.append(f"{len(fails)} test(s) failed deterministic checks")
     if ftests and sens < th["sensitivity"]: reasons.append(f"sensitivity pass rate {sens:.3f} < threshold {th['sensitivity']:.3f}")
@@ -688,7 +1368,7 @@ def evaluate_claim(claim: Mapping[str, Any], thresholds: Mapping[str, Mapping[st
     unresolved = [c for c in _as_list(claim.get("unresolved_contradictions")) if _nonempty(c)]
     if unresolved: reasons.append(f"unresolved contradictions present: {len(unresolved)}")
     if isinstance(method, Mapping):
-        mus = [u for u in _as_list(method.get("method_unknowns")) if _nonempty(u)]
+        mus = _collect_unknowns_in_method(method)
         if mus and imp in {"critical", "major"}: reasons.append(f"{imp} method unknowns present: {len(mus)}")
     status = "PASS" if not reasons else "FAIL"
     return ClaimResult(cid, imp, status, reasons, sens, adh, method_score, ev_count, structured_count, len(ftests), len(ttests), fr + tr, ev_count, structured_count, unique_artifact_count)
@@ -703,6 +1383,124 @@ def _resolve_downstream_policy(
     if type(policy) is not str or policy not in DOWNSTREAM_POLICIES:
         raise InvalidInputError(f"unknown downstream policy: {policy!r}")
     return DOWNSTREAM_POLICIES[policy]
+
+
+def _canonical_proposition_text(value: Any) -> Optional[str]:
+    if type(value) is not str or not value.strip():
+        return None
+    normalized = unicodedata.normalize("NFC", value)
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
+def _proposition_sha256(value: Any) -> Optional[str]:
+    canonical = _canonical_proposition_text(value)
+    if canonical is None:
+        return None
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _modal_case_sha256(
+    test: Mapping[str, Any],
+    claim_proposition: Any,
+    expected_kind: str,
+    evidence_observed_result: Any = None,
+) -> Optional[str]:
+    claim_text = _canonical_proposition_text(claim_proposition)
+    if claim_text is None:
+        return None
+    if _nonempty(test.get("perturbation")):
+        variation_field = "perturbation"
+        variation = test.get("perturbation")
+    else:
+        variation_field = "variant"
+        variation = test.get("variant")
+    payload = {
+        "claim_proposition": claim_text,
+        "kind": _lower(test.get("kind") or expected_kind),
+        "test_id": _test_id(test),
+        "target_claim_ids": sorted(set(_target_claim_values(test))),
+        "variation_field": variation_field,
+        "variation": _canonical_proposition_text(variation) or "",
+        "expected_behavior": (
+            _canonical_proposition_text(test.get("expected_behavior")) or ""
+        ),
+        "observed_behavior": (
+            _canonical_proposition_text(test.get("observed_behavior")) or ""
+        ),
+        "observed_result": (
+            _canonical_proposition_text(
+                evidence_observed_result
+                if evidence_observed_result is not None
+                else test.get("observed_result")
+            ) or ""
+        ),
+        "outcome": _lower(
+            test.get("outcome") or test.get("observed_outcome")
+        ),
+        "result": _lower(test.get("result")),
+    }
+    encoded = json.dumps(
+        payload,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _downstream_proposition_binding_reasons(
+    downstream_id: str,
+    derived_claim: Any,
+    own_claim: Mapping[str, Any],
+    binding: Any,
+) -> List[str]:
+    """Require an explicit versioned textual proposition identity.
+
+    Semantic equivalence is not guessed. The downstream proposition and the
+    independently evaluated claim must canonicalize to the same text and digest.
+    """
+    prefix = f"downstream claim {downstream_id} proposition binding"
+    if not isinstance(binding, Mapping):
+        return [f"{prefix} is not an object"]
+    reasons: List[str] = []
+    if binding.get("schema_version") != PROPOSITION_BINDING_SCHEMA_VERSION:
+        reasons.append(
+            f"{prefix} schema_version is not "
+            f"{PROPOSITION_BINDING_SCHEMA_VERSION}"
+        )
+    raw_digest = binding.get("canonical_text_sha256")
+    claimed_digest = _canonical_claimed_sha256(raw_digest)
+    if claimed_digest is None:
+        reasons.append(
+            f"{prefix} canonical_text_sha256 is not a SHA-256 digest"
+        )
+    downstream_digest = _proposition_sha256(derived_claim)
+    own_digest = _proposition_sha256(own_claim.get("text"))
+    if downstream_digest is None or own_digest is None:
+        reasons.append(
+            f"{prefix} requires nonempty downstream and own-claim text"
+        )
+    elif downstream_digest != own_digest:
+        reasons.append(
+            f"{prefix} does not identify the independent claim proposition"
+        )
+    if (
+        claimed_digest is not None
+        and downstream_digest is not None
+        and claimed_digest != downstream_digest
+    ):
+        reasons.append(
+            f"{prefix} digest does not match the downstream proposition"
+        )
+    if (
+        claimed_digest is not None
+        and own_digest is not None
+        and claimed_digest != own_digest
+    ):
+        reasons.append(
+            f"{prefix} digest does not match the independent claim"
+        )
+    return reasons
 
 
 def evaluate_downstream_nonclosure(
@@ -855,6 +1653,14 @@ def evaluate_downstream_nonclosure(
                     f"{own_claim_id}"
                 )
             else:
+                reasons.extend(
+                    _downstream_proposition_binding_reasons(
+                        did,
+                        derived_claim,
+                        claim_records[own_claim_id],
+                        record.get("proposition_binding"),
+                    )
+                )
                 if evaluated_status.get(own_claim_id) != "PASS":
                     reasons.append(
                         f"downstream claim {did} independent claim "
@@ -909,16 +1715,22 @@ def evaluate_downstream_nonclosure(
                         )
     return reasons, len(records)
 
-def _invalid_certificate_result(reason: str) -> Dict[str, Any]:
+def _invalid_certificate_result(
+    reason: str,
+    summary_updates: Optional[Mapping[str, Any]] = None,
+) -> Dict[str, Any]:
+    summary: Dict[str, Any] = {
+        "claims": 0,
+        "failed_claims": 0,
+        "critical_failed": 0,
+        "major_failed": 0,
+        "downstream_nonclosure_violations": 0,
+    }
+    summary.update(summary_updates or {})
     return {
         "status": "INVALID_INPUT",
-        "summary": {
-            "claims": 0,
-            "failed_claims": 0,
-            "critical_failed": 0,
-            "major_failed": 0,
-            "downstream_nonclosure_violations": 0,
-        },
+        "failure_kind": "invalid_input",
+        "summary": summary,
         "reasons": [reason],
         "claim_results": [],
     }
@@ -928,7 +1740,6 @@ def evaluate_certificate(
     cert: Any,
     evidence_root: Optional[Path] = None,
     strict_evidence: bool = False,
-    max_unknown_depth: int = 6,
     downstream_policy: str | DownstreamPolicy = "generic",
 ) -> Dict[str, Any]:
     try:
@@ -940,6 +1751,47 @@ def evaluate_certificate(
     if not isinstance(cert, Mapping):
         return _invalid_certificate_result(
             "certificate JSON root is not an object"
+        )
+    bounds_error = _validate_json_bounds(cert)
+    if bounds_error is not None:
+        return _invalid_certificate_result(bounds_error)
+    if strict_evidence and evidence_root is None:
+        return _invalid_certificate_result(
+            "strict_evidence requires evidence_root",
+            {
+                "evidence_root_checked": False,
+                "strict_evidence": True,
+                "structured_evidence_required": True,
+                "structured_evidence_checked": False,
+            },
+        )
+    evidence_root_error: Optional[str] = None
+    if evidence_root is not None:
+        if not isinstance(evidence_root, Path):
+            evidence_root_error = "evidence_root is not a pathlib Path"
+        else:
+            try:
+                root_stat = os.lstat(evidence_root)
+                if stat.S_ISLNK(root_stat.st_mode):
+                    evidence_root_error = "evidence_root must not be a symlink"
+                elif not stat.S_ISDIR(root_stat.st_mode):
+                    evidence_root_error = (
+                        "evidence_root is not an existing directory"
+                    )
+            except (OSError, RuntimeError, ValueError) as exc:
+                evidence_root_error = (
+                    "evidence_root stat failed: "
+                    f"{type(exc).__name__}"
+                )
+    if evidence_root_error is not None:
+        return _invalid_certificate_result(
+            evidence_root_error,
+            {
+                "evidence_root_checked": False,
+                "strict_evidence": bool(strict_evidence),
+                "structured_evidence_required": True,
+                "structured_evidence_checked": False,
+            },
         )
     raw_claims = cert.get("claims")
     if raw_claims is not None and not isinstance(raw_claims, list):
@@ -957,8 +1809,32 @@ def evaluate_certificate(
     if not claims: reasons.append("no claims in certificate")
     method_score, method_missing = method_completeness(cert.get("method_manifest") if isinstance(cert.get("method_manifest"), Mapping) else None)
     if method_score < DEFAULT_THRESHOLDS["major"]["method_completeness"]: reasons.append(f"certificate-level method_manifest incomplete: missing {method_missing}")
-    effective_evidence_root = evidence_root if (strict_evidence or evidence_root is not None) else None
-    results = [evaluate_claim(c, thresholds, evidence_root=effective_evidence_root) for c in claims]
+    effective_evidence_root = evidence_root
+    json_cache: Dict[JsonCacheKey, BoundedJsonResult] = {}
+    try:
+        results = [
+            evaluate_claim(
+                claim,
+                thresholds,
+                evidence_root=effective_evidence_root,
+                json_cache=json_cache,
+            )
+            for claim in claims
+        ]
+    except InvalidInputError as exc:
+        return _invalid_certificate_result(
+            str(exc),
+            {
+                "evidence_root_checked": bool(evidence_root),
+                "strict_evidence": bool(
+                    strict_evidence or evidence_root is not None
+                ),
+                "structured_evidence_required": bool(
+                    strict_evidence or evidence_root is not None
+                ),
+                "structured_evidence_checked": bool(evidence_root),
+            },
+        )
     result_by_id = {
         result.claim_id: result
         for result in results
@@ -974,7 +1850,7 @@ def evaluate_certificate(
     critical_fail = sum(r.status == "FAIL" and r.importance == "critical" for r in results)
     major_fail = sum(r.status == "FAIL" and r.importance == "major" for r in results)
     scope_unknowns = [x for x in _as_list(cert.get("scope_limitations")) if _nonempty(x)]
-    cert_method_unknowns = _collect_method_unknowns(cert, max_depth=max_unknown_depth)
+    cert_method_unknowns = _collect_method_unknowns(cert)
     if critical_fail or major_fail or not claims or downstream_reasons:
         status = "FAIL"
     elif fail_count or reasons:
@@ -1000,6 +1876,7 @@ def evaluate_certificate(
             "structured_evidence_required": bool(
                 strict_evidence or evidence_root is not None
             ),
+            "structured_evidence_checked": bool(evidence_root),
             "derived_or_downstream_claims": downstream_count,
             "downstream_nonclosure_violations": len(downstream_reasons),
             "downstream_policy": selected_downstream_policy.name,
@@ -1018,7 +1895,7 @@ def to_markdown(result: Mapping[str, Any], cert_path: Path) -> str:
     for r in result.get("claim_results", []):
         reasons = "; ".join(r.get("reasons") or []) or "—"
         lines.append(f"| {r['claim_id']} | {r['importance']} | {r['status']} | {r['sensitivity_rate']:.2f} | {r['adherence_rate']:.2f} | {r['method_completeness']:.2f} | {r['evidence_count']} | {r.get('structured_evidence_count', 0)} | {r['false_world_tests']} | {r['true_world_tests']} | {reasons} |")
-    lines.append("\nThis deterministic result checks declared fields, thresholds, tests, outcomes, local evidence-ref containment, unique canonical evidence-ref and modal-test counting, structured evidence binding for every cited local ref, and exact SHA-256 equality between artifact_path and hash_or_version, and URI-scheme rejection for both evidence refs and artifact_path. It does not independently prove expert-level semantic adequacy of every evidence artifact or perturbation.")
+    lines.append("\nThis deterministic result checks declared fields, thresholds, tests, outcomes, local evidence-ref containment, hardlink-aware evidence and artifact identity, case-bound modal observation independence, proposition-bound downstream passes, structured evidence binding for every cited local ref, exact SHA-256 equality between artifact_path and hash_or_version, and URI-scheme rejection for both evidence refs and artifact_path. It does not independently prove expert-level semantic adequacy of every evidence artifact or perturbation.")
     return "\n".join(lines) + "\n"
 
 
@@ -1053,21 +1930,19 @@ def _atomic_write_new_text(path: Path, text: str) -> None:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Evaluate a Nozickian truth-tracking certificate JSON")
-    ap.add_argument("certificate", type=Path); ap.add_argument("--markdown", type=Path); ap.add_argument("--evidence-root", type=Path); ap.add_argument("--strict-evidence", "--require-structured-evidence", dest="strict_evidence", action="store_true", help="Require structured local evidence binding when --evidence-root is supplied")
-    ap.add_argument("--max-unknown-depth", type=int, default=6, help="Max recursion depth for collecting certificate-scope method unknowns; negative means unbounded (default: 6).")
+    ap.add_argument("certificate", type=Path); ap.add_argument("--markdown", type=Path); ap.add_argument("--evidence-root", type=Path); ap.add_argument("--strict-evidence", "--require-structured-evidence", dest="strict_evidence", action="store_true", help="Require structured local evidence binding; --evidence-root is mandatory")
     ap.add_argument(
         "--downstream-policy",
         choices=sorted(DOWNSTREAM_POLICIES),
         default="generic",
     )
     args = ap.parse_args(argv)
-    evidence_root = args.evidence_root.resolve() if args.evidence_root else None
+    evidence_root = args.evidence_root
     try:
         result = evaluate_certificate(
             load_json(args.certificate),
             evidence_root=evidence_root,
             strict_evidence=(args.strict_evidence or evidence_root is not None),
-            max_unknown_depth=args.max_unknown_depth,
             downstream_policy=args.downstream_policy,
         )
     except InvalidInputError as exc:
@@ -1075,6 +1950,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     except Exception:  # pylint: disable=broad-exception-caught
         result = {
             "status": "INTERNAL_ERROR",
+            "failure_kind": "internal_error",
             "summary": {},
             "reasons": [
                 "unexpected gate implementation failure; internal details omitted"

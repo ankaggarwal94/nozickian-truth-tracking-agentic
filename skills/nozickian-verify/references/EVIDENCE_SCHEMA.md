@@ -8,9 +8,7 @@ Required fields:
 {
   "evidence_schema_version": "1.0",
   "claim_id": "C-001",
-  "test_id": "FW-001",
-  "applies_to_claims": ["C-001"],
-  "applies_to_tests": ["FW-001"],
+  "claim_proposition_sha256": "sha256:<digest of the canonical certificate claim text>",
   "artifact_path": "relative/path/under/evidence_root/to/the/evidence/source",
   "command_or_source": "command, file, trace, source URL, or manual audit record that produced the observation",
   "observed_result": "what was actually observed",
@@ -20,9 +18,158 @@ Required fields:
 }
 ```
 
-For claim-level evidence, `test_id` may be omitted if `applies_to_tests` is not relevant. For test-level evidence, either `test_id` must match the modal test ID or `applies_to_tests` must include the test ID or `*`. The `claim_id` must match the claim being evaluated, or `applies_to_claims` must include the claim ID or `*`.
+The package writes wrapper schema `1.0`. The gate requires a nonempty
+`evidence_schema_version`; the separately versioned observation-ledger field
+described below is checked for the exact value `"1.0"`. `claim_id` must match the
+claim being evaluated, or optional `applies_to_claims` must contain that claim ID
+or `*`.
+
+In strict local-evidence mode, the certificate claim itself must declare
+`proposition_sha256`, and every claim-level and test-level wrapper must declare
+the same proposition identity as `claim_proposition_sha256`. The digest input is
+the claim's `text` after Unicode NFC normalization, replacing each run of
+whitespace with one ASCII space, and stripping leading and trailing whitespace.
+The gate hashes the UTF-8 bytes of that canonical text with SHA-256. A declared
+digest may be 64 hexadecimal characters or may use a `sha256:` or `sha256=`
+prefix; hexadecimal case is normalized, but writers should emit lowercase
+`sha256:<64-hex>` values. An empty or non-string proposition cannot be
+canonicalized.
+
+Test-level wrappers add the modal bindings shown here:
+
+```json
+{
+  "evidence_schema_version": "1.0",
+  "claim_id": "C-001",
+  "claim_proposition_sha256": "sha256:<canonical claim digest>",
+  "test_id": "FW-001",
+  "modal_case_sha256": "sha256:<canonical modal-case digest>",
+  "observation_id": "obs.C-001.FW-001",
+  "artifact_path": "observations/current_observations.json",
+  "command_or_source": "the exact command or source that produced this case observation",
+  "observed_result": "the exact observation text copied into the named ledger record",
+  "support_summary": "why this observation supports this particular nearby-world case",
+  "timestamp_utc": "2026-05-25T00:00:00Z",
+  "hash_or_version": "sha256:<digest of the complete observation-ledger bytes>"
+}
+```
+
+For test-level evidence, `test_id` must match the modal test ID, or optional
+`applies_to_tests` must contain that test ID or `*`. `modal_case_sha256` is the
+SHA-256 of the following object serialized as UTF-8 JSON with sorted keys,
+`ensure_ascii=false`, and compact separators (`,` and `:`):
+
+```json
+{
+  "claim_proposition": "<canonical claim text>",
+  "kind": "<lowercase stripped test kind, falling back to the expected kind>",
+  "test_id": "<stripped id, falling back to test_id>",
+  "target_claim_ids": ["<sorted unique stripped target IDs>"],
+  "variation_field": "perturbation",
+  "variation": "<canonical perturbation or variant text>",
+  "expected_behavior": "<canonical expected_behavior>",
+  "observed_behavior": "<canonical observed_behavior>",
+  "observed_result": "<canonical evidence-wrapper observed_result>",
+  "outcome": "<lowercase stripped outcome or observed_outcome>",
+  "result": "<lowercase stripped result>"
+}
+```
+
+`target_claim_ids` comes from `target_claim_ids` when that field is present,
+otherwise from `target_claim`; a scalar is treated as a one-element list before
+the values are stripped, deduplicated, and sorted. `variation_field` is
+`perturbation` when that value is nonempty and otherwise is `variant`. The four
+prose values use the same NFC/whitespace canonicalization as claim text. In
+particular, `observed_result` comes from the evidence wrapper, so changing either
+the case declaration or the observation text changes the modal-case digest.
+
+## Observation ledger binding
+
+`observation_id` is optional, but when present it must be an already stripped,
+1-to-128-character identifier matching
+`[A-Za-z0-9][A-Za-z0-9._:-]{0,127}`. Its wrapper's `artifact_path` must identify a
+JSON ledger with this shape:
+
+```json
+{
+  "observation_schema_version": "1.0",
+  "observations": {
+    "obs.C-001.FW-001": {
+      "claim_id": "C-001",
+      "test_id": "FW-001",
+      "kind": "false_world",
+      "claim_proposition_sha256": "sha256:<canonical claim digest>",
+      "modal_case_sha256": "sha256:<canonical modal-case digest>",
+      "result": "pass",
+      "outcome": "rejected_false_claim",
+      "observed_result": "the exact observation text copied into the evidence wrapper"
+    }
+  }
+}
+```
+
+The ledger must have exact `observation_schema_version: "1.0"` and an
+`observations` object containing the named record. The record's `claim_id`,
+`test_id`, and `kind` must exactly equal the evaluated claim ID, modal test ID,
+and expected kind (`false_world` or `true_world`). Its two digests must match the
+gate-derived claim and modal-case digests. `result`, after stripping and
+lowercasing, must be `pass`. Outcome comparison also strips and lowercases. The
+accepted false-world outcomes are
+`rejected_false_claim`, `withheld`, `flagged`, `failed_as_expected`, `downgraded`,
+`corrected`, `blocked`, and `not_certified`. The accepted true-world outcomes are
+`retained_true_claim`, `accepted_equivalent`, `passed_benign_variant`,
+`correctly_updated`, `preserved`, `recovered`, and `not_overfit`. The ledger
+`observed_result`, after outer whitespace is stripped, must be at least ten
+characters and exactly equal the stripped wrapper `observed_result`.
+
+A named, verified `observation_id` is the modal observation identity used for
+independence counting. Without one, the gate falls back to the cited artifact's
+SHA-256, so multiple wrappers over the same aggregate bytes do not create
+multiple observations merely by using different filenames or test labels.
+
+## Byte-backed local evidence
+
+Both an `evidence_ref` and its wrapper `artifact_path` must be canonical relative
+POSIX paths beneath `evidence_root`. Strict mode rejects absolute paths, `.` or
+`..` segments, backslashes, control characters, alias suffixes, URI schemes,
+missing paths, directories, special files, and any path that traverses a
+symlink. The wrapper must be a nonempty regular JSON file; the artifact must be a
+regular non-symlink file. Wrappers are limited to 1 MiB, and a named observation
+ledger is limited to 8 MiB and bounded to depth 64, 100,000 JSON nodes, and
+100,000 object fields. No-follow descriptor reads bind the opened regular file,
+reject an inode swap before open, and reject size or modification-time changes
+to that opened file during the read. `hash_or_version` must be an actual SHA-256
+digest of the complete artifact bytes. When `observation_id` is present, those
+same hashed artifact bytes must parse as the bounded observation ledger above.
+
+Evidence sufficiency is byte-backed too: byte-identical wrappers collapse to one
+structured reference, and claim evidence that requires multiple sources must
+also resolve to distinct artifact SHA-256 values. Thus copied wrappers, hardlink
+aliases, or differently named files with identical bytes cannot inflate the
+minimum evidence count.
 
 This prevents unrelated nonempty files such as `README.md`, `LICENSE`, a stale report, an out-of-root evidence JSON, or a partially fabricated ref set from counting as evidence for arbitrary claims. It does not replace expert semantic review; it is a deterministic binding check that forces each evidence reference to stay in the reviewed evidence root, state what it supports, and bind to an exact artifact digest.
+
+## Passing downstream proposition binding
+
+A `derived_or_downstream_claims` record with a passing status must name a
+distinct `own_claim_id` whose claim independently evaluates `PASS`. It must also
+carry:
+
+```json
+{
+  "proposition_binding": {
+    "schema_version": "1.0",
+    "canonical_text_sha256": "sha256:<canonical downstream proposition digest>"
+  }
+}
+```
+
+The downstream `derived_claim` and the independent claim's `text` must
+canonicalize to the same proposition, and `canonical_text_sha256` must match
+both. The gate does not infer semantic equivalence or allow a source claim to be
+reused as the independent claim. Non-passing downstream statuses instead require
+a nonempty reason and do not claim automatic closure.
 
 ## Promotion certificate v2 evidence graph
 
@@ -94,6 +241,7 @@ The claim-level schema above remains unchanged for ordinary `ntt_gate.py` certif
     {
       "id": "C-UPGRADE-001",
       "text": "The exact package snapshot satisfies the independently evaluated promotion contract.",
+      "proposition_sha256": "sha256:<digest of the canonical claim text>",
       "importance": "critical",
       "artifact_location": "promotion_claims/C-UPGRADE-001",
       "truth_status": "executed_confirmed",

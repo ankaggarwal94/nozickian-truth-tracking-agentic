@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-formal-invocation",
+  "claim_proposition_sha256": "sha256:ad5a976a1b91c94ca32386a493b58776f54a6fcf63bbdae479de86154acd2e43",
+  "command_or_source": "run_formal_runner_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
+  "modal_case_sha256": "sha256:58fc61a5929be7f2954dcb19059ceed8f5ceba3e60e8f4c45a7ab106c70ad29e",
+  "observation_id": "obs:C-formal-invocation:FW-formal-malformed-jsonl",
+  "observed_result": "The formal contract rejected the complete stream when one JSONL record was malformed.",
+  "support_summary": "This wrapper binds FW-formal-malformed-jsonl to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-formal-malformed-jsonl",
+  "timestamp_utc": "2026-07-14T00:00:00Z"
+}

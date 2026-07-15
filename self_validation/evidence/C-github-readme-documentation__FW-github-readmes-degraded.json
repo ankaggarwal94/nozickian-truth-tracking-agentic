@@ -1,11 +1,14 @@
 {
-  "artifact_path": "skills/nozickian-verify/scripts/validate_package.py",
+  "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-github-readme-documentation",
-  "command_or_source": "v1.0.3 package-local GitHub README documentation and deterministic validator checks",
+  "claim_proposition_sha256": "sha256:7aa3f6e8c7fafe0ac5e9ffe5a65d423e0a8695b381203fad4f74c6e174c64227",
+  "command_or_source": "validate_package.py --self-test",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:5f8f605fb56009c394ca92dca9d764ed5bc0c6a484556e0893f949035aa603ee",
-  "observed_result": "Observed the false-world mutation that degrades docs/README.md and requires validation failure.",
-  "support_summary": "The mutation evidence binds the false-world test to validator code that rejects missing or placeholder GitHub README documentation even when manifests are refreshed.",
+  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
+  "modal_case_sha256": "sha256:42462f567e05c9907cc39be1902c87fc5ec6df98b9fe65120c52b516f7e0e041",
+  "observation_id": "obs:C-github-readme-documentation:FW-github-readmes-degraded",
+  "observed_result": "The validator mutation lane rejected the degraded GitHub README documentation.",
+  "support_summary": "This wrapper binds FW-github-readmes-degraded to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-github-readmes-degraded",
-  "timestamp_utc": "2026-06-07T00:00:00Z"
+  "timestamp_utc": "2026-07-14T00:00:00Z"
 }

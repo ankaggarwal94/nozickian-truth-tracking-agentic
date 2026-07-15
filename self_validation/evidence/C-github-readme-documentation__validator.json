@@ -1,10 +1,11 @@
 {
   "artifact_path": "skills/nozickian-verify/scripts/validate_package.py",
   "claim_id": "C-github-readme-documentation",
-  "command_or_source": "v1.0.3 package-local GitHub README documentation and deterministic validator checks",
+  "claim_proposition_sha256": "sha256:7aa3f6e8c7fafe0ac5e9ffe5a65d423e0a8695b381203fad4f74c6e174c64227",
+  "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:5f8f605fb56009c394ca92dca9d764ed5bc0c6a484556e0893f949035aa603ee",
-  "observed_result": "Observed validator code that requires the GitHub README documentation set and checks closed-surface documentation placement.",
-  "support_summary": "The validator implements check_github_readmes, expected README topic coverage, non-runtime documentation placement, and false-world mutation coverage for degraded GitHub documentation.",
-  "timestamp_utc": "2026-06-07T00:00:00Z"
+  "hash_or_version": "sha256:dc2559e1edfc99eaec30d0df64441c35da0e564c02cc08e4ad5b1c39630bad8b",
+  "observed_result": "Current source bytes support the scoped proposition for C-github-readme-documentation.",
+  "support_summary": "This wrapper binds C-github-readme-documentation to current package artifact skills/nozickian-verify/scripts/validate_package.py by exact SHA-256 and to the canonical claim proposition digest.",
+  "timestamp_utc": "2026-07-14T00:00:00Z"
 }

@@ -12,7 +12,7 @@ The package implements a check-and-verify flow in which assertions are converted
 
 ## No automatic epistemic closure
 
-A verified claim `p` may entail another claim `q`, but this package does not let verification automatically transmit from `p` to `q`. The certificate field `derived_or_downstream_claims` records such conclusions explicitly. Untested downstream claims remain `UNVERIFIED` unless they are promoted into their own full claim records with independent method and modal evidence.
+A verified claim `p` may entail another claim `q`, but this package does not let verification automatically transmit from `p` to `q`. The certificate field `derived_or_downstream_claims` records such conclusions explicitly. Untested downstream claims remain `UNKNOWN` unless they are promoted into their own full claim records with independent method and modal evidence; `UNVERIFIED` is reserved for a whole-artifact gate result.
 
 ## Practical interpretation
 
