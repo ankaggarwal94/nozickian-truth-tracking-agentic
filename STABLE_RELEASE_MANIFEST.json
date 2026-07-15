@@ -23,10 +23,10 @@
       "sha256": "ad36bf2e524de5e768aa086d8091526564d95831afb4f6c513bc7a4d0a4948d9"
     },
     {
-      "bytes": 39111,
+      "bytes": 71319,
       "path": "AUDIT_REPORT.md",
       "role": "release-metadata",
-      "sha256": "95d6370be81716a653e50f9c305493f90fc0cc04f571eec78baa66bb1ee3291f"
+      "sha256": "8a86ffb38f1a13d22b01007fb04d28e95d263f1ebafb1e160af5524f37fb128d"
     },
     {
       "bytes": 1056,
@@ -610,7 +610,7 @@
   ],
   "self_exclusion": "file_inventory intentionally excludes STABLE_RELEASE_MANIFEST.json to avoid a self-referential hash cycle; self_hash_sha256 is computed over canonical JSON with self_hash_sha256 set to null.",
   "self_file": "STABLE_RELEASE_MANIFEST.json",
-  "self_hash_sha256": "ab85cf4bb677845d3a9aba1a167bf68438d681658a20016ad897af7454700d7f",
+  "self_hash_sha256": "46bf025e84d59d7e4a7fd305f38d0aef7327ede4810c319b45e4b986d1e6a9e3",
   "validation_commands": [
     "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test",
     "python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence",

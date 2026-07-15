@@ -269,3 +269,357 @@ The final sweep covers proposition and modal-case binding, observation identity,
 | consistency-sweep record contract | PASS - the final certificate records schema/DAG/formal-tree/provenance/obligation/Issue-8, CI reachability, documentation/template/cap-wording, stdout-containment, and regenerated-output corrections; an iterative post-serialization resolver verified every current locator against its semantic target |
 
 Counts in this table come from the checked-in final release-evidence fixed point. `MANIFEST.sha256`, `STABLE_RELEASE_MANIFEST.json`, the current observation ledger, and structured evidence hashes were regenerated together and checked by literal release replay. The release remains **PASS-SCOPED**: no live official Claude Code fixture trace was captured, both optional official validators were unavailable, and the v1.0.3 certifier cannot discharge the two Issue #5 charter obligations. Live runtime stays `UNVERIFIED_RUNTIME`; the synthetic aggregate does not change that.
+
+
+## Durable lessons ledger — PR #3 ultra-review (2026-07-15)
+
+This is the canonical PR-visible mirror of the local orchestration ledger. It records reusable invariants separately from immutable release identifiers. Snapshot facts are superseded after any edit and must be re-proven before publication.
+
+<!-- BEGIN PR3 DURABLE LESSONS v1 -->
+
+## Ledger policy
+
+- DATE records when the lesson was promoted.
+- DURABILITY is PERMANENT for cross-project invariants, PROJECT for repository-specific policy, or RELEASE for immutable snapshot facts.
+- A lesson is promoted only after at least two independent observations or an explicit DURABILITY decision. Every entry below is explicitly promoted by the user’s durability request and supported by implementation evidence plus independent review or hosted execution.
+- ISSUE describes the demonstrated failure class; RESOLUTION states the invariant; RECURRENCE states when to reapply it; APPLIES TO limits scope; LAST VERIFIED and SOURCE identify evidence.
+- COUNTEREXAMPLE names the nearby false world; RETENTION TEST names the adherence or fixed-point check; RESIDUAL prevents overclaiming; OWNER / FOLLOW-UP assigns continued custody.
+- A newer record supersedes a snapshot identifier only by naming the prior identifier and proving the new immutable state. Historical identifiers and counts remain historical rather than silently becoming current.
+
+### L-PR3-001 — Receive review findings as hypotheses
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: Blind agreement, bulk speculative edits, or dismissing feedback without reproduction can add regressions or leave real defects unresolved.
+- RESOLUTION: Read the whole finding, translate it into a concrete invariant, inspect current head, reproduce or falsify it, evaluate repository-wide consequences, repair one coherent lane, and run the focused regression before calling it resolved.
+- RECURRENCE: Apply to every human, bot, or subagent review round.
+- APPLIES TO: Pull-request review, audit remediation, and feedback integration.
+- LAST VERIFIED: 2026-07-15; every accepted PR #3 finding received a focused test and independent cross-review.
+- SOURCE: PR #3 remediation record; focused gate, formal, promotion, and validator suites.
+- COUNTEREXAMPLE: A plausible review comment is implemented despite already being fixed or being false on current head.
+- RETENTION TEST: Reproduce the alleged failure before editing and rerun the named regression after editing.
+- RESIDUAL: A passing focused test does not establish global correctness.
+- OWNER / FOLLOW-UP: Parent integrator; preserve the receiving-code-review sequence in future rounds.
+- PROMOTION RATIONALE: Explicit user requirement plus repeated successful use across independent repair lanes.
+
+### L-PR3-002 — Partition agents by trust and verification boundary
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: One broad reviewer can conflate layers, miss correlated defects, or validate its own assumptions.
+- RESOLUTION: Assign bounded lanes for gate/evidence semantics, formal/runtime handling, validator/release behavior, documentation/inventory, and adversarial review. The parent owns integration; independent read-only agents cross-review the integrated fixed point.
+- RECURRENCE: Use specialized first-pass lanes and at least one cross-lane adversarial pass for high-assurance work.
+- APPLIES TO: Ultra-reviews, formal-verification packages, and security-sensitive CI/certification.
+- LAST VERIFIED: 2026-07-15; a final holistic audit plus lane-specific independent cross-reviews found no blocker within the reviewed scope.
+- SOURCE: Conversation orchestration record; self-certificate human_review fields; final pushed-commit audit.
+- COUNTEREXAMPLE: Sibling agents assume another lane checked an integration seam.
+- RETENTION TEST: Final parent-owned diff audit plus an independent pushed-state audit.
+- RESIDUAL: More agents do not create proof; correlated assumptions remain possible.
+- OWNER / FOLLOW-UP: Parent integrator; explicitly record lane scope, handoffs, and unresolved seams.
+- PROMOTION RATIONALE: Multiple independent observations and the user’s standing preference for layered orchestration.
+
+### L-PR3-003 — Separate claim, method, oracle, neighborhood, execution, and runtime identity
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: Byte identity or a passing run can be mistaken for truth, source authority, freshness, neighborhood adequacy, official provenance, or method-relative tracking.
+- RESOLUTION: Record the exact proposition p; method M with versions, argv, configuration, parser, and approvals; truth-oracle assumptions; nearby false and true worlds; this execution; package/target snapshots; and runtime entrypoint identity as distinct objects.
+- RECURRENCE: Reconstruct these dimensions whenever a claim, tool, oracle, prompt, parser, fixture neighborhood, or runtime changes.
+- APPLIES TO: All Nozickian certificates and promotion claims.
+- LAST VERIFIED: 2026-07-15; seven proposition-bound claims, explicit method/evidence records, modal bindings, and scoped runtime identity.
+- SOURCE: skills/nozickian-verify/references/STANDARD.md; EVIDENCE_SCHEMA.md; self_validation/self_certificate.json.
+- COUNTEREXAMPLE: “The file hash matched, therefore the claim is true and current.”
+- RETENTION TEST: Require distinct fields and evidence for each dimension and preserve explicit residuals.
+- RESIDUAL: No finite neighborhood proves global sensitivity or oracle adequacy.
+- OWNER / FOLLOW-UP: Claim owner and parent adjudicator; revisit whenever M or the oracle changes.
+- PROMOTION RATIONALE: Core method-relative truth-tracking invariant observed across the package’s entire evolution.
+
+### L-PR3-004 — Bind evidence to the exact proposition
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: Artifact hashes alone could remain byte-valid after the supported claim text was substituted.
+- RESOLUTION: Canonicalize claim text, hash the canonical UTF-8 bytes, and require certificate proposition_sha256 plus every wrapper claim_proposition_sha256 to match.
+- RECURRENCE: Recompute all proposition bindings after any claim wording change, including editorial-looking changes.
+- APPLIES TO: Strict gates, promotion claims, self-certificates, and evidence migrations.
+- LAST VERIFIED: 2026-07-15; gate contracts 119/119 and strict gate PASS-SCOPED.
+- SOURCE: skills/nozickian-verify/references/EVIDENCE_SCHEMA.md; scripts/ntt_gate.py; run_gate_contract_tests.py.
+- COUNTEREXAMPLE: Coordinated certificate-text substitution with unchanged evidence bytes.
+- RETENTION TEST: Proposition-substitution false worlds.
+- RESIDUAL: A proposition digest binds text, not truth.
+- OWNER / FOLLOW-UP: Evidence producer and gate maintainer; version canonicalization deliberately.
+- PROMOTION RATIONALE: Closes a demonstrated general substitution class.
+
+### L-PR3-005 — Bind modal evidence to the exact nearby world and observation
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: A wrapper could name one test while supporting another perturbation, outcome, or observation, and multiple wrappers over one aggregate artifact could masquerade as independent trials.
+- RESOLUTION: Bind the canonical proposition, kind, test ID, target claims, variation, expected and observed behavior, outcome, and result in modal_case_sha256. Require an exact observation_id match in the versioned current ledger; otherwise count independence by underlying artifact bytes.
+- RECURRENCE: Regenerate the digest and observation record after any case edit; never count filenames as independent observations.
+- APPLIES TO: False-world sensitivity, true-world adherence, and modal thresholds.
+- LAST VERIFIED: 2026-07-15; 76/76 false worlds rejected and 12/12 nearby true worlds retained.
+- SOURCE: self_validation/current_observations.json; modal wrappers; gate contracts.
+- COUNTEREXAMPLE: Reuse one passing aggregate record for multiple different modal cases.
+- RETENTION TEST: Modal-substitution and shared-ledger true-world cases.
+- RESIDUAL: Passing chosen worlds does not prove neighborhood completeness.
+- OWNER / FOLLOW-UP: Evidence producer and reviewer; justify neighborhood selection.
+- PROMOTION RATIONALE: Core Nozickian case-to-observation identity rule.
+
+### L-PR3-006 — Treat local evidence as bounded, no-follow, byte-backed input
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: Traversal, schemes, symlinks, special files, inode swaps, oversized/deep JSON, hardlinks, aliases, and byte-identical copies could escape the root, exhaust resources, or inflate sufficiency.
+- RESOLUTION: Require canonical relative POSIX paths; reject schemes, traversal, links, special files, aliases, and unsafe hardlinks; use bounded no-follow descriptor reads with pre/post identity checks; cap bytes, depth, nodes, records, fields, and strings; deduplicate wrapper and artifact bytes.
+- RECURRENCE: Apply before every untrusted read and test both path aliases and byte-copy aliases.
+- APPLIES TO: Gate evidence, observation ledgers, promotion bundles, formal companions, and validator fixtures.
+- LAST VERIFIED: 2026-07-15; resource-bound, path-control, strict-root, and alias probes passed.
+- SOURCE: scripts/ntt_gate.py; certify_pass_tracked_upgrade.py; gate and promotion contracts.
+- COUNTEREXAMPLE: Strict evidence without a root, a path escape, a symlink, or two copied wrappers counted twice.
+- RETENTION TEST: INVALID_INPUT for missing strict root and ordinary named failures for unsafe evidence.
+- RESIDUAL: Bounds can reject unusually large legitimate inputs and must be documented.
+- OWNER / FOLLOW-UP: Parser and filesystem-boundary maintainers; review limits when formats evolve.
+- PROMOTION RATIONALE: Reusable security and availability invariant.
+
+### L-PR3-007 — Never transmit epistemic status automatically downstream
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: A passing source claim p could improperly promote an entailed, summarized, deployment, safety, compliance, or action-authorizing claim q.
+- RESOLUTION: A passing downstream record must point to a distinct independently passing claim with its own proposition binding, method, evidence, nearby worlds, and residuals. Untested q remains reasoned UNKNOWN; p cannot verify itself downstream.
+- RECURRENCE: Enumerate downstream conclusions after every source-claim pass.
+- APPLIES TO: Generic gate, promotion certifier, reports, and deployment decisions.
+- LAST VERIFIED: 2026-07-15; three downstream records and zero closure violations.
+- SOURCE: EVIDENCE_SCHEMA.md; STANDARD.md; ntt_gate.py; promotion auto-closure contract.
+- COUNTEREXAMPLE: Green CI or a passing package claim is reported as proof of safe deployment.
+- RETENTION TEST: Downstream auto-closure false worlds and independent-claim checks.
+- RESIDUAL: Explicit downstream records can still be semantically inadequate.
+- OWNER / FOLLOW-UP: Parent adjudicator; require independent claim admission for q.
+- PROMOTION RATIONALE: The project’s enduring no-automatic-epistemic-closure rule.
+
+### L-PR3-008 — Authenticate structured runtime events, not tool-like text
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: Nested tool-shaped payloads, text masquerades, role inversion, duplicate IDs, result-before-call order, malformed JSONL, and valid-looking tails could falsely authenticate execution.
+- RESOLUTION: Parse only recognized event positions; treat tool nodes as hard boundaries; require assistant-origin tool use, a matching later user-origin substantive result, exact unique IDs and native selectors, no unexpected lanes, total line/node ordering, bounded per-record structure, and complete-transcript authentication.
+- RECURRENCE: Add a false-world trace for every newly accepted event shape or parser relaxation.
+- APPLIES TO: Formal runner, live trace authentication, and PASS-TRACKED evidence.
+- LAST VERIFIED: 2026-07-15; formal contracts 119/119.
+- SOURCE: docs/runtime-trace-auth/README.md; run_formal_artifact_verification.py; run_formal_runner_contract_tests.py.
+- COUNTEREXAMPLE: An early disallowed event is hidden before a large valid-looking tail.
+- RETENTION TEST: Malformed JSONL, descendant ordering, masquerade, mismatched-ID, and tail cases.
+- RESIDUAL: Structural authentication does not prove semantic quality of a tool result.
+- OWNER / FOLLOW-UP: Formal-runner maintainer; keep accepted event grammar explicit.
+- PROMOTION RATIONALE: Prevents a broad demonstrated transcript-spoofing family.
+
+### L-PR3-009 — Bound subprocess capture and terminate the process group
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: Sequential reads could deadlock, descendants could retain output pipes, capture could grow without bound, and tail-only handling could discard an early failure.
+- RESOLUTION: Drain stdout and stderr concurrently under explicit ceilings; decide and hash from complete retained bytes; on timeout or overflow kill the whole POSIX process group, close pipes, and use bounded joins. Excess fails closed.
+- RECURRENCE: Use this wrapper for every verifier or runtime subprocess.
+- APPLIES TO: Live fixtures, formal runs, official validators, and promotion certification.
+- LAST VERIFIED: 2026-07-15; descendant-pipe and large reordered-result cases passed.
+- SOURCE: run_live_skill_evals.py; run_formal_artifact_verification.py; certify_pass_tracked_upgrade.py.
+- COUNTEREXAMPLE: Parent exits while a child keeps the pipe open indefinitely.
+- RETENTION TEST: Descendant-pipe, timeout, oversized-output, and early-failure/valid-tail probes.
+- RESIDUAL: POSIX process-group semantics are platform-scoped.
+- OWNER / FOLLOW-UP: Runtime/process owner; specify platform behavior before porting.
+- PROMOTION RATIONALE: General process-safety and evidence-integrity rule.
+
+### L-PR3-010 — Execute immutable snapshots and state runtime identity narrowly
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: Mutable package/target bytes and ambient PATH resolution could let executed content differ from certified content.
+- RESOLUTION: Materialize independent immutable package and target snapshots, bind their identities, and verify source/snapshot pre/post stability. Resolve one absolute regular non-symlink executable entrypoint, fingerprint it before and after, and use that exact path for every invocation.
+- RECURRENCE: Re-snapshot after behavior changes and fail on any snapshot or entrypoint drift.
+- APPLIES TO: Live fixtures, formal artifact runs, and promotion bundles.
+- LAST VERIFIED: 2026-07-15; snapshot-mutation and runtime-identity contracts passed.
+- SOURCE: run_live_skill_evals.py; run_formal_artifact_verification.py; docs/release/README.md.
+- COUNTEREXAMPLE: A different executable earlier on PATH is selected after changing working directory.
+- RETENTION TEST: Two-cwd PATH false world and pre/post identity checks.
+- RESIDUAL: Entrypoint fingerprinting does not attest the transitive interpreter, libraries, kernel, host, or official provenance.
+- OWNER / FOLLOW-UP: Runtime evidence owner; expand the identity boundary only with explicit new evidence.
+- PROMOTION RATIONALE: Binds what ran while keeping the assurance boundary honest.
+
+### L-PR3-011 — Secure caller-controlled output destinations
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: Output paths could traverse linked ancestors, overwrite external sentinels, target special files, or alias protected inputs.
+- RESOLUTION: Validate path components lexically without following attacker-controlled links; reject direct links, special files, hardlink aliases, and a regular file at the output-directory path; accept an existing real directory or safely create a new one. Regenerate an allowed private regular JSON file only through an exclusive same-directory temporary and atomic replacement.
+- RECURRENCE: Apply to every new JSON, Markdown, transcript, manifest, or output-directory option.
+- APPLIES TO: Gate, validator, formal runner, certifier, and manifest writers.
+- LAST VERIFIED: 2026-07-15; path-control and external-sentinel probes passed.
+- SOURCE: README.md; docs/release/README.md; relevant scripts and contract suites.
+- COUNTEREXAMPLE: A destination symlink points to an external sentinel.
+- RETENTION TEST: Symlink, FIFO, hardlink, linked-ancestor, and protected-input probes.
+- RESIDUAL: Atomic replacement guarantees destination semantics only on the supported filesystem model.
+- OWNER / FOLLOW-UP: Every CLI owner; keep structured bounded INVALID_INPUT behavior.
+- PROMOTION RATIONALE: Cross-cutting filesystem safety invariant.
+
+### L-PR3-012 — Release replay must observe the actual outer self-test and literal CLIs
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: Semantic simulations and incomplete file snapshots could miss mutations caused by the real self-test, modes, empty directories, links, hardlinks, timestamps, or entry metadata.
+- RESOLUTION: Bind a complete no-follow non-cruft entry snapshot around the actual outer self-test, then execute two literal deterministic CLI passes with external outputs and require zero drift in type, mode, identity, bytes, and relevant metadata.
+- RECURRENCE: Preserve the reviewed literal command list and rerun after every release-affecting edit.
+- APPLIES TO: validate_package.py --self-test, release lock, and release certification.
+- LAST VERIFIED: 2026-07-15; full self-test 1459/1459 and two-pass replay succeeded.
+- SOURCE: validate_package.py; RELEASE_LOCK.json; PACKAGE_SURFACE.json.
+- COUNTEREXAMPLE: A simulated command passes while the actual CLI writes inside the package.
+- RETENTION TEST: Actual outer invocation binding plus two literal passes.
+- RESIDUAL: The replay covers declared deterministic commands, not arbitrary future commands.
+- OWNER / FOLLOW-UP: Release maintainer; update policy and tests together when commands change.
+- PROMOTION RATIONALE: Makes idempotence observational rather than merely modeled.
+
+### L-PR3-013 — Executable policy, not a manifest, decides the stable tree
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: A manifest author could hide behavior or stable files by editing inventory or volatile exclusions.
+- RESOLUTION: Independently derive inventory and exclusions from the current validator; require exact manifest equality; verify the manifest self-hash and every path, type, byte count, and SHA before computing one canonical stable-tree digest.
+- RECURRENCE: Refresh manifests after policy/content changes, then independently recompute and verify.
+- APPLIES TO: Stable release identity, live results, promotion certificates, and archives.
+- LAST VERIFIED: 2026-07-15; 98-file stable inventory and 99-file repository tree verified.
+- SOURCE: validate_package.py; STABLE_RELEASE_MANIFEST.json; MANIFEST.sha256.
+- COUNTEREXAMPLE: A behavior file is added to a manifest-authored volatile exclusion.
+- RETENTION TEST: Exact policy parity and refreshed-manifest false worlds.
+- RESIDUAL: The executable validator remains inside the team/internal threat model.
+- OWNER / FOLLOW-UP: Validator and release maintainers; require independent review of policy changes.
+- PROMOTION RATIONALE: Prevents self-authored exclusions from weakening certification.
+
+### L-PR3-014 — Keep one current observation ledger and remove stale mirrors
+
+- DATE: 2026-07-15
+- DURABILITY: PROJECT
+- ISSUE: Prior-version ledgers, redundant text artifacts, and checked-in generated outputs created stale provenance, orphan evidence, and divergent copies.
+- RESOLUTION: Keep seven current claims, forty current structured wrappers, and one current_observations.json; reference every wrapper exactly once; remove stale v1.0.1/v1.0.2 ledgers, redundant text mirrors, and obsolete output ledgers.
+- RECURRENCE: On regeneration, check wrapper-reference bijection, hashes, version, stale roots, and orphan/missing files.
+- APPLIES TO: This repository’s self-validation evidence.
+- LAST VERIFIED: 2026-07-15; 40/40 wrappers uniquely referenced with zero missing, orphaned, or stale hashes.
+- SOURCE: self_validation/self_certificate.json; current_observations.json; self_validation/evidence/.
+- COUNTEREXAMPLE: Two “current” ledgers disagree while both remain cited.
+- RETENTION TEST: Inventory bijection and stale-provenance scans.
+- RESIDUAL: Current observations are still scoped deterministic evidence, not official runtime evidence.
+- OWNER / FOLLOW-UP: Release evidence owner; migrate atomically at the next release.
+- PROMOTION RATIONALE: Repeated project-specific provenance failures justify a one-authoritative-ledger rule.
+
+### L-PR3-015 — Promotion evidence is a typed graph and the production CLI must run fresh
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: Flat refs, prewritten captures, first-glob selection, scoped-away policy nodes, or a substitute harness could fabricate a complete profile.
+- RESOLUTION: Require the fixed nine-role promotion-evidence-v2 DAG with canonical bundle-local paths, exact bytes, hashes, dependencies, and role validation. Rerun deterministic suites and allowlisted tools with fixed argv. Invoke the production certifier CLI for the full baseline and every negative; sanitize and restore inherited control variables without mutating fake executable bytes.
+- RECURRENCE: Version the graph when semantics change and prove every negative reached production.
+- APPLIES TO: Modeled PASS-SCOPED to PASS-TRACKED certification.
+- LAST VERIFIED: 2026-07-15; 36/36 cases and production baseline 248/248.
+- SOURCE: PASS_TRACKED_UPGRADE_AUDIT.md; certify_pass_tracked_upgrade.py; run_promotion_certifier_contract_tests.py.
+- COUNTEREXAMPLE: The harness passes while bypassing production parsing or inherits NTT_CONTRACT_CLAUDE_OUTPUT_MODE.
+- RETENTION TEST: Production-CLI invocation inventory, fixed-DAG negatives, and environment isolation.
+- RESIDUAL: Synthetic contract coverage is not runtime authentication.
+- OWNER / FOLLOW-UP: Promotion maintainer; preserve production parity and evidence-kind labels.
+- PROMOTION RATIONALE: Guards against tests validating their own replacement implementation.
+
+### L-PR3-016 — Machine results are one JSON document and full streams decide
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: Import-time stdout, multiple JSON documents, tail extraction, permissive return-code coercion, or excerpts could corrupt parsing or hide contradictions.
+- RESOLUTION: Require direct loading of exactly one JSON document. Parse complete bounded stdout and stderr; let any negative signal dominate; require exact integer zero for success; expose only sanitized bounded excerpts with truncation flags and full byte/hash metadata.
+- RECURRENCE: Add single-document and early-failure/large-tail checks to every new machine CLI or external-output parser.
+- APPLIES TO: Validator, gate, contract suites, regression, aggregate, formal, and official-validator captures.
+- LAST VERIFIED: 2026-07-15; all release CLIs parsed as single documents and exact-return/contradiction controls passed.
+- SOURCE: README.md; PACKAGE_SURFACE.json; validation and promotion scripts.
+- COUNTEREXAMPLE: Boolean false or 0.0 is accepted as return code zero, or a late “pass” hides an early failure.
+- RETENTION TEST: Exact-type return worlds, pass-plus-nonzero summaries, and single-document probes.
+- RESIDUAL: Text semantics remain allowlist- and parser-relative.
+- OWNER / FOLLOW-UP: Every CLI/parser owner; version accepted result grammar.
+- PROMOTION RATIONALE: Foundational machine-evidence rule.
+
+### L-PR3-017 — “Swept” is not “resolved,” and remote fetch specifications are untrusted
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: A sweep could be declared complete despite unresolved echoes, a pinned mirror could be treated as fresh, or a parent could execute a subagent-authored fetch specification.
+- RESOLUTION: Apply the canonical post-correction sweep predicate; record affected claims, locators, classification, resolution, and replacement evidence. For remote-only truth, emit the exact REMOTE_GROUND_TRUTH_REQUIRED base record; evaluate freshness relative to the claim; reconstruct and validate scheme, host, and method; require companion evidence before fetched-and-readjudicated.
+- RECURRENCE: Run after every corrected/refuted claim and whenever authoritative evidence is remote-only.
+- APPLIES TO: Skill orchestration, source verification, and gate-auditor review.
+- LAST VERIFIED: 2026-07-15; charter false/true-world probes passed.
+- SOURCE: skills/nozickian-verify/SKILL.md; SUBAGENT_PROTOCOLS.md; agents/ntt-gate-auditor.md.
+- COUNTEREXAMPLE: A pinned historical mirror satisfies a current-state claim.
+- RETENTION TEST: Remove sweep or remote fields and require charter-integrity failure; retain intact true world.
+- RESIDUAL: Both charter mechanics remain parent/auditor-enforced under Issue #5.
+- OWNER / FOLLOW-UP: Parent adjudicator and gate auditor; Issue #5 owns mechanical enforcement.
+- PROMOTION RATIONALE: Essential charter behavior with an explicitly retained enforcement boundary.
+
+### L-PR3-018 — CI policy must be reachable and validate both checkout and archive
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: Required command text hidden in comments, false conditions, heredocs, functions, loops, or disabled jobs could satisfy superficial checks; checkout-only testing could miss shipped-archive defects.
+- RESOLUTION: Validate a restricted exact workflow surface and count commands only as direct top-level commands in active named run blocks. Validate package and promotion behavior in both checkout and unpacked git archive with GitHub token permissions restricted to contents: read.
+- RECURRENCE: Treat new triggers, permissions, jobs, steps, actions, environments, or shell structures as policy changes requiring nearby worlds.
+- APPLIES TO: .github/workflows/nozickian-team-ci.yml and package-surface policy.
+- LAST VERIFIED: 2026-07-15; Actions run 29388907116 and job 87267813190 completed successfully on synthetic merge 08572eb286dcb6802cf7f5eccc92a38d86cf4649 from head c34fceb7b49617ed0aea007f1f6849e763c8c63b and base 4d655d72c91002a33050f7be0733c5dbc3d06452.
+- SOURCE: Workflow file; PACKAGE_SURFACE.json; validate_package.py; Actions job 87267813190.
+- COUNTEREXAMPLE: Exact command text exists only inside if false or a comment.
+- RETENTION TEST: Disabled-job/comment/conditional false worlds plus structurally equivalent YAML true world.
+- RESIDUAL: Green CI is evidence for its exact merge snapshot, not semantic truth or future base states.
+- OWNER / FOLLOW-UP: CI and validator maintainers; rerun after any base/head or workflow change.
+- PROMOTION RATIONALE: Prevents presentation-only CI compliance and checkout-only assurance.
+
+### L-PR3-019 — Treat publication transport as untrusted and prove the remote payload
+
+- DATE: 2026-07-15
+- DURABILITY: PROJECT
+- ISSUE: The first connector publication silently truncated the 164,731-byte promotion certifier to 141,312 bytes while still returning a blob SHA; Actions run 13 caught the syntax and manifest failure.
+- RESOLUTION: Re-fetch current head; enforce one path to one local Git blob to one returned remote blob; compare every path’s local Git-object SHA and byte count; chunk large base64 on three-byte boundaries when needed; compose the complete tree including deletions and modes; fast-forward with force false; re-fetch the ref, commit, tree, and critical files; then run hosted CI and an independent pushed-state audit.
+- RECURRENCE: Apply to every connector Git-data publication and never treat batch success as payload-integrity evidence.
+- APPLIES TO: PR #3 and similar connector-based repository writes.
+- LAST VERIFIED: 2026-07-15; repaired certifier blob eace960d6b086f2a9c9b60039f50ee28857c8811, head c34fceb7b49617ed0aea007f1f6849e763c8c63b, and tree 8210b1e6ff5ac52467fc533f93e67ccaa8298de2 matched local; run 14 succeeded.
+- SOURCE: Failed Actions run 29388787367; successful run 29388907116; commits 217e5cf and c34fceb.
+- COUNTEREXAMPLE: A create-blob response is accepted without comparing the created blob to git hash-object.
+- RETENTION TEST: Per-file SHA/cardinality audit, independent full-tree reconstruction, remote fetch, and hosted CI.
+- RESIDUAL: Git-object equality proves bytes, not truth; each subsequent edit supersedes these snapshot identifiers.
+- OWNER / FOLLOW-UP: Publishing parent; never reuse the current tree SHA after the durability commit.
+- PROMOTION RATIONALE: Directly observed publication-layer corruption plus successful independent repair.
+
+### L-PR3-020 — Finish at a reproducible fixed point, not the first green run
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: Evidence, manifests, counts, documentation, and validators recursively affect one another; an earlier pass becomes stale after a later edit.
+- RESOLUTION: Refresh only the integrity artifacts actually affected, rerun basic validation, strict gate, regression, gate/formal contracts, promotion aggregate, formal dry run, and full self-test; reconcile counts and status across all current records; repeat until commands and tree stop drifting; finish with JSON parsing, diff checks, orphan/stale evidence, and cache scans. Count a false-world rejection only when the intended named semantic check fails in an ordinary completed result; HARNESS_ERROR, INTERNAL_ERROR, an unrelated INVALID_INPUT, or a parser crash is not sensitivity evidence. Require true worlds to complete and pass so fail-closed does not become reject-all.
+- RECURRENCE: Required after every release-affecting edit and again after publication.
+- APPLIES TO: High-assurance release closure.
+- LAST VERIFIED: 2026-07-15; basic 1335/1335, full 1459/1459, gate/formal 119/119 each, regression 166/166, promotion 36/36, 76/76 false and 12/12 true worlds.
+- SOURCE: Current AUDIT_REPORT.md fixed-point record and Actions run 29388907116.
+- COUNTEREXAMPLE: A count or manifest from an earlier green tree is presented as current after a documentation edit, or a crashed mutation harness is counted as a successful false-world rejection.
+- RETENTION TEST: Two literal release passes, exact-tree comparison, causal named-check inspection for false worlds, completed PASS for true worlds, and new CI for every new head/base merge snapshot.
+- RESIDUAL: A fixed point is relative to declared commands, policy, environment, and threat model.
+- OWNER / FOLLOW-UP: Release parent; invalidate prior snapshot identifiers immediately on edit.
+- PROMOTION RATIONALE: Prevents stale green evidence from becoming the verdict.
+
+### L-PR3-021 — Preserve honest status vocabulary and residual scope
+
+- DATE: 2026-07-15
+- DURABILITY: PERMANENT
+- ISSUE: Strong deterministic and synthetic results invite unsupported promotion or ambiguous status transmission across layers.
+- RESOLUTION: Name the subject of every status. Untested claim q is UNKNOWN. Whole-artifact status may be PASS-TRACKED, PASS-SCOPED, LIMITED, FAIL, or UNVERIFIED. Missing live execution is UNVERIFIED_RUNTIME. Unavailable official validators are NOT_EXECUTED. The current modeled certifier result is status PASS-SCOPED, outcome CAPPED, promotion_authorized false, and nonzero exit while both Issue #5 obligations remain.
+- RECURRENCE: Re-evaluate a limitation only with fresh direct evidence or mechanical implementation; never promote by confidence, interpretation, or synthetic coverage.
+- APPLIES TO: Release verdicts, promotion reports, runtime identity, and threat-model claims.
+- LAST VERIFIED: 2026-07-15; strict gate PASS-SCOPED with zero failed claims; official tools NOT_EXECUTED; runtime UNVERIFIED_RUNTIME.
+- SOURCE: README.md; runtime-trace-auth docs; PASS_TRACKED_UPGRADE_AUDIT.md; PACKAGE_SURFACE.json; self-certificate.
+- COUNTEREXAMPLE: “Promotion passed” is used to summarize a synthetic CAPPED result.
+- RETENTION TEST: Exact status/type checks, unresolved Issue #5 obligations, and PR-body residual audit.
+- RESIDUAL: Hostile maintainer control and semantic adequacy of future evidence remain outside mechanical closure.
+- OWNER / FOLLOW-UP: Parent adjudicator and release maintainer; preserve scoped wording everywhere.
+- PROMOTION RATIONALE: The durable outcome is calibrated assurance, not maximal status.
+
+<!-- END PR3 DURABLE LESSONS v1 -->
