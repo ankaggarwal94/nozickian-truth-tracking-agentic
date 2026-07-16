@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-validator-sensitivity",
+  "claim_proposition_sha256": "sha256:dc2dfd6a76bb8c4bf7cf9bfaaca1a161188aff38741fec6771cc1afccb021f4f",
+  "command_or_source": "validate_package.py --self-test",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:f28155c55eb1c9fa72ddfaf13ead47b92c674c4c58563b75307e695df451e286",
+  "observation_id": "obs:C-validator-sensitivity:FW-validator-formal-output-invariant",
+  "observed_result": "The validator mutation lane rejected removal of the exact formal output recomputation invariant after manifest refresh.",
+  "support_summary": "This wrapper binds FW-validator-formal-output-invariant to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-validator-formal-output-invariant",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

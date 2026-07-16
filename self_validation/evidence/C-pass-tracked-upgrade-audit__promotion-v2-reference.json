@@ -1,11 +1,11 @@
 {
   "artifact_path": "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
   "claim_id": "C-pass-tracked-upgrade-audit",
-  "claim_proposition_sha256": "sha256:a158800f4ad4e017c722b9ceff1e29439caffbceda1e627529dfa9cf391da536",
+  "claim_proposition_sha256": "sha256:af6dd806f1832342970a4c3a945bfd9964b1b8072def1be83cdef7feac81ef8b",
   "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:366130075ac9d1e45c624f14cc72b330719166c1f418d8e229df0b0cfc8ed314",
+  "hash_or_version": "sha256:309e55ae678b2d90e8c685dac846f0b51f1428cb25a5d05040c07e3e4dcffa53",
   "observed_result": "Current source bytes support the scoped proposition for C-pass-tracked-upgrade-audit.",
   "support_summary": "This wrapper binds C-pass-tracked-upgrade-audit to current package artifact skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md by exact SHA-256 and to the canonical claim proposition digest.",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

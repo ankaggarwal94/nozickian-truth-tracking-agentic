@@ -7,7 +7,7 @@ Claude Code CLI is installed. If the runtime cannot be exercised, it records
 UNVERIFIED_RUNTIME rather than treating a version check as a pass.
 """
 from __future__ import annotations
-import argparse, contextlib, hashlib, importlib.util, io, json, os, re, shutil, signal, stat, subprocess, sys, tempfile, threading, time, uuid
+import argparse, contextlib, ctypes, hashlib, importlib.util, io, json, os, re, shutil, signal, stat, subprocess, sys, tempfile, threading, time, unicodedata, uuid
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Dict, List, Mapping, Sequence, Tuple, cast
@@ -27,6 +27,230 @@ MAX_CAPTURE_BYTES = 64 * 1024 * 1024
 FIXTURE_ID_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
 PIPE_CLOSE_GRACE_SEC = 0.5
 READER_JOIN_GRACE_SEC = 1.0
+DETACHED_CHILD_CLEANUP_TIMEOUT_SEC = 0.5
+DETACHED_CHILD_QUIET_SEC = 0.05
+MAX_PROC_SCAN_ENTRIES = 100_000
+_SUBREAPER_ENABLED: bool | None = None
+
+
+def _linux_process_graph() -> Tuple[int, Dict[int, Tuple[int, int]]]:
+    """Return self host PID and host-pid -> (parent, signalable pid) graph."""
+    self_host_pid = int(Path("/proc/self").resolve(strict=True).name)
+    with Path("/proc/self/status").open(
+        "r", encoding="utf-8", errors="replace"
+    ) as stream:
+        self_status = stream.read(64 * 1024)
+    self_namespace_pids: List[int] | None = None
+    for line in self_status.splitlines():
+        if line.startswith("NSpid:"):
+            try:
+                self_namespace_pids = [
+                    int(value) for value in line.split(":", 1)[1].split()
+                ]
+            except ValueError as exc:
+                raise OSError("invalid self NSpid identity") from exc
+            break
+    if not self_namespace_pids:
+        raise OSError("/proc status lacks NSpid")
+    if self_namespace_pids[0] != self_host_pid:
+        raise OSError("/proc self host identity mismatch")
+    namespace_depth = len(self_namespace_pids)
+    graph: Dict[int, Tuple[int, int]] = {}
+    scanned = 0
+    with os.scandir("/proc") as entries:
+        for entry in entries:
+            if not entry.name.isdigit():
+                continue
+            scanned += 1
+            if scanned > MAX_PROC_SCAN_ENTRIES:
+                raise OSError("/proc process scan bound exceeded")
+            try:
+                with open(
+                    os.path.join(entry.path, "status"),
+                    "r",
+                    encoding="utf-8",
+                    errors="replace",
+                ) as stream:
+                    status = stream.read(64 * 1024)
+            except (FileNotFoundError, PermissionError, ProcessLookupError):
+                continue
+            parent_host_pid: int | None = None
+            namespace_pids: List[int] | None = None
+            try:
+                for line in status.splitlines():
+                    if line.startswith("PPid:"):
+                        parent_host_pid = int(line.split(":", 1)[1].strip())
+                    elif line.startswith("NSpid:"):
+                        namespace_pids = [
+                            int(value)
+                            for value in line.split(":", 1)[1].split()
+                        ]
+            except ValueError as exc:
+                raise OSError("invalid numeric identity in /proc status") from exc
+            if (
+                parent_host_pid is not None
+                and namespace_pids
+                and len(namespace_pids) >= namespace_depth
+                and namespace_pids[0] == int(entry.name)
+                and namespace_pids[namespace_depth - 1] > 0
+            ):
+                graph[int(entry.name)] = (
+                    parent_host_pid,
+                    namespace_pids[namespace_depth - 1],
+                )
+    if self_host_pid not in graph:
+        raise OSError("/proc process graph omits self")
+    return self_host_pid, graph
+
+
+def _linux_descendant_closure(
+    graph: Mapping[int, Tuple[int, int]], roots: set[int]
+) -> set[int]:
+    """Return roots and their complete transitive host-PID descendants."""
+    children: Dict[int, set[int]] = {}
+    for host_pid, (parent_host_pid, _namespace_pid) in graph.items():
+        children.setdefault(parent_host_pid, set()).add(host_pid)
+    closure: set[int] = set()
+    pending = list(roots)
+    while pending:
+        host_pid = pending.pop()
+        if host_pid in closure:
+            continue
+        closure.add(host_pid)
+        pending.extend(children.get(host_pid, ()))
+    return closure
+
+
+def _enable_linux_child_subreaper() -> bool:
+    """Enable Linux orphan reparenting so setsid descendants remain visible."""
+    global _SUBREAPER_ENABLED
+    if _SUBREAPER_ENABLED is not None:
+        return _SUBREAPER_ENABLED
+    if not sys.platform.startswith("linux"):
+        _SUBREAPER_ENABLED = False
+        return False
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+        prctl = libc.prctl
+        prctl.argtypes = [
+            ctypes.c_int,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+        ]
+        prctl.restype = ctypes.c_int
+        if prctl(36, 1, 0, 0, 0) != 0:  # PR_SET_CHILD_SUBREAPER
+            raise OSError(ctypes.get_errno(), "PR_SET_CHILD_SUBREAPER failed")
+        _linux_process_graph()
+    except (AttributeError, OSError, ValueError):
+        _SUBREAPER_ENABLED = False
+    else:
+        _SUBREAPER_ENABLED = True
+    return _SUBREAPER_ENABLED
+
+
+def process_containment_scope() -> Dict[str, Any]:
+    detached_contained = _enable_linux_child_subreaper()
+    return {
+        "mechanism": (
+            "linux-child-subreaper-plus-process-group"
+            if detached_contained
+            else "initial-posix-process-group"
+            if os.name == "posix"
+            else "leader-process-only"
+        ),
+        "cleanup_after_leader_exit": os.name == "posix",
+        "detached_session_descendants_contained": detached_contained,
+    }
+
+
+def _reap_child_nonblocking(pid: int) -> None:
+    try:
+        os.waitpid(pid, os.WNOHANG)
+    except (ChildProcessError, ProcessLookupError):
+        pass
+
+
+def _cleanup_detached_descendants(
+    baseline: Mapping[str, Any] | None,
+) -> Dict[str, Any]:
+    """Kill/reap the full nonbaseline descendant closure to bounded quiescence."""
+    if baseline is None:
+        return {
+            "supported": False,
+            "survivor_seen": False,
+            "cleanup_complete": False,
+            "pids_seen": 0,
+        }
+    parent_host_pid = baseline.get("parent_host_pid")
+    baseline_roots = baseline.get("baseline_roots")
+    if type(parent_host_pid) is not int or not isinstance(baseline_roots, set):
+        return {
+            "supported": True,
+            "survivor_seen": False,
+            "cleanup_complete": False,
+            "pids_seen": 0,
+        }
+    deadline = time.monotonic() + DETACHED_CHILD_CLEANUP_TIMEOUT_SEC
+    quiet_since: float | None = None
+    seen_host_pids: set[int] = set()
+    while time.monotonic() < deadline:
+        observed_self_host_pid, graph = _linux_process_graph()
+        if observed_self_host_pid != parent_host_pid:
+            return {
+                "supported": True,
+                "survivor_seen": bool(seen_host_pids),
+                "cleanup_complete": False,
+                "pids_seen": len(seen_host_pids),
+            }
+        all_descendants = _linux_descendant_closure(
+            graph, {parent_host_pid}
+        ) - {parent_host_pid}
+        excluded = _linux_descendant_closure(
+            graph, baseline_roots
+        )
+        current_host_pids = all_descendants - excluded
+        if current_host_pids:
+            seen_host_pids.update(current_host_pids)
+            quiet_since = None
+            # Compute one complete tree snapshot before signaling. This avoids
+            # the depth-times-scan escape of direct-child-only subreaping.
+            for host_pid in current_host_pids:
+                namespace_pid = graph[host_pid][1]
+                try:
+                    os.kill(namespace_pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            for host_pid in current_host_pids:
+                if graph[host_pid][0] == parent_host_pid:
+                    _reap_child_nonblocking(graph[host_pid][1])
+        else:
+            if quiet_since is None:
+                quiet_since = time.monotonic()
+            elif time.monotonic() - quiet_since >= DETACHED_CHILD_QUIET_SEC:
+                break
+        time.sleep(0.005)
+    observed_self_host_pid, graph = _linux_process_graph()
+    all_descendants = _linux_descendant_closure(
+        graph, {observed_self_host_pid}
+    ) - {observed_self_host_pid}
+    excluded = _linux_descendant_closure(graph, baseline_roots)
+    remaining = all_descendants - excluded
+    for host_pid in remaining:
+        namespace_pid = graph[host_pid][1]
+        try:
+            os.kill(namespace_pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        if graph[host_pid][0] == observed_self_host_pid:
+            _reap_child_nonblocking(namespace_pid)
+    return {
+        "supported": True,
+        "survivor_seen": bool(seen_host_pids),
+        "cleanup_complete": not remaining,
+        "pids_seen": len(seen_host_pids),
+    }
 
 
 def normalize_display(
@@ -78,6 +302,21 @@ def run_cmd(
     }
     started = time.time()
     try:
+        containment_scope = process_containment_scope()
+        if containment_scope.get(
+            "detached_session_descendants_contained"
+        ) is not True:
+            raise OSError("detached-descendant containment is unavailable")
+        self_host_pid, initial_graph = _linux_process_graph()
+        baseline = {
+            "parent_host_pid": self_host_pid,
+            "baseline_roots": {
+                host_pid
+                for host_pid, (parent_host_pid, _namespace_pid)
+                in initial_graph.items()
+                if parent_host_pid == self_host_pid
+            },
+        }
         # SECURITY-REVIEW: Fixed argv invokes the PATH-resolved Claude executable
         # directly; no shell parsing or command-string interpolation is used.
         # Each pipe is drained concurrently and bounded while the child runs.
@@ -135,37 +374,42 @@ def run_cmd(
         timed_out = False
         descendant_pipe_leak = False
         process_group_terminated = False
+        process_group_cleanup_attempted = False
+        normal_exit_group_survivor = False
         leader_exited_at: float | None = None
 
-        def terminate_group() -> None:
-            nonlocal process_group_terminated
-            process_group_terminated = True
+        def terminate_group() -> bool:
+            nonlocal process_group_cleanup_attempted, process_group_terminated
+            process_group_cleanup_attempted = True
             try:
                 if os.name == "posix":
                     os.killpg(proc.pid, signal.SIGKILL)
                 else:
                     proc.kill()
+                process_group_terminated = True
+                return True
             except ProcessLookupError:
-                pass
+                return False
             except OSError:
                 try:
                     proc.kill()
+                    process_group_terminated = True
+                    return True
                 except OSError:
-                    pass
+                    return False
 
         while True:
             if stop.is_set():
                 terminate_group()
                 break
             if proc.poll() is not None:
-                if not any(reader.is_alive() for reader in readers):
-                    break
-                if leader_exited_at is None:
-                    leader_exited_at = time.monotonic()
-                if time.monotonic() - leader_exited_at >= PIPE_CLOSE_GRACE_SEC:
-                    descendant_pipe_leak = True
-                    terminate_group()
-                    break
+                # The leader's exit starts the containment boundary. Kill the
+                # original group immediately, then sweep the complete detached
+                # descendant graph below; waiting on inherited pipes would
+                # grant descendants a post-leader mutation window.
+                if os.name == "posix":
+                    normal_exit_group_survivor = terminate_group()
+                break
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 timed_out = True
@@ -180,6 +424,16 @@ def run_cmd(
                 proc.wait(timeout=READER_JOIN_GRACE_SEC)
             except subprocess.TimeoutExpired:
                 pass
+        # Reap detached descendants before joining pipe readers. A child can
+        # call setsid(2) while retaining stdout/stderr; waiting for those pipes
+        # first would grant it an avoidable post-leader mutation window.
+        detached_cleanup = _cleanup_detached_descendants(baseline)
+        detached_descendant_survivor = bool(
+            detached_cleanup.get("survivor_seen")
+        )
+        process_containment_cleanup_complete = bool(
+            detached_cleanup.get("cleanup_complete")
+        )
         join_deadline = time.monotonic() + READER_JOIN_GRACE_SEC
         for reader in readers:
             reader.join(timeout=max(0.0, join_deadline - time.monotonic()))
@@ -192,6 +446,7 @@ def run_cmd(
             for reader in readers:
                 reader.join(timeout=max(0.0, join_deadline - time.monotonic()))
         reader_join_timed_out = any(reader.is_alive() for reader in readers)
+        descendant_pipe_leak = reader_join_timed_out
         empty_sha = hashlib.sha256(b"").hexdigest()
         stdout_state = states.get("stdout", {"raw": b"", "observed": 0, "sha256": empty_sha, "exceeded": False})
         stderr_state = states.get("stderr", {"raw": b"", "observed": 0, "sha256": empty_sha, "exceeded": False})
@@ -207,7 +462,16 @@ def run_cmd(
                 else 126
                 if exceeded
                 else 125
-                if descendant_pipe_leak or reader_join_timed_out
+                if (
+                    descendant_pipe_leak
+                    or reader_join_timed_out
+                    or normal_exit_group_survivor
+                    or detached_descendant_survivor
+                    or (
+                        detached_cleanup.get("supported") is True
+                        and not process_containment_cleanup_complete
+                    )
+                )
                 else proc.returncode
             ),
             "stdout": normalize_display(stdout_text, display_replacements),
@@ -219,8 +483,15 @@ def run_cmd(
             "capture_limit_exceeded": exceeded,
             "timed_out": timed_out,
             "descendant_pipe_leak": descendant_pipe_leak,
+            "normal_exit_group_survivor": normal_exit_group_survivor,
+            "detached_descendant_survivor": detached_descendant_survivor,
             "reader_join_timed_out": reader_join_timed_out,
+            "process_group_cleanup_attempted": process_group_cleanup_attempted,
             "process_group_terminated": process_group_terminated,
+            "process_containment_cleanup_complete": (
+                process_containment_cleanup_complete
+            ),
+            "process_containment": containment_scope,
             "duration_sec": round(time.time()-started, 3),
         }
     except OSError as exc:
@@ -233,6 +504,12 @@ def run_cmd(
                 f"{type(exc).__name__}: {exc}",
                 display_replacements,
             ),
+            "normal_exit_group_survivor": False,
+            "detached_descendant_survivor": False,
+            "process_group_cleanup_attempted": False,
+            "process_group_terminated": False,
+            "process_containment_cleanup_complete": False,
+            "process_containment": process_containment_scope(),
             "duration_sec": round(time.time()-started, 3),
         }
 
@@ -340,45 +617,375 @@ def fixture_transcript_path(out_dir: Path, fixture_id: Any) -> Path:
     return candidate
 
 
-def atomic_replace_transcript(path: Path, payload: bytes) -> None:
-    """Replace one private transcript without following a final link."""
+def _directory_open_flags() -> int:
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory = getattr(os, "O_DIRECTORY", 0)
+    if not nofollow or not directory:
+        raise OSError("platform lacks no-follow directory traversal")
+    flags = os.O_RDONLY | directory | nofollow
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    return flags
+
+
+def _open_directory_no_follow(path: Path) -> int:
+    absolute = Path(os.path.abspath(path))
+    flags = _directory_open_flags()
+    descriptor = os.open(os.path.sep, flags)
     try:
-        parent_mode = path.parent.lstat().st_mode
-    except OSError as exc:
-        raise ValueError("transcript output parent is unavailable") from exc
-    if stat.S_ISLNK(parent_mode) or not stat.S_ISDIR(parent_mode):
-        raise ValueError("transcript output parent is not a real directory")
-    if os.path.lexists(path):
-        metadata = path.lstat()
-        if (
-            stat.S_ISLNK(metadata.st_mode)
-            or not stat.S_ISREG(metadata.st_mode)
-            or metadata.st_nlink != 1
-        ):
-            raise ValueError("transcript output target is not a private regular file")
-    temporary = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
+        for component in absolute.parts[1:]:
+            if component in {"", ".", ".."}:
+                raise ValueError("unsafe transcript directory component")
+            child = os.open(component, flags, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        return descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _directory_path_matches_fd(path: Path, descriptor: int) -> bool:
+    reopened: int | None = None
+    try:
+        reopened = _open_directory_no_follow(path)
+        expected = os.fstat(descriptor)
+        observed = os.fstat(reopened)
+        return (expected.st_dev, expected.st_ino) == (
+            observed.st_dev,
+            observed.st_ino,
+        )
+    except (OSError, ValueError):
+        return False
+    finally:
+        if reopened is not None:
+            os.close(reopened)
+
+
+def prepare_transcript_directory(path: Path) -> int:
+    """Create/traverse the transcript directory and return its held dirfd."""
+    absolute = Path(os.path.abspath(path))
+    flags = _directory_open_flags()
+    descriptor: int | None = os.open(os.path.sep, flags)
+    try:
+        for component in absolute.parts[1:]:
+            if component in {"", ".", ".."}:
+                raise ValueError("unsafe transcript directory component")
+            try:
+                child = os.open(component, flags, dir_fd=descriptor)
+            except FileNotFoundError:
+                os.mkdir(component, mode=0o700, dir_fd=descriptor)
+                os.fsync(descriptor)
+                child = os.open(component, flags, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        if not _directory_path_matches_fd(absolute, descriptor):
+            raise ValueError("transcript directory changed during creation")
+        os.fsync(descriptor)
+        result = descriptor
+        descriptor = None
+        return result
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
+def atomic_replace_transcript(
+    path: Path,
+    payload: bytes,
+    *,
+    directory_fd: int | None = None,
+    lexical_parent: Path | None = None,
+) -> None:
+    """Replace one private transcript without following a final link."""
+    if path.name in {"", ".", ".."}:
+        raise ValueError("unsafe transcript output name")
+    parent = lexical_parent if lexical_parent is not None else path.parent
+    parent_fd = (
+        os.dup(directory_fd)
+        if directory_fd is not None
+        else _open_directory_no_follow(path.parent)
+    )
+    temporary = f".{path.name}.{uuid.uuid4().hex}.tmp"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
     descriptor: int | None = None
     try:
-        descriptor = os.open(temporary, flags, 0o600)
-        with os.fdopen(descriptor, "wb") as stream:
-            descriptor = None
-            stream.write(payload)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
-        created = path.stat(follow_symlinks=False)
+        try:
+            target = os.stat(
+                path.name,
+                dir_fd=parent_fd,
+                follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            target = None
+        if target is not None and (
+            not stat.S_ISREG(target.st_mode) or target.st_nlink != 1
+        ):
+            raise ValueError(
+                "transcript output target is not a private regular file"
+            )
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("transcript output parent changed before write")
+        descriptor = os.open(
+            temporary,
+            flags,
+            0o600,
+            dir_fd=parent_fd,
+        )
+        offset = 0
+        while offset < len(payload):
+            written = os.write(descriptor, payload[offset:])
+            if written <= 0:
+                raise OSError("zero-byte transcript write")
+            offset += written
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = None
+        try:
+            target = os.stat(
+                path.name,
+                dir_fd=parent_fd,
+                follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            target = None
+        if target is not None and (
+            not stat.S_ISREG(target.st_mode) or target.st_nlink != 1
+        ):
+            raise ValueError(
+                "transcript output target changed before install"
+            )
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("transcript output parent changed before install")
+        os.replace(
+            temporary,
+            path.name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+        )
+        created = os.stat(
+            path.name,
+            dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
         if not stat.S_ISREG(created.st_mode) or created.st_nlink != 1:
             raise OSError("transcript output is not a private regular file")
+        os.fsync(parent_fd)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("transcript output parent changed during install")
     finally:
         if descriptor is not None:
             os.close(descriptor)
         try:
-            temporary.unlink()
+            os.unlink(temporary, dir_fd=parent_fd)
         except FileNotFoundError:
             pass
+        finally:
+            os.close(parent_fd)
+
+
+def _open_output_parent(path: Path) -> Tuple[int, str]:
+    """Open or create an output parent without following any component link."""
+    raw = str(path)
+    if (
+        not raw
+        or any(
+            ord(character) < 32
+            or ord(character) == 127
+            or unicodedata.category(character) == "Cc"
+            for character in raw
+        )
+    ):
+        raise ValueError("JSON output path contains a control character")
+    if path.name in {"", ".", ".."} or ".." in path.parts:
+        raise ValueError("JSON output path is not canonical")
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory = getattr(os, "O_DIRECTORY", 0)
+    if not nofollow or not directory:
+        raise OSError("platform lacks no-follow directory traversal")
+    if path.is_absolute():
+        descriptor = os.open(path.anchor, os.O_RDONLY | directory)
+        parts = path.parent.parts[1:]
+    else:
+        descriptor = os.open(".", os.O_RDONLY | directory)
+        parts = path.parent.parts
+    try:
+        for part in parts:
+            if part in {"", "."}:
+                continue
+            try:
+                child = os.open(
+                    part,
+                    os.O_RDONLY | directory | nofollow,
+                    dir_fd=descriptor,
+                )
+            except FileNotFoundError:
+                os.mkdir(part, mode=0o700, dir_fd=descriptor)
+                child = os.open(
+                    part,
+                    os.O_RDONLY | directory | nofollow,
+                    dir_fd=descriptor,
+                )
+            os.close(descriptor)
+            descriptor = child
+        return descriptor, path.name
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def prepare_json_output(path: Path) -> Tuple[int, Path]:
+    """Acquire the exact optional JSON parent before live evaluation."""
+
+    target = Path(os.path.abspath(path))
+    parent_fd, target_name = _open_output_parent(target)
+    try:
+        if target_name != target.name:
+            raise ValueError("JSON output filename changed during acquisition")
+        if not _directory_path_matches_fd(target.parent, parent_fd):
+            raise ValueError("JSON output parent changed during acquisition")
+        try:
+            target_stat = os.stat(
+                target_name,
+                dir_fd=parent_fd,
+                follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            target_stat = None
+        if target_stat is not None and (
+            not stat.S_ISREG(target_stat.st_mode)
+            or target_stat.st_nlink != 1
+        ):
+            raise ValueError(
+                "JSON output target is not a private regular file"
+            )
+        result = parent_fd
+        parent_fd = -1
+        return result, target
+    finally:
+        if parent_fd >= 0:
+            os.close(parent_fd)
+
+
+def atomic_replace_json_output(
+    path: Path,
+    text: str,
+    *,
+    directory_fd: int | None = None,
+    lexical_parent: Path | None = None,
+) -> None:
+    """Install JSON without following ancestors, final links, or hardlinks."""
+    target = Path(os.path.abspath(path))
+    parent = (
+        Path(os.path.abspath(lexical_parent))
+        if lexical_parent is not None
+        else target.parent
+    )
+    if target.parent != parent:
+        raise ValueError("JSON output path changed after acquisition")
+    if directory_fd is None:
+        parent_fd, target_name = _open_output_parent(target)
+    else:
+        parent_fd = os.dup(directory_fd)
+        target_name = target.name
+    temporary_name = f".{target_name}.{uuid.uuid4().hex}.tmp"
+    temporary_created = False
+    try:
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("JSON output parent changed before write")
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+        descriptor = os.open(
+            temporary_name,
+            flags,
+            0o600,
+            dir_fd=parent_fd,
+        )
+        temporary_created = True
+        try:
+            payload = text.encode("utf-8")
+            offset = 0
+            while offset < len(payload):
+                written = os.write(descriptor, payload[offset:])
+                if written <= 0:
+                    raise OSError("zero-byte JSON output write")
+                offset += written
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+        try:
+            target_stat = os.stat(
+                target_name,
+                dir_fd=parent_fd,
+                follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            target_stat = None
+        if target_stat is not None and (
+            not stat.S_ISREG(target_stat.st_mode)
+            or target_stat.st_nlink != 1
+        ):
+            raise OSError("JSON output target is not a private regular file")
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("JSON output parent changed before install")
+        os.replace(
+            temporary_name,
+            target_name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+        )
+        temporary_created = False
+        installed = os.stat(
+            target_name,
+            dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        if not stat.S_ISREG(installed.st_mode) or installed.st_nlink != 1:
+            raise OSError("installed JSON output is not a private regular file")
+        os.fsync(parent_fd)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("JSON output parent changed during install")
+    finally:
+        if temporary_created:
+            try:
+                os.unlink(temporary_name, dir_fd=parent_fd)
+            except FileNotFoundError:
+                pass
+        os.close(parent_fd)
+
+
+def emit_result(
+    result: Mapping[str, Any],
+    json_path: Path | None,
+    display_replacements: Sequence[Tuple[str, str]],
+    *,
+    json_directory_fd: int | None = None,
+    json_lexical_parent: Path | None = None,
+) -> Tuple[Dict[str, Any], bool]:
+    """Print one result and safely write its optional compatibility JSON."""
+    display_result = cast(
+        Dict[str, Any],
+        normalize_display(result, display_replacements),
+    )
+    text = json.dumps(display_result, indent=2, sort_keys=True)
+    if json_path is not None:
+        try:
+            atomic_replace_json_output(
+                json_path,
+                text,
+                directory_fd=json_directory_fd,
+                lexical_parent=json_lexical_parent,
+            )
+        except (OSError, RuntimeError, ValueError):
+            display_result = dict(display_result)
+            display_result["json_output_error"] = (
+                "JSON output path is unsafe, aliased, or unavailable."
+            )
+            print(json.dumps(display_result, indent=2, sort_keys=True))
+            return display_result, False
+    print(text)
+    return display_result, True
 
 
 def current_package_tree(root: Path) -> Dict[str, Any]:
@@ -449,11 +1056,96 @@ def _read_release_file_no_follow(root: Path, relative: PurePosixPath) -> bytes:
     return current.read_bytes()
 
 
+def execution_copy_endpoint_identity(root: Path) -> Dict[str, Any]:
+    """Hash no-follow endpoint metadata for a permission-hardened copy."""
+    records: List[Dict[str, Any]] = []
+    pending: List[Tuple[PurePosixPath, Path]] = [
+        (PurePosixPath("."), root)
+    ]
+    try:
+        while pending:
+            relative, path = pending.pop()
+            metadata = path.stat(follow_symlinks=False)
+            mode = metadata.st_mode
+            if stat.S_ISDIR(mode):
+                kind = "directory"
+            elif stat.S_ISREG(mode):
+                kind = "regular"
+            else:
+                return {
+                    "algorithm": "no-follow-endpoint-metadata-v1",
+                    "sha256": None,
+                    "entries": len(records),
+                    "valid": False,
+                }
+            records.append(
+                {
+                    "path": relative.as_posix(),
+                    "kind": kind,
+                    "device": metadata.st_dev,
+                    "inode": metadata.st_ino,
+                    "mode": stat.S_IMODE(mode),
+                    "nlink": metadata.st_nlink,
+                    "uid": metadata.st_uid,
+                    "gid": metadata.st_gid,
+                    "bytes": metadata.st_size,
+                    "mtime_ns": metadata.st_mtime_ns,
+                    "ctime_ns": metadata.st_ctime_ns,
+                }
+            )
+            if kind == "directory":
+                with os.scandir(path) as iterator:
+                    children = sorted(
+                        (entry.name for entry in iterator),
+                        reverse=True,
+                    )
+                for name in children:
+                    child_relative = (
+                        PurePosixPath(name)
+                        if relative == PurePosixPath(".")
+                        else relative / name
+                    )
+                    pending.append((child_relative, path / name))
+    except OSError:
+        return {
+            "algorithm": "no-follow-endpoint-metadata-v1",
+            "sha256": None,
+            "entries": len(records),
+            "valid": False,
+        }
+    records.sort(key=lambda item: item["path"])
+    payload = json.dumps(
+        records,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return {
+        "algorithm": "no-follow-endpoint-metadata-v1",
+        "sha256": f"sha256:{hashlib.sha256(payload).hexdigest()}",
+        "entries": len(records),
+        "valid": True,
+    }
+
+
+def endpoint_identity_is_valid(identity: Any) -> bool:
+    return (
+        type(identity) is dict
+        and set(identity) == {"algorithm", "sha256", "entries", "valid"}
+        and identity.get("algorithm") == "no-follow-endpoint-metadata-v1"
+        and type(identity.get("sha256")) is str
+        and bool(re.fullmatch(r"sha256:[0-9a-f]{64}", identity["sha256"]))
+        and type(identity.get("entries")) is int
+        and identity.get("entries") > 0
+        and identity.get("valid") is True
+    )
+
+
 def materialize_execution_package_snapshot(
     root: Path,
     source_tree: Mapping[str, Any],
 ) -> Tuple[tempfile.TemporaryDirectory[str], Path, Dict[str, Any]]:
-    """Materialize the manifest-bound package used by every live invocation."""
+    """Materialize a permission-hardened, endpoint-checked execution copy."""
     if (
         source_tree.get("valid") is not True
         or not isinstance(source_tree.get("sha256"), str)
@@ -532,11 +1224,14 @@ def materialize_execution_package_snapshot(
         ):
             directory.chmod(0o500)
         snapshot.chmod(0o500)
+        snapshot_endpoint_pre = execution_copy_endpoint_identity(snapshot)
+        if not endpoint_identity_is_valid(snapshot_endpoint_pre):
+            raise ValueError("execution copy endpoint identity is invalid")
     except Exception:
         holder.cleanup()
         raise
     return holder, snapshot, {
-        "mode": "private-read-only-stable-release-snapshot",
+        "mode": "private-permission-hardened-endpoint-checked-release-copy",
         "source_pre": {
             "algorithm": source_tree.get("algorithm"),
             "sha256": source_tree.get("sha256"),
@@ -549,6 +1244,12 @@ def materialize_execution_package_snapshot(
         },
         "source_post": None,
         "snapshot_post": None,
+        "snapshot_endpoint_pre": snapshot_endpoint_pre,
+        "snapshot_endpoint_post": None,
+        "endpoint_stable": False,
+        "stability_scope": "pre-post-endpoint",
+        "temporal_immutability_enforced": False,
+        "process_containment": process_containment_scope(),
         "stable": False,
     }
 
@@ -569,15 +1270,25 @@ def finalize_execution_package_snapshot(
             "sha256": tree.get("sha256"),
             "valid": tree.get("valid") is True,
         }
+    finalized["snapshot_endpoint_post"] = execution_copy_endpoint_identity(
+        snapshot_root
+    )
     identities = [
         finalized.get("source_pre"),
         finalized.get("source_post"),
         finalized.get("snapshot_pre"),
         finalized.get("snapshot_post"),
     ]
+    finalized["endpoint_stable"] = (
+        endpoint_identity_is_valid(finalized.get("snapshot_endpoint_pre"))
+        and endpoint_identity_is_valid(finalized.get("snapshot_endpoint_post"))
+        and finalized.get("snapshot_endpoint_pre")
+        == finalized.get("snapshot_endpoint_post")
+    )
     finalized["stable"] = (
         all(isinstance(item, Mapping) and item.get("valid") is True for item in identities)
         and all(item == identities[0] for item in identities[1:])
+        and finalized["endpoint_stable"] is True
     )
     return finalized
 
@@ -722,6 +1433,96 @@ def main(argv=None) -> int:
     ap.add_argument("--output-dir", type=Path, help="external directory for live runtime transcripts; default remains self_validation/live_runtime_transcripts for backwards compatibility")
     args = ap.parse_args(argv)
     root = args.plugin_root.resolve()
+    out_dir = (
+        Path(os.path.abspath(args.output_dir))
+        if args.output_dir is not None
+        else root / "self_validation/live_runtime_transcripts"
+    )
+    transcript_directory_fd: int | None = None
+    transcript_directory_error: str | None = None
+    if args.run_fixtures and args.output_dir is not None:
+        try:
+            # An explicit caller-controlled output directory is part of the
+            # invocation boundary. Freeze it before package inspection,
+            # runtime discovery, or any long-running preflight command.
+            transcript_directory_fd = prepare_transcript_directory(out_dir)
+        except (OSError, ValueError) as exc:
+            transcript_directory_error = (
+                f"{type(exc).__name__} while acquiring transcript output directory"
+            )
+    json_directory_fd: int | None = None
+    json_target: Path | None = None
+    if args.json is not None:
+        try:
+            # Freeze the JSON parent before package inspection, runtime
+            # preflight, or any long-running fixture command.
+            json_directory_fd, json_target = prepare_json_output(args.json)
+        except (OSError, ValueError) as exc:
+            print(
+                json.dumps(
+                    {
+                        "json_output_error": (
+                            "JSON output path is unsafe, aliased, or unavailable."
+                        ),
+                        "plugin_root": "<package-root>",
+                        "reason": (
+                            "Optional JSON output capability could not be "
+                            "acquired before live evaluation."
+                        ),
+                        "status": "FAIL",
+                        "output_capability_error": type(exc).__name__,
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+            if transcript_directory_fd is not None:
+                os.close(transcript_directory_fd)
+                transcript_directory_fd = None
+            return 2
+
+    def publish_result(
+        current_result: Mapping[str, Any],
+        replacements: Sequence[Tuple[str, str]],
+    ) -> Tuple[Dict[str, Any], bool]:
+        nonlocal json_directory_fd, transcript_directory_fd
+        try:
+            return emit_result(
+                current_result,
+                json_target,
+                replacements,
+                json_directory_fd=json_directory_fd,
+                json_lexical_parent=(
+                    json_target.parent
+                    if json_target is not None
+                    else None
+                ),
+            )
+        finally:
+            if json_directory_fd is not None:
+                os.close(json_directory_fd)
+                json_directory_fd = None
+            if transcript_directory_fd is not None:
+                os.close(transcript_directory_fd)
+                transcript_directory_fd = None
+
+    if transcript_directory_error is not None:
+        publish_result(
+            {
+                "status": "FAIL",
+                "reason": transcript_directory_error,
+                "plugin_root": "<package-root>",
+                "commands": [],
+                "fixture_results": [],
+                "transcript_checks": [],
+            },
+            (
+                (str(out_dir), "<output-dir>"),
+                (str(root), "<package-root>"),
+            ),
+        )
+        return 2
+
     observed_at_utc = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     package_tree = current_package_tree(root)
     evals_path = root / "skills/nozickian-verify/evals/evals.json"
@@ -776,11 +1577,6 @@ def main(argv=None) -> int:
             executable_fingerprint_error = (
                 f"{type(exc).__name__} while resolving or hashing executable"
             )
-    out_dir = (
-        args.output_dir.resolve()
-        if args.output_dir
-        else root / "self_validation/live_runtime_transcripts"
-    )
     replacement_list: List[Tuple[str, str]] = []
     if resolved_claude:
         replacement_list.append((str(resolved_claude), "<claude-cli>"))
@@ -865,14 +1661,7 @@ def main(argv=None) -> int:
             "plugin.json file."
         )
         result["plugin_metadata_error"] = plugin_metadata_error
-        display_result = normalize_display(result, display_replacements)
-        if args.json:
-            args.json.parent.mkdir(parents=True, exist_ok=True)
-            args.json.write_text(
-                json.dumps(display_result, indent=2, sort_keys=True),
-                encoding="utf-8",
-            )
-        print(json.dumps(display_result, indent=2, sort_keys=True))
+        publish_result(result, display_replacements)
         return 2
     binding_errors = []
     if package_tree.get("valid") is not True:
@@ -888,35 +1677,78 @@ def main(argv=None) -> int:
             "failed; no Claude subprocess was executed."
         )
         result["binding_errors"] = binding_errors
-        display_result = normalize_display(result, display_replacements)
-        if args.json:
-            args.json.parent.mkdir(parents=True, exist_ok=True)
-            args.json.write_text(
-                json.dumps(display_result, indent=2, sort_keys=True),
-                encoding="utf-8",
-            )
-        print(json.dumps(display_result, indent=2, sort_keys=True))
+        publish_result(result, display_replacements)
         return 2
+    if args.run_fixtures:
+        selected_fixture_items = list(evals.get("fixtures", []))
+        selected_fixture_items = selected_fixture_items[
+            : max(0, args.max_fixtures)
+        ]
+        selected_transcript_names = {
+            f"{item.get('id')}.json"
+            for item in selected_fixture_items
+            if isinstance(item, Mapping)
+            and isinstance(item.get("id"), str)
+            and FIXTURE_ID_RE.fullmatch(item.get("id")) is not None
+        }
+        if (
+            transcript_directory_fd is not None
+            and not _directory_path_matches_fd(
+                out_dir,
+                transcript_directory_fd,
+            )
+        ):
+            transcript_directory_error = (
+                "transcript output directory changed before runtime preflight"
+            )
+        if (
+            transcript_directory_error is None
+            and json_directory_fd is not None
+            and json_target is not None
+        ):
+            if not _directory_path_matches_fd(
+                json_target.parent,
+                json_directory_fd,
+            ):
+                transcript_directory_error = (
+                    "JSON output directory changed before runtime preflight"
+                )
+            else:
+                same_parent = json_target.parent == out_dir
+                if transcript_directory_fd is not None:
+                    json_parent_stat = os.fstat(json_directory_fd)
+                    transcript_parent_stat = os.fstat(
+                        transcript_directory_fd
+                    )
+                    same_parent = (
+                        json_parent_stat.st_dev,
+                        json_parent_stat.st_ino,
+                    ) == (
+                        transcript_parent_stat.st_dev,
+                        transcript_parent_stat.st_ino,
+                    )
+                if (
+                    same_parent
+                    and json_target.name in selected_transcript_names
+                ):
+                    transcript_directory_error = (
+                        "JSON output aliases a selected fixture transcript"
+                    )
+        if transcript_directory_error is not None:
+            result["status"] = "FAIL"
+            result["reason"] = transcript_directory_error
+            publish_result(result, display_replacements)
+            return 2
     if not claude:
-        display_result = normalize_display(result, display_replacements)
-        if args.json:
-            args.json.parent.mkdir(parents=True, exist_ok=True); args.json.write_text(json.dumps(display_result, indent=2, sort_keys=True), encoding="utf-8")
-        print(json.dumps(display_result, indent=2, sort_keys=True))
-        return 2 if args.require_claude else 0
+        _, published = publish_result(result, display_replacements)
+        return 2 if args.require_claude or not published else 0
     if resolved_claude is None:
         result["status"] = "FAIL"
         result["reason"] = (
             "Claude Code was found on PATH, but its resolved executable was not "
             "a readable regular non-symlink file; no subprocess was executed."
         )
-        display_result = normalize_display(result, display_replacements)
-        if args.json:
-            args.json.parent.mkdir(parents=True, exist_ok=True)
-            args.json.write_text(
-                json.dumps(display_result, indent=2, sort_keys=True),
-                encoding="utf-8",
-            )
-        print(json.dumps(display_result, indent=2, sort_keys=True))
+        publish_result(result, display_replacements)
         return 2
 
     execution_snapshot_holder: tempfile.TemporaryDirectory[str] | None = None
@@ -933,18 +1765,11 @@ def main(argv=None) -> int:
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         result["status"] = "FAIL"
         result["reason"] = (
-            "Immutable live execution package snapshot could not be prepared; "
+            "Endpoint-checked live execution package copy could not be prepared; "
             "no subprocess was executed."
         )
         result["execution_package_snapshot_error"] = type(exc).__name__
-        display_result = normalize_display(result, display_replacements)
-        if args.json:
-            args.json.parent.mkdir(parents=True, exist_ok=True)
-            args.json.write_text(
-                json.dumps(display_result, indent=2, sort_keys=True),
-                encoding="utf-8",
-            )
-        print(json.dumps(display_result, indent=2, sort_keys=True))
+        publish_result(result, display_replacements)
         return 2
     display_replacements = tuple(
         [(str(execution_root), "<package-root>"), *replacement_list]
@@ -985,6 +1810,22 @@ def main(argv=None) -> int:
         }
     )
 
+    if args.run_fixtures and preflight_ok:
+        if (
+            transcript_directory_error is None
+            and transcript_directory_fd is None
+        ):
+            try:
+                # Preserve the historical lazy behavior for the fixed default
+                # package path, but traverse it without following links and
+                # retain the resulting capability through fixture execution.
+                transcript_directory_fd = prepare_transcript_directory(
+                    out_dir
+                )
+            except (OSError, ValueError) as exc:
+                transcript_directory_error = (
+                    f"{type(exc).__name__} while acquiring transcript output directory"
+                )
     if not args.run_fixtures:
         if not preflight_ok and commands[1].get("returncode") == 0:
             result["status"] = "FAIL"
@@ -999,9 +1840,14 @@ def main(argv=None) -> int:
     else:
         fixture_results = []
         transcript_results = []
-        fixture_binding_failure = None
+        fixture_binding_failure = transcript_directory_error
         plugin_name = plugin_metadata.get('name', 'nozickian-truth-tracking-agentic')
-        for item in evals.get('fixtures', [])[: max(0, args.max_fixtures)]:
+        fixture_items = (
+            []
+            if fixture_binding_failure is not None
+            else evals.get('fixtures', [])[: max(0, args.max_fixtures)]
+        )
+        for item in fixture_items:
             try:
                 if not isinstance(item, Mapping):
                     raise ValueError("fixture entry is not an object")
@@ -1021,7 +1867,6 @@ def main(argv=None) -> int:
                 break
             prompt = build_fixture_prompt(plugin_name, fixture_id, artifact)
             canonical_prompt = normalize_display(prompt, display_replacements)
-            out_dir.mkdir(parents=True, exist_ok=True)
             cmd = [executable_argv, "--plugin-dir", str(execution_root), "-p", "--output-format", "json", "--max-turns", str(args.max_turns), prompt]
             cmd_result = run_cmd(
                 cmd,
@@ -1036,7 +1881,12 @@ def main(argv=None) -> int:
                 sort_keys=True,
             ).encode("utf-8")
             try:
-                atomic_replace_transcript(transcript_file, transcript_bytes)
+                atomic_replace_transcript(
+                    transcript_file,
+                    transcript_bytes,
+                    directory_fd=transcript_directory_fd,
+                    lexical_parent=out_dir,
+                )
             except (OSError, ValueError) as exc:
                 fixture_binding_failure = (
                     f"{type(exc).__name__} while writing fixture transcript"
@@ -1051,12 +1901,38 @@ def main(argv=None) -> int:
                     "prompt": canonical_prompt,
                     "prompt_sha256": sha256_text(canonical_prompt),
                     "returncode": cmd_result["returncode"],
+                    "command_capture": {
+                        field: cmd_result.get(field)
+                        for field in (
+                            "returncode",
+                            "capture_limit_exceeded",
+                            "timed_out",
+                            "descendant_pipe_leak",
+                            "reader_join_timed_out",
+                            "normal_exit_group_survivor",
+                            "detached_descendant_survivor",
+                            "process_group_cleanup_attempted",
+                            "process_group_terminated",
+                            "process_containment_cleanup_complete",
+                            "process_containment",
+                        )
+                    },
                     "transcript_file": normalize_display(str(transcript_file), display_replacements),
                     "transcript_sha256": hashlib.sha256(transcript_bytes).hexdigest(),
                     "checks": checks,
                 }
             )
             transcript_results.append(checks)
+        if (
+            transcript_directory_fd is not None
+            and not _directory_path_matches_fd(
+                out_dir,
+                transcript_directory_fd,
+            )
+        ):
+            fixture_binding_failure = (
+                "transcript output directory changed during fixture execution"
+            )
         refresh_runtime_fingerprint(runtime_identity, resolved_claude)
         result["fixture_results"] = fixture_results
         result["transcript_checks"] = transcript_results
@@ -1091,12 +1967,11 @@ def main(argv=None) -> int:
         result["reason"] = (
             "Live execution package snapshot or source identity changed during run."
         )
-    display_result = normalize_display(result, display_replacements)
-    if args.json:
-        args.json.parent.mkdir(parents=True, exist_ok=True); args.json.write_text(json.dumps(display_result, indent=2, sort_keys=True), encoding="utf-8")
-    print(json.dumps(display_result, indent=2, sort_keys=True))
+    _, published = publish_result(result, display_replacements)
     if execution_snapshot_holder is not None:
         execution_snapshot_holder.cleanup()
+    if not published:
+        return 2
     return 0 if result["status"] == "PASS-SCOPED" or (result["status"] == "UNVERIFIED_RUNTIME" and not args.require_claude) else 2
 
 if __name__ == "__main__":

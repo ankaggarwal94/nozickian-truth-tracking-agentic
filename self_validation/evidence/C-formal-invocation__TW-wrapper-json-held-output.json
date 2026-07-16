@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-formal-invocation",
+  "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
+  "command_or_source": "run_formal_runner_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:1e45a9b8a7528e57c81f4269185018e63a97a8db3171acd11524c395d033a9eb",
+  "observation_id": "obs:C-formal-invocation:TW-wrapper-json-held-output",
+  "observed_result": "The formal contract retained all four wrapper true controls and exact stdout/file equality.",
+  "support_summary": "This wrapper binds TW-wrapper-json-held-output to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "TW-wrapper-json-held-output",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

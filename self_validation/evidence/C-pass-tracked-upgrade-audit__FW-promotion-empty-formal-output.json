@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-pass-tracked-upgrade-audit",
+  "claim_proposition_sha256": "sha256:af6dd806f1832342970a4c3a945bfd9964b1b8072def1be83cdef7feac81ef8b",
+  "command_or_source": "run_promotion_certifier_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:6e32b1b480e9d93485fa11b2bfbd72e0800c9921c35b7fa8f935de05ad0a1d18",
+  "observation_id": "obs:C-pass-tracked-upgrade-audit:FW-promotion-empty-formal-output",
+  "observed_result": "The promotion contract used the production certifier CLI and rejected the recomputed empty report and gate companions.",
+  "support_summary": "This wrapper binds FW-promotion-empty-formal-output to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-promotion-empty-formal-output",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-formal-invocation",
+  "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
+  "command_or_source": "run_formal_runner_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:87f30796e57c36cea9c4f44129da019e4f934fe5541267bd816e098fcd6d1d0e",
+  "observation_id": "obs:C-formal-invocation:FW-formal-self-attested-output-check",
+  "observed_result": "The formal contract rejected the arbitrary self-attested output check after recomputing the exact allowed set.",
+  "support_summary": "This wrapper binds FW-formal-self-attested-output-check to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-formal-self-attested-output-check",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

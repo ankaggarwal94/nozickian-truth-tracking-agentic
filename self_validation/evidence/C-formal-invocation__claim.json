@@ -1,11 +1,11 @@
 {
   "artifact_path": "skills/nozickian-verify/scripts/run_formal_artifact_verification.py",
   "claim_id": "C-formal-invocation",
-  "claim_proposition_sha256": "sha256:ad5a976a1b91c94ca32386a493b58776f54a6fcf63bbdae479de86154acd2e43",
+  "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
   "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:6770388eb763c9b064f7da04df55261f25154516cd38e27d09bd6038bfd40267",
+  "hash_or_version": "sha256:3917a03bb36bd92fa46585fe931b1ebae332bc6beb35d3d4cce3ff973e0ac7c5",
   "observed_result": "Current source bytes support the scoped proposition for C-formal-invocation.",
   "support_summary": "This wrapper binds C-formal-invocation to current package artifact skills/nozickian-verify/scripts/run_formal_artifact_verification.py by exact SHA-256 and to the canonical claim proposition digest.",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

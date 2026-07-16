@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import ctypes
 import hashlib
 import importlib.util
 import io
@@ -56,6 +57,19 @@ MAX_STALE_SCAN_FILE_BYTES = 8 * 1024 * 1024
 MAX_STALE_SCAN_TOTAL_BYTES = 128 * 1024 * 1024
 PIPE_CLOSE_GRACE_SEC = 0.5
 READER_JOIN_GRACE_SEC = 1.0
+PROCESS_CONTAINMENT_SCOPE = {
+    "mechanism": (
+        "initial-posix-process-group"
+        if os.name == "posix"
+        else "leader-process-only"
+    ),
+    "cleanup_after_leader_exit": os.name == "posix",
+    "detached_session_descendants_contained": False,
+}
+DETACHED_CLEANUP_TIMEOUT_SEC = 1.0
+DETACHED_CLEANUP_QUIET_SEC = 0.05
+MAX_PROC_SCAN_ENTRIES = 100_000
+PR_SET_CHILD_SUBREAPER = 36
 ISSUE_5_UNRESOLVED_OBLIGATIONS = [
     "Issue #5 consistency-sweep activation and resolution mechanics remain parent-enforced.",
     "Issue #5 REMOTE_GROUND_TRUTH_REQUIRED escalation mechanics remain parent-enforced.",
@@ -231,51 +245,190 @@ def lexical_directory_ancestor_error(path: Path) -> Optional[str]:
     return None
 
 
-def atomic_replace_regular_text(path: Path, text: str) -> None:
+def _directory_open_flags() -> int:
+    """Return flags for a held, no-follow directory capability."""
+    if not all(
+        hasattr(os, name)
+        for name in ("O_DIRECTORY", "O_NOFOLLOW")
+    ):
+        raise OSError("no-follow directory descriptors are unavailable")
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    return flags
+
+
+def _open_directory_no_follow(path: Path) -> int:
+    """Open every component beneath a held parent without following links."""
+    absolute = Path(os.path.abspath(path))
+    flags = _directory_open_flags()
+    descriptor = os.open(os.path.sep, flags)
+    try:
+        for component in absolute.parts[1:]:
+            if component in ("", ".", ".."):
+                raise ValueError("unsafe output directory component")
+            child = os.open(component, flags, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        return descriptor
+    except Exception:
+        os.close(descriptor)
+        raise
+
+
+def _safe_output_name(path: Path) -> str:
+    name = path.name
+    if name in ("", ".", "..") or os.path.sep in name:
+        raise ValueError("unsafe output file name")
+    if os.path.altsep and os.path.altsep in name:
+        raise ValueError("unsafe output file name")
+    return name
+
+
+def _directory_path_matches_fd(path: Path, descriptor: int) -> bool:
+    """Confirm the lexical directory still denotes the held directory."""
+    reopened: Optional[int] = None
+    try:
+        reopened = _open_directory_no_follow(path)
+        expected = os.fstat(descriptor)
+        observed = os.fstat(reopened)
+        return (expected.st_dev, expected.st_ino) == (
+            observed.st_dev,
+            observed.st_ino,
+        )
+    except (OSError, ValueError):
+        return False
+    finally:
+        if reopened is not None:
+            os.close(reopened)
+
+
+def _paths_alias(first: Path, second: Path) -> bool:
+    if first == second:
+        return True
+    try:
+        return os.path.samefile(first, second)
+    except OSError:
+        return False
+
+
+def _acquire_output_parent(
+    path: Path,
+    *,
+    directory_fd: Optional[int],
+    lexical_parent: Optional[Path],
+) -> Tuple[str, int, Path]:
+    name = _safe_output_name(path)
+    if directory_fd is None:
+        parent = path.parent
+        descriptor = _open_directory_no_follow(parent)
+    else:
+        parent = lexical_parent if lexical_parent is not None else path.parent
+        descriptor = os.dup(directory_fd)
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISDIR(metadata.st_mode):
+            os.close(descriptor)
+            raise ValueError("held output parent is not a directory")
+    return name, descriptor, parent
+
+
+def _replaceable_regular_at(
+    directory_fd: int,
+    name: str,
+) -> None:
+    try:
+        metadata = os.stat(
+            name,
+            dir_fd=directory_fd,
+            follow_symlinks=False,
+        )
+    except FileNotFoundError:
+        return
+    if stat.S_ISLNK(metadata.st_mode):
+        raise ValueError("unsafe output target is a symbolic link")
+    if not stat.S_ISREG(metadata.st_mode):
+        raise ValueError("unsafe output target is not a regular file")
+    if metadata.st_nlink != 1:
+        raise ValueError("unsafe output target is a hardlink alias")
+
+
+def _write_all(descriptor: int, payload: bytes) -> None:
+    remaining = memoryview(payload)
+    while remaining:
+        written = os.write(descriptor, remaining)
+        if written <= 0:
+            raise OSError("short write while creating output")
+        remaining = remaining[written:]
+
+
+def atomic_replace_regular_text(
+    path: Path,
+    text: str,
+    *,
+    directory_fd: Optional[int] = None,
+    lexical_parent: Optional[Path] = None,
+) -> None:
     """Atomically create or replace one private regular output."""
-    # SECURITY-REVIEW: CLI output paths are caller-controlled. Every existing
-    # lexical ancestor plus the final target is lstat-checked without resolving
-    # links. Replacing an explicitly supplied existing private regular file is
-    # intentional CLI regeneration behavior: payload bytes are written to a
-    # same-directory O_EXCL/O_NOFOLLOW temporary and os.replace swaps directory
-    # entries without opening or following the final target.
-    ancestor_error = lexical_directory_ancestor_error(path)
-    if ancestor_error is not None:
-        raise ValueError(f"unsafe output path: {ancestor_error}")
-    parent_error = directory_error(path.parent)
-    if parent_error is not None:
-        raise ValueError(f"unsafe output parent: {parent_error}")
-    if os.path.lexists(path):
-        metadata = path.lstat()
-        if stat.S_ISLNK(metadata.st_mode):
-            raise ValueError("unsafe output target is a symbolic link")
-        if not stat.S_ISREG(metadata.st_mode):
-            raise ValueError("unsafe output target is not a regular file")
-        if metadata.st_nlink != 1:
-            raise ValueError("unsafe output target is a hardlink alias")
-    temporary = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"
+    # SECURITY-REVIEW: CLI output paths are caller-controlled. Hold the exact
+    # parent directory while validating, creating, and installing the output;
+    # every filesystem operation below is relative to that descriptor. An
+    # attacker can rename the lexical ancestor, but cannot redirect these
+    # operations through a replacement symlink or directory.
+    name, parent_fd, parent = _acquire_output_parent(
+        path,
+        directory_fd=directory_fd,
+        lexical_parent=lexical_parent,
+    )
+    temporary = f".{name}.{uuid.uuid4().hex}.tmp"
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
+    flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
     descriptor: Optional[int] = None
     try:
-        descriptor = os.open(temporary, flags, 0o600)
-        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-            descriptor = None
-            stream.write(text)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
-        metadata = path.lstat()
+        _replaceable_regular_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before write")
+        descriptor = os.open(
+            temporary,
+            flags,
+            0o600,
+            dir_fd=parent_fd,
+        )
+        _write_all(descriptor, text.encode("utf-8"))
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = None
+        # Recheck both the final entry and the lexical parent at the commit
+        # boundary. os.replace uses the held parent for both names.
+        _replaceable_regular_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before install")
+        os.replace(
+            temporary,
+            name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+        )
+        metadata = os.stat(
+            name,
+            dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
         if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
             raise ValueError("installed output is not a private regular file")
+        os.fsync(parent_fd)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed during install")
     finally:
         if descriptor is not None:
             os.close(descriptor)
         try:
-            temporary.unlink()
+            os.unlink(temporary, dir_fd=parent_fd)
         except FileNotFoundError:
             pass
+        finally:
+            os.close(parent_fd)
 
 
 def read_regular_text(
@@ -497,6 +650,277 @@ def json_validator_status(data: Any) -> Tuple[bool, str, Dict[str, Any]]:
     return True, "returncode zero and anchored positive JSON status", details
 
 
+def _linux_status_process_identity(
+    path: Path,
+    namespace_index: int,
+    expected_host_pid: Optional[int] = None,
+) -> Optional[Tuple[int, int]]:
+    try:
+        with path.open("r", encoding="utf-8", errors="replace") as stream:
+            payload = stream.read(64 * 1024)
+    except OSError:
+        return None
+    parent_host_pid: Optional[int] = None
+    namespace_pid: Optional[int] = None
+    host_pid_matches = expected_host_pid is None
+    for line in payload.splitlines():
+        if line.startswith("PPid:"):
+            fields = line.split()
+            if len(fields) == 2 and fields[1].isdigit():
+                parent_host_pid = int(fields[1])
+        elif line.startswith("NSpid:"):
+            fields = line.split()[1:]
+            if (
+                len(fields) > namespace_index
+                and all(field.isdigit() for field in fields)
+            ):
+                namespace_pid = int(fields[namespace_index])
+                host_pid_matches = (
+                    expected_host_pid is None
+                    or int(fields[0]) == expected_host_pid
+                )
+    if (
+        parent_host_pid is None
+        or namespace_pid is None
+        or not host_pid_matches
+    ):
+        return None
+    return parent_host_pid, namespace_pid
+
+
+def _linux_self_host_pid() -> Optional[int]:
+    fallback: Optional[int] = None
+    try:
+        with Path("/proc/self/status").open(
+            "r", encoding="utf-8", errors="replace"
+        ) as stream:
+            payload = stream.read(64 * 1024)
+    except OSError:
+        return None
+    for line in payload.splitlines():
+        if line.startswith("NSpid:"):
+            fields = line.split()[1:]
+            if fields and all(field.isdigit() for field in fields):
+                return int(fields[0])
+        elif line.startswith("Pid:"):
+            fields = line.split()
+            if len(fields) == 2 and fields[1].isdigit():
+                fallback = int(fields[1])
+    return fallback
+
+
+def _linux_self_namespace_index() -> Optional[int]:
+    try:
+        with Path("/proc/self/status").open(
+            "r", encoding="utf-8", errors="replace"
+        ) as stream:
+            payload = stream.read(64 * 1024)
+    except OSError:
+        return None
+    for line in payload.splitlines():
+        if line.startswith("NSpid:"):
+            fields = line.split()[1:]
+            if fields and all(field.isdigit() for field in fields):
+                return len(fields) - 1
+    return None
+
+
+def _linux_process_graph(
+    namespace_index: int,
+) -> Optional[Dict[int, Tuple[int, int]]]:
+    graph: Dict[int, Tuple[int, int]] = {}
+    scanned = 0
+    try:
+        with os.scandir("/proc") as entries:
+            for entry in entries:
+                if not entry.name.isdigit():
+                    continue
+                scanned += 1
+                if scanned > MAX_PROC_SCAN_ENTRIES:
+                    return None
+                identity = _linux_status_process_identity(
+                    Path(entry.path) / "status",
+                    namespace_index,
+                    int(entry.name),
+                )
+                if identity is None:
+                    continue
+                graph[int(entry.name)] = identity
+    except OSError:
+        return None
+    return graph
+
+
+def _host_descendant_closure(
+    graph: Mapping[int, Tuple[int, int]],
+    roots: set[int],
+) -> set[int]:
+    children: Dict[int, List[int]] = {}
+    for host_pid, (parent_host_pid, _namespace_pid) in graph.items():
+        children.setdefault(parent_host_pid, []).append(host_pid)
+    closure: set[int] = set()
+    pending = list(roots)
+    while pending:
+        host_pid = pending.pop()
+        if host_pid in closure:
+            continue
+        closure.add(host_pid)
+        pending.extend(children.get(host_pid, ()))
+    return closure
+
+
+def prepare_process_containment() -> Dict[str, Any]:
+    unavailable = {
+        "enabled": False,
+        "parent_host_pid": None,
+        "baseline_host_pids": set(),
+        "scope": dict(PROCESS_CONTAINMENT_SCOPE),
+    }
+    if not sys.platform.startswith("linux") or not Path("/proc").is_dir():
+        return unavailable
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+        prctl = libc.prctl
+        prctl.argtypes = [
+            ctypes.c_int,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+        ]
+        prctl.restype = ctypes.c_int
+        if prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
+            return unavailable
+    except (AttributeError, OSError):
+        return unavailable
+    parent_host_pid = _linux_self_host_pid()
+    namespace_index = _linux_self_namespace_index()
+    if parent_host_pid is None or namespace_index is None:
+        return unavailable
+    baseline_graph = _linux_process_graph(namespace_index)
+    if baseline_graph is None:
+        return unavailable
+    baseline_direct = {
+        host_pid
+        for host_pid, (parent_pid, _namespace_pid) in baseline_graph.items()
+        if parent_pid == parent_host_pid
+    }
+    return {
+        "enabled": True,
+        "parent_host_pid": parent_host_pid,
+        "namespace_index": namespace_index,
+        "baseline_host_pids": baseline_direct,
+        "scope": {
+            "mechanism": "linux-child-subreaper-plus-process-group",
+            "cleanup_after_leader_exit": True,
+            "detached_session_descendants_contained": True,
+        },
+    }
+
+
+def cleanup_detached_descendants(
+    containment: Mapping[str, Any],
+) -> Tuple[bool, bool]:
+    """Kill/reap the complete new transitive closure to a quiet state."""
+    if containment.get("enabled") is not True:
+        # The capture caller fails before Popen when this capability is absent.
+        return False, True
+    parent_host_pid = containment.get("parent_host_pid")
+    namespace_index = containment.get("namespace_index")
+    baseline = containment.get("baseline_host_pids")
+    if (
+        type(parent_host_pid) is not int
+        or type(namespace_index) is not int
+        or not isinstance(baseline, set)
+    ):
+        return False, False
+    deadline = time.monotonic() + DETACHED_CLEANUP_TIMEOUT_SEC
+    quiet_since: Optional[float] = None
+    survivor_seen = False
+    while time.monotonic() < deadline:
+        graph = _linux_process_graph(namespace_index)
+        if graph is None:
+            return survivor_seen, False
+        runner_closure = _host_descendant_closure(
+            graph,
+            {parent_host_pid},
+        ) - {parent_host_pid}
+        excluded = _host_descendant_closure(graph, set(baseline))
+        candidate_host_pids = runner_closure - excluded
+        candidates = {
+            host_pid: graph[host_pid][1]
+            for host_pid in candidate_host_pids
+            if host_pid in graph
+        }
+        if candidates:
+            survivor_seen = True
+            quiet_since = None
+            for namespace_pid in candidates.values():
+                try:
+                    os.kill(namespace_pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                except OSError:
+                    return survivor_seen, False
+            for namespace_pid in candidates.values():
+                try:
+                    os.waitpid(namespace_pid, os.WNOHANG)
+                except (ChildProcessError, ProcessLookupError):
+                    pass
+                except OSError:
+                    return survivor_seen, False
+        else:
+            now = time.monotonic()
+            if quiet_since is None:
+                quiet_since = now
+            elif now - quiet_since >= DETACHED_CLEANUP_QUIET_SEC:
+                return survivor_seen, True
+        time.sleep(0.01)
+    # Make a final best-effort full-closure kill/reap pass at the deadline.
+    # Success still requires a fresh scan proving that the closure is empty;
+    # merely sending the signals is not completion evidence.
+    graph = _linux_process_graph(namespace_index)
+    if graph is None:
+        return survivor_seen, False
+    runner_closure = _host_descendant_closure(
+        graph,
+        {parent_host_pid},
+    ) - {parent_host_pid}
+    excluded = _host_descendant_closure(graph, set(baseline))
+    final_host_pids = runner_closure - excluded
+    if final_host_pids:
+        survivor_seen = True
+    for host_pid in final_host_pids:
+        namespace_pid = graph[host_pid][1]
+        try:
+            os.kill(namespace_pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        except OSError:
+            return survivor_seen, False
+    for host_pid in final_host_pids:
+        namespace_pid = graph[host_pid][1]
+        try:
+            os.waitpid(namespace_pid, os.WNOHANG)
+        except (ChildProcessError, ProcessLookupError):
+            pass
+        except OSError:
+            return survivor_seen, False
+    time.sleep(0.005)
+    fresh_graph = _linux_process_graph(namespace_index)
+    if fresh_graph is None:
+        return survivor_seen, False
+    fresh_closure = _host_descendant_closure(
+        fresh_graph,
+        {parent_host_pid},
+    ) - {parent_host_pid}
+    fresh_excluded = _host_descendant_closure(
+        fresh_graph,
+        set(baseline),
+    )
+    return survivor_seen, not (fresh_closure - fresh_excluded)
+
+
 def load_module(name: str, path: Path) -> Any:
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
@@ -536,6 +960,11 @@ def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None, timeout: int = 900) 
         # the declared bound while the child is running.
         process_env = os.environ.copy()
         process_env["PYTHONDONTWRITEBYTECODE"] = "1"
+        containment = prepare_process_containment()
+        if containment.get("enabled") is not True:
+            raise OSError(
+                "detached-session process containment is unavailable"
+            )
         proc = subprocess.Popen(
             list(cmd),
             cwd=str(cwd) if cwd else None,
@@ -590,38 +1019,41 @@ def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None, timeout: int = 900) 
         deadline = time.monotonic() + timeout
         timed_out = False
         descendant_pipe_leak = False
+        normal_exit_group_survivor = False
         process_group_terminated = False
-        leader_exited_at: Optional[float] = None
+        process_group_cleanup_attempted = False
 
-        def terminate_group() -> None:
-            nonlocal process_group_terminated
-            process_group_terminated = True
+        def terminate_group() -> bool:
+            nonlocal process_group_cleanup_attempted, process_group_terminated
+            process_group_cleanup_attempted = True
             try:
                 if os.name == "posix":
                     os.killpg(proc.pid, signal.SIGKILL)
+                    process_group_terminated = True
                 else:
                     proc.kill()
+                    process_group_terminated = True
             except ProcessLookupError:
                 pass
             except OSError:
                 try:
                     proc.kill()
+                    process_group_terminated = True
                 except OSError:
                     pass
+            return process_group_terminated
 
         while True:
             if stop.is_set():
                 terminate_group()
                 break
             if proc.poll() is not None:
-                if not any(reader.is_alive() for reader in readers):
-                    break
-                if leader_exited_at is None:
-                    leader_exited_at = time.monotonic()
-                if time.monotonic() - leader_exited_at >= PIPE_CLOSE_GRACE_SEC:
-                    descendant_pipe_leak = True
-                    terminate_group()
-                    break
+                # Pipe state is not a containment oracle. Kill/probe the
+                # original group immediately, then sweep the complete
+                # transitive /proc closure before joining readers.
+                if terminate_group():
+                    normal_exit_group_survivor = True
+                break
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 timed_out = True
@@ -636,6 +1068,10 @@ def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None, timeout: int = 900) 
                 proc.wait(timeout=READER_JOIN_GRACE_SEC)
             except subprocess.TimeoutExpired:
                 pass
+        (
+            detached_descendant_survivor,
+            process_containment_cleanup_complete,
+        ) = cleanup_detached_descendants(containment)
         join_deadline = time.monotonic() + READER_JOIN_GRACE_SEC
         for reader in readers:
             reader.join(timeout=max(0.0, join_deadline - time.monotonic()))
@@ -662,7 +1098,13 @@ def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None, timeout: int = 900) 
                 else 126
                 if capture_limit_exceeded
                 else 125
-                if descendant_pipe_leak or reader_join_timed_out
+                if (
+                    descendant_pipe_leak
+                    or normal_exit_group_survivor
+                    or detached_descendant_survivor
+                    or not process_containment_cleanup_complete
+                    or reader_join_timed_out
+                )
                 else proc.returncode
             ),
             "stdout": stdout_raw.decode("utf-8", errors="replace"),
@@ -676,12 +1118,22 @@ def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None, timeout: int = 900) 
             "stderr_sha256": stderr_state["sha256"],
             "stderr_truncated": stderr_state["observed"] > PUBLIC_STREAM_BOUND_BYTES,
             "capture_limit_exceeded": capture_limit_exceeded,
+            "timed_out": timed_out,
             "descendant_pipe_leak": descendant_pipe_leak,
+            "normal_exit_group_survivor": normal_exit_group_survivor,
+            "detached_descendant_survivor": (
+                detached_descendant_survivor
+            ),
+            "process_containment_cleanup_complete": (
+                process_containment_cleanup_complete
+            ),
             "reader_join_timed_out": reader_join_timed_out,
+            "process_group_cleanup_attempted": (
+                process_group_cleanup_attempted
+            ),
             "process_group_terminated": process_group_terminated,
+            "process_containment": dict(containment["scope"]),
         }
-        if timed_out:
-            result["timed_out"] = True
         return result
     except Exception as exc:
         stderr_raw = (
@@ -693,6 +1145,15 @@ def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None, timeout: int = 900) 
             **_captured_stream_fields(b"", "stdout"),
             **_captured_stream_fields(stderr_raw, "stderr"),
             "capture_limit_exceeded": False,
+            "timed_out": False,
+            "descendant_pipe_leak": False,
+            "reader_join_timed_out": False,
+            "normal_exit_group_survivor": False,
+            "detached_descendant_survivor": False,
+            "process_containment_cleanup_complete": False,
+            "process_group_cleanup_attempted": False,
+            "process_group_terminated": False,
+            "process_containment": dict(PROCESS_CONTAINMENT_SCOPE),
         }
 
 
@@ -782,6 +1243,127 @@ def trace_authentication_schema_valid(
     )
 
 
+def _process_containment_scope_typed(value: Any) -> bool:
+    return (
+        type(value) is dict
+        and set(value)
+        == {
+            "mechanism",
+            "cleanup_after_leader_exit",
+            "detached_session_descendants_contained",
+        }
+        and value.get("mechanism")
+        == "linux-child-subreaper-plus-process-group"
+        and value.get("cleanup_after_leader_exit") is True
+        and value.get("detached_session_descendants_contained") is True
+    )
+
+
+def _endpoint_metadata_identity_typed(value: Any) -> bool:
+    return (
+        type(value) is dict
+        and set(value) == {"algorithm", "sha256", "entries", "valid"}
+        and value.get("algorithm") == "no-follow-endpoint-metadata-v1"
+        and type(value.get("sha256")) is str
+        and bool(re.fullmatch(r"sha256:[0-9a-f]{64}", value["sha256"]))
+        and type(value.get("entries")) is int
+        and value.get("entries") > 0
+        and value.get("valid") is True
+    )
+
+
+def _execution_copy_identity_typed(
+    value: Any,
+    expected_tree: Mapping[str, Any],
+) -> bool:
+    return (
+        type(value) is dict
+        and set(value)
+        == {
+            "mode",
+            "source_pre",
+            "source_post",
+            "snapshot_pre",
+            "snapshot_post",
+            "snapshot_endpoint_pre",
+            "snapshot_endpoint_post",
+            "endpoint_stable",
+            "stability_scope",
+            "temporal_immutability_enforced",
+            "process_containment",
+            "stable",
+        }
+        and value.get("mode")
+        == "private-permission-hardened-endpoint-checked-release-copy"
+        and all(
+            exact_json_equal(value.get(field), expected_tree)
+            for field in (
+                "source_pre",
+                "source_post",
+                "snapshot_pre",
+                "snapshot_post",
+            )
+        )
+        and _endpoint_metadata_identity_typed(
+            value.get("snapshot_endpoint_pre")
+        )
+        and exact_json_equal(
+            value.get("snapshot_endpoint_pre"),
+            value.get("snapshot_endpoint_post"),
+        )
+        and value.get("endpoint_stable") is True
+        and value.get("stability_scope") == "pre-post-endpoint"
+        and value.get("temporal_immutability_enforced") is False
+        and _process_containment_scope_typed(value.get("process_containment"))
+        and value.get("stable") is True
+    )
+
+
+LIVE_COMMAND_CAPTURE_FIELDS = (
+    "returncode",
+    "capture_limit_exceeded",
+    "timed_out",
+    "descendant_pipe_leak",
+    "reader_join_timed_out",
+    "normal_exit_group_survivor",
+    "detached_descendant_survivor",
+    "process_group_cleanup_attempted",
+    "process_group_terminated",
+    "process_containment_cleanup_complete",
+    "process_containment",
+)
+
+
+def _live_command_capture_projection(value: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(value, Mapping):
+        return None
+    return {field: value.get(field) for field in LIVE_COMMAND_CAPTURE_FIELDS}
+
+
+def _live_command_capture_typed(value: Any) -> bool:
+    return (
+        type(value) is dict
+        and set(value) == set(LIVE_COMMAND_CAPTURE_FIELDS)
+        and type(value.get("returncode")) is int
+        and all(
+            type(value.get(field)) is bool
+            for field in LIVE_COMMAND_CAPTURE_FIELDS
+            if field not in {"returncode", "process_containment"}
+        )
+        and value.get("returncode") == 0
+        and value.get("capture_limit_exceeded") is False
+        and value.get("timed_out") is False
+        and value.get("descendant_pipe_leak") is False
+        and value.get("reader_join_timed_out") is False
+        and value.get("normal_exit_group_survivor") is False
+        and value.get("detached_descendant_survivor") is False
+        and value.get("process_group_cleanup_attempted") is True
+        and value.get("process_group_terminated") is False
+        and value.get("process_containment_cleanup_complete") is True
+        and _process_containment_scope_typed(value.get("process_containment"))
+    )
+
+
 def _formal_command_record_typed(value: Any) -> bool:
     return (
         type(value) is dict
@@ -796,6 +1378,15 @@ def _formal_command_record_typed(value: Any) -> bool:
             "stdout_truncated",
             "stderr_truncated",
             "capture_limit_exceeded",
+            "timed_out",
+            "descendant_pipe_leak",
+            "reader_join_timed_out",
+            "normal_exit_group_survivor",
+            "detached_descendant_survivor",
+            "process_containment_cleanup_complete",
+            "process_group_cleanup_attempted",
+            "process_group_terminated",
+            "process_containment",
         }
         and _string_list(value.get("argv"))
         and type(value.get("returncode")) is int
@@ -806,6 +1397,27 @@ def _formal_command_record_typed(value: Any) -> bool:
         and type(value.get("stdout_truncated")) is bool
         and type(value.get("stderr_truncated")) is bool
         and type(value.get("capture_limit_exceeded")) is bool
+        and type(value.get("timed_out")) is bool
+        and type(value.get("descendant_pipe_leak")) is bool
+        and type(value.get("reader_join_timed_out")) is bool
+        and type(value.get("normal_exit_group_survivor")) is bool
+        and type(value.get("detached_descendant_survivor")) is bool
+        and type(value.get("process_containment_cleanup_complete")) is bool
+        and type(value.get("process_group_cleanup_attempted")) is bool
+        and type(value.get("process_group_terminated")) is bool
+        and _process_containment_scope_typed(
+            value.get("process_containment")
+        )
+        and value.get("returncode") == 0
+        and value.get("capture_limit_exceeded") is False
+        and value.get("timed_out") is False
+        and value.get("descendant_pipe_leak") is False
+        and value.get("reader_join_timed_out") is False
+        and value.get("normal_exit_group_survivor") is False
+        and value.get("detached_descendant_survivor") is False
+        and value.get("process_containment_cleanup_complete") is True
+        and value.get("process_group_cleanup_attempted") is True
+        and value.get("process_group_terminated") is False
         and all(
             type(value.get(field)) is str
             and bool(re.fullmatch(r"sha256:[0-9a-f]{64}", value.get(field)))
@@ -868,9 +1480,264 @@ def formal_runtime_identity_typed(value: Any) -> bool:
     )
 
 
+def _formal_record_argv(record: Any) -> Optional[List[str]]:
+    if not isinstance(record, Mapping):
+        return None
+    argv = record.get("argv")
+    if not _string_list(argv):
+        return None
+    return list(argv)
+
+
+def _formal_precheck_inventory_typed(
+    records: Any,
+    runtime_executable: Any,
+) -> bool:
+    """Bind a passing formal result to the production precheck inventory."""
+    if type(records) is not list or len(records) != 4:
+        return False
+    if not all(_formal_command_record_typed(record) for record in records):
+        return False
+    argvs = [_formal_record_argv(record) for record in records]
+    if any(argv is None for argv in argvs):
+        return False
+    validate, regression, gate, plugin = argvs
+    assert validate is not None
+    assert regression is not None
+    assert gate is not None
+    assert plugin is not None
+    scripts = "<execution-package-root>/skills/nozickian-verify/scripts"
+    return (
+        type(runtime_executable) is str
+        and Path(runtime_executable).is_absolute()
+        and len(validate) in {3, 4}
+        and validate[:3]
+        == [
+            "<python>",
+            f"{scripts}/validate_package.py",
+            "<execution-package-root>",
+        ]
+        and validate[2] == "<execution-package-root>"
+        and validate[3:] in ([], ["--self-test"])
+        and regression
+        == [
+            "<python>",
+            f"{scripts}/run_regression_evals.py",
+            "<execution-package-root>",
+        ]
+        and gate
+        == [
+            "<python>",
+            f"{scripts}/ntt_gate.py",
+            "<execution-package-root>/self_validation/self_certificate.json",
+            "--evidence-root",
+            "<execution-package-root>",
+            "--strict-evidence",
+        ]
+        and plugin
+        == [
+            runtime_executable,
+            "plugin",
+            "validate",
+            "<execution-package-root>",
+            "--strict",
+        ]
+    )
+
+
+def _formal_execution_inventory_typed(
+    records: Any,
+    runtime_executable: Any,
+    formal_coordinator: str,
+) -> bool:
+    """Bind formal evidence to version, coordinator, and strict-gate calls."""
+    if type(records) is not list or len(records) != 3:
+        return False
+    if not all(_formal_command_record_typed(record) for record in records):
+        return False
+    argvs = [_formal_record_argv(record) for record in records]
+    if any(argv is None for argv in argvs):
+        return False
+    version, coordinator, gate = argvs
+    assert version is not None
+    assert coordinator is not None
+    assert gate is not None
+    if type(runtime_executable) is not str or not Path(
+        runtime_executable
+    ).is_absolute():
+        return False
+    optional = coordinator[11:-1] if len(coordinator) >= 12 else []
+    optional_valid = (
+        optional == []
+        or (
+            len(optional) == 2
+            and optional[0] in {"--model", "--effort"}
+            and bool(optional[1])
+        )
+        or (
+            len(optional) == 4
+            and optional[0] == "--model"
+            and bool(optional[1])
+            and optional[2] == "--effort"
+            and bool(optional[3])
+        )
+    )
+    coordinator_shape = (
+        len(coordinator) >= 12
+        and type(formal_coordinator) is str
+        and bool(formal_coordinator)
+        and coordinator[:10]
+        == [
+            runtime_executable,
+            "--plugin-dir",
+            "<execution-package-root>",
+            "--agent",
+            formal_coordinator,
+            "-p",
+            "--output-format",
+            "stream-json",
+            "--include-hook-events",
+            "--max-turns",
+        ]
+        and bool(re.fullmatch(r"[1-9][0-9]*", coordinator[10]))
+        and optional_valid
+        and bool(re.fullmatch(r"sha256:[0-9a-f]{64}", coordinator[-1]))
+    )
+    gate_certificate = gate[2] if len(gate) == 8 else ""
+    gate_markdown = gate[7] if len(gate) == 8 else ""
+    certificate_prefix = (
+        gate_certificate[: -len("_NOZICKIAN_certificate.json")]
+        if gate_certificate.endswith("_NOZICKIAN_certificate.json")
+        else None
+    )
+    return (
+        version == [runtime_executable, "--version"]
+        and coordinator_shape
+        and gate[:2]
+        == [
+            "<python>",
+            "<execution-package-root>/skills/nozickian-verify/scripts/ntt_gate.py",
+        ]
+        and gate[3:7]
+        == [
+            "--evidence-root",
+            "<output-dir>",
+            "--strict-evidence",
+            "--markdown",
+        ]
+        and certificate_prefix is not None
+        and certificate_prefix.startswith("<output-dir>/")
+        and gate_markdown
+        == certificate_prefix + "_NOZICKIAN_GATE.md"
+    )
+
+
+def _formal_execution_companions_bound(
+    data: Mapping[str, Any],
+    companions: Mapping[str, Any],
+) -> Dict[str, bool]:
+    commands = data.get("commands")
+    if type(commands) is not list or len(commands) != 3:
+        return {"prompt": False, "transcript": False, "gate": False}
+    coordinator = commands[1]
+    gate = commands[2]
+    coordinator_argv = (
+        coordinator.get("argv") if isinstance(coordinator, Mapping) else None
+    )
+    gate_argv = gate.get("argv") if isinstance(gate, Mapping) else None
+    prompt = companions.get("prompt")
+    transcript = companions.get("transcript")
+    certificate = companions.get("certificate")
+    gate_companion = companions.get("gate")
+    prompt_sha256 = (
+        prompt.get("sha256") if isinstance(prompt, Mapping) else None
+    )
+    transcript_sha256 = (
+        transcript.get("sha256")
+        if isinstance(transcript, Mapping)
+        else None
+    )
+    transcript_bytes = (
+        transcript.get("bytes") if isinstance(transcript, Mapping) else None
+    )
+    certificate_path = (
+        certificate.get("path")
+        if isinstance(certificate, Mapping)
+        else None
+    )
+    gate_path = (
+        gate_companion.get("path")
+        if isinstance(gate_companion, Mapping)
+        else None
+    )
+    return {
+        "prompt": (
+            isinstance(coordinator_argv, list)
+            and bool(coordinator_argv)
+            and coordinator_argv[-1] == prompt_sha256
+        ),
+        "transcript": (
+            isinstance(coordinator, Mapping)
+            and coordinator.get("stdout_sha256") == transcript_sha256
+            and coordinator.get("stdout_bytes") == transcript_bytes
+        ),
+        "gate": (
+            isinstance(gate_argv, list)
+            and len(gate_argv) == 8
+            and type(certificate_path) is str
+            and type(gate_path) is str
+            and gate_argv[2] == f"<output-dir>/{certificate_path}"
+            and gate_argv[7] == f"<output-dir>/{gate_path}"
+        ),
+    }
+
+
+def _formal_output_checks_recomputed(
+    runner: Any,
+    resolved_companions: Mapping[str, Path],
+    recorded_checks: Any,
+) -> Tuple[bool, List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Recompute the runner's output checks and bind their exact projection."""
+    recorded_projection = (
+        [
+            {"name": check.get("name"), "passed": check.get("passed")}
+            for check in recorded_checks
+        ]
+        if type(recorded_checks) is list
+        and all(isinstance(check, Mapping) for check in recorded_checks)
+        else []
+    )
+    required_roles = {"report", "certificate", "ledger", "gate"}
+    if not required_roles.issubset(resolved_companions):
+        return False, recorded_projection, []
+    try:
+        recomputed = runner.check_required_outputs(
+            dict(resolved_companions),
+            include_gate=True,
+        )
+    except Exception:
+        return False, recorded_projection, []
+    recomputed_projection = (
+        [
+            {"name": check.get("name"), "passed": check.get("passed")}
+            for check in recomputed
+        ]
+        if type(recomputed) is list
+        and all(isinstance(check, Mapping) for check in recomputed)
+        else []
+    )
+    matched = (
+        bool(recomputed_projection)
+        and all(check.get("passed") is True for check in recomputed_projection)
+        and exact_json_equal(recorded_projection, recomputed_projection)
+    )
+    return matched, recorded_projection, recomputed_projection
+
+
 def formal_projected_fields_typed(
     data: Mapping[str, Any],
     required_agents: Sequence[str],
+    formal_coordinator: str,
 ) -> bool:
     expected_keys = {
         "formal_result_schema_version",
@@ -898,6 +1765,12 @@ def formal_projected_fields_typed(
     }
     summary = data.get("precheck_summary")
     output_checks = data.get("output_checks")
+    runtime_identity = data.get("runtime_identity")
+    runtime_executable = (
+        runtime_identity.get("resolved_executable_path")
+        if isinstance(runtime_identity, Mapping)
+        else None
+    )
     return (
         set(data) == expected_keys
         and all(
@@ -920,15 +1793,17 @@ def formal_projected_fields_typed(
             data.get("required_native_agents"),
             list(required_agents),
         )
-        and type(data.get("prechecks")) is list
-        and all(
-            _formal_command_record_typed(record)
-            for record in data.get("prechecks")
+        and type(formal_coordinator) is str
+        and bool(formal_coordinator)
+        and data.get("formal_coordinator") == formal_coordinator
+        and _formal_precheck_inventory_typed(
+            data.get("prechecks"),
+            runtime_executable,
         )
-        and type(data.get("commands")) is list
-        and all(
-            _formal_command_record_typed(record)
-            for record in data.get("commands")
+        and _formal_execution_inventory_typed(
+            data.get("commands"),
+            runtime_executable,
+            formal_coordinator,
         )
         and type(summary) is dict
         and set(summary) == {"total", "failed", "passed", "failed_commands"}
@@ -936,14 +1811,27 @@ def formal_projected_fields_typed(
             type(summary.get(field)) is int
             for field in ("total", "failed", "passed")
         )
-        and type(summary.get("failed_commands")) is list
+        and summary.get("total") == len(data.get("prechecks"))
+        and summary.get("failed") == 0
+        and summary.get("passed") == summary.get("total")
+        and summary.get("failed_commands") == []
         and type(output_checks) is list
+        and bool(output_checks)
         and all(
             type(check) is dict
             and type(check.get("name")) is str
             and type(check.get("passed")) is bool
+            and check.get("passed") is True
             for check in output_checks
         )
+        and len(
+            {
+                check.get("name")
+                for check in output_checks
+                if isinstance(check, Mapping)
+            }
+        )
+        == len(output_checks)
     )
 
 
@@ -2036,31 +2924,10 @@ def live_fixture_checks(package_root: Path, bundle: Path) -> List[Check]:
     }
     checks.append(
         Check(
-            "live execution used one stable immutable package snapshot",
-            isinstance(execution_snapshot, Mapping)
-            and set(execution_snapshot)
-            == {
-                "mode",
-                "source_pre",
-                "source_post",
-                "snapshot_pre",
-                "snapshot_post",
-                "stable",
-            }
-            and execution_snapshot.get("mode")
-            == "private-read-only-stable-release-snapshot"
-            and execution_snapshot.get("stable") is True
-            and all(
-                exact_json_equal(
-                    execution_snapshot.get(field),
-                    expected_live_tree_identity,
-                )
-                for field in (
-                    "source_pre",
-                    "source_post",
-                    "snapshot_pre",
-                    "snapshot_post",
-                )
+            "live execution used one endpoint-checked package copy with explicit limits",
+            _execution_copy_identity_typed(
+                execution_snapshot,
+                expected_live_tree_identity,
             ),
             details=execution_snapshot,
         )
@@ -2240,10 +3107,16 @@ def live_fixture_checks(package_root: Path, bundle: Path) -> List[Check]:
     version_preflight_ok = (
         version_command.get("cmd") == expected_version_argv
         and returncode_is_integer_zero(version_command.get("returncode"))
+        and _live_command_capture_typed(
+            _live_command_capture_projection(version_command)
+        )
     )
     plugin_preflight_ok = (
         plugin_command.get("cmd") == expected_plugin_argv
         and returncode_is_integer_zero(plugin_command.get("returncode"))
+        and _live_command_capture_typed(
+            _live_command_capture_projection(plugin_command)
+        )
     )
     checks.append(
         Check(
@@ -2379,7 +3252,19 @@ def live_fixture_checks(package_root: Path, bundle: Path) -> List[Check]:
                 checks.append(Check(f"live fixture {idx} object", False, details=item)); continue
             fixture_id = str(item.get("id") or "")
             artifact = expected_by_id.get(fixture_id)
-            checks.append(Check(f"live fixture {idx} command returned zero", returncode_is_integer_zero(item.get("returncode")), details={"id": fixture_id, "returncode": item.get("returncode")}))
+            fixture_capture = item.get("command_capture")
+            checks.append(Check(
+                f"live fixture {idx} command returned zero",
+                returncode_is_integer_zero(item.get("returncode"))
+                and _live_command_capture_typed(fixture_capture)
+                and fixture_capture.get("returncode")
+                == item.get("returncode"),
+                details={
+                    "id": fixture_id,
+                    "returncode": item.get("returncode"),
+                    "command_capture": fixture_capture,
+                },
+            ))
             checks.append(
                 Check(
                     f"live fixture {idx} ID names a current fixture",
@@ -2631,14 +3516,23 @@ def live_fixture_checks(package_root: Path, bundle: Path) -> List[Check]:
             checks.append(
                 Check(
                     f"live fixture {idx} transcript returncode matches result",
-                    returncode_is_integer_zero(
-                        transcript_data.get("returncode")
+                    _live_command_capture_typed(fixture_capture)
+                    and _live_command_capture_typed(
+                        _live_command_capture_projection(transcript_data)
+                    )
+                    and exact_json_equal(
+                        fixture_capture,
+                        _live_command_capture_projection(transcript_data),
                     )
                     and returncode_is_integer_zero(item.get("returncode")),
                     details={
                         "id": fixture_id,
                         "result_returncode": item.get("returncode"),
                         "transcript_returncode": transcript_data.get("returncode"),
+                        "result_capture": fixture_capture,
+                        "transcript_capture": (
+                            _live_command_capture_projection(transcript_data)
+                        ),
                     },
                 )
             )
@@ -2756,8 +3650,8 @@ def formal_artifact_checks(
     )
     checks.append(
         Check(
-            "formal result status PASS-TRACKED",
-            data.get("status") == PASS_TRACKED,
+            "formal result status is capped to PASS-SCOPED by execution-boundary limits",
+            data.get("status") == PASS_SCOPED,
             details=data.get("status"),
         )
     )
@@ -2821,33 +3715,13 @@ def formal_artifact_checks(
         )
     )
     execution_snapshot = data.get("execution_package_snapshot_identity")
-    execution_snapshot_ok = (
-        isinstance(execution_snapshot, Mapping)
-        and set(execution_snapshot)
-        == {
-            "mode",
-            "source_pre",
-            "source_post",
-            "snapshot_pre",
-            "snapshot_post",
-            "stable",
-        }
-        and execution_snapshot.get("mode")
-        == "private-read-only-stable-release-snapshot"
-        and execution_snapshot.get("stable") is True
-        and all(
-            exact_json_equal(execution_snapshot.get(field), expected_tree)
-            for field in (
-                "source_pre",
-                "source_post",
-                "snapshot_pre",
-                "snapshot_post",
-            )
-        )
+    execution_snapshot_ok = _execution_copy_identity_typed(
+        execution_snapshot,
+        expected_tree,
     )
     checks.append(
         Check(
-            "formal execution package snapshot is stable and current",
+            "formal execution package copy is endpoint-stable, current, and explicitly scoped",
             execution_snapshot_ok,
             details=execution_snapshot,
         )
@@ -2935,11 +3809,17 @@ def formal_artifact_checks(
             "REQUIRED_NATIVE_AGENTS",
             None,
         )
+        runner_formal_coordinator = getattr(
+            runner,
+            "FORMAL_COORDINATOR",
+            None,
+        )
     except Exception:
         companion_specs = None
         verification_context_spec = None
         trace_authentication_fields = None
         runner_required_agents = None
+        runner_formal_coordinator = None
     specs_typed = (
         isinstance(companion_specs, Mapping)
         and bool(companion_specs)
@@ -2968,7 +3848,17 @@ def formal_artifact_checks(
     runner_schema_specs_typed = (
         type(verification_context_spec) is dict
         and all(
-            type(key) is str and type(value) is str
+            type(key) is str
+            and (
+                (
+                    key == "temporal_immutability_enforced"
+                    and value is False
+                )
+                or (
+                    key != "temporal_immutability_enforced"
+                    and type(value) is str
+                )
+            )
             for key, value in verification_context_spec.items()
         )
         and type(trace_authentication_fields) in {tuple, list}
@@ -2979,6 +3869,8 @@ def formal_artifact_checks(
         and len(set(trace_authentication_fields))
         == len(trace_authentication_fields)
         and _string_list(runner_required_agents)
+        and type(runner_formal_coordinator) is str
+        and bool(runner_formal_coordinator)
     )
     checks.append(
         Check(
@@ -2988,31 +3880,49 @@ def formal_artifact_checks(
                 "verification_context": verification_context_spec,
                 "trace_authentication_fields": trace_authentication_fields,
                 "required_native_agents": runner_required_agents,
+                "formal_coordinator": runner_formal_coordinator,
             },
             failure_kind="INTERNAL_ERROR",
         )
     )
     if not runner_schema_specs_typed:
         return checks
+    formal_commands = data.get("commands")
+    coordinator_argv = (
+        formal_commands[1].get("argv")
+        if type(formal_commands) is list
+        and len(formal_commands) > 1
+        and isinstance(formal_commands[1], Mapping)
+        else None
+    )
+    coordinator_argv_agent = (
+        coordinator_argv[4]
+        if type(coordinator_argv) is list and len(coordinator_argv) > 4
+        else None
+    )
     checks.append(
         Check(
             "formal result projected fields have exact JSON types",
             formal_projected_fields_typed(
                 data,
                 runner_required_agents,
+                runner_formal_coordinator,
             ),
             details={
                 "keys": sorted(str(key) for key in data),
                 "trace_authentication_present": (
                     "trace_authentication" in data
                 ),
+                "formal_coordinator": data.get("formal_coordinator"),
+                "coordinator_argv_agent": coordinator_argv_agent,
+                "expected_formal_coordinator": runner_formal_coordinator,
             },
             failure_kind="INVALID_INPUT",
         )
     )
     checks.append(
         Check(
-            "formal result declares standalone immutable snapshot context",
+            "formal result declares standalone endpoint-checked copy context",
             type(data.get("verification_context")) is dict
             and exact_json_equal(
                 data.get("verification_context"),
@@ -3167,6 +4077,127 @@ def formal_artifact_checks(
             )
         )
 
+    formal_commands = data.get("commands")
+    coordinator_record = (
+        formal_commands[1]
+        if isinstance(formal_commands, list)
+        and len(formal_commands) == 3
+        and isinstance(formal_commands[1], Mapping)
+        else {}
+    )
+    gate_record = (
+        formal_commands[2]
+        if isinstance(formal_commands, list)
+        and len(formal_commands) == 3
+        and isinstance(formal_commands[2], Mapping)
+        else {}
+    )
+    coordinator_argv = coordinator_record.get("argv")
+    gate_argv = gate_record.get("argv")
+    prompt_record = companions.get("prompt")
+    transcript_record = companions.get("transcript")
+    certificate_record = companions.get("certificate")
+    gate_companion_record = companions.get("gate")
+    execution_bindings = _formal_execution_companions_bound(
+        data,
+        companions,
+    )
+    prompt_sha256 = (
+        prompt_record.get("sha256")
+        if isinstance(prompt_record, Mapping)
+        else None
+    )
+    checks.append(
+        Check(
+            "formal coordinator prompt digest matches declared prompt companion",
+            execution_bindings["prompt"],
+            details={
+                "command_prompt_sha256": (
+                    coordinator_argv[-1]
+                    if isinstance(coordinator_argv, list)
+                    and coordinator_argv
+                    else None
+                ),
+                "companion_prompt_sha256": prompt_sha256,
+            },
+        )
+    )
+    transcript_sha256 = (
+        transcript_record.get("sha256")
+        if isinstance(transcript_record, Mapping)
+        else None
+    )
+    transcript_bytes = (
+        transcript_record.get("bytes")
+        if isinstance(transcript_record, Mapping)
+        else None
+    )
+    checks.append(
+        Check(
+            "formal coordinator stdout matches complete transcript companion",
+            execution_bindings["transcript"],
+            details={
+                "command_stdout_sha256": coordinator_record.get(
+                    "stdout_sha256"
+                ),
+                "command_stdout_bytes": coordinator_record.get(
+                    "stdout_bytes"
+                ),
+                "companion_transcript_sha256": transcript_sha256,
+                "companion_transcript_bytes": transcript_bytes,
+            },
+        )
+    )
+    certificate_path = (
+        certificate_record.get("path")
+        if isinstance(certificate_record, Mapping)
+        else None
+    )
+    gate_companion_path = (
+        gate_companion_record.get("path")
+        if isinstance(gate_companion_record, Mapping)
+        else None
+    )
+    checks.append(
+        Check(
+            "formal strict-gate argv binds declared certificate and gate companions",
+            execution_bindings["gate"],
+            details={
+                "command_certificate": (
+                    gate_argv[2]
+                    if isinstance(gate_argv, list) and len(gate_argv) > 2
+                    else None
+                ),
+                "declared_certificate": certificate_path,
+                "command_gate": (
+                    gate_argv[7]
+                    if isinstance(gate_argv, list) and len(gate_argv) > 7
+                    else None
+                ),
+                "declared_gate": gate_companion_path,
+            },
+        )
+    )
+    (
+        output_checks_match,
+        recorded_output_projection,
+        recomputed_output_projection,
+    ) = _formal_output_checks_recomputed(
+        runner,
+        resolved_by_role,
+        data.get("output_checks"),
+    )
+    checks.append(
+        Check(
+            "formal output checks recompute exactly from declared companions",
+            output_checks_match,
+            details={
+                "recorded": recorded_output_projection,
+                "recomputed": recomputed_output_projection,
+            },
+        )
+    )
+
     reserved_undeclared: List[str] = []
     for entry, kind, entry_error in walk_tree_no_follow(
         result_dir,
@@ -3212,6 +4243,9 @@ def formal_artifact_checks(
             "pre_sha256",
             "post_sha256",
             "stable",
+            "endpoint_stable",
+            "stability_scope",
+            "temporal_immutability_enforced",
             "digest_stable",
             "source_metadata_stable",
             "snapshot_metadata_stable",
@@ -3239,11 +4273,15 @@ def formal_artifact_checks(
         and target_identity.get("snapshot_sha256") == target_sha
         and target_identity.get("pre_sha256") == target_sha
         and target_identity.get("post_sha256") == target_sha
+        and target_identity.get("stability_scope")
+        == "pre-post-endpoint"
+        and target_identity.get("temporal_immutability_enforced") is False
         and all(
             type(target_identity.get(field)) is bool
             and target_identity.get(field) is True
             for field in (
                 "stable",
+                "endpoint_stable",
                 "digest_stable",
                 "source_metadata_stable",
                 "snapshot_metadata_stable",
@@ -3252,7 +4290,7 @@ def formal_artifact_checks(
     )
     checks.append(
         Check(
-            "formal target snapshot binds stable pre/post digest",
+            "formal target copy binds stable pre/post endpoints without claiming temporal immutability",
             target_ok,
             details=target_identity,
         )
@@ -4456,6 +5494,54 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     package_root = Path(os.path.abspath(args.package_root))
     bundle = Path(os.path.abspath(args.audit_bundle))
+    json_path = Path(os.path.abspath(args.json)) if args.json else None
+    markdown_path = (
+        Path(os.path.abspath(args.markdown)) if args.markdown else None
+    )
+    if (
+        json_path is not None
+        and markdown_path is not None
+        and _paths_alias(json_path, markdown_path)
+    ):
+        invalid = {
+            "status": "FAIL",
+            "outcome": "FAILED",
+            "failure_kind": "INVALID_INPUT",
+            "promotion_authorized": False,
+            "reason": (
+                "unsafe output paths: --json and --markdown destinations alias"
+            ),
+        }
+        print(json.dumps(invalid, indent=2, sort_keys=True))
+        return 2
+    output_capabilities: Dict[str, Tuple[Path, int]] = {}
+    for label, path in (("json", json_path), ("markdown", markdown_path)):
+        if path is None:
+            continue
+        descriptor: Optional[int] = None
+        try:
+            descriptor = _open_directory_no_follow(path.parent)
+            if not _directory_path_matches_fd(path.parent, descriptor):
+                raise ValueError("output parent identity is unstable")
+            _replaceable_regular_at(descriptor, _safe_output_name(path))
+            output_capabilities[label] = (path, descriptor)
+        except (OSError, ValueError):
+            if descriptor is not None:
+                try:
+                    os.close(descriptor)
+                except OSError:
+                    pass
+            for _path, held_fd in output_capabilities.values():
+                os.close(held_fd)
+            invalid = {
+                "status": "FAIL",
+                "outcome": "FAILED",
+                "failure_kind": "INVALID_INPUT",
+                "promotion_authorized": False,
+                "reason": f"unsafe --{label} output path was rejected",
+            }
+            print(json.dumps(invalid, indent=2, sort_keys=True))
+            return 2
     result = certify_bundle(
         package_root,
         bundle,
@@ -4471,12 +5557,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             (str(bundle), "<audit-bundle>"),
         ),
     )
-    if args.json:
-        json_path = Path(os.path.abspath(args.json))
+    if json_path is not None:
         try:
             atomic_replace_regular_text(
                 json_path,
                 json.dumps(display_result, indent=2, sort_keys=True) + "\n",
+                directory_fd=output_capabilities["json"][1],
+                lexical_parent=json_path.parent,
             )
         except (OSError, ValueError):
             invalid = {
@@ -4487,13 +5574,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 "reason": "unsafe --json output path was rejected",
             }
             print(json.dumps(invalid, indent=2, sort_keys=True))
+            for _path, held_fd in output_capabilities.values():
+                os.close(held_fd)
             return 2
-    if args.markdown:
-        markdown_path = Path(os.path.abspath(args.markdown))
+    if markdown_path is not None:
         try:
             atomic_replace_regular_text(
                 markdown_path,
                 to_markdown(display_result),
+                directory_fd=output_capabilities["markdown"][1],
+                lexical_parent=markdown_path.parent,
             )
         except (OSError, ValueError):
             invalid = {
@@ -4504,8 +5594,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 "reason": "unsafe --markdown output path was rejected",
             }
             print(json.dumps(invalid, indent=2, sort_keys=True))
+            for _path, held_fd in output_capabilities.values():
+                os.close(held_fd)
             return 2
     print(json.dumps(display_result, indent=2, sort_keys=True))
+    for _path, held_fd in output_capabilities.values():
+        os.close(held_fd)
     return 2
 
 

@@ -11,7 +11,9 @@ of Nozickian verification. v0.7.2 hardens strict local evidence semantics:
 * remote, absolute, path-escaping, missing, non-JSON, and wrong-hash evidence
   refs are rejected in strict local-evidence mode; and
 * a good evidence ref cannot mask one bad cited evidence ref; and
-* URI-like artifact_path values are rejected even if a matching local path exists, and modal-test thresholds count unique false/true-world tests rather than duplicated test objects.
+* URI-like artifact_path values are rejected even if a matching local path exists,
+  modal-test thresholds count unique false/true-world tests rather than duplicated
+  test objects, and Markdown report output never follows final or ancestor links.
 """
 from __future__ import annotations
 import argparse
@@ -1860,6 +1862,149 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         ),
         "reasons": [],
     })
+
+    markdown_root = _private_tempdir("ntt_gate_markdown_output_contract_")
+    markdown_output = markdown_root / "nested" / "gate-result.md"
+    gate_mod._atomic_write_new_text(markdown_output, "first report\n")
+    markdown_regular_ok = (
+        markdown_output.read_text(encoding="utf-8") == "first report\n"
+        and stat.S_IMODE(markdown_output.stat().st_mode) == 0o600
+    )
+    cases.append({
+        "name": "gate_markdown_output_is_private_and_atomically_created",
+        "status": "PASS" if markdown_regular_ok else "FAIL",
+        "expected_any": ["PASS"],
+        "passed": markdown_regular_ok,
+        "reasons": [],
+    })
+
+    markdown_sentinel = markdown_root / "sentinel.md"
+    markdown_sentinel.write_text("sentinel\n", encoding="utf-8")
+    markdown_symlink = markdown_root / "symlink-output.md"
+    markdown_symlink.symlink_to(markdown_sentinel.name)
+    markdown_hardlink = markdown_root / "hardlink-output.md"
+    os.link(markdown_sentinel, markdown_hardlink)
+
+    def markdown_write_rejected(path: Path) -> bool:
+        try:
+            gate_mod._atomic_write_new_text(path, "overwrite\n")
+        except (OSError, RuntimeError, ValueError):
+            return True
+        return False
+
+    markdown_final_links_rejected = (
+        markdown_write_rejected(markdown_symlink)
+        and markdown_write_rejected(markdown_hardlink)
+        and markdown_write_rejected(markdown_output)
+    )
+    cases.append({
+        "name": "gate_markdown_output_rejects_existing_and_linked_targets",
+        "status": "PASS" if markdown_final_links_rejected else "FAIL",
+        "expected_any": ["PASS"],
+        "passed": (
+            markdown_final_links_rejected
+            and markdown_sentinel.read_text(encoding="utf-8") == "sentinel\n"
+            and markdown_output.read_text(encoding="utf-8") == "first report\n"
+        ),
+        "reasons": [],
+    })
+
+    markdown_real_parent = markdown_root / "real-parent"
+    markdown_real_parent.mkdir()
+    markdown_linked_parent = markdown_root / "linked-parent"
+    markdown_linked_parent.symlink_to(markdown_real_parent.name)
+    markdown_ancestor_rejected = markdown_write_rejected(
+        markdown_linked_parent / "escaped-report.md"
+    )
+    cases.append({
+        "name": "gate_markdown_output_rejects_symlinked_ancestor",
+        "status": "PASS" if markdown_ancestor_rejected else "FAIL",
+        "expected_any": ["PASS"],
+        "passed": (
+            markdown_ancestor_rejected
+            and not (markdown_real_parent / "escaped-report.md").exists()
+        ),
+        "reasons": [],
+    })
+
+    markdown_swap_root = _private_tempdir(
+        "ntt_gate_markdown_real_directory_swap_"
+    )
+    markdown_checked_parent = markdown_swap_root / "checked-parent"
+    markdown_checked_parent.mkdir()
+    markdown_parked_parent = markdown_swap_root / "parked-parent"
+    markdown_replacement_parent = markdown_swap_root / "replacement-parent"
+    markdown_replacement_parent.mkdir()
+    markdown_swap_output = markdown_checked_parent / "gate-result.md"
+    markdown_replacement_sentinel = (
+        markdown_replacement_parent / markdown_swap_output.name
+    )
+    markdown_replacement_bytes = b"replacement sentinel\n"
+    markdown_replacement_sentinel.write_bytes(markdown_replacement_bytes)
+    markdown_certificate = markdown_swap_root / "certificate.json"
+    markdown_certificate.write_text("{}\n", encoding="utf-8")
+    original_evaluate_certificate = gate_mod.evaluate_certificate
+    markdown_swap_performed = False
+
+    def swap_during_gate_evaluation(*_args: Any, **_kwargs: Any) -> Dict[str, Any]:
+        nonlocal markdown_swap_performed
+        markdown_checked_parent.rename(markdown_parked_parent)
+        markdown_replacement_parent.rename(markdown_checked_parent)
+        markdown_swap_performed = True
+        return {
+            "status": "PASS-SCOPED",
+            "failure_kind": None,
+            "summary": {},
+            "reasons": [],
+            "claim_results": [],
+        }
+
+    markdown_swap_stdout = io.StringIO()
+    try:
+        gate_mod.evaluate_certificate = swap_during_gate_evaluation
+        with contextlib.redirect_stdout(markdown_swap_stdout):
+            markdown_swap_returncode = gate_mod.main([
+                str(markdown_certificate),
+                "--markdown",
+                str(markdown_swap_output),
+            ])
+    finally:
+        gate_mod.evaluate_certificate = original_evaluate_certificate
+    try:
+        markdown_swap_result = json.loads(
+            markdown_swap_stdout.getvalue()
+        )
+    except (TypeError, ValueError):
+        markdown_swap_result = {}
+    cases.append({
+        "name": "gate_markdown_holds_parent_across_real_directory_substitution",
+        "status": "PASS" if (
+            markdown_swap_performed
+            and markdown_swap_returncode == 2
+            and markdown_swap_result.get("status") == "INVALID_INPUT"
+            and (markdown_checked_parent / markdown_swap_output.name).read_bytes()
+            == markdown_replacement_bytes
+            and not (
+                markdown_parked_parent / markdown_swap_output.name
+            ).exists()
+        ) else "FAIL",
+        "expected_any": ["PASS"],
+        "passed": (
+            markdown_swap_performed
+            and markdown_swap_returncode == 2
+            and markdown_swap_result.get("status") == "INVALID_INPUT"
+            and (markdown_checked_parent / markdown_swap_output.name).read_bytes()
+            == markdown_replacement_bytes
+            and not (
+                markdown_parked_parent / markdown_swap_output.name
+            ).exists()
+            and not any(
+                entry.name.startswith(f".{markdown_swap_output.name}.")
+                for entry in markdown_parked_parent.iterdir()
+            )
+        ),
+        "reasons": [],
+    })
     return cases
 
 
@@ -1913,12 +2058,102 @@ def _open_output_parent(path: Path) -> Tuple[int, str]:
         raise
 
 
-def _atomic_write_json(path: Path, text: str) -> None:
+def _canonical_output_path(path: Path) -> Path:
+    raw = str(path)
+    absolute = Path(os.path.abspath(path))
+    if (
+        not raw
+        or any(
+            ord(character) < 32
+            or ord(character) == 127
+            or unicodedata.category(character) == "Cc"
+            for character in raw
+        )
+        or absolute.name in {"", ".", ".."}
+        or ".." in absolute.parts
+    ):
+        raise ValueError("output path is not canonical")
+    return absolute
+
+
+def _directory_path_matches_fd(path: Path, descriptor: int) -> bool:
+    observed: Optional[int] = None
+    try:
+        nofollow = getattr(os, "O_NOFOLLOW", 0)
+        directory = getattr(os, "O_DIRECTORY", 0)
+        if not nofollow or not directory:
+            return False
+        flags = os.O_RDONLY | nofollow | directory
+        if hasattr(os, "O_CLOEXEC"):
+            flags |= os.O_CLOEXEC
+        absolute = Path(os.path.abspath(path))
+        observed = os.open(os.path.sep, flags)
+        for component in absolute.parts[1:]:
+            child = os.open(component, flags, dir_fd=observed)
+            os.close(observed)
+            observed = child
+        expected_metadata = os.fstat(descriptor)
+        observed_metadata = os.fstat(observed)
+        return (
+            expected_metadata.st_dev,
+            expected_metadata.st_ino,
+        ) == (
+            observed_metadata.st_dev,
+            observed_metadata.st_ino,
+        )
+    except (OSError, ValueError):
+        return False
+    finally:
+        if observed is not None:
+            os.close(observed)
+
+
+def _require_replaceable_json_target(directory_fd: int, name: str) -> None:
+    try:
+        metadata = os.stat(
+            name,
+            dir_fd=directory_fd,
+            follow_symlinks=False,
+        )
+    except FileNotFoundError:
+        return
+    if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+        raise ValueError("JSON output target is not a private regular file")
+
+
+def _acquire_json_output_capability(path: Path) -> Tuple[Path, int]:
+    absolute = _canonical_output_path(path)
+    descriptor, _name = _open_output_parent(absolute)
+    try:
+        _require_replaceable_json_target(descriptor, absolute.name)
+        if not _directory_path_matches_fd(absolute.parent, descriptor):
+            raise ValueError("JSON output parent identity is unstable")
+        return absolute, descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _atomic_write_json(
+    path: Path,
+    text: str,
+    *,
+    directory_fd: Optional[int] = None,
+) -> None:
     """Atomically install JSON without following target/ancestor symlinks."""
-    parent_fd, target_name = _open_output_parent(path)
+    if directory_fd is None:
+        absolute, parent_fd = _acquire_json_output_capability(path)
+    else:
+        absolute = _canonical_output_path(path)
+        parent_fd = os.dup(directory_fd)
+    target_name = absolute.name
     temporary_name = f".{target_name}.{uuid.uuid4().hex}.tmp"
     temporary_created = False
+    descriptor: Optional[int] = None
     try:
+        _require_replaceable_json_target(parent_fd, target_name)
+        if not _directory_path_matches_fd(absolute.parent, parent_fd):
+            raise ValueError("JSON output parent changed before write")
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
         descriptor = os.open(
             temporary_name,
@@ -1931,20 +2166,17 @@ def _atomic_write_json(path: Path, text: str) -> None:
             payload = text.encode("utf-8")
             offset = 0
             while offset < len(payload):
-                offset += os.write(descriptor, payload[offset:])
+                written = os.write(descriptor, payload[offset:])
+                if written <= 0:
+                    raise OSError("zero-byte JSON output write")
+                offset += written
             os.fsync(descriptor)
         finally:
             os.close(descriptor)
-        try:
-            target_stat = os.stat(
-                target_name,
-                dir_fd=parent_fd,
-                follow_symlinks=False,
-            )
-        except FileNotFoundError:
-            target_stat = None
-        if target_stat is not None and not stat.S_ISREG(target_stat.st_mode):
-            raise OSError("JSON output target is not a regular file")
+            descriptor = None
+        _require_replaceable_json_target(parent_fd, target_name)
+        if not _directory_path_matches_fd(absolute.parent, parent_fd):
+            raise ValueError("JSON output parent changed before install")
         os.replace(
             temporary_name,
             target_name,
@@ -1952,7 +2184,16 @@ def _atomic_write_json(path: Path, text: str) -> None:
             dst_dir_fd=parent_fd,
         )
         temporary_created = False
+        installed = os.stat(
+            target_name,
+            dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        if not stat.S_ISREG(installed.st_mode) or installed.st_nlink != 1:
+            raise OSError("installed JSON output is not private")
         os.fsync(parent_fd)
+        if not _directory_path_matches_fd(absolute.parent, parent_fd):
+            raise ValueError("JSON output parent changed during install")
     finally:
         if temporary_created:
             try:
@@ -1967,17 +2208,47 @@ def main(argv=None) -> int:
     ap.add_argument("package_root", type=Path, nargs="?", default=Path("."))
     ap.add_argument("--json", type=Path)
     args = ap.parse_args(argv)
+    output_path: Optional[Path] = None
+    output_directory_fd: Optional[int] = None
+    if args.json is not None:
+        try:
+            output_path, output_directory_fd = (
+                _acquire_json_output_capability(args.json)
+            )
+        except (OSError, RuntimeError, ValueError):
+            print(json.dumps({
+                "status": "FAIL",
+                "failure_kind": "INVALID_INPUT",
+                "reason": "unsafe --json output path was rejected",
+                "total": 0,
+                "passed": 0,
+                "cases": [],
+            }, indent=2, sort_keys=True))
+            return 2
     gate_path = args.package_root / "skills/nozickian-verify/scripts/ntt_gate.py"
     gate = load_gate(gate_path)
     cases = run_cases(gate)
     out = {"total": len(cases), "passed": sum(1 for c in cases if c["passed"]), "cases": cases}
     text = json.dumps(out, indent=2, sort_keys=True)
-    print(text)
-    if args.json:
+    if output_path is not None and output_directory_fd is not None:
         try:
-            _atomic_write_json(args.json, text)
+            _atomic_write_json(
+                output_path,
+                text,
+                directory_fd=output_directory_fd,
+            )
         except (OSError, RuntimeError, ValueError):
+            failed_result = dict(out)
+            failed_result.update({
+                "status": "FAIL",
+                "failure_kind": "INVALID_INPUT",
+                "json_output_error": "held --json output path changed or became unsafe",
+            })
+            print(json.dumps(failed_result, indent=2, sort_keys=True))
+            os.close(output_directory_fd)
             return 2
+        os.close(output_directory_fd)
+    print(text)
     return 0 if out["passed"] == out["total"] else 2
 
 

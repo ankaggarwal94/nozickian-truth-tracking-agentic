@@ -6,6 +6,6 @@
   "evidence_schema_version": "1.0",
   "hash_or_version": "sha256:6930031ef6f7c27c9f49e7ef6d200ca75183cce207c11a594afb2a40d1423e72",
   "observed_result": "Current source bytes support the scoped proposition for C-charter-caps.",
-  "support_summary": "This wrapper binds C-charter-caps to the current remote-escalation and echo-sweep protocol bytes by exact SHA-256 and to the canonical claim proposition digest.",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "support_summary": "This wrapper binds C-charter-caps to current package artifact skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md by exact SHA-256 and to the canonical claim proposition digest.",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

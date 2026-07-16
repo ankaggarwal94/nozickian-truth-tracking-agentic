@@ -4,11 +4,11 @@
   "claim_proposition_sha256": "sha256:59845efcc628f15149c6bea69aff553ed1aa99d835f450b9e7e529740c877536",
   "command_or_source": "source inspection plus validate_package.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
   "modal_case_sha256": "sha256:fa8ff5fc1a24dd6abfcdfd65a5ce6bdad1f243baef37186d0a712120bdb67595",
   "observation_id": "obs:C-charter-caps:TW-charter-intact",
   "observed_result": "The intact charter contains both rule sets and the explicit non-mechanical-enforcement boundary.",
   "support_summary": "This wrapper binds TW-charter-intact to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "TW-charter-intact",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

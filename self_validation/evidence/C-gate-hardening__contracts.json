@@ -1,11 +1,11 @@
 {
   "artifact_path": "skills/nozickian-verify/scripts/run_gate_contract_tests.py",
   "claim_id": "C-gate-hardening",
-  "claim_proposition_sha256": "sha256:c943a52556d1e129e758bf16d2a2e89804516e94d1e5c510d81a1b4b4ad9d62c",
+  "claim_proposition_sha256": "sha256:4bff8ccb92cb75bf893456a5777bc58a7075432de4546f01befa6f9541f5e35c",
   "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:83b45317ca5b7b110619efe32d4f959c57625e64f8c1e7a20de5a2ff184d9107",
+  "hash_or_version": "sha256:028819d328175184c11684be560b327a9af105d497164721ac089e10a71a7dc5",
   "observed_result": "Current source bytes support the scoped proposition for C-gate-hardening.",
   "support_summary": "This wrapper binds C-gate-hardening to current package artifact skills/nozickian-verify/scripts/run_gate_contract_tests.py by exact SHA-256 and to the canonical claim proposition digest.",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

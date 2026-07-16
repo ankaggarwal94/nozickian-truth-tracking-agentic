@@ -4,11 +4,11 @@
   "claim_proposition_sha256": "sha256:7aa3f6e8c7fafe0ac5e9ffe5a65d423e0a8695b381203fad4f74c6e174c64227",
   "command_or_source": "validate_package.py --self-test",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
   "modal_case_sha256": "sha256:42462f567e05c9907cc39be1902c87fc5ec6df98b9fe65120c52b516f7e0e041",
   "observation_id": "obs:C-github-readme-documentation:FW-github-readmes-degraded",
   "observed_result": "The validator mutation lane rejected the degraded GitHub README documentation.",
   "support_summary": "This wrapper binds FW-github-readmes-degraded to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-github-readmes-degraded",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

@@ -1,14 +1,14 @@
 {
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-gate-hardening",
-  "claim_proposition_sha256": "sha256:c943a52556d1e129e758bf16d2a2e89804516e94d1e5c510d81a1b4b4ad9d62c",
+  "claim_proposition_sha256": "sha256:4bff8ccb92cb75bf893456a5777bc58a7075432de4546f01befa6f9541f5e35c",
   "command_or_source": "run_gate_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
-  "modal_case_sha256": "sha256:9c1488bd02b381f79597c1199b6772e33403b8bde12f1fccec1af34d0e787c6c",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:256e6f37354cf4bf0a99d82c7df0b3dedd8253c959b9247e92e1fd1aa3eaaa63",
   "observation_id": "obs:C-gate-hardening:TW-gate-shared-ledger",
   "observed_result": "The gate contract retained the valid shared ledger and returned PASS-TRACKED.",
   "support_summary": "This wrapper binds TW-gate-shared-ledger to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "TW-gate-shared-ledger",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

@@ -48,15 +48,15 @@ EXPECTED_SCRIPTS = {"ntt_gate.py", "validate_package.py", "run_gate_contract_tes
 EXPECTED_FIXTURES = {"mini_manual.md", "mini_code.py", "fake_trace.json"}
 EXPECTED_ASSETS = {"certificate-template.json", "subagent-task-card.md"}
 EXPECTED_GITHUB_READMES: Dict[str, List[str]] = {
-    "docs/README.md": ["Documentation hub", "PASS-SCOPED", "PASS-TRACKED", "closed-surface", "synthetic aggregate contract", "36 baseline/negative cases"],
-    "docs/quickstart/README.md": ["Quickstart", "validate_package.py", "run_live_skill_evals.py", "UNVERIFIED_RUNTIME", "run_promotion_certifier_contract_tests.py", "36/36"],
+    "docs/README.md": ["Documentation hub", "PASS-SCOPED", "PASS-TRACKED", "closed-surface", "synthetic aggregate contract", "43 baseline/negative cases"],
+    "docs/quickstart/README.md": ["Quickstart", "validate_package.py", "run_live_skill_evals.py", "UNVERIFIED_RUNTIME", "run_promotion_certifier_contract_tests.py", "43/43"],
     "docs/audit-model/README.md": ["Nozickian", "CoVe", "no automatic epistemic closure", "derived_or_downstream_claims"],
-    "docs/evidence/README.md": ["self_certificate.json", "strict", "SHA-256", "structured evidence", "promotion-evidence-v2", "failure_kind"],
-    "docs/pass-tracked-upgrade/README.md": ["PASS-SCOPED", "PASS-TRACKED", "certify_pass_tracked_upgrade.py", "promotion certificate", "promotion-evidence-v2", "CAPPED", "36/36"],
-    "docs/runtime-trace-auth/README.md": ["stream", "tool-use", "tool-result", "trace authentication", "formal result `2.0`", "CAPPED"],
+    "docs/evidence/README.md": ["self_certificate.json", "strict", "SHA-256", "structured evidence", "promotion-evidence-v2", "failure_kind", "formal output-check projection", "pass_fds"],
+    "docs/pass-tracked-upgrade/README.md": ["PASS-SCOPED", "PASS-TRACKED", "certify_pass_tracked_upgrade.py", "promotion certificate", "promotion-evidence-v2", "CAPPED", "43/43", "/proc/<runner-pid>/fd/N", "direct-parent `PPid:`"],
+    "docs/runtime-trace-auth/README.md": ["stream", "tool-use", "tool-result", "trace authentication", "formal result `2.0`", "CAPPED", "held no-follow capability", "pass_fds", "before creating the requested output directory or JSON file"],
     "docs/security/README.md": ["closed surface", "threat model", "runtime", "README"],
     "docs/development/README.md": ["Development", "update-manifest", "validator", "evidence", "run_promotion_certifier_contract_tests.py"],
-    "docs/release/README.md": ["Release", "MANIFEST.sha256", "STABLE_RELEASE_MANIFEST.json", "PASS-SCOPED", "reproducible-build epoch", "Issue #8", "promotion-evidence-v2"],
+    "docs/release/README.md": ["Release", "MANIFEST.sha256", "STABLE_RELEASE_MANIFEST.json", "PASS-SCOPED", "reproducible-build epoch", "Issue #8", "promotion-evidence-v2", "formal output-check projection", "pass_fds"],
     "docs/faq/README.md": ["FAQ", "PASS-SCOPED", "PASS-TRACKED", "downstream", "Issue #5"],
     "docs/github/README.md": ["GitHub", "README", "repository", "runtime"],
 }
@@ -77,11 +77,22 @@ ALLOWED_PLUGIN_MANIFEST_FILES = {".claude-plugin/plugin.json"}
 ALLOWED_SKILL_RUNTIME_DIRS = {"assets", "evals", "references", "scripts"}
 FORBIDDEN_SURFACES = {"commands", "hooks", "monitors", "bin"}
 FORBIDDEN_ROOT_FILES = {"settings.json", ".mcp.json", ".lsp.json"}
+CHECKOUT_ACTION = (
+    "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5"
+)
+SETUP_PYTHON_ACTION = (
+    "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
+)
 REQUIRED_STANDARD_TERMS = ["claim-level decomposition", "method M", "nearby false-world", "nearby true-world", "gate condition", "sensitivity", "adherence", "thresholds can be tightened", "cannot be relaxed", "no automatic epistemic closure", "downstream transmission", "derived_or_downstream_claims", "PASS-TRACKED upgrade audit", "upgrade from PASS-SCOPED", "promotion-evidence-v2", "formal result `2.0`", "promotion-contract-v2-complete", "failure_kind"]
 PROMOTION_AGGREGATE_COMMAND = (
     "python3 "
     "skills/nozickian-verify/scripts/"
     "run_promotion_certifier_contract_tests.py ."
+)
+ARCHIVE_SELF_TEST_COMMAND = (
+    'python3 "$archive_root/skills/nozickian-verify/scripts/'
+    'validate_package.py" "$archive_root" --self-test --markdown '
+    "/tmp/ntt_ci_outputs/ARCHIVE_SELF_VALIDATION_REPORT.md"
 )
 EXPECTED_CI_WORKFLOW: Dict[str, Any] = {
     "name": "nozickian-team-ci",
@@ -94,9 +105,9 @@ EXPECTED_CI_WORKFLOW: Dict[str, Any] = {
         "deterministic-validation": {
             "runs-on": "ubuntu-latest",
             "steps": [
-                {"uses": "actions/checkout@v4"},
+                {"uses": CHECKOUT_ACTION},
                 {
-                    "uses": "actions/setup-python@v5",
+                    "uses": SETUP_PYTHON_ACTION,
                     "with": {"python-version": "3.11"},
                 },
                 {
@@ -123,9 +134,9 @@ EXPECTED_CI_WORKFLOW: Dict[str, Any] = {
                         "trap 'rm -rf \"$archive_root\"' EXIT\n"
                         "git archive --format=tar HEAD | tar -xf - -C "
                         '"$archive_root"\n'
-                        'python3 "$archive_root/skills/nozickian-verify/'
-                        'scripts/validate_package.py" "$archive_root"\n'
-                        'cd "$archive_root"\n'
+                        + ARCHIVE_SELF_TEST_COMMAND
+                        + "\n"
+                        + 'cd "$archive_root"\n'
                         + PROMOTION_AGGREGATE_COMMAND
                         + "\n"
                     ),
@@ -197,6 +208,41 @@ EXPECTED_CURRENT_PROMOTION_EVIDENCE_FILES = {
         "C-pass-tracked-upgrade-audit__promotion-v2-reference.json"
     ),
 }
+EXPECTED_FORMAL_OUTPUT_CHECK_POLICY = (
+    "exact nonempty all-passing projection recomputed from the bound report, "
+    "certificate, ledger, and gate; arbitrary self-attested checks and "
+    "coherently rehashed empty report or gate companions fail closed"
+)
+EXPECTED_FORMAL_OUTPUT_CAPABILITY_POLICY = (
+    "formal output and compatibility JSON parents are acquired component-wise "
+    "with O_DIRECTORY/O_NOFOLLOW before execution and held through "
+    "descriptor-relative O_EXCL creation, link/rename installation, and "
+    "directory fsync; canonical-result versus compatibility-JSON "
+    "classification is frozen during pre-execution collision analysis against "
+    "held identities and is not recomputed after writes; formal children "
+    "receive only runner-owned /proc/<runner-pid>/fd/N via pass_fds, where "
+    "procfs-visible Pid must equal the child's procfs-visible direct-parent "
+    "PPid and child-FD close/rebind, self/unrelated PIDs, noncanonical or "
+    "nonpositive PID/FD tokens, extra components, closed descriptors, and "
+    "file descriptors are rejected; unavailable procfd inheritance is "
+    "INVALID_INPUT before output mutation"
+)
+EXPECTED_SAFE_OUTPUT_POLICY = (
+    "gate Markdown, certifier JSON/Markdown, formal output and compatibility "
+    "JSON, live transcripts and optional JSON, validator Markdown, and the "
+    "gate/formal/regression/promotion contract JSON wrappers plus the fixed "
+    "behavior and stable-release manifests acquire "
+    "component-wise O_DIRECTORY/O_NOFOLLOW parent capabilities before their "
+    "long-running work and retain them through descriptor-relative exclusive "
+    "temporary or new-file creation, link/rename installation as applicable, "
+    "and directory fsync; role and alias classifications are frozen from "
+    "lexical names plus held identities, each output enforces its declared "
+    "fresh-versus-replaceable final-name policy, and direct or ancestor links, "
+    "special/hardlink sentinels, cross-output aliases, and lexical-parent "
+    "substitution cannot redirect writes and fail closed; validator Markdown "
+    "also rechecks that its held parent remains outside the package tree; "
+    "endpoint and held-capability checks are not temporal isolation"
+)
 REQUIRED_PROMOTION_SURFACE_INVARIANTS = (
     (
         "v1.0.3 promotion certificate schema 2.0 uses "
@@ -207,11 +253,32 @@ REQUIRED_PROMOTION_SURFACE_INVARIANTS = (
         "mandatory when unavailable execution is explicitly scope-excluded."
     ),
     (
-        "v1.0.3 formal result 2.0 binds the immutable standalone target "
-        "snapshot, exact report/gate/certificate/ledger/transcript/prompt/"
+        "v1.0.3 formal result 2.0 binds the standalone endpoint-checked target "
+        "copy, exact report/gate/certificate/ledger/transcript/prompt/"
         "target-snapshot companion manifest, package-tree identity, run "
-        "identity, and target pre/post identity; promotion uses only the typed "
-        "formal.result locator and allows unrelated nonreserved files."
+        "identity, and target pre/post endpoint identity; "
+        "temporal_immutability_enforced is false, so an otherwise "
+        "PASS-TRACKED formal result is capped at PASS-SCOPED; promotion uses "
+        "only the typed formal.result locator and allows unrelated "
+        "nonreserved files."
+    ),
+    (
+        "v1.0.3 promotion recomputes the exact formal output-check projection "
+        "from the bound report, certificate, ledger, and gate companions; the "
+        "projection must be nonempty and all passing, so arbitrary "
+        "self-attested checks and coherently rehashed empty report or gate "
+        "companions fail closed."
+    ),
+    (
+        "v1.0.3 formal trace capture uses total line/node event positions, "
+        "per-record depth/node bounds, pre/post endpoint identity for the "
+        "source and permission-hardened execution copies, resolved runtime "
+        "identity, bounded capture, and cleanup of the original process group; "
+        "execution requires supported Linux PR_SET_CHILD_SUBREAPER plus "
+        "bounded /proc adopted-child tracking to be established before Popen, "
+        "then kills and reaps same-group and detached-session descendants after "
+        "leader exit; unavailable containment fails before execution, and "
+        "incomplete cleanup or any survivor fails closed."
     ),
     (
         "v1.0.3 promotion claims form a nonempty exact-typed unique-ID set; "
@@ -233,32 +300,58 @@ REQUIRED_PROMOTION_SURFACE_INVARIANTS = (
         "forbidden."
     ),
     (
-        "v1.0.3 caller-supplied certifier/formal output paths reject "
-        "symlinked ancestors, direct links, special files, and hardlink "
-        "aliases; existing private regular --json files are intentionally "
-        "atomically replaced, while --output-dir must be a real or safely "
-        "created directory."
+        "v1.0.3 gate Markdown, certifier JSON/Markdown, formal output and "
+        "compatibility JSON, live transcripts and optional JSON, validator "
+        "Markdown, gate/formal/regression/promotion contract JSON wrappers, "
+        "and the fixed behavior and stable-release manifests "
+        "acquire component-wise O_DIRECTORY/O_NOFOLLOW parent capabilities "
+        "before their long-running work and hold them through "
+        "descriptor-relative exclusive temporary or new-file creation, "
+        "link/rename installation as applicable, and directory fsync. Output "
+        "role and alias classifications are frozen from lexical names plus held "
+        "identities; canonical formal-result classification is not recomputed "
+        "after writes; certifier JSON/Markdown and live JSON/selected-transcript "
+        "aliases are rejected. Each output enforces its declared fresh-versus-"
+        "replaceable final-name policy; direct or ancestor links, special or "
+        "hardlink sentinels, and symlink or real-directory parent substitution "
+        "cannot redirect writes and fail closed. Validator Markdown additionally "
+        "requires its held parent to remain outside the package tree. Formal "
+        "coordinator and gate children use only runner-owned "
+        "/proc/<runner-pid>/fd/N via pass_fds; procfs-visible Pid must equal the "
+        "child's procfs-visible direct-parent PPid, and child-FD close/rebind, "
+        "self or unrelated PIDs, noncanonical or nonpositive PID/FD tokens, "
+        "extra components, closed descriptors, and file descriptors are "
+        "rejected. Unavailable procfd inheritance is INVALID_INPUT before output "
+        "mutation. Held-capability and endpoint checks are not temporal "
+        "isolation; a same-UID mutation between observations is not mechanically "
+        "excluded."
     ),
     (
-        "v1.0.3 aggregate promotion contracts are synthetic 36/36 evidence "
+        "v1.0.3 aggregate promotion contracts are synthetic 43/43 evidence "
         "and invoke the production certifier CLI for the baseline and every "
         "negative; they do not authenticate a real runtime."
     ),
     (
-        "v1.0.3 certify_pass_tracked_upgrade.py alone caps every complete "
+        "v1.0.3 certify_pass_tracked_upgrade.py caps every complete "
         "modeled result at PASS-SCOPED/CAPPED with promotion_authorized false, "
         "promotion-contract-v2-complete, both unresolved Issue #5 "
-        "obligations, and nonzero exit; generic gate/formal PASS-TRACKED "
-        "semantics remain unchanged."
+        "obligations, and nonzero exit; generic ntt_gate.py PASS-TRACKED "
+        "semantics remain unchanged, while the formal runner separately caps "
+        "an otherwise PASS-TRACKED result at PASS-SCOPED because temporal "
+        "immutability is not mechanically enforced; unavailable process "
+        "containment fails before execution rather than creating a scoped run."
     ),
 )
 REQUIRED_VALIDATOR_SURFACE_INVARIANTS = (
     (
         "v1.0.3 CI policy uses a dependency-free restricted YAML subset and "
         "requires the exact triggers, top-level contents: read permission, "
-        "single job, ordered actions, and run scripts; extra triggers, "
-        "permissions, jobs, steps, uses, environment, or unsupported YAML "
-        "syntax fail closed."
+        "single job, SHA-pinned ordered actions, and run scripts; the unpacked "
+        "Git archive must run the exact full --self-test with Markdown outside "
+        "the archive before its promotion aggregate, and comments or uncalled "
+        "functions cannot satisfy that command; extra triggers, permissions, "
+        "jobs, steps, uses, environment, mutable action tags, or unsupported "
+        "YAML syntax fail closed."
     ),
     (
         "v1.0.3 eval fixtures use unique canonical lowercase ASCII slug IDs "
@@ -904,38 +997,301 @@ def path_resolves_within(root: Path, candidate: Path) -> bool:
         return False
 
 
-def atomic_replace_text(path: Path, text: str) -> None:
-    """Write text through a private same-directory file without following target.
+def _markdown_directory_open_flags() -> int:
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory = getattr(os, "O_DIRECTORY", 0)
+    if not nofollow or not directory:
+        raise OSError(
+            "platform lacks no-follow Markdown output traversal"
+        )
+    flags = os.O_RDONLY | directory | nofollow
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    return flags
 
-    Replacing the directory entry, rather than truncating the caller's target,
-    keeps an external hardlink or symlink from modifying an in-package inode
-    after the self-test completion snapshot.
-    """
 
-    path.parent.mkdir(parents=True, exist_ok=True)
-    parent = path.parent.resolve(strict=True)
-    target = parent / path.name
-    fd, temporary_name = tempfile.mkstemp(
-        prefix=f".{path.name}.tmp-",
-        dir=parent,
-        text=True,
-    )
-    temporary = Path(temporary_name)
+def _open_markdown_directory_no_follow(path: Path) -> int:
+    absolute = Path(os.path.abspath(path))
+    flags = _markdown_directory_open_flags()
+    descriptor = os.open(os.path.sep, flags)
     try:
-        os.fchmod(fd, 0o600)
-        with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
-            fd = -1
-            handle.write(text)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, target)
+        for component in absolute.parts[1:]:
+            if component in {"", ".", ".."}:
+                raise ValueError(
+                    "unsafe Markdown output directory component"
+                )
+            child = os.open(component, flags, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        return descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _prepare_markdown_directory_no_follow(path: Path) -> int:
+    absolute = Path(os.path.abspath(path))
+    flags = _markdown_directory_open_flags()
+    descriptor: int | None = os.open(os.path.sep, flags)
+    try:
+        for component in absolute.parts[1:]:
+            if component in {"", ".", ".."}:
+                raise ValueError(
+                    "unsafe Markdown output directory component"
+                )
+            try:
+                child = os.open(component, flags, dir_fd=descriptor)
+            except FileNotFoundError:
+                os.mkdir(component, mode=0o700, dir_fd=descriptor)
+                os.fsync(descriptor)
+                child = os.open(component, flags, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        result = descriptor
+        descriptor = None
+        return result
     finally:
-        if fd >= 0:
-            os.close(fd)
-        try:
-            temporary.unlink()
-        except FileNotFoundError:
-            pass
+        if descriptor is not None:
+            os.close(descriptor)
+
+
+def _markdown_directory_path_matches_fd(
+    path: Path,
+    descriptor: int,
+) -> bool:
+    reopened: int | None = None
+    try:
+        reopened = _open_markdown_directory_no_follow(path)
+        expected = os.fstat(descriptor)
+        observed = os.fstat(reopened)
+        return (expected.st_dev, expected.st_ino) == (
+            observed.st_dev,
+            observed.st_ino,
+        )
+    except (OSError, ValueError):
+        return False
+    finally:
+        if reopened is not None:
+            os.close(reopened)
+
+
+def _markdown_directory_fd_is_within_root(
+    descriptor: int,
+    root: Path,
+    root_directory_fd: int | None = None,
+) -> bool:
+    """Check current directory ancestry by identity, not caller spelling."""
+
+    root_fd: int | None = None
+    current: int | None = None
+    try:
+        root_fd = (
+            os.dup(root_directory_fd)
+            if root_directory_fd is not None
+            else _open_markdown_directory_no_follow(root.resolve())
+        )
+        root_stat = os.fstat(root_fd)
+        root_identity = (root_stat.st_dev, root_stat.st_ino)
+        current = os.dup(descriptor)
+        flags = _markdown_directory_open_flags()
+        for _ in range(4096):
+            current_stat = os.fstat(current)
+            current_identity = (
+                current_stat.st_dev,
+                current_stat.st_ino,
+            )
+            if current_identity == root_identity:
+                return True
+            parent = os.open("..", flags, dir_fd=current)
+            parent_stat = os.fstat(parent)
+            parent_identity = (parent_stat.st_dev, parent_stat.st_ino)
+            if parent_identity == current_identity:
+                os.close(parent)
+                return False
+            os.close(current)
+            current = parent
+        raise OSError("Markdown output ancestry exceeds safety bound")
+    finally:
+        if current is not None:
+            os.close(current)
+        if root_fd is not None:
+            os.close(root_fd)
+
+
+def _markdown_output_boundary_stable(
+    lexical_parent: Path,
+    descriptor: int,
+    package_root: Path | None,
+    package_root_fd: int | None = None,
+) -> bool:
+    return (
+        _markdown_directory_path_matches_fd(lexical_parent, descriptor)
+        and (
+            package_root is None
+            or (
+                (
+                    package_root_fd is None
+                    or _markdown_directory_path_matches_fd(
+                        package_root,
+                        package_root_fd,
+                    )
+                )
+                and not _markdown_directory_fd_is_within_root(
+                    descriptor,
+                    package_root,
+                    package_root_fd,
+                )
+            )
+        )
+    )
+
+
+def prepare_markdown_output(
+    package_root: Path,
+    path: Path,
+) -> Tuple[int, Path, int]:
+    """Freeze one external Markdown parent before package validation."""
+
+    root = package_root.resolve()
+    target = Path(os.path.abspath(path))
+    if target.name in {"", ".", ".."}:
+        raise ValueError("unsafe Markdown output filename")
+    try:
+        target.relative_to(root)
+    except ValueError:
+        pass
+    else:
+        raise ValueError(
+            "Markdown output is lexically inside the package root"
+        )
+
+    root_descriptor = _open_markdown_directory_no_follow(root)
+    descriptor: int | None = None
+    try:
+        descriptor = _prepare_markdown_directory_no_follow(target.parent)
+        if not _markdown_output_boundary_stable(
+            target.parent,
+            descriptor,
+            root,
+            root_descriptor,
+        ):
+            raise ValueError(
+                "Markdown output parent is not a stable external directory"
+            )
+        result = descriptor
+        descriptor = None
+        held_root = root_descriptor
+        root_descriptor = -1
+        return result, target, held_root
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        if root_descriptor >= 0:
+            os.close(root_descriptor)
+
+
+def atomic_replace_text(
+    path: Path,
+    text: str,
+    *,
+    directory_fd: int | None = None,
+    lexical_parent: Path | None = None,
+    package_root: Path | None = None,
+    package_root_fd: int | None = None,
+) -> None:
+    """Install Markdown through a held, identity-checked parent directory."""
+
+    target = Path(os.path.abspath(path))
+    if target.name in {"", ".", ".."}:
+        raise ValueError("unsafe Markdown output filename")
+    parent = (
+        Path(os.path.abspath(lexical_parent))
+        if lexical_parent is not None
+        else target.parent
+    )
+    if target.parent != parent:
+        raise ValueError("Markdown output path changed after acquisition")
+    parent_fd = (
+        os.dup(directory_fd)
+        if directory_fd is not None
+        else _prepare_markdown_directory_no_follow(parent)
+    )
+    temporary = f".{target.name}.tmp-{os.urandom(16).hex()}"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    descriptor: int | None = None
+    installed = False
+    try:
+        if not _markdown_output_boundary_stable(
+            parent,
+            parent_fd,
+            package_root,
+            package_root_fd,
+        ):
+            raise ValueError(
+                "Markdown output boundary changed before write"
+            )
+        descriptor = os.open(
+            temporary,
+            flags,
+            0o600,
+            dir_fd=parent_fd,
+        )
+        payload = text.encode("utf-8")
+        offset = 0
+        while offset < len(payload):
+            written = os.write(descriptor, payload[offset:])
+            if written <= 0:
+                raise OSError("zero-byte Markdown output write")
+            offset += written
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = None
+        if not _markdown_output_boundary_stable(
+            parent,
+            parent_fd,
+            package_root,
+            package_root_fd,
+        ):
+            raise ValueError(
+                "Markdown output boundary changed before install"
+            )
+        os.replace(
+            temporary,
+            target.name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+        )
+        installed = True
+        created = os.stat(
+            target.name,
+            dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        if not stat.S_ISREG(created.st_mode) or created.st_nlink != 1:
+            raise OSError(
+                "Markdown output is not a private regular file"
+            )
+        os.fsync(parent_fd)
+        if not _markdown_output_boundary_stable(
+            parent,
+            parent_fd,
+            package_root,
+            package_root_fd,
+        ):
+            raise ValueError(
+                "Markdown output boundary changed during install"
+            )
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        if not installed:
+            try:
+                os.unlink(temporary, dir_fd=parent_fd)
+            except FileNotFoundError:
+                pass
+        os.close(parent_fd)
 
 
 def is_unique_string_list(value: Any) -> bool:
@@ -1565,36 +1921,132 @@ def atomic_write_fixed_text(
     text: str,
     *,
     allowed_names: set[str],
+    directory_fd: int | None = None,
+    lexical_parent: Path | None = None,
 ) -> None:
-    """Atomically replace one of the validator's fixed manifest paths."""
+    """Atomically replace one fixed manifest through a held parent capability.
+
+    The lexical parent is checked against the held directory at every commit
+    boundary.  This detects an ancestor or real-directory substitution at the
+    observed endpoints; it deliberately does not claim temporal immutability
+    against an A->B->A replacement entirely between those checks.
+    """
     if path.name not in allowed_names:
         raise ValueError(f"refusing atomic write to non-allowlisted filename: {path.name}")
-    # SECURITY-REVIEW: Callers supply only fixed manifest filenames. A fresh
-    # same-directory file is written and then replaces the final directory
-    # entry, so an existing destination symlink is replaced rather than followed.
-    fd, temp_name = tempfile.mkstemp(
-        prefix=f".{path.name}.",
-        suffix=".tmp",
-        dir=str(path.parent),
+    target = Path(os.path.abspath(path))
+    parent = Path(
+        os.path.abspath(
+            lexical_parent if lexical_parent is not None else target.parent
+        )
     )
-    temp_path = Path(temp_name)
-    try:
-        stream = os.fdopen(fd, "w", encoding="utf-8", newline="")
-        fd = -1
-        with stream:
-            stream.write(text)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.chmod(temp_path, 0o644)
-        os.replace(temp_path, path)
-    except Exception:
-        if fd >= 0:
-            os.close(fd)
+    if target.parent != parent:
+        raise ValueError("fixed manifest path changed after parent acquisition")
+    parent_fd = (
+        os.dup(directory_fd)
+        if directory_fd is not None
+        else _open_markdown_directory_no_follow(parent)
+    )
+    parent_metadata = os.fstat(parent_fd)
+    if not stat.S_ISDIR(parent_metadata.st_mode):
+        os.close(parent_fd)
+        raise ValueError("fixed manifest parent capability is not a directory")
+    temporary = f".{target.name}.{os.urandom(16).hex()}.tmp"
+    descriptor: int | None = None
+    temporary_created = False
+
+    def require_replaceable_target() -> None:
         try:
-            temp_path.unlink()
+            metadata = os.stat(
+                target.name,
+                dir_fd=parent_fd,
+                follow_symlinks=False,
+            )
         except FileNotFoundError:
+            return
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or stat.S_ISLNK(metadata.st_mode)
+            or metadata.st_nlink != 1
+        ):
+            raise ValueError(
+                "fixed manifest target is not a private regular file"
+            )
+
+    try:
+        require_replaceable_target()
+        if not _markdown_directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("fixed manifest parent changed before write")
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+        if hasattr(os, "O_CLOEXEC"):
+            flags |= os.O_CLOEXEC
+        descriptor = os.open(
+            temporary,
+            flags,
+            0o600,
+            dir_fd=parent_fd,
+        )
+        temporary_created = True
+        payload = text.encode("utf-8")
+        offset = 0
+        while offset < len(payload):
+            written = os.write(descriptor, payload[offset:])
+            if written <= 0:
+                raise OSError("zero-byte fixed manifest write")
+            offset += written
+        os.fchmod(descriptor, 0o644)
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = None
+        require_replaceable_target()
+        if not _markdown_directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("fixed manifest parent changed before install")
+        os.replace(
+            temporary,
+            target.name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+        )
+        temporary_created = False
+        installed = os.stat(
+            target.name,
+            dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        if not stat.S_ISREG(installed.st_mode) or installed.st_nlink != 1:
+            raise OSError("installed fixed manifest is not private")
+        os.fsync(parent_fd)
+        if not _markdown_directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("fixed manifest parent changed during install")
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        if temporary_created:
+            try:
+                os.unlink(temporary, dir_fd=parent_fd)
+            except FileNotFoundError:
+                pass
+        try:
+            os.close(parent_fd)
+        except OSError:
             pass
-        raise
+
+
+def acquire_fixed_manifest_parent(root: Path) -> Tuple[Path, int]:
+    """Acquire the exact package root before manifest validation or building."""
+    lexical_root = Path(os.path.abspath(root))
+    descriptor = _open_markdown_directory_no_follow(lexical_root)
+    try:
+        if not _markdown_directory_path_matches_fd(
+            lexical_root,
+            descriptor,
+        ):
+            raise ValueError("fixed manifest package root identity is unstable")
+        result = descriptor
+        descriptor = -1
+        return lexical_root, result
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
 
 
 def iter_behavior_files(root: Path) -> List[str]:
@@ -1614,15 +2066,37 @@ def iter_behavior_files(root: Path) -> List[str]:
     return sorted(rels)
 
 
-def update_manifest(root: Path) -> None:
-    lines = []
-    for rel in iter_behavior_files(root):
-        lines.append(f"{sha256_path(root/rel)}  {rel}")
-    atomic_write_fixed_text(
-        root / "MANIFEST.sha256",
-        "\n".join(lines) + "\n",
-        allowed_names={"MANIFEST.sha256"},
-    )
+def update_manifest(
+    root: Path,
+    *,
+    directory_fd: int | None = None,
+    lexical_root: Path | None = None,
+) -> None:
+    held_fd = directory_fd
+    held_root = lexical_root
+    owns_fd = False
+    if held_fd is None:
+        held_root, held_fd = acquire_fixed_manifest_parent(root)
+        owns_fd = True
+    assert held_root is not None and held_fd is not None
+    try:
+        if Path(os.path.abspath(root)) != held_root:
+            raise ValueError("fixed manifest root differs from held parent")
+        if not _markdown_directory_path_matches_fd(held_root, held_fd):
+            raise ValueError("fixed manifest package root changed before build")
+        lines = []
+        for rel in iter_behavior_files(root):
+            lines.append(f"{sha256_path(root/rel)}  {rel}")
+        atomic_write_fixed_text(
+            held_root / "MANIFEST.sha256",
+            "\n".join(lines) + "\n",
+            allowed_names={"MANIFEST.sha256"},
+            directory_fd=held_fd,
+            lexical_parent=held_root,
+        )
+    finally:
+        if owns_fd:
+            os.close(held_fd)
 
 
 def iter_release_inventory_files(root: Path) -> List[str]:
@@ -1930,13 +2404,39 @@ def build_stable_release_manifest(
     return data
 
 
-def write_stable_release_manifest(root: Path) -> None:
-    data = build_stable_release_manifest(root)
-    atomic_write_fixed_text(
-        root / STABLE_RELEASE_MANIFEST,
-        json.dumps(data, indent=2, sort_keys=True) + "\n",
-        allowed_names={STABLE_RELEASE_MANIFEST},
-    )
+def write_stable_release_manifest(
+    root: Path,
+    *,
+    directory_fd: int | None = None,
+    lexical_root: Path | None = None,
+) -> None:
+    held_fd = directory_fd
+    held_root = lexical_root
+    owns_fd = False
+    if held_fd is None:
+        held_root, held_fd = acquire_fixed_manifest_parent(root)
+        owns_fd = True
+    assert held_root is not None and held_fd is not None
+    try:
+        if Path(os.path.abspath(root)) != held_root:
+            raise ValueError(
+                "stable release manifest root differs from held parent"
+            )
+        if not _markdown_directory_path_matches_fd(held_root, held_fd):
+            raise ValueError(
+                "stable release manifest package root changed before build"
+            )
+        data = build_stable_release_manifest(root)
+        atomic_write_fixed_text(
+            held_root / STABLE_RELEASE_MANIFEST,
+            json.dumps(data, indent=2, sort_keys=True) + "\n",
+            allowed_names={STABLE_RELEASE_MANIFEST},
+            directory_fd=held_fd,
+            lexical_parent=held_root,
+        )
+    finally:
+        if owns_fd:
+            os.close(held_fd)
 
 
 def load_module_from_path(name: str, path: Path):
@@ -2167,7 +2667,7 @@ class Validator:
             else ""
         )
         for token in [
-            "36/36",
+            "43/43",
             "production certifier CLI",
             "promotion-contract-v2-complete",
             "Issue #8",
@@ -2357,7 +2857,7 @@ class Validator:
             == "promotion-evidence-v2"
             and upgrade_audit.get("formal_result_schema_version") == "2.0"
             and type(aggregate_contract) is dict
-            and aggregate_contract.get("expected_result") == "36/36"
+            and aggregate_contract.get("expected_result") == "43/43"
             and aggregate_contract.get(
                 "production_certifier_cli_baseline_and_negatives"
             )
@@ -2571,7 +3071,7 @@ class Validator:
             "promotion-evidence-v2",
             "formal result 2.0",
             "canonical FAIL plus failure_kind",
-            "synthetic 36/36",
+            "synthetic 43/43",
             "promotion-contract-v2-complete",
             "aggregate-certifier.json",
             "promotion-v2-reference.json",
@@ -2626,7 +3126,7 @@ class Validator:
                 self.add("self_validation GitHub README substantive", len(sv_text) >= 700, details=f"chars={len(sv_text)}")
                 for token in [
                     "current_observations.json",
-                    "36/36",
+                    "43/43",
                     "synthetic contract evidence",
                     "CAPPED",
                 ]:
@@ -2809,7 +3309,7 @@ class Validator:
                     for step in active_steps
                     for command in step["commands"]
                 ]
-                for token in ["validate_package.py . --self-test", 'archive_root="$(mktemp -d)"', 'git archive --format=tar HEAD | tar -xf - -C "$archive_root"', 'validate_package.py" "$archive_root"', "ntt_gate.py self_validation/self_certificate.json --evidence-root .", "run_regression_evals.py .", "run_formal_runner_contract_tests.py .", "run_formal_artifact_verification.py . README.md --dry-run"]:
+                for token in ["validate_package.py . --self-test", 'archive_root="$(mktemp -d)"', 'git archive --format=tar HEAD | tar -xf - -C "$archive_root"', ARCHIVE_SELF_TEST_COMMAND, "ntt_gate.py self_validation/self_certificate.json --evidence-root .", "run_regression_evals.py .", "run_formal_runner_contract_tests.py .", "run_formal_artifact_verification.py . README.md --dry-run"]:
                     self.add(
                         f"CI active run step includes {token}",
                         any(token in command for command in active_commands),
@@ -2833,6 +3333,16 @@ class Validator:
                     and PROMOTION_AGGREGATE_COMMAND in step["commands"]
                     and 'cd "$archive_root"' in step["commands"]
                 ]
+                archive_self_test_steps = [
+                    step for step in active_steps
+                    if step["name"] == "Validate unpacked Git archive"
+                    and ARCHIVE_SELF_TEST_COMMAND in step["commands"]
+                    and 'cd "$archive_root"' in step["commands"]
+                    and PROMOTION_AGGREGATE_COMMAND in step["commands"]
+                    and step["commands"].index(ARCHIVE_SELF_TEST_COMMAND)
+                    < step["commands"].index('cd "$archive_root"')
+                    < step["commands"].index(PROMOTION_AGGREGATE_COMMAND)
+                ]
                 self.add(
                     "CI has exactly two active unconditional aggregate commands",
                     len(aggregate_occurrences) == 2,
@@ -2847,6 +3357,14 @@ class Validator:
                     "CI active archive aggregate step runs inside unpacked root",
                     len(archive_steps) == 1,
                     details=repr(archive_steps),
+                )
+                self.add(
+                    (
+                        "CI active archive full self-test is exact and "
+                        "precedes archive aggregate"
+                    ),
+                    len(archive_self_test_steps) == 1,
+                    details=repr(archive_self_test_steps),
                 )
         for name in sorted(FORBIDDEN_ROOT_FILES):
             self.add(f"forbidden root file absent: {name}", not self.path(name).exists(), details=name)
@@ -2990,7 +3508,16 @@ class Validator:
             == "promotion-evidence-v2"
             and isinstance(upgrade.get("aggregate_contract"), Mapping)
             and upgrade["aggregate_contract"].get("expected_cases")
-            == "36/36"
+            == "43/43"
+            and isinstance(upgrade.get("formal_result_contract"), Mapping)
+            and upgrade["formal_result_contract"].get("output_check_policy")
+            == EXPECTED_FORMAL_OUTPUT_CHECK_POLICY
+            and upgrade["formal_result_contract"].get(
+                "output_capability_policy"
+            )
+            == EXPECTED_FORMAL_OUTPUT_CAPABILITY_POLICY
+            and upgrade.get("safe_output_policy")
+            == EXPECTED_SAFE_OUTPUT_POLICY
             and isinstance(upgrade.get("v1_0_3_mandatory_cap"), Mapping)
             and upgrade["v1_0_3_mandatory_cap"].get(
                 "satisfied_profile"
@@ -3016,7 +3543,7 @@ class Validator:
                 rtext = p.read_text(encoding="utf-8")
                 self.add(f"reference substantive: {rel}", len(rtext) >= 600, details=rel)
                 if rel == "PASS_TRACKED_UPGRADE_AUDIT.md":
-                    upgrade_terms = ["PASS-SCOPED to PASS-TRACKED", "Required audit bundle layout", "Required command sequence", "--output-format stream-json", "--include-hook-events", "--plugin-dir", "run_live_skill_evals.py", "run_formal_artifact_verification.py", "--require-trace-auth", "certify_pass_tracked_upgrade.py", "promotion_certificate.json", "UNVERIFIED_RUNTIME", "downstream", "no automatic", "promotion_schema_version", "promotion-evidence-v2", "formal result `2.0`", "fresh allowlisted official validators", "CAPPED", "36/36"]
+                    upgrade_terms = ["PASS-SCOPED to PASS-TRACKED", "Required audit bundle layout", "Required command sequence", "--output-format stream-json", "--include-hook-events", "--plugin-dir", "run_live_skill_evals.py", "run_formal_artifact_verification.py", "--require-trace-auth", "certify_pass_tracked_upgrade.py", "promotion_certificate.json", "UNVERIFIED_RUNTIME", "downstream", "no automatic", "promotion_schema_version", "promotion-evidence-v2", "formal result `2.0`", "fresh allowlisted official validators", "CAPPED", "43/43", "O_DIRECTORY", "O_NOFOLLOW", "pass_fds", "INVALID_INPUT", "before requested output mutation"]
                     for term in upgrade_terms:
                         self.add(f"PASS-TRACKED upgrade audit contains term: {term}", term.lower() in rtext.lower(), details=term)
                 if rel in {"EVIDENCE_SCHEMA.md", "OUTPUT_TEMPLATES.md"}:
@@ -3183,6 +3710,39 @@ class Validator:
             "run_formal_runner_contract_tests.py": ["fake claude", "no tool_use events", "PASS-TRACKED", "trace authentication", "run_formal_artifact_verification.py", "target_mutation_forbids_formal_pass", "target_snapshot_mutation_forbids_formal_pass", "formal_runner_rejects_preexisting_output_symlink_sentinel", "formal_runner_rejects_preexisting_output_hardlink_sentinel", "formal_runner_rejects_preexisting_special_output", "native_tool_use_without_results_does_not_authenticate", "failed_native_result_does_not_authenticate", "mismatched_tool_result_id_does_not_authenticate", "single_agent_call_mentions_all_lanes_does_not_authenticate", "duplicate_tool_use_id_across_lanes_does_not_authenticate", "empty_tool_result_content_does_not_authenticate", "generic_result_without_status_or_is_error_does_not_authenticate", "structured_subagent_type_exact_match_required", "nested_tool_result_inside_tool_input_does_not_authenticate", "nested_tool_result_inside_arguments_does_not_authenticate", "tool_result_before_tool_use_does_not_authenticate", "same_event_input_embedded_result_does_not_authenticate", "text_block_tool_use_does_not_authenticate", "text_block_tool_result_does_not_authenticate", "assistant_message_tool_use_masquerade_does_not_authenticate", "message_result_masquerade_does_not_authenticate", "unexpected_agent_call_without_structured_selector_rejected", "unknown_agent_selector_rejected", "tool_result_metadata_only_text_block_does_not_authenticate", "tool_result_document_block_without_data_does_not_authenticate", "tool_result_nonempty_text_block_authenticates", "missing_result_agents", "tool_use_inside_tool_result_payload_does_not_authenticate", "tool_result_inside_tool_result_payload_does_not_authenticate", "fake_tool_use_and_result_inside_tool_result_data_does_not_authenticate", "tool_use_inside_tool_result_delta_does_not_authenticate", "user_message_tool_use_does_not_authenticate", "assistant_message_tool_result_does_not_authenticate", "role_inverted_tool_use_result_trace_does_not_authenticate", "valid_assistant_tool_use_user_tool_result_still_authenticates"],
         }
         scripts["certify_pass_tracked_upgrade.py"].extend([
+            "_formal_output_checks_recomputed",
+            "formal output checks recompute exactly from declared companions",
+            "bool(recomputed_projection)",
+            "_open_directory_no_follow",
+            "_directory_path_matches_fd",
+            "output_capabilities",
+            "directory_fd=output_capabilities",
+        ])
+        scripts["run_formal_runner_contract_tests.py"].extend([
+            "certifier_rejects_arbitrary_self_attested_formal_output_checks",
+            "certifier_rejects_empty_formal_report_or_gate_after_recomputation",
+            "held_dirfd_output_operations_retain_ordinary_true_controls",
+            "held_dirfd_atomic_writers_reject_ancestor_to_symlink_swap",
+            "coordinator_and_gate_use_runner_owned_capability_after_child_fd_rebind_and_directory_substitution",
+            "certifier_rejects_same_or_hardlinked_json_markdown_destinations",
+            "certifier_holds_json_and_markdown_parents_across_real_directory_substitution",
+            "formal_runner_procfd_unavailable_fails_before_output_mutation",
+            "canonical_json_classification_is_frozen_across_post_write_directory_swap",
+            "live_transcript_held_directory_retains_ordinary_true_control",
+            "live_transcript_rejects_ancestor_symlink_swap_at_temporary_open",
+            "live_transcript_holds_parent_across_long_real_directory_substitution",
+            "live_json_holds_parent_across_long_real_directory_substitution",
+            "live_output_dir_rejects_direct_symlink_before_fixture_execution",
+            "live_output_dir_rejects_symlinked_ancestor_before_fixture_execution",
+            "live_json_rejects_alias_with_selected_fixture_transcript",
+            "wrapper_json_capabilities_are_acquired_before_suite_execution",
+            "wrapper_json_outputs_hold_parent_across_real_directory_substitution",
+        ])
+        scripts["run_promotion_certifier_contract_tests.py"].extend([
+            "formal_arbitrary_output_check_rejected",
+            "formal_empty_report_rejected",
+        ])
+        scripts["certify_pass_tracked_upgrade.py"].extend([
             "PROMOTION_CERTIFICATE_SCHEMA",
             "PROMOTION_CERTIFICATE_REQUIRED_FIELD_TYPES",
             "promotion certificate schema version is exact string 2.0",
@@ -3208,6 +3768,9 @@ class Validator:
             "job_statically_disabled",
             "EXPECTED_ISSUE_5_UNRESOLVED_OBLIGATIONS",
             "EXPECTED_CURRENT_PROMOTION_EVIDENCE_FILES",
+            "EXPECTED_FORMAL_OUTPUT_CHECK_POLICY",
+            "EXPECTED_FORMAL_OUTPUT_CAPABILITY_POLICY",
+            "EXPECTED_SAFE_OUTPUT_POLICY",
             "REQUIRED_PROMOTION_SURFACE_INVARIANTS",
             "REQUIRED_VALIDATOR_SURFACE_INVARIANTS",
             "parse_restricted_ci_workflow",
@@ -3220,14 +3783,39 @@ class Validator:
             "_bounded_json_read",
             "MAX_CERTIFICATE_BYTES",
             "proposition_binding",
+            "_open_output_parent",
+            "_proc_status_pid",
+            "procfd output capability is not owned by the direct parent",
+            "src_dir_fd=parent_fd",
+            "dst_dir_fd=parent_fd",
+            "_acquire_markdown_output_capability",
+            "markdown_directory_fd",
         ])
         scripts["run_live_skill_evals.py"].extend([
             "MAX_CAPTURE_BYTES",
             "canonical_fixture_id",
             "fixture_transcript_path",
             "atomic_replace_transcript",
+            "_open_output_parent",
+            "atomic_replace_json_output",
+            "emit_result",
             "materialize_execution_package_snapshot",
             "execution_package_snapshot_identity",
+            "private-permission-hardened-endpoint-checked-release-copy",
+            "execution_copy_endpoint_identity",
+            "snapshot_endpoint_pre",
+            "snapshot_endpoint_post",
+            "endpoint_stable",
+            "temporal_immutability_enforced",
+            "process_containment",
+            "detached_session_descendants_contained",
+            "linux-child-subreaper-plus-process-group",
+            "detached_descendant_survivor",
+            "process_containment_cleanup_complete",
+            "prepare_transcript_directory",
+            "prepare_json_output",
+            "JSON output aliases a selected fixture transcript",
+            "Path(os.path.abspath(args.output_dir))",
         ])
         scripts["run_formal_artifact_verification.py"].extend([
             "FORMAL_VERIFICATION_CONTEXT",
@@ -3237,12 +3825,33 @@ class Validator:
             "lexical_directory_ancestor_error",
             "replaceable_regular_output_error",
             "atomic_replace_regular",
-            "standalone-immutable-snapshot",
+            "standalone-endpoint-checked-copy",
+            "private-permission-hardened-endpoint-checked-release-copy",
+            "execution_copy_endpoint_identity",
+            "snapshot_endpoint_pre",
+            "snapshot_endpoint_post",
+            "endpoint_stable",
+            "temporal_immutability_enforced",
+            "process_containment",
+            "detached_session_descendants_contained",
+            "linux-child-subreaper-plus-process-group",
+            "cap_status_by_execution_package_snapshot",
+            "detached_descendant_survivor",
+            "process_containment_cleanup_complete",
             "PYTHONDONTWRITEBYTECODE",
             "start_new_session",
             "process_group_terminated",
             "runtime_identity",
             "execution_package_snapshot_identity",
+            "_preflight_held_output_capability",
+            "_prepare_output_directory_fd",
+            "_inherited_directory_alias",
+            "pass_fds",
+            "directory_fd=output_directory_fd",
+            "runner proc-visible PID is unavailable",
+            "Path(\"/proc/self/status\")",
+            "json_is_canonical",
+            "frozen during pre-execution collision analysis",
         ])
         scripts["run_live_skill_evals.py"].append(
             "previous_dont_write = sys.dont_write_bytecode"
@@ -3254,6 +3863,14 @@ class Validator:
             "trace_authentication_schema_valid",
             "formal result projected fields have exact JSON types",
             "formal trace authentication has exact JSON schema",
+            "_process_containment_scope_typed",
+            "_endpoint_metadata_identity_typed",
+            "_execution_copy_identity_typed",
+            "temporal_immutability_enforced",
+            "detached_session_descendants_contained",
+            "linux-child-subreaper-plus-process-group",
+            "detached_descendant_survivor",
+            "process_containment_cleanup_complete",
         ])
         scripts["run_promotion_certifier_contract_tests.py"].extend([
             "official_structured_stderr_failure_dominates_stdout",
@@ -3278,9 +3895,23 @@ class Validator:
             "certifier_json_regular_file_is_atomically_replaced",
             "certifier_json_symlinked_ancestor_rejected_without_external_overwrite",
             "certifier_json_special_target_rejected",
+            "_acquire_json_output_capability",
+            "directory_fd=output_directory_fd",
+        ])
+        scripts["run_gate_contract_tests.py"].extend([
+            "gate_markdown_holds_parent_across_real_directory_substitution",
+            "_acquire_json_output_capability",
+            "directory_fd=output_directory_fd",
+        ])
+        scripts["run_regression_evals.py"].extend([
+            "_acquire_json_output_capability",
+            "directory_fd=output_directory_fd",
         ])
         scripts["run_formal_runner_contract_tests.py"].extend([
-            "formal_result_declares_standalone_snapshot_context",
+            "formal_result_declares_endpoint_checked_copy_context",
+            "formal_prompt_verifies_endpoint_checked_target_copy",
+            "endpoint_stability_without_temporal_immutability_caps_pass",
+            "target_endpoint_check_does_not_claim_temporal_immutability",
             "invalid_package_identity_forbids_formal_pass",
             "repeated_plain_validation_creates_no_bytecode_cruft",
             "formal_runner_atomically_replaces_regular_compatibility_json",
@@ -3289,7 +3920,32 @@ class Validator:
             "formal_runner_rejects_special_compatibility_json_target",
             "malformed_jsonl_record_rejects_entire_trace",
             "over_100k_node_result_before_call_is_bounded_and_rejected",
+            "proc_parser_selects_current_namespace_depth",
+            "capture_fails_before_spawn_without_detached_containment",
+            "capture_kills_closed_stdio_group_descendant",
+            "capture_contains_or_refuses_detached_session_boundary",
+            "capture_kills_150_deep_detached_chain",
             "capture_kills_parent_exit_inherited_pipe_group",
+            "capture_kills_full_group_on_timeout",
+            "capture_kills_full_group_on_descendant_overflow",
+            "_acquire_json_output_capability",
+            "directory_fd=output_directory_fd",
+        ])
+        scripts["validate_package.py"].extend([
+            "prepare_markdown_output",
+            "_markdown_output_boundary_stable",
+            "_markdown_directory_fd_is_within_root",
+            "held Markdown output capability retains ordinary external true control",
+            "Markdown output rejects real and symlink parent substitution at temporary open",
+            "Markdown output rejects external parent moved into package after snapshot",
+            "acquire_fixed_manifest_parent",
+            "fixed manifest writers retain normal private-file replacement",
+            "fixed manifest writers reject final symlink targets without sentinel overwrite",
+            "fixed manifest writers reject hardlink targets without shared-file overwrite",
+            "fixed manifest writers reject special-file targets",
+            "fixed manifest writers reject symlinked ancestors without sentinel overwrite",
+            "fixed manifest builders hold the package root across real-directory substitution",
+            "update-manifest CLI holds package root before closed-surface preflight",
         ])
         for name, tokens in scripts.items():
             p = sdir/name
@@ -3648,7 +4304,7 @@ class Validator:
             gc.collect()
 
     def run_manifest_symlink_safety_probe(self) -> None:
-        """Prove update mode rejects a manifest link without touching its target."""
+        """Exercise fixed-manifest capabilities against links and root swaps."""
         try:
             source_before = self.source_git_snapshot()
             dest = self.mutation_copy()
@@ -3686,21 +4342,375 @@ class Validator:
                 sentinel.read_bytes() == sentinel_bytes,
                 details=f"bytes={len(sentinel.read_bytes())}",
             )
-            atomic_write_fixed_text(
-                manifest,
-                "fixed atomic replacement probe\n",
-                allowed_names={"MANIFEST.sha256"},
+
+            fixed_names = ("MANIFEST.sha256", STABLE_RELEASE_MANIFEST)
+            normal_results: Dict[str, bool] = {}
+            target_link_results: Dict[str, bool] = {}
+            hardlink_results: Dict[str, bool] = {}
+            special_results: Dict[str, bool] = {}
+            ancestor_results: Dict[str, bool] = {}
+            real_swap_results: Dict[str, bool] = {}
+
+            for fixed_name in fixed_names:
+                slug = fixed_name.replace(".", "-").lower()
+
+                normal_parent = dest.parent / f"fixed-normal-{slug}"
+                normal_parent.mkdir()
+                normal_target = normal_parent / fixed_name
+                normal_target.write_text("old fixed manifest\n", encoding="utf-8")
+                normal_root, normal_fd = acquire_fixed_manifest_parent(
+                    normal_parent
+                )
+                try:
+                    atomic_write_fixed_text(
+                        normal_target,
+                        "new fixed manifest\n",
+                        allowed_names={fixed_name},
+                        directory_fd=normal_fd,
+                        lexical_parent=normal_root,
+                    )
+                finally:
+                    os.close(normal_fd)
+                normal_metadata = normal_target.lstat()
+                normal_results[fixed_name] = (
+                    normal_target.read_text(encoding="utf-8")
+                    == "new fixed manifest\n"
+                    and stat.S_ISREG(normal_metadata.st_mode)
+                    and stat.S_IMODE(normal_metadata.st_mode) == 0o644
+                    and normal_metadata.st_nlink == 1
+                )
+
+                link_parent = dest.parent / f"fixed-link-{slug}"
+                link_parent.mkdir()
+                link_sentinel = link_parent / "external-sentinel"
+                link_bytes = f"{fixed_name} link sentinel\n".encode("utf-8")
+                link_sentinel.write_bytes(link_bytes)
+                link_target = link_parent / fixed_name
+                link_target.symlink_to(link_sentinel)
+                link_rejected = False
+                try:
+                    atomic_write_fixed_text(
+                        link_target,
+                        "must not be installed\n",
+                        allowed_names={fixed_name},
+                    )
+                except (OSError, ValueError):
+                    link_rejected = True
+                target_link_results[fixed_name] = (
+                    link_rejected
+                    and link_target.is_symlink()
+                    and link_sentinel.read_bytes() == link_bytes
+                )
+
+                hardlink_parent = dest.parent / f"fixed-hardlink-{slug}"
+                hardlink_parent.mkdir()
+                hardlink_source = hardlink_parent / "shared-source"
+                hardlink_source.write_text("shared fixed bytes\n", encoding="utf-8")
+                hardlink_target = hardlink_parent / fixed_name
+                os.link(hardlink_source, hardlink_target)
+                hardlink_rejected = False
+                try:
+                    atomic_write_fixed_text(
+                        hardlink_target,
+                        "must not be installed\n",
+                        allowed_names={fixed_name},
+                    )
+                except (OSError, ValueError):
+                    hardlink_rejected = True
+                hardlink_results[fixed_name] = (
+                    hardlink_rejected
+                    and hardlink_source.read_text(encoding="utf-8")
+                    == "shared fixed bytes\n"
+                    and hardlink_target.stat().st_nlink == 2
+                )
+
+                special_parent = dest.parent / f"fixed-special-{slug}"
+                special_parent.mkdir()
+                special_target = special_parent / fixed_name
+                os.mkfifo(special_target)
+                special_rejected = False
+                try:
+                    atomic_write_fixed_text(
+                        special_target,
+                        "must not be installed\n",
+                        allowed_names={fixed_name},
+                    )
+                except (OSError, ValueError):
+                    special_rejected = True
+                special_results[fixed_name] = (
+                    special_rejected
+                    and stat.S_ISFIFO(special_target.lstat().st_mode)
+                )
+
+                ancestor_parent = dest.parent / f"fixed-ancestor-{slug}"
+                ancestor_parent.mkdir()
+                ancestor_real = ancestor_parent / "real-parent"
+                ancestor_real.mkdir()
+                ancestor_target = ancestor_real / fixed_name
+                ancestor_bytes = f"{fixed_name} ancestor sentinel\n".encode(
+                    "utf-8"
+                )
+                ancestor_target.write_bytes(ancestor_bytes)
+                ancestor_link = ancestor_parent / "linked-parent"
+                ancestor_link.symlink_to(ancestor_real, target_is_directory=True)
+                ancestor_rejected = False
+                try:
+                    atomic_write_fixed_text(
+                        ancestor_link / fixed_name,
+                        "must not be installed\n",
+                        allowed_names={fixed_name},
+                    )
+                except (OSError, ValueError):
+                    ancestor_rejected = True
+                ancestor_results[fixed_name] = (
+                    ancestor_rejected
+                    and ancestor_link.is_symlink()
+                    and ancestor_target.read_bytes() == ancestor_bytes
+                )
+
+                race_parent = dest.parent / f"fixed-real-swap-{slug}"
+                race_parent.mkdir()
+                checked_root = race_parent / "checked-root"
+                checked_root.mkdir()
+                checked_target = checked_root / fixed_name
+                original_bytes = f"{fixed_name} original bytes\n".encode(
+                    "utf-8"
+                )
+                checked_target.write_bytes(original_bytes)
+                parked_root = race_parent / "parked-root"
+                replacement_bytes = (
+                    f"{fixed_name} replacement sentinel\n".encode("utf-8")
+                )
+                swapped = False
+
+                if fixed_name == "MANIFEST.sha256":
+                    original_builder = globals()["iter_behavior_files"]
+
+                    def swapping_builder(_root: Path) -> List[str]:
+                        nonlocal swapped
+                        checked_root.rename(parked_root)
+                        checked_root.mkdir()
+                        (checked_root / fixed_name).write_bytes(
+                            replacement_bytes
+                        )
+                        swapped = True
+                        return []
+
+                    globals()["iter_behavior_files"] = swapping_builder
+                    operation = lambda: update_manifest(checked_root)
+                    restore_name = "iter_behavior_files"
+                else:
+                    original_builder = globals()[
+                        "build_stable_release_manifest"
+                    ]
+
+                    def swapping_builder(_root: Path) -> Dict[str, Any]:
+                        nonlocal swapped
+                        checked_root.rename(parked_root)
+                        checked_root.mkdir()
+                        (checked_root / fixed_name).write_bytes(
+                            replacement_bytes
+                        )
+                        swapped = True
+                        return {"self_hash_sha256": None}
+
+                    globals()["build_stable_release_manifest"] = (
+                        swapping_builder
+                    )
+                    operation = lambda: write_stable_release_manifest(
+                        checked_root
+                    )
+                    restore_name = "build_stable_release_manifest"
+                race_rejected = False
+                try:
+                    operation()
+                except (OSError, ValueError):
+                    race_rejected = True
+                finally:
+                    globals()[restore_name] = original_builder
+                replacement_target = checked_root / fixed_name
+                parked_target = parked_root / fixed_name
+                real_swap_results[fixed_name] = (
+                    swapped
+                    and race_rejected
+                    and replacement_target.read_bytes() == replacement_bytes
+                    and parked_target.read_bytes() == original_bytes
+                    and not any(
+                        entry.name.startswith(f".{fixed_name}.")
+                        for root_path in (checked_root, parked_root)
+                        for entry in root_path.iterdir()
+                    )
+                )
+
+            self.add(
+                "fixed manifest writers retain normal private-file replacement",
+                all(normal_results.values()),
+                details=json.dumps(normal_results, sort_keys=True),
             )
             self.add(
-                "atomic manifest writer replaces a link without following its target",
-                not manifest.is_symlink()
-                and manifest.read_text(encoding="utf-8")
-                == "fixed atomic replacement probe\n"
-                and sentinel.read_bytes() == sentinel_bytes,
+                "fixed manifest writers reject final symlink targets without sentinel overwrite",
+                all(target_link_results.values()),
+                details=json.dumps(target_link_results, sort_keys=True),
+            )
+            self.add(
+                "fixed manifest writers reject hardlink targets without shared-file overwrite",
+                all(hardlink_results.values()),
+                details=json.dumps(hardlink_results, sort_keys=True),
+            )
+            self.add(
+                "fixed manifest writers reject special-file targets",
+                all(special_results.values()),
+                details=json.dumps(special_results, sort_keys=True),
+            )
+            self.add(
+                "fixed manifest writers reject symlinked ancestors without sentinel overwrite",
+                all(ancestor_results.values()),
+                details=json.dumps(ancestor_results, sort_keys=True),
+            )
+            self.add(
+                "fixed manifest builders hold the package root across real-directory substitution",
+                all(real_swap_results.values()),
+                details=json.dumps(real_swap_results, sort_keys=True),
+            )
+
+            cli_checked = dest.parent / "fixed-cli-preflight-root"
+            shutil.copytree(
+                self.root,
+                cli_checked,
+                symlinks=True,
+                ignore=shutil.ignore_patterns(
+                    ".git",
+                    "__pycache__",
+                    "*.pyc",
+                    *CRUFT_IGNORE_GLOBS,
+                ),
+            )
+            # Start from a self-consistent Git-free package copy so a failure
+            # after the injected swap is attributable to the held-root
+            # boundary rather than stale manifest content.
+            update_manifest(cli_checked)
+            write_stable_release_manifest(cli_checked)
+            cli_parked = dest.parent / "fixed-cli-preflight-parked"
+            cli_original = {
+                fixed_name: {
+                    "bytes": (cli_checked / fixed_name).read_bytes(),
+                    "identity": (
+                        (cli_checked / fixed_name).lstat().st_dev,
+                        (cli_checked / fixed_name).lstat().st_ino,
+                    ),
+                }
+                for fixed_name in fixed_names
+            }
+            cli_replacement: Dict[str, Dict[str, Any]] = {}
+            original_closed_surface = Validator.check_closed_surface
+            cli_swapped = False
+
+            def swapping_closed_surface(instance: "Validator") -> None:
+                nonlocal cli_swapped, cli_replacement
+                if not cli_swapped and instance.root == cli_checked:
+                    cli_checked.rename(cli_parked)
+                    shutil.copytree(
+                        cli_parked,
+                        cli_checked,
+                        symlinks=True,
+                        ignore=shutil.ignore_patterns(
+                            ".git",
+                            "__pycache__",
+                            "*.pyc",
+                            *CRUFT_IGNORE_GLOBS,
+                        ),
+                    )
+                    cli_replacement = {
+                        fixed_name: {
+                            "bytes": (cli_checked / fixed_name).read_bytes(),
+                            "identity": (
+                                (cli_checked / fixed_name).lstat().st_dev,
+                                (cli_checked / fixed_name).lstat().st_ino,
+                            ),
+                        }
+                        for fixed_name in fixed_names
+                    }
+                    cli_swapped = True
+                original_closed_surface(instance)
+
+            cli_stdout = io.StringIO()
+            cli_stderr = io.StringIO()
+            try:
+                Validator.check_closed_surface = swapping_closed_surface
+                with contextlib.redirect_stdout(
+                    cli_stdout
+                ), contextlib.redirect_stderr(cli_stderr):
+                    cli_returncode = main(
+                        [str(cli_checked), "--update-manifest"]
+                    )
+            finally:
+                Validator.check_closed_surface = original_closed_surface
+            try:
+                cli_result = json.loads(cli_stdout.getvalue())
+            except (json.JSONDecodeError, TypeError):
+                cli_result = {}
+            cli_parked_unchanged = all(
+                (cli_parked / fixed_name).read_bytes()
+                == cli_original[fixed_name]["bytes"]
+                and (
+                    (cli_parked / fixed_name).lstat().st_dev,
+                    (cli_parked / fixed_name).lstat().st_ino,
+                )
+                == cli_original[fixed_name]["identity"]
+                for fixed_name in fixed_names
+            )
+            cli_replacement_unchanged = bool(cli_replacement) and all(
+                (cli_checked / fixed_name).read_bytes()
+                == cli_replacement[fixed_name]["bytes"]
+                and (
+                    (cli_checked / fixed_name).lstat().st_dev,
+                    (cli_checked / fixed_name).lstat().st_ino,
+                )
+                == cli_replacement[fixed_name]["identity"]
+                for fixed_name in fixed_names
+            )
+            cli_temp_residue = sorted(
+                entry.name
+                for root_path in (cli_checked, cli_parked)
+                for entry in root_path.iterdir()
+                if any(
+                    entry.name.startswith(f".{fixed_name}.")
+                    and entry.name.endswith(".tmp")
+                    for fixed_name in fixed_names
+                )
+            )
+            cli_named_failure = any(
+                check.get("name")
+                == "update-manifest held package-root capability remains stable through install"
+                and check.get("passed") is False
+                for check in cli_result.get("checks", [])
+                if isinstance(check, Mapping)
+            )
+            self.add(
+                "update-manifest CLI holds package root before closed-surface preflight",
+                (
+                    cli_swapped
+                    and cli_returncode == 2
+                    and cli_result.get("status") == "FAIL"
+                    and cli_result.get("critical_failed", 0) >= 1
+                    and cli_named_failure
+                    and cli_parked_unchanged
+                    and cli_replacement_unchanged
+                    and not cli_temp_residue
+                ),
                 details=json.dumps(
                     {
-                        "manifest_is_symlink": manifest.is_symlink(),
-                        "sentinel_unchanged": sentinel.read_bytes() == sentinel_bytes,
+                        "swapped": cli_swapped,
+                        "returncode": cli_returncode,
+                        "status": cli_result.get("status"),
+                        "critical_failed": cli_result.get(
+                            "critical_failed"
+                        ),
+                        "named_failure": cli_named_failure,
+                        "parked_unchanged": cli_parked_unchanged,
+                        "replacement_unchanged": cli_replacement_unchanged,
+                        "temp_residue": cli_temp_residue,
+                        "stderr": cli_stderr.getvalue()[:500],
                     },
                     sort_keys=True,
                 ),
@@ -4558,6 +5568,36 @@ class Validator:
             "rejects missing exact promotion surface invariant",
             package_surface_missing_promotion_invariant,
         ))
+        def package_surface_missing_formal_output_invariant(dest: Path):
+            p = dest / "PACKAGE_SURFACE.json"
+            data = json.loads(p.read_text(encoding="utf-8"))
+            data["closed_surface_invariants"].remove(
+                REQUIRED_PROMOTION_SURFACE_INVARIANTS[2]
+            )
+            p.write_text(
+                json.dumps(data, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            maybe_update(dest)
+        mutations.append((
+            "rejects missing exact formal output recomputation invariant",
+            package_surface_missing_formal_output_invariant,
+        ))
+        def package_surface_missing_held_output_capability_invariant(dest: Path):
+            p = dest / "PACKAGE_SURFACE.json"
+            data = json.loads(p.read_text(encoding="utf-8"))
+            data["closed_surface_invariants"].remove(
+                REQUIRED_PROMOTION_SURFACE_INVARIANTS[7]
+            )
+            p.write_text(
+                json.dumps(data, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            maybe_update(dest)
+        mutations.append((
+            "rejects missing exact held output capability invariant",
+            package_surface_missing_held_output_capability_invariant,
+        ))
         def package_surface_missing_validator_invariant(dest: Path):
             p = dest / "PACKAGE_SURFACE.json"
             data = json.loads(p.read_text(encoding="utf-8"))
@@ -4611,6 +5651,42 @@ class Validator:
         mutations.append((
             "rejects aggregate commands present only in CI comments",
             ci_commented_aggregate,
+        ))
+        def ci_commented_archive_self_test(dest: Path):
+            p = dest / ".github/workflows/nozickian-team-ci.yml"
+            text = p.read_text(encoding="utf-8")
+            needle = "          " + ARCHIVE_SELF_TEST_COMMAND + "\n"
+            if text.count(needle) != 1:
+                raise AssertionError("direct archive self-test command not found")
+            p.write_text(
+                text.replace(
+                    needle,
+                    "          # " + ARCHIVE_SELF_TEST_COMMAND + "\n",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            maybe_update(dest)
+        mutations.append((
+            "rejects archive self-test present only in a CI comment",
+            ci_commented_archive_self_test,
+        ))
+        def ci_function_only_archive_self_test(dest: Path):
+            p = dest / ".github/workflows/nozickian-team-ci.yml"
+            text = p.read_text(encoding="utf-8")
+            needle = "          " + ARCHIVE_SELF_TEST_COMMAND + "\n"
+            if text.count(needle) != 1:
+                raise AssertionError("direct archive self-test command not found")
+            replacement = (
+                "          archive_self_test_decoy() {\n"
+                "            " + ARCHIVE_SELF_TEST_COMMAND + "\n"
+                "          }\n"
+            )
+            p.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+            maybe_update(dest)
+        mutations.append((
+            "rejects archive self-test present only in an uncalled CI function",
+            ci_function_only_archive_self_test,
         ))
         def ci_disabled_aggregate(dest: Path):
             p = dest / ".github/workflows/nozickian-team-ci.yml"
@@ -4669,10 +5745,36 @@ class Validator:
             "rejects aggregate CI commands nested inside if false",
             ci_aggregate_inside_if_false,
         ))
+        def ci_mutable_checkout_tag(dest: Path):
+            p = dest / ".github/workflows/nozickian-team-ci.yml"
+            text = p.read_text(encoding="utf-8")
+            needle = f"      - uses: {CHECKOUT_ACTION}\n"
+            replacement = "      - uses: actions/checkout@v4\n"
+            if needle not in text:
+                raise AssertionError("SHA-pinned checkout action step not found")
+            p.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+            maybe_update(dest)
+        mutations.append((
+            "rejects mutable checkout action tag after manifest update",
+            ci_mutable_checkout_tag,
+        ))
+        def ci_mutable_setup_python_tag(dest: Path):
+            p = dest / ".github/workflows/nozickian-team-ci.yml"
+            text = p.read_text(encoding="utf-8")
+            needle = f"      - uses: {SETUP_PYTHON_ACTION}\n"
+            replacement = "      - uses: actions/setup-python@v5\n"
+            if needle not in text:
+                raise AssertionError("SHA-pinned setup-python action step not found")
+            p.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+            maybe_update(dest)
+        mutations.append((
+            "rejects mutable setup-python action tag after manifest update",
+            ci_mutable_setup_python_tag,
+        ))
         def ci_extra_external_action(dest: Path):
             p = dest / ".github/workflows/nozickian-team-ci.yml"
             text = p.read_text(encoding="utf-8")
-            needle = "      - uses: actions/checkout@v4\n"
+            needle = f"      - uses: {CHECKOUT_ACTION}\n"
             replacement = (
                 needle
                 + "      - name: Unreviewed executable surface\n"
@@ -4689,7 +5791,7 @@ class Validator:
         def ci_extra_run_step(dest: Path):
             p = dest / ".github/workflows/nozickian-team-ci.yml"
             text = p.read_text(encoding="utf-8")
-            needle = "      - uses: actions/checkout@v4\n"
+            needle = f"      - uses: {CHECKOUT_ACTION}\n"
             replacement = (
                 needle
                 + "      - name: Unreviewed shell surface\n"
@@ -5149,6 +6251,38 @@ class Validator:
                     }
                     failed = failed and all(targeted_ci_assertion.values())
                 elif name in {
+                    "rejects archive self-test present only in a CI comment",
+                    (
+                        "rejects archive self-test present only in an "
+                        "uncalled CI function"
+                    ),
+                }:
+                    failed_names = set(
+                        result.get("failed_critical_check_names", [])
+                    )
+                    targeted_ci_assertion = {
+                        "ordinary_validator_failure": (
+                            result.get("status") == "FAIL"
+                            and result.get("harness_error") is False
+                            and result.get("returncode") == 2
+                        ),
+                        "archive_self_test_assertion_failed": (
+                            (
+                                "CI active archive full self-test is exact "
+                                "and precedes archive aggregate"
+                            )
+                            in failed_names
+                        ),
+                        "exact_structural_policy_failed": (
+                            (
+                                "CI workflow executable structure exactly "
+                                "matches policy"
+                            )
+                            in failed_names
+                        ),
+                    }
+                    failed = failed and all(targeted_ci_assertion.values())
+                elif name in {
                     "rejects extra active external CI action after manifest update",
                     "rejects extra active CI run step after manifest update",
                     "rejects extra active CI job after manifest update",
@@ -5304,6 +6438,38 @@ class Validator:
             "true-world benign variation: retains non-path root suffixes during display normalization",
             path_probe_ok,
             details=json.dumps(path_probe_result, sort_keys=True),
+        )
+        archive_parser_commands = direct_ci_shell_commands(
+            [
+                "# " + ARCHIVE_SELF_TEST_COMMAND,
+                "archive_self_test_decoy() {",
+                "  " + ARCHIVE_SELF_TEST_COMMAND,
+                "}",
+                ARCHIVE_SELF_TEST_COMMAND,
+            ]
+        )
+        archive_parser_ok = archive_parser_commands == [
+            ARCHIVE_SELF_TEST_COMMAND
+        ]
+        archive_parser_result = {
+            "name": (
+                "retains direct archive self-test while ignoring comment "
+                "and function decoys"
+            ),
+            "passed": archive_parser_ok,
+            "observed_status": "PASS" if archive_parser_ok else "FAIL",
+            "critical_failed": 0 if archive_parser_ok else 1,
+            "returncode": 0 if archive_parser_ok else 2,
+            "harness_error": False,
+        }
+        self.true_world_tests.append(archive_parser_result)
+        self.add(
+            (
+                "true-world benign variation: retains direct archive "
+                "self-test while ignoring comment and function decoys"
+            ),
+            archive_parser_ok,
+            details=json.dumps(archive_parser_result, sort_keys=True),
         )
         def add_readme(dest: Path):
             p=dest/"README.md"; p.write_text(p.read_text()+"\nAdditional explanatory note that does not affect executable verification.\n", encoding="utf-8"); write_stable_release_manifest(dest)
@@ -5537,6 +6703,221 @@ class Validator:
                 "atomic Markdown output replacement does not truncate a package hardlink alias",
                 hardlink_safe,
             )
+
+            markdown_control_parent = tmp / "markdown-held-control"
+            markdown_control_target = (
+                markdown_control_parent / "report.md"
+            )
+            markdown_control_fd: int | None = None
+            markdown_control_root_fd: int | None = None
+            markdown_control_ok = False
+            try:
+                (
+                    markdown_control_fd,
+                    frozen_control_target,
+                    markdown_control_root_fd,
+                ) = (
+                    prepare_markdown_output(
+                        snapshot_probe,
+                        markdown_control_target,
+                    )
+                )
+                atomic_replace_text(
+                    frozen_control_target,
+                    "held Markdown control\n",
+                    directory_fd=markdown_control_fd,
+                    lexical_parent=frozen_control_target.parent,
+                    package_root=snapshot_probe,
+                    package_root_fd=markdown_control_root_fd,
+                )
+                control_stat = markdown_control_target.lstat()
+                markdown_control_ok = (
+                    markdown_control_target.read_text(encoding="utf-8")
+                    == "held Markdown control\n"
+                    and stat.S_ISREG(control_stat.st_mode)
+                    and control_stat.st_nlink == 1
+                    and stat.S_IMODE(control_stat.st_mode) == 0o600
+                )
+            except (OSError, ValueError):
+                markdown_control_ok = False
+            finally:
+                if markdown_control_fd is not None:
+                    os.close(markdown_control_fd)
+                if markdown_control_root_fd is not None:
+                    os.close(markdown_control_root_fd)
+            self.add(
+                "held Markdown output capability retains ordinary external true control",
+                markdown_control_ok,
+            )
+
+            def exercise_markdown_parent_swap(
+                replacement_kind: str,
+            ) -> Dict[str, Any]:
+                race_root = tmp / f"markdown-{replacement_kind}-race"
+                race_root.mkdir()
+                checked_parent = race_root / "checked-parent"
+                checked_parent.mkdir()
+                parked_parent = race_root / "parked-parent"
+                external_parent = race_root / "external-parent"
+                external_parent.mkdir()
+                target = checked_parent / "report.md"
+                original_bytes = b"original Markdown report\n"
+                target.write_bytes(original_bytes)
+                replacement_bytes = b"replacement sentinel\n"
+                external_target = external_parent / "report.md"
+                external_target.write_bytes(replacement_bytes)
+                held_fd: int | None = None
+                held_root_fd: int | None = None
+                original_open = os.open
+                swapped = False
+
+                def swap_at_temporary_open(
+                    path: Any,
+                    flags: int,
+                    mode: int = 0o777,
+                    *,
+                    dir_fd: int | None = None,
+                ) -> int:
+                    nonlocal swapped
+                    if (
+                        not swapped
+                        and dir_fd is not None
+                        and isinstance(path, str)
+                        and path.startswith(".report.md.tmp-")
+                    ):
+                        checked_parent.rename(parked_parent)
+                        if replacement_kind == "real":
+                            checked_parent.mkdir()
+                            (checked_parent / "report.md").write_bytes(
+                                replacement_bytes
+                            )
+                        else:
+                            checked_parent.symlink_to(
+                                external_parent,
+                                target_is_directory=True,
+                            )
+                        swapped = True
+                    return original_open(
+                        path,
+                        flags,
+                        mode,
+                        dir_fd=dir_fd,
+                    )
+
+                rejected = False
+                try:
+                    (
+                        held_fd,
+                        frozen_target,
+                        held_root_fd,
+                    ) = prepare_markdown_output(snapshot_probe, target)
+                    os.open = swap_at_temporary_open
+                    atomic_replace_text(
+                        frozen_target,
+                        "unsafe replacement\n",
+                        directory_fd=held_fd,
+                        lexical_parent=frozen_target.parent,
+                        package_root=snapshot_probe,
+                        package_root_fd=held_root_fd,
+                    )
+                except (OSError, ValueError):
+                    rejected = True
+                finally:
+                    os.open = original_open
+                    if held_fd is not None:
+                        os.close(held_fd)
+                    if held_root_fd is not None:
+                        os.close(held_root_fd)
+                replacement_unchanged = (
+                    (checked_parent / "report.md").read_bytes()
+                    == replacement_bytes
+                )
+                return {
+                    "safe": (
+                        swapped
+                        and rejected
+                        and (parked_parent / "report.md").read_bytes()
+                        == original_bytes
+                        and replacement_unchanged
+                        and not any(
+                            item.name.startswith(".report.md.tmp-")
+                            for item in parked_parent.iterdir()
+                        )
+                    ),
+                    "swapped": swapped,
+                    "rejected": rejected,
+                    "replacement_unchanged": replacement_unchanged,
+                    "external_unchanged": (
+                        external_target.read_bytes() == replacement_bytes
+                    ),
+                }
+
+            markdown_real_swap = exercise_markdown_parent_swap("real")
+            markdown_symlink_swap = exercise_markdown_parent_swap(
+                "symlink"
+            )
+            self.add(
+                "Markdown output rejects real and symlink parent substitution at temporary open",
+                (
+                    markdown_real_swap["safe"]
+                    and markdown_symlink_swap["safe"]
+                    and markdown_symlink_swap["external_unchanged"]
+                ),
+                details=json.dumps(
+                    {
+                        "real": markdown_real_swap,
+                        "symlink": markdown_symlink_swap,
+                    },
+                    sort_keys=True,
+                ),
+            )
+
+            moved_external_parent = tmp / "markdown-moved-external"
+            moved_external_parent.mkdir()
+            moved_target = moved_external_parent / "report.md"
+            moved_fd: int | None = None
+            moved_root_fd: int | None = None
+            moved_into_package = snapshot_probe / "post-snapshot-output"
+            moved_rejected = False
+            moved_identity_detected = False
+            try:
+                (
+                    moved_fd,
+                    frozen_moved_target,
+                    moved_root_fd,
+                ) = prepare_markdown_output(snapshot_probe, moved_target)
+                moved_external_parent.rename(moved_into_package)
+                moved_identity_detected = (
+                    _markdown_directory_fd_is_within_root(
+                        moved_fd,
+                        snapshot_probe,
+                        moved_root_fd,
+                    )
+                )
+                atomic_replace_text(
+                    frozen_moved_target,
+                    "must not enter package\n",
+                    directory_fd=moved_fd,
+                    lexical_parent=frozen_moved_target.parent,
+                    package_root=snapshot_probe,
+                    package_root_fd=moved_root_fd,
+                )
+            except (OSError, ValueError):
+                moved_rejected = True
+            finally:
+                if moved_fd is not None:
+                    os.close(moved_fd)
+                if moved_root_fd is not None:
+                    os.close(moved_root_fd)
+            self.add(
+                "Markdown output rejects external parent moved into package after snapshot",
+                (
+                    moved_identity_detected
+                    and moved_rejected
+                    and not (moved_into_package / "report.md").exists()
+                    and not any(moved_into_package.iterdir())
+                ),
+            )
             dest = tmp / self.root.name
             # SECURITY-REVIEW: Preserve symlinks so the copied validator's
             # preflight observes link entries rather than following targets.
@@ -5751,8 +7132,8 @@ class Validator:
                         promotion_proc is not None
                         and promotion_proc.returncode == 0
                         and promotion_result.get("status") == "PASS"
-                        and promotion_result.get("passed") == 36
-                        and promotion_result.get("total") == 36
+                        and promotion_result.get("passed") == 43
+                        and promotion_result.get("total") == 43
                         and promotion_result.get(
                             "production_certifier_cli_baseline"
                         )
@@ -5921,58 +7302,188 @@ def main(argv=None) -> int:
     ap.add_argument("--update-manifest", action="store_true", help="rewrite MANIFEST.sha256 for current behavior files before validating")
     ap.add_argument("--skip-release-idempotence", action="store_true", help="skip the release-lock idempotence self-test; intended for the release-lock command chain itself")
     args = ap.parse_args(argv)
+    lexical_root = Path(os.path.abspath(args.root))
     root = args.root.resolve()
-    unsafe_self_test_markdown = bool(
-        args.self_test
-        and args.markdown is not None
-        and path_resolves_within(root, args.markdown)
-    )
-    if unsafe_self_test_markdown:
-        invalid = Validator(
-            root,
-            run_self_test=False,
-            skip_release_idempotence=True,
-        )
-        invalid.add(
-            "self-test markdown output must resolve outside the measured package tree",
-            False,
-            details=(
-                "--self-test requires --markdown to resolve outside the package "
-                "root so no write can occur after the completion snapshot"
-            ),
-        )
-        result = invalid.result()
-    elif args.update_manifest:
-        preflight = Validator(
-            root,
-            run_self_test=False,
-            skip_release_idempotence=True,
-        )
-        preflight.check_closed_surface()
-        if any(
-            check["severity"] == "critical" and not check["passed"]
-            for check in preflight.checks
-        ):
-            result = preflight.result()
+    markdown_directory_fd: int | None = None
+    markdown_root_directory_fd: int | None = None
+    markdown_target: Path | None = None
+    markdown_output_error: str | None = None
+    fixed_manifest_directory_fd: int | None = None
+    fixed_manifest_root: Path | None = None
+    fixed_manifest_output_error: str | None = None
+    if args.update_manifest:
+        try:
+            # Freeze the exact package root before closed-surface preflight or
+            # manifest-byte construction. The same capability is held until
+            # the post-update validation completes.
+            (
+                fixed_manifest_root,
+                fixed_manifest_directory_fd,
+            ) = acquire_fixed_manifest_parent(lexical_root)
+        except (OSError, ValueError) as exc:
+            fixed_manifest_output_error = (
+                f"{type(exc).__name__}: {exc}"
+            )
+    if args.markdown is not None:
+        try:
+            # Acquire the exact external parent before validation takes its
+            # package snapshot, and retain it through the final install.
+            (
+                markdown_directory_fd,
+                markdown_target,
+                markdown_root_directory_fd,
+            ) = prepare_markdown_output(root, args.markdown)
+        except (OSError, ValueError) as exc:
+            markdown_output_error = (
+                f"{type(exc).__name__}: {exc}"
+            )
+
+    try:
+        if markdown_output_error is not None:
+            invalid = Validator(
+                root,
+                run_self_test=False,
+                skip_release_idempotence=True,
+            )
+            invalid.add(
+                (
+                    "self-test markdown output must resolve outside the measured package tree"
+                    if args.self_test
+                    else "markdown output must resolve outside the measured package tree"
+                ),
+                False,
+                details=(
+                    "Markdown output requires a held no-follow parent "
+                    "capability that remains outside the package root: "
+                    f"{markdown_output_error}"
+                ),
+            )
+            result = invalid.result()
+        elif fixed_manifest_output_error is not None:
+            invalid = Validator(
+                root,
+                run_self_test=False,
+                skip_release_idempotence=True,
+            )
+            invalid.add(
+                "update-manifest requires one stable held package-root capability",
+                False,
+                details=(
+                    "Fixed manifest refresh rejects symlinked or unstable "
+                    "package-root traversal before validation: "
+                    f"{fixed_manifest_output_error}"
+                ),
+            )
+            result = invalid.result()
+        elif args.update_manifest:
+            assert fixed_manifest_root is not None
+            assert fixed_manifest_directory_fd is not None
+            preflight = Validator(
+                root,
+                run_self_test=False,
+                skip_release_idempotence=True,
+            )
+            preflight.check_closed_surface()
+            if any(
+                check["severity"] == "critical" and not check["passed"]
+                for check in preflight.checks
+            ):
+                result = preflight.result()
+            else:
+                try:
+                    update_manifest(
+                        root,
+                        directory_fd=fixed_manifest_directory_fd,
+                        lexical_root=fixed_manifest_root,
+                    )
+                except (OSError, ValueError) as exc:
+                    preflight.add(
+                        "update-manifest held package-root capability remains stable through install",
+                        False,
+                        details=f"{type(exc).__name__}: {exc}",
+                    )
+                    result = preflight.result()
+                else:
+                    result = Validator(
+                        root,
+                        run_self_test=args.self_test,
+                        skip_release_idempotence=args.skip_release_idempotence,
+                    ).validate()
+                    if not _markdown_directory_path_matches_fd(
+                        fixed_manifest_root,
+                        fixed_manifest_directory_fd,
+                    ):
+                        result.setdefault("checks", []).append(
+                            {
+                                "name": (
+                                    "update-manifest package-root capability remains stable through validation"
+                                ),
+                                "passed": False,
+                                "severity": "critical",
+                                "details": (
+                                    "package-root lexical identity changed after "
+                                    "the fixed manifest install"
+                                ),
+                            }
+                        )
+                        result["checks_total"] = int(
+                            result.get("checks_total", 0)
+                        ) + 1
+                        result["critical_failed"] = int(
+                            result.get("critical_failed", 0)
+                        ) + 1
+                        result["status"] = "FAIL"
         else:
-            update_manifest(root)
             result = Validator(
                 root,
                 run_self_test=args.self_test,
                 skip_release_idempotence=args.skip_release_idempotence,
             ).validate()
-    else:
-        result = Validator(
-            root,
-            run_self_test=args.self_test,
-            skip_release_idempotence=args.skip_release_idempotence,
-        ).validate()
-    display_result = normalize_cli_display(result, root)
-    json.dump(display_result, sys.stdout, indent=2, sort_keys=True)
-    sys.stdout.write("\n")
-    if args.markdown and not unsafe_self_test_markdown:
-        atomic_replace_text(args.markdown, to_markdown(display_result))
-    return 0 if result["critical_failed"] == 0 else 2
+
+        if (
+            markdown_directory_fd is not None
+            and markdown_target is not None
+        ):
+            try:
+                display_result = normalize_cli_display(result, root)
+                atomic_replace_text(
+                    markdown_target,
+                    to_markdown(display_result),
+                    directory_fd=markdown_directory_fd,
+                    lexical_parent=markdown_target.parent,
+                    package_root=root,
+                    package_root_fd=markdown_root_directory_fd,
+                )
+            except (OSError, ValueError) as exc:
+                result.setdefault("checks", []).append(
+                    {
+                        "name": (
+                            "Markdown output capability remains external and stable through final install"
+                        ),
+                        "passed": False,
+                        "severity": "critical",
+                        "details": f"{type(exc).__name__}: {exc}",
+                    }
+                )
+                result["checks_total"] = int(
+                    result.get("checks_total", 0)
+                ) + 1
+                result["critical_failed"] = int(
+                    result.get("critical_failed", 0)
+                ) + 1
+                result["status"] = "FAIL"
+
+        display_result = normalize_cli_display(result, root)
+        json.dump(display_result, sys.stdout, indent=2, sort_keys=True)
+        sys.stdout.write("\n")
+        return 0 if result["critical_failed"] == 0 else 2
+    finally:
+        if markdown_directory_fd is not None:
+            os.close(markdown_directory_fd)
+        if markdown_root_directory_fd is not None:
+            os.close(markdown_root_directory_fd)
+        if fixed_manifest_directory_fd is not None:
+            os.close(fixed_manifest_directory_fd)
 
 if __name__ == "__main__":
     raise SystemExit(main())

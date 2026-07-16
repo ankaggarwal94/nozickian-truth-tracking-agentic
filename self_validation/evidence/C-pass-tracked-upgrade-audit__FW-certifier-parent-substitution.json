@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-pass-tracked-upgrade-audit",
+  "claim_proposition_sha256": "sha256:af6dd806f1832342970a4c3a945bfd9964b1b8072def1be83cdef7feac81ef8b",
+  "command_or_source": "run_formal_runner_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:2e56dafd72ea9b5590bbe473c2fd1b7b9de21364c5d3be80e6d7f8485d10200e",
+  "observation_id": "obs:C-pass-tracked-upgrade-audit:FW-certifier-parent-substitution",
+  "observed_result": "The formal contract retained both original parent capabilities, rejected the substituted lexical parents, and wrote nothing into their replacements.",
+  "support_summary": "This wrapper binds FW-certifier-parent-substitution to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-certifier-parent-substitution",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

@@ -4,8 +4,8 @@
   "claim_proposition_sha256": "sha256:59845efcc628f15149c6bea69aff553ed1aa99d835f450b9e7e529740c877536",
   "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:393c4a759533ff2551133abcd3a487188bbcb842b97d2ee11c210fa9eb2862ae",
+  "hash_or_version": "sha256:7f0d9be95be2bd957378d52a5f9a30bd6a3d379f76c84227c3a766f9f3a194ed",
   "observed_result": "Current source bytes support the scoped proposition for C-charter-caps.",
   "support_summary": "This wrapper binds C-charter-caps to current package artifact skills/nozickian-verify/SKILL.md by exact SHA-256 and to the canonical claim proposition digest.",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

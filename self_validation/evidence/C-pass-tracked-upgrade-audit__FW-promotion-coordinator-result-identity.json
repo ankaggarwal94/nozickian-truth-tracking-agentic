@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-pass-tracked-upgrade-audit",
+  "claim_proposition_sha256": "sha256:af6dd806f1832342970a4c3a945bfd9964b1b8072def1be83cdef7feac81ef8b",
+  "command_or_source": "run_promotion_certifier_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:b34bbf4b765778ffe9f35d50c55ef9e20d9d818c7c438476d54aebd5fe15f268",
+  "observation_id": "obs:C-pass-tracked-upgrade-audit:FW-promotion-coordinator-result-identity",
+  "observed_result": "The promotion contract used the production certifier CLI and rejected the substituted formal-result coordinator identity.",
+  "support_summary": "This wrapper binds FW-promotion-coordinator-result-identity to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-promotion-coordinator-result-identity",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

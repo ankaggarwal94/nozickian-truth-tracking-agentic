@@ -1,14 +1,14 @@
 {
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-formal-invocation",
-  "claim_proposition_sha256": "sha256:ad5a976a1b91c94ca32386a493b58776f54a6fcf63bbdae479de86154acd2e43",
+  "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
   "command_or_source": "run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
-  "modal_case_sha256": "sha256:08dc1ca298ea23224d2877208c8efebcadc3c85c46a0479af3e8ba157903b2e9",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:dd60cae24867f8b742254291f549f2ad42a642ba879679b51296c0449d310db3",
   "observation_id": "obs:C-formal-invocation:FW-formal-large-reordered-result",
   "observed_result": "The formal contract bounded the large trace and rejected the result-before-call ordering.",
   "support_summary": "This wrapper binds FW-formal-large-reordered-result to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-formal-large-reordered-result",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

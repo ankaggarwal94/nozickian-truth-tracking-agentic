@@ -7,5 +7,5 @@
   "hash_or_version": "sha256:8e16ce008bbc7f71b2fe428342b1189d3862cf3b392e56773660cf26c634b10a",
   "observed_result": "Current source bytes support the scoped proposition for C-structure.",
   "support_summary": "This wrapper binds C-structure to current package artifact .claude-plugin/plugin.json by exact SHA-256 and to the canonical claim proposition digest.",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

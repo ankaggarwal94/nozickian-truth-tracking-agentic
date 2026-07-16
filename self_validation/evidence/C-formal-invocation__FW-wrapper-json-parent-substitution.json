@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-formal-invocation",
+  "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
+  "command_or_source": "run_formal_runner_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:78f8d85f46acb985bf691c5fae8e4a1091f206ebafba9c2eac9073cb5d2b4fe8",
+  "observation_id": "obs:C-formal-invocation:FW-wrapper-json-parent-substitution",
+  "observed_result": "The formal contract showed all four wrappers preserved replacement sentinels and rejected the substituted parents.",
+  "support_summary": "This wrapper binds FW-wrapper-json-parent-substitution to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-wrapper-json-parent-substitution",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

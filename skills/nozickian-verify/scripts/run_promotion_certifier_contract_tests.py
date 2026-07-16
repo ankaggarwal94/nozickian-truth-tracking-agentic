@@ -19,6 +19,8 @@ import subprocess
 import sys
 import tempfile
 import time
+import unicodedata
+import uuid
 from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
@@ -27,6 +29,176 @@ SKILL_SCRIPTS = Path("skills/nozickian-verify/scripts")
 # macOS may expose the temp root through /var -> /private/var. Resolve that
 # platform alias so positive controls do not themselves contain a link.
 CANONICAL_TEMP_ROOT = Path(tempfile.gettempdir()).resolve()
+
+
+def _output_directory_flags() -> int:
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory = getattr(os, "O_DIRECTORY", 0)
+    if not nofollow or not directory:
+        raise OSError("platform lacks no-follow output traversal")
+    flags = os.O_RDONLY | nofollow | directory
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    return flags
+
+
+def _canonical_output_path(path: Path) -> Path:
+    raw = str(path)
+    absolute = Path(os.path.abspath(path))
+    if (
+        not raw
+        or any(
+            ord(character) < 32
+            or ord(character) == 127
+            or unicodedata.category(character) == "Cc"
+            for character in raw
+        )
+        or absolute.name in {"", ".", ".."}
+        or ".." in absolute.parts
+    ):
+        raise ValueError("JSON output path is not canonical")
+    return absolute
+
+
+def _open_or_create_output_parent(path: Path) -> int:
+    flags = _output_directory_flags()
+    descriptor = os.open(os.path.sep, flags)
+    try:
+        for component in path.parent.parts[1:]:
+            if component in {"", ".", ".."}:
+                raise ValueError("unsafe JSON output directory component")
+            try:
+                child = os.open(component, flags, dir_fd=descriptor)
+            except FileNotFoundError:
+                os.mkdir(component, mode=0o700, dir_fd=descriptor)
+                os.fsync(descriptor)
+                child = os.open(component, flags, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        return descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _directory_path_matches_fd(path: Path, descriptor: int) -> bool:
+    observed: int | None = None
+    try:
+        flags = _output_directory_flags()
+        observed = os.open(os.path.sep, flags)
+        for component in path.parts[1:]:
+            child = os.open(component, flags, dir_fd=observed)
+            os.close(observed)
+            observed = child
+        expected_metadata = os.fstat(descriptor)
+        observed_metadata = os.fstat(observed)
+        return (
+            expected_metadata.st_dev,
+            expected_metadata.st_ino,
+        ) == (
+            observed_metadata.st_dev,
+            observed_metadata.st_ino,
+        )
+    except (OSError, ValueError):
+        return False
+    finally:
+        if observed is not None:
+            os.close(observed)
+
+
+def _require_replaceable_json_target(directory_fd: int, name: str) -> None:
+    try:
+        metadata = os.stat(
+            name,
+            dir_fd=directory_fd,
+            follow_symlinks=False,
+        )
+    except FileNotFoundError:
+        return
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or stat.S_ISLNK(metadata.st_mode)
+        or metadata.st_nlink != 1
+    ):
+        raise ValueError("JSON output target is not a private regular file")
+
+
+def _acquire_json_output_capability(path: Path) -> tuple[Path, int]:
+    absolute = _canonical_output_path(path)
+    descriptor = _open_or_create_output_parent(absolute)
+    try:
+        _require_replaceable_json_target(descriptor, absolute.name)
+        if not _directory_path_matches_fd(absolute.parent, descriptor):
+            raise ValueError("JSON output parent identity is unstable")
+        return absolute, descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _atomic_replace_json_output(
+    path: Path,
+    text: str,
+    *,
+    directory_fd: int,
+) -> None:
+    parent_fd = os.dup(directory_fd)
+    temporary = f".{path.name}.{uuid.uuid4().hex}.tmp"
+    descriptor: int | None = None
+    temporary_created = False
+    try:
+        _require_replaceable_json_target(parent_fd, path.name)
+        if not _directory_path_matches_fd(path.parent, parent_fd):
+            raise ValueError("JSON output parent changed before write")
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+        if hasattr(os, "O_CLOEXEC"):
+            flags |= os.O_CLOEXEC
+        descriptor = os.open(
+            temporary,
+            flags,
+            0o600,
+            dir_fd=parent_fd,
+        )
+        temporary_created = True
+        payload = text.encode("utf-8")
+        offset = 0
+        while offset < len(payload):
+            written = os.write(descriptor, payload[offset:])
+            if written <= 0:
+                raise OSError("zero-byte JSON output write")
+            offset += written
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = None
+        _require_replaceable_json_target(parent_fd, path.name)
+        if not _directory_path_matches_fd(path.parent, parent_fd):
+            raise ValueError("JSON output parent changed before install")
+        os.replace(
+            temporary,
+            path.name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+        )
+        temporary_created = False
+        installed = os.stat(
+            path.name,
+            dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        if not stat.S_ISREG(installed.st_mode) or installed.st_nlink != 1:
+            raise OSError("installed JSON output is not private")
+        os.fsync(parent_fd)
+        if not _directory_path_matches_fd(path.parent, parent_fd):
+            raise ValueError("JSON output parent changed during install")
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        if temporary_created:
+            try:
+                os.unlink(temporary, dir_fd=parent_fd)
+            except FileNotFoundError:
+                pass
+        os.close(parent_fd)
 
 
 def load_module(name: str, path: Path) -> Any:
@@ -262,6 +434,58 @@ def write_official_policies(
         )
 
 
+def supported_process_containment_scope(producer: Any) -> Dict[str, Any]:
+    """Obtain the same fail-closed Linux scope required in production."""
+    if hasattr(producer, "prepare_process_containment"):
+        state = producer.prepare_process_containment()
+        scope = state.get("scope") if isinstance(state, Mapping) else None
+        enabled = isinstance(state, Mapping) and state.get("enabled") is True
+    else:
+        scope = producer.process_containment_scope()
+        enabled = True
+    expected = {
+        "mechanism": "linux-child-subreaper-plus-process-group",
+        "cleanup_after_leader_exit": True,
+        "detached_session_descendants_contained": True,
+    }
+    if enabled is not True or scope != expected:
+        raise RuntimeError(
+            "promotion contracts require supported detached-session containment"
+        )
+    return dict(expected)
+
+
+def safe_command_capture(scope: Mapping[str, Any]) -> Dict[str, Any]:
+    return {
+        "returncode": 0,
+        "capture_limit_exceeded": False,
+        "timed_out": False,
+        "descendant_pipe_leak": False,
+        "reader_join_timed_out": False,
+        "normal_exit_group_survivor": False,
+        "detached_descendant_survivor": False,
+        "process_group_cleanup_attempted": True,
+        "process_group_terminated": False,
+        "process_containment_cleanup_complete": True,
+        "process_containment": dict(scope),
+    }
+
+
+def safe_raw_command(
+    cmd: Sequence[str],
+    scope: Mapping[str, Any],
+    *,
+    stdout: str = "",
+    stderr: str = "",
+) -> Dict[str, Any]:
+    return {
+        "cmd": list(cmd),
+        "stdout": stdout,
+        "stderr": stderr,
+        **safe_command_capture(scope),
+    }
+
+
 def write_live_bundle(
     certifier: Any,
     package_root: Path,
@@ -280,6 +504,7 @@ def write_live_bundle(
     evals_path = package_root / "skills/nozickian-verify/evals/evals.json"
     evals = json.loads(evals_path.read_text(encoding="utf-8"))
     tree = certifier.package_tree_sha256(package_root)
+    containment_scope = supported_process_containment_scope(live)
     fixture_results: List[Dict[str, Any]] = []
     transcript_checks: List[Dict[str, Any]] = []
     for fixture in evals["fixtures"]:
@@ -312,6 +537,7 @@ def write_live_bundle(
             / "live_fixtures/transcripts"
             / f"{fixture_id}.json"
         )
+        command_capture = safe_command_capture(containment_scope)
         write_json(
             transcript_path,
             {
@@ -329,6 +555,11 @@ def write_live_bundle(
                 "returncode": 0,
                 "stdout": stdout,
                 "stderr": "",
+                **{
+                    key: value
+                    for key, value in command_capture.items()
+                    if key != "returncode"
+                },
             },
         )
         fixture_results.append(
@@ -344,6 +575,7 @@ def write_live_bundle(
                     canonical_prompt.encode("utf-8")
                 ).hexdigest(),
                 "returncode": 0,
+                "command_capture": command_capture,
                 "transcript_file": f"<output-dir>/{fixture_id}.json",
                 "transcript_sha256": certifier.sha256_path(
                     transcript_path
@@ -358,6 +590,9 @@ def write_live_bundle(
         "sha256": tree["sha256"],
         "valid": True,
     }
+    live_endpoint_identity = live.execution_copy_endpoint_identity(
+        package_root
+    )
     write_json(
         bundle / "live_fixtures/live_runtime_eval_result.json",
         {
@@ -367,11 +602,17 @@ def write_live_bundle(
             "package_tree_sha256": tree["sha256"],
             "fixture_spec_sha256": certifier.sha256_path(evals_path),
             "execution_package_snapshot_identity": {
-                "mode": "private-read-only-stable-release-snapshot",
+                "mode": "private-permission-hardened-endpoint-checked-release-copy",
                 "source_pre": live_tree_identity,
                 "source_post": live_tree_identity,
                 "snapshot_pre": live_tree_identity,
                 "snapshot_post": live_tree_identity,
+                "snapshot_endpoint_pre": live_endpoint_identity,
+                "snapshot_endpoint_post": live_endpoint_identity,
+                "endpoint_stable": True,
+                "stability_scope": "pre-post-endpoint",
+                "temporal_immutability_enforced": False,
+                "process_containment": containment_scope,
                 "stable": True,
             },
             "run_config": {
@@ -407,7 +648,10 @@ def write_live_bundle(
                 "version_pattern_match": True,
             },
             "commands": [
-                {"cmd": ["<claude-cli>", "--version"], "returncode": 0},
+                {
+                    "cmd": ["<claude-cli>", "--version"],
+                    **safe_command_capture(containment_scope),
+                },
                 {
                     "cmd": [
                         "<claude-cli>",
@@ -415,7 +659,7 @@ def write_live_bundle(
                         "validate",
                         "<package-root>",
                     ],
-                    "returncode": 0,
+                    **safe_command_capture(containment_scope),
                 },
             ],
             "preflight": {
@@ -677,7 +921,13 @@ def write_formal_bundle(
         encoding="utf-8",
     )
     out["ledger"].write_text(
-        "Substitution used: none\nMachine gate run: runner-managed\n",
+        (
+            "Substitution used: none\n"
+            "Machine gate run: runner-managed\n"
+            f"Main coordinator: {formal.FORMAL_COORDINATOR}\n"
+            + "\n".join(certifier.REQUIRED_NATIVE_AGENTS)
+            + "\n"
+        ),
         encoding="utf-8",
     )
     out["prompt"].write_text(
@@ -735,17 +985,112 @@ def write_formal_bundle(
         "valid": True,
     }
     executable_file_identity = formal.file_snapshot_identity(fake_claude)
+    formal_endpoint_identity = formal.execution_copy_endpoint_identity(
+        package_root
+    )
+    containment_scope = supported_process_containment_scope(formal)
+    prechecks = [
+        safe_raw_command(
+            [
+                sys.executable,
+                str(package_root / SKILL_SCRIPTS / "validate_package.py"),
+                str(package_root),
+            ],
+            containment_scope,
+        ),
+        safe_raw_command(
+            [
+                sys.executable,
+                str(package_root / SKILL_SCRIPTS / "run_regression_evals.py"),
+                str(package_root),
+            ],
+            containment_scope,
+        ),
+        safe_raw_command(
+            [
+                sys.executable,
+                str(package_root / SKILL_SCRIPTS / "ntt_gate.py"),
+                str(package_root / "self_validation/self_certificate.json"),
+                "--evidence-root",
+                str(package_root),
+                "--strict-evidence",
+            ],
+            containment_scope,
+        ),
+        safe_raw_command(
+            [
+                str(fake_claude.resolve()),
+                "plugin",
+                "validate",
+                str(package_root),
+                "--strict",
+            ],
+            containment_scope,
+        ),
+    ]
+    commands = [
+        safe_raw_command(
+            [str(fake_claude.resolve()), "--version"],
+            containment_scope,
+            stdout="2.1.205 (Claude Code)\n",
+        ),
+        safe_raw_command(
+            [
+                str(fake_claude.resolve()),
+                "--plugin-dir",
+                str(package_root),
+                "--agent",
+                formal.FORMAL_COORDINATOR,
+                "-p",
+                "--output-format",
+                "stream-json",
+                "--include-hook-events",
+                "--max-turns",
+                "20",
+                out["prompt"].read_text(encoding="utf-8"),
+            ],
+            containment_scope,
+            stdout=out["transcript"].read_text(encoding="utf-8"),
+        ),
+        safe_raw_command(
+            [
+                sys.executable,
+                str(package_root / SKILL_SCRIPTS / "ntt_gate.py"),
+                str(out["certificate"]),
+                "--evidence-root",
+                str(result_dir),
+                "--strict-evidence",
+                "--markdown",
+                str(out["gate"]),
+            ],
+            containment_scope,
+        ),
+    ]
+    output_checks = formal.check_required_outputs(out, include_gate=True)
+    if not output_checks or not all(
+        check.get("passed") is True for check in output_checks
+    ):
+        raise RuntimeError("synthetic formal output checks did not pass")
     result = {
         "run_id": "synthetic-aggregate-run-001",
-        "status": certifier.PASS_TRACKED,
-        "reason": "synthetic origin exercises production validation only",
+        "status": certifier.PASS_SCOPED,
+        "reason": (
+            "synthetic origin is endpoint-checked with supported process "
+            "containment, but temporal immutability is not enforced"
+        ),
         "package_tree_identity": formal_tree_identity,
         "execution_package_snapshot_identity": {
-            "mode": "private-read-only-stable-release-snapshot",
+            "mode": "private-permission-hardened-endpoint-checked-release-copy",
             "source_pre": formal_tree_identity,
             "source_post": formal_tree_identity,
             "snapshot_pre": formal_tree_identity,
             "snapshot_post": formal_tree_identity,
+            "snapshot_endpoint_pre": formal_endpoint_identity,
+            "snapshot_endpoint_post": formal_endpoint_identity,
+            "endpoint_stable": True,
+            "stability_scope": "pre-post-endpoint",
+            "temporal_immutability_enforced": False,
+            "process_containment": containment_scope,
             "stable": True,
         },
         "runtime_identity": {
@@ -760,17 +1105,18 @@ def write_formal_bundle(
             "fingerprint_stable": True,
             "error": None,
         },
-        "commands": [],
-        "prechecks": [],
+        "commands": commands,
+        "prechecks": prechecks,
         "precheck_summary": {
-            "total": 0,
-            "passed": 0,
+            "total": len(prechecks),
+            "passed": len(prechecks),
             "failed": 0,
             "failed_commands": [],
         },
-        "output_checks": [],
+        "output_checks": output_checks,
         "gate_status": certifier.PASS_TRACKED,
         "trace_authentication": trace_auth,
+        "_execution_root": str(package_root),
     }
     canonical = formal.build_formal_result_v2(
         result,
@@ -1100,7 +1446,7 @@ EXPECTED_BASELINE_LANE_COUNTS = {
     "official": 2,
     "live": 77,
     "promotion": 77,
-    "formal": 60,
+    "formal": 64,
     "hygiene": 2,
 }
 EXPECTED_CASE_NAMES = (
@@ -1115,6 +1461,13 @@ EXPECTED_CASE_NAMES = (
     "fabricated_official_text_policy",
     "decoy_formal_companion",
     "swapped_formal_companions",
+    "formal_coordinator_result_identity_binding",
+    "formal_coordinator_argv_identity_binding",
+    "formal_prompt_companion_binding",
+    "formal_transcript_command_binding",
+    "formal_gate_companion_argv_binding",
+    "formal_arbitrary_output_check_rejected",
+    "formal_empty_report_rejected",
     "dummy_untyped_evidence",
     "fake_own_claim_id",
     "malformed_claim_nonobject",
@@ -1141,127 +1494,155 @@ EXPECTED_CASE_NAMES = (
     "certifier_json_special_target_rejected",
     "normal_invocation_creates_no_python_bytecode",
 )
-EXPECTED_CASE_TOTAL = 36
+EXPECTED_CASE_TOTAL = 43
 EXPECTED_POSITIVE_MUTATION_CHECK_INVENTORIES: Dict[
     str, Tuple[int, str]
 ] = {
     "distinct_formal_roles_may_contain_equal_bytes": (
-        248,
-        "1434e80fb2ce1a002d30754e9e304dbe76565e69c3e35ce87232d731550a131a",
+        252,
+        "d5dd400812977f16d3e3a2b0e7a40543aab716942a96c91cfb35cd0623bc19a3",
     ),
     "official_scope_exclusion_retains_fixed_role_dag": (
-        248,
-        "c14c9c71638af1d5d92d81f741f8ca8632e2bd3ebf4eb2ba37bf9584dbbd8e82",
+        252,
+        "afd32ba4df002e48c9ac8b6353ba5680ff14f908946fc51b73b0844b8ab096d5",
     ),
     "independently_passing_downstream_claim_accepted_before_cap": (
-        248,
-        "1434e80fb2ce1a002d30754e9e304dbe76565e69c3e35ce87232d731550a131a",
+        252,
+        "d5dd400812977f16d3e3a2b0e7a40543aab716942a96c91cfb35cd0623bc19a3",
     ),
 }
 EXPECTED_MUTATION_CHECK_INVENTORIES: Dict[str, Tuple[int, str]] = {
     "missing_promotion_schema_version": (
-        248,
-        "dc10831b2f5a77ff28849f2df0f76cd7a10193e28683c28ccac9fb7ac7351eb1",
+        252,
+        "6f489bab21d307a5793a91e86a17d6e77e2ff27f97d3719a238b4bed90c91265",
     ),
     "wrong_type_promotion_schema_version": (
-        248,
-        "dc10831b2f5a77ff28849f2df0f76cd7a10193e28683c28ccac9fb7ac7351eb1",
+        252,
+        "6f489bab21d307a5793a91e86a17d6e77e2ff27f97d3719a238b4bed90c91265",
     ),
     "stale_deterministic_capture_wrong_tree": (
-        247,
-        "c332bbed3124a0618cb608e30692c14615c0e90c7545a563359b14b6a341ff89",
+        251,
+        "2945d5ff01342d688a3e86e9615d2b8c94360dc6711bb26a9738d066d3954062",
     ),
     "fabricated_official_text_policy": (
-        248,
-        "16c653f90403f29ccfb2a74c8c7564437f70c278740595d30b0b068fef7dcc04",
+        252,
+        "7a0cfe450ec567f1d9eec904057df9d7a106ecd623a1378edaadc1ef27831a2b",
     ),
     "decoy_formal_companion": (
-        248,
-        "45f07302bc8c224aa4be995922e849dbd7218bdc1182af70be1f020124db0bd0",
+        252,
+        "7b706f481a66dd53aec2cd415d6a12d64a0e1603b3b3055ea1b894335dc9a726",
     ),
     "swapped_formal_companions": (
-        248,
-        "4919306cc591c504c47ebee43ab32c99353b903ce722b61500278eba2b34b439",
+        252,
+        "981bc356ce63980c54dd6e00cf6d55ac5d70fdc31d8cdfcc983a181b8f600a5b",
+    ),
+    "formal_coordinator_result_identity_binding": (
+        252,
+        "324cd779bba7e11f91a696939ff83427ed56ca0f5c4b3f014937ff0dbf7b3035",
+    ),
+    "formal_coordinator_argv_identity_binding": (
+        252,
+        "324cd779bba7e11f91a696939ff83427ed56ca0f5c4b3f014937ff0dbf7b3035",
+    ),
+    "formal_prompt_companion_binding": (
+        252,
+        "7f208bce32e09d3c5052ae15e3d82ee3c69ac1f238c757b4d78cca0df4a42cb9",
+    ),
+    "formal_transcript_command_binding": (
+        252,
+        "e297d262c2e5a6abb3cc68cd81dd5d17088fe3c201c1dd310c4703d238ac889e",
+    ),
+    "formal_gate_companion_argv_binding": (
+        252,
+        "221ea147ebe034e5c431255a2e60ef10c8ee022d8ee8a4f4f19cc8872bd33289",
+    ),
+    "formal_arbitrary_output_check_rejected": (
+        252,
+        "0ae4ae31a58f04c07f5089e885a6ab227eeead3ae5ecc675fc40278e5685a8ec",
+    ),
+    "formal_empty_report_rejected": (
+        252,
+        "0ae4ae31a58f04c07f5089e885a6ab227eeead3ae5ecc675fc40278e5685a8ec",
     ),
     "dummy_untyped_evidence": (
         137,
-        "a8c9b84d54b814b0bc38cba9e2733fd96c5e7055195a073754c2fae549712cdd",
+        "a24b4237eacac0dce5236268e10e013e6f1b4b7aaba793c2a6eb6731fdfafa65",
     ),
     "fake_own_claim_id": (
-        248,
-        "b9939876216c9b7438c6437b656b9611f031daa5c2b655c432c1af50c2dcfd32",
+        252,
+        "460b9aa2f9d35e018c64efac59ced5a8c4954719e4ce381648741b47e531b85c",
     ),
     "malformed_claim_nonobject": (
-        246,
-        "62ee2bfd88f361bc5f6168dbdd8b0c9517020e827fff67f7acffbdde86158b1e",
+        250,
+        "b362ba33b3c334ff3ef1ef346bf6bac08914c9e0badcaad896937fb851bd1490",
     ),
     "malformed_claim_null_entry": (
-        246,
-        "62ee2bfd88f361bc5f6168dbdd8b0c9517020e827fff67f7acffbdde86158b1e",
+        250,
+        "b362ba33b3c334ff3ef1ef346bf6bac08914c9e0badcaad896937fb851bd1490",
     ),
     "malformed_claims_null": (
-        246,
-        "52dfc65ed6c92deb8a74cae081ccbc6739b84e96711aefd078b68def77db2d05",
+        250,
+        "011b7ab9d86c9c008fae02362fe7489745a86ea3b65d39309af9af1c03c7a6ff",
     ),
     "empty_promotion_claims_rejected": (
-        246,
-        "62ee2bfd88f361bc5f6168dbdd8b0c9517020e827fff67f7acffbdde86158b1e",
+        250,
+        "b362ba33b3c334ff3ef1ef346bf6bac08914c9e0badcaad896937fb851bd1490",
     ),
     "malformed_claim_bool_id": (
-        246,
-        "62ee2bfd88f361bc5f6168dbdd8b0c9517020e827fff67f7acffbdde86158b1e",
+        250,
+        "b362ba33b3c334ff3ef1ef346bf6bac08914c9e0badcaad896937fb851bd1490",
     ),
     "malformed_claim_duplicate_id": (
-        246,
-        "62ee2bfd88f361bc5f6168dbdd8b0c9517020e827fff67f7acffbdde86158b1e",
+        250,
+        "b362ba33b3c334ff3ef1ef346bf6bac08914c9e0badcaad896937fb851bd1490",
     ),
     "malformed_claim_invalid_id": (
-        246,
-        "62ee2bfd88f361bc5f6168dbdd8b0c9517020e827fff67f7acffbdde86158b1e",
+        250,
+        "b362ba33b3c334ff3ef1ef346bf6bac08914c9e0badcaad896937fb851bd1490",
     ),
     "malformed_scalar": (
-        248,
-        "71b94642bc99aa9ff8d007194b7c5595922ccc858d220310e68a5921f7d97098",
+        252,
+        "9cf4a76249e4f90ae4fd7464187740601682d7819725e1f9c5194e9e5652c5e8",
     ),
     "official_stderr_contradiction_dominates_stdout": (
-        248,
-        "80f784a62273ec0ead79259d9f586c08eef911a76c254ef9b53fe641d1c2a2c9",
+        252,
+        "f0d3bd8450b26f2ac7032fc7c38f030424fed33eaed83f7b6a86112f90023a20",
     ),
     "official_structured_stderr_failure_dominates_stdout": (
-        248,
-        "80f784a62273ec0ead79259d9f586c08eef911a76c254ef9b53fe641d1c2a2c9",
+        252,
+        "f0d3bd8450b26f2ac7032fc7c38f030424fed33eaed83f7b6a86112f90023a20",
     ),
     "official_mixed_jsonl_stderr_failure_dominates_stdout": (
-        248,
-        "80f784a62273ec0ead79259d9f586c08eef911a76c254ef9b53fe641d1c2a2c9",
+        252,
+        "f0d3bd8450b26f2ac7032fc7c38f030424fed33eaed83f7b6a86112f90023a20",
     ),
     "official_early_failure_survives_large_neutral_tail": (
-        248,
-        "80f784a62273ec0ead79259d9f586c08eef911a76c254ef9b53fe641d1c2a2c9",
+        252,
+        "f0d3bd8450b26f2ac7032fc7c38f030424fed33eaed83f7b6a86112f90023a20",
     ),
     "formal_package_identity_bool_int_alias": (
-        248,
-        "107f445ca7a77476394fb11dc0f62e29800e476d7a6d88d26c4841c199492474",
+        252,
+        "278a6205d761aade0aeb541c6dc19919460dcc4a35d6d2945b008991821e6878",
     ),
     "formal_trace_authenticated_bool_int_alias": (
-        248,
-        "3adeca4bc50f722074aa4aad0ef50e498f9e1ff8262ec170ba91b0dd2c56fc6c",
+        252,
+        "d6dc03b66f5d3fe834ba99e33cc4ffffc2e262d245d95e75717dc9eac1c67795",
     ),
     "formal_transcript_without_authentic_native_events": (
-        248,
-        "efdb862db6bf05cb3a41b5523a26a8c8002c66578aa07ce1a7d3eda02833340c",
+        252,
+        "217f27d4a6ebde9b312b5db4a634228c521d95149ebc717700807851a69f2634",
     ),
     "formal_trace_authentication_missing": (
-        248,
-        "a2e92b27f3ee285085c3dbec88920d150790d9c6865e5d1b4cb17d44ae000053",
+        252,
+        "cd0b7847cd96d42dbc6c733b167f512592a9a9408f9dbb9b51204e85fff3e439",
     ),
     "noncanonical_promotion_evidence_path": (
-        245,
-        "7e07360bd4b80c2887c0a04565107b65e1ef87211a5f10fd93bff572138dc691",
+        249,
+        "4b23645938ad0eb490f253e88cbb9b397849aa15926fd11010c1077dba0c5de5",
     ),
     "oversized_evidence_graph_is_bounded": (
-        187,
-        "a5ffa330df71635dc1417c3dccf3de13d5bc6cead624db16c08fe74a917bae0a",
+        191,
+        "04f72696f1ca90811148482aeecdaab9a71e94e0ce5e6f5d6e9f47e441ac2450",
     ),
 }
 
@@ -1309,7 +1690,7 @@ def expected_baseline_lanes() -> Dict[str, List[str]]:
     live.extend([
         "live package-tree algorithm exactly matches current shared algorithm",
         "live package-tree SHA-256 matches current package bytes",
-        "live execution used one stable immutable package snapshot",
+        "live execution used one endpoint-checked package copy with explicit limits",
         "live fixture specification SHA-256 matches current evals bytes",
         "live runtime status has an exact string type",
         "live runtime was executed",
@@ -1417,12 +1798,12 @@ def expected_baseline_lanes() -> Dict[str, List[str]]:
         "typed formal result parses as object",
         "formal result schema is v2",
         "formal result has typed run_id",
-        "formal result status PASS-TRACKED",
+        "formal result status is capped to PASS-SCOPED by execution-boundary limits",
         "formal result gate_status PASS-TRACKED",
         "formal result uses one bundle-local evidence root",
         "formal result package-tree identity has exact JSON schema",
         "formal result package-tree identity matches current package",
-        "formal execution package snapshot is stable and current",
+        "formal execution package copy is endpoint-stable, current, and explicitly scoped",
         (
             "formal Claude executable path, version, and pre/post identity "
             "are bound"
@@ -1432,7 +1813,7 @@ def expected_baseline_lanes() -> Dict[str, List[str]]:
         "formal companion specifications load from current runner",
         "formal runner exports exact result schema specifications",
         "formal result projected fields have exact JSON types",
-        "formal result declares standalone immutable snapshot context",
+        "formal result declares standalone endpoint-checked copy context",
         "formal result declares exact required typed companions",
     ]
     for role in EXPECTED_FORMAL_ROLES:
@@ -1444,8 +1825,18 @@ def expected_baseline_lanes() -> Dict[str, List[str]]:
             f"formal companion exact bytes and sha256 match: {role}",
         ])
     formal.extend([
+        "formal coordinator prompt digest matches declared prompt companion",
+        "formal coordinator stdout matches complete transcript companion",
+        (
+            "formal strict-gate argv binds declared certificate and gate "
+            "companions"
+        ),
+        "formal output checks recompute exactly from declared companions",
         "formal result directory has no undeclared reserved companions",
-        "formal target snapshot binds stable pre/post digest",
+        (
+            "formal target copy binds stable pre/post endpoints without "
+            "claiming temporal immutability"
+        ),
         "current formal gate is a regular file",
         "formal trace authentication has exact JSON schema",
         "formal transcript re-authenticates and matches recorded semantics",
@@ -2529,10 +2920,22 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                         "CHECK_FAILED",
                         "INVALID_INPUT",
                     ),
+                    (
+                        "formal output checks recompute exactly from declared "
+                        "companions",
+                        "CHECK_FAILED",
+                        '"recomputed"',
+                    ),
                     ((
                         "formal result directory has no undeclared reserved "
                         "companions"
                     ), "INVALID_INPUT", "synthetic-target_NOZICKIAN_certificate.json"),
+                    (
+                        "formal strict-gate argv binds declared certificate "
+                        "and gate companions",
+                        "CHECK_FAILED",
+                        '"command_certificate"',
+                    ),
                 ],
                 expected_recorded_details={
                     (
@@ -2545,6 +2948,190 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                         "INVALID_INPUT",
                     ): "synthetic-target_NOZICKIAN_certificate.json",
                 },
+            )
+
+            def mutate_formal_result(
+                bundle: Path,
+                mutate: Callable[[Dict[str, Any]], None],
+            ) -> None:
+                result_path = (
+                    bundle
+                    / "formal_artifacts/artifact-001/formal_result.json"
+                )
+                result = json.loads(
+                    result_path.read_text(encoding="utf-8")
+                )
+                mutate(result)
+                write_json(result_path, result)
+                update_certificate(
+                    bundle,
+                    lambda certificate: refresh_node_hash(
+                        certifier,
+                        bundle,
+                        certificate,
+                        "formal.result",
+                    ),
+                )
+
+            def substitute_formal_coordinator_result(bundle: Path) -> None:
+                mutate_formal_result(
+                    bundle,
+                    lambda result: result.__setitem__(
+                        "formal_coordinator",
+                        "attacker-result-coordinator",
+                    ),
+                )
+
+            run_mutation(
+                "formal_coordinator_result_identity_binding",
+                substitute_formal_coordinator_result,
+                "INVALID_INPUT",
+                [(
+                    "formal result projected fields have exact JSON types",
+                    "INVALID_INPUT",
+                    "attacker-result-coordinator",
+                )],
+            )
+
+            def substitute_formal_coordinator_argv(bundle: Path) -> None:
+                mutate_formal_result(
+                    bundle,
+                    lambda result: result["commands"][1]["argv"].__setitem__(
+                        4,
+                        "attacker-argv-coordinator",
+                    ),
+                )
+
+            run_mutation(
+                "formal_coordinator_argv_identity_binding",
+                substitute_formal_coordinator_argv,
+                "INVALID_INPUT",
+                [(
+                    "formal result projected fields have exact JSON types",
+                    "INVALID_INPUT",
+                    "attacker-argv-coordinator",
+                )],
+            )
+
+            def substitute_formal_prompt(bundle: Path) -> None:
+                mutate_formal_result(
+                    bundle,
+                    lambda result: result["commands"][1]["argv"].__setitem__(
+                        -1,
+                        "sha256:" + "d" * 64,
+                    ),
+                )
+
+            run_mutation(
+                "formal_prompt_companion_binding",
+                substitute_formal_prompt,
+                "CHECK_FAILED",
+                [(
+                    "formal coordinator prompt digest matches declared "
+                    "prompt companion",
+                    "CHECK_FAILED",
+                    "sha256:dddddddd",
+                )],
+            )
+
+            def mismatch_formal_transcript_command(bundle: Path) -> None:
+                def mutate(result: Dict[str, Any]) -> None:
+                    result["commands"][1]["stdout_sha256"] = (
+                        "sha256:" + "e" * 64
+                    )
+
+                mutate_formal_result(bundle, mutate)
+
+            run_mutation(
+                "formal_transcript_command_binding",
+                mismatch_formal_transcript_command,
+                "CHECK_FAILED",
+                [(
+                    "formal coordinator stdout matches complete transcript "
+                    "companion",
+                    "CHECK_FAILED",
+                    "sha256:eeeeeeee",
+                )],
+            )
+
+            def mismatch_formal_gate_companions(bundle: Path) -> None:
+                def mutate(result: Dict[str, Any]) -> None:
+                    gate_argv = result["commands"][2]["argv"]
+                    gate_argv[2] = (
+                        "<output-dir>/attacker_NOZICKIAN_certificate.json"
+                    )
+                    gate_argv[7] = (
+                        "<output-dir>/attacker_NOZICKIAN_GATE.md"
+                    )
+
+                mutate_formal_result(bundle, mutate)
+
+            run_mutation(
+                "formal_gate_companion_argv_binding",
+                mismatch_formal_gate_companions,
+                "CHECK_FAILED",
+                [(
+                    "formal strict-gate argv binds declared certificate and "
+                    "gate companions",
+                    "CHECK_FAILED",
+                    "attacker_NOZICKIAN_certificate.json",
+                )],
+            )
+
+            def replace_formal_output_checks(bundle: Path) -> None:
+                mutate_formal_result(
+                    bundle,
+                    lambda result: result.__setitem__(
+                        "output_checks",
+                        [{
+                            "name": "attacker self-attested pass",
+                            "passed": True,
+                        }],
+                    ),
+                )
+
+            run_mutation(
+                "formal_arbitrary_output_check_rejected",
+                replace_formal_output_checks,
+                "CHECK_FAILED",
+                [(
+                    "formal output checks recompute exactly from declared "
+                    "companions",
+                    "CHECK_FAILED",
+                    "attacker self-attested pass",
+                )],
+            )
+
+            def empty_formal_report(bundle: Path) -> None:
+                def mutate(result: Dict[str, Any]) -> None:
+                    report_record = result["companions"]["report"]
+                    report_path = (
+                        bundle
+                        / "formal_artifacts/artifact-001"
+                        / report_record["path"]
+                    )
+                    report_path.write_bytes(b"")
+                    report_record.update({
+                        "sha256": (
+                            "sha256:"
+                            + hashlib.sha256(b"").hexdigest()
+                        ),
+                        "bytes": 0,
+                        "present": True,
+                    })
+
+                mutate_formal_result(bundle, mutate)
+
+            run_mutation(
+                "formal_empty_report_rejected",
+                empty_formal_report,
+                "CHECK_FAILED",
+                [(
+                    "formal output checks recompute exactly from declared "
+                    "companions",
+                    "CHECK_FAILED",
+                    "output exists: report",
+                )],
             )
 
             def dummy_evidence(bundle: Path) -> None:
@@ -2982,12 +3569,20 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 "formal_transcript_without_authentic_native_events",
                 transcript_without_authentic_native_events,
                 "CHECK_FAILED",
-                [(
-                    "formal transcript re-authenticates and matches "
-                    "recorded semantics",
-                    "CHECK_FAILED",
-                    "\"parsed_authenticated\": false",
-                )],
+                [
+                    (
+                        "formal coordinator stdout matches complete transcript "
+                        "companion",
+                        "CHECK_FAILED",
+                        '"companion_transcript_sha256"',
+                    ),
+                    (
+                        "formal transcript re-authenticates and matches "
+                        "recorded semantics",
+                        "CHECK_FAILED",
+                        "\"parsed_authenticated\": false",
+                    ),
+                ],
             )
 
             def missing_trace_authentication(bundle: Path) -> None:
@@ -3123,6 +3718,11 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
             replaceable_json = root / "replaceable-certifier-result.json"
             original_regular_bytes = b"replace this regular result\n"
             replaceable_json.write_bytes(original_regular_bytes)
+            original_regular_metadata = replaceable_json.lstat()
+            original_regular_identity = (
+                original_regular_metadata.st_dev,
+                original_regular_metadata.st_ino,
+            )
             (
                 replace_rc,
                 replace_result,
@@ -3138,22 +3738,55 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
             except (TypeError, ValueError):
                 replaced_result = None
             replace_metadata = replaceable_json.lstat()
+            replacement_identity = (
+                replace_metadata.st_dev,
+                replace_metadata.st_ino,
+            )
+            replace_temp_residue = sorted(
+                entry.name
+                for entry in root.iterdir()
+                if entry.name.startswith(
+                    f".{replaceable_json.name}."
+                )
+                and entry.name.endswith(".tmp")
+            )
             cases.append({
                 "name": "certifier_json_regular_file_is_atomically_replaced",
                 "passed": (
                     replace_rc == 2
                     and replace_result.get("status") == certifier.PASS_SCOPED
                     and replace_result.get("outcome") == "CAPPED"
+                    and replace_result.get("modeled_promotion_checks_passed")
+                    is True
+                    and not failed_check_inventory(replace_result)
+                    and "failure_kind" not in replace_result
                     and replace_invocation.get("verified") is True
                     and replaced_bytes != original_regular_bytes
                     and replaced_result == replace_result
                     and stat.S_ISREG(replace_metadata.st_mode)
                     and replace_metadata.st_nlink == 1
+                    and replacement_identity != original_regular_identity
+                    and not replace_temp_residue
                 ),
                 "execution_mode": "production-certifier-cli",
                 "exit_code": replace_rc,
                 "status": replace_result.get("status"),
                 "cli_invocation_verified": replace_invocation.get("verified"),
+                "modeled_promotion_checks_passed": replace_result.get(
+                    "modeled_promotion_checks_passed"
+                ),
+                "failed_checks": sorted(
+                    failed_check_inventory(replace_result).elements()
+                ),
+                "stdout_json_equal": replaced_result == replace_result,
+                "inode_replaced": (
+                    replacement_identity != original_regular_identity
+                ),
+                "private_regular": (
+                    stat.S_ISREG(replace_metadata.st_mode)
+                    and replace_metadata.st_nlink == 1
+                ),
+                "temp_residue": replace_temp_residue,
             })
 
             ancestor_external = root / "certifier-ancestor-external"
@@ -3306,6 +3939,23 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--json", type=Path)
     args = parser.parse_args(argv)
     source_root = Path(os.path.abspath(args.package_root))
+    output_path: Optional[Path] = None
+    output_directory_fd: Optional[int] = None
+    if args.json is not None:
+        try:
+            output_path, output_directory_fd = (
+                _acquire_json_output_capability(args.json)
+            )
+        except (OSError, RuntimeError, ValueError):
+            print(json.dumps({
+                "status": "FAIL",
+                "failure_kind": "INVALID_INPUT",
+                "reason": "unsafe --json output path was rejected",
+                "total": 0,
+                "passed": 0,
+                "cases": [],
+            }, indent=2, sort_keys=True))
+            return 2
     try:
         result = run_contract(source_root)
     except Exception as exc:
@@ -3321,10 +3971,25 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "cases": [],
         }
     text = json.dumps(result, indent=2, sort_keys=True)
+    if output_path is not None and output_directory_fd is not None:
+        try:
+            _atomic_replace_json_output(
+                output_path,
+                text + "\n",
+                directory_fd=output_directory_fd,
+            )
+        except (OSError, RuntimeError, ValueError):
+            failed_result = dict(result)
+            failed_result.update({
+                "status": "FAIL",
+                "failure_kind": "INVALID_INPUT",
+                "json_output_error": "held --json output path changed or became unsafe",
+            })
+            print(json.dumps(failed_result, indent=2, sort_keys=True))
+            os.close(output_directory_fd)
+            return 2
+        os.close(output_directory_fd)
     print(text)
-    if args.json:
-        args.json.parent.mkdir(parents=True, exist_ok=True)
-        args.json.write_text(text + "\n", encoding="utf-8")
     return 0 if result.get("status") == "PASS" else 2
 
 

@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-pass-tracked-upgrade-audit",
+  "claim_proposition_sha256": "sha256:af6dd806f1832342970a4c3a945bfd9964b1b8072def1be83cdef7feac81ef8b",
+  "command_or_source": "run_formal_runner_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:517e35769576f4142d64422d1a6d60fc0be8d513bb8aedb588c560006fef810d",
+  "observation_id": "obs:C-pass-tracked-upgrade-audit:TW-certifier-distinct-outputs",
+  "observed_result": "The formal contract retained distinct JSON and Markdown outputs with the expected structured result and rendered report.",
+  "support_summary": "This wrapper binds TW-certifier-distinct-outputs to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "TW-certifier-distinct-outputs",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

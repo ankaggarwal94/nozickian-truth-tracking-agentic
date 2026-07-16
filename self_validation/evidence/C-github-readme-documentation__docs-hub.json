@@ -4,8 +4,8 @@
   "claim_proposition_sha256": "sha256:7aa3f6e8c7fafe0ac5e9ffe5a65d423e0a8695b381203fad4f74c6e174c64227",
   "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:b53678adc7d592fb78bc0df787e14b4a1dab797d004728503e0ca073d16d32cb",
+  "hash_or_version": "sha256:818c02a841d60e0ac201c44fdd1a162d85710ae0c025ef40e0e18a40e63af060",
   "observed_result": "Current source bytes support the scoped proposition for C-github-readme-documentation.",
   "support_summary": "This wrapper binds C-github-readme-documentation to current package artifact docs/README.md by exact SHA-256 and to the canonical claim proposition digest.",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

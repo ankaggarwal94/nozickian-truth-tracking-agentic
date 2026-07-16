@@ -1,14 +1,14 @@
 {
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-gate-hardening",
-  "claim_proposition_sha256": "sha256:c943a52556d1e129e758bf16d2a2e89804516e94d1e5c510d81a1b4b4ad9d62c",
+  "claim_proposition_sha256": "sha256:4bff8ccb92cb75bf893456a5777bc58a7075432de4546f01befa6f9541f5e35c",
   "command_or_source": "run_gate_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
-  "modal_case_sha256": "sha256:60c2fc3200d4002ad73a47e8a63873855c4f1d7a5fe73b0cf7c277ba8367184f",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:8969b29dc40ab94c34f3d06b288425f191bfdb3632a6dee0bbaec3fed65b3f37",
   "observation_id": "obs:C-gate-hardening:FW-gate-path-control",
   "observed_result": "The gate contract rejected the control-character artifact path without raising an external exception.",
   "support_summary": "This wrapper binds FW-gate-path-control to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-gate-path-control",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

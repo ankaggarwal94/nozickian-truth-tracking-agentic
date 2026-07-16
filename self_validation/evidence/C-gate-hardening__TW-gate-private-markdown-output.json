@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-gate-hardening",
+  "claim_proposition_sha256": "sha256:4bff8ccb92cb75bf893456a5777bc58a7075432de4546f01befa6f9541f5e35c",
+  "command_or_source": "run_gate_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:62a1bd363a4a55d977795f7a8658cb2795dcc4a5d4f10416f9103abe0d3c68ca",
+  "observation_id": "obs:C-gate-hardening:TW-gate-private-markdown-output",
+  "observed_result": "The gate contract atomically created the fresh Markdown report with mode 0600 and exact bytes.",
+  "support_summary": "This wrapper binds TW-gate-private-markdown-output to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "TW-gate-private-markdown-output",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

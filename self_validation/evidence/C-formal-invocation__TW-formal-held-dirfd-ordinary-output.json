@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-formal-invocation",
+  "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
+  "command_or_source": "run_formal_runner_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:2e4ef5962636695ab062e4928b3da8f4fe87f85e241954f42acb027876c63d2f",
+  "observation_id": "obs:C-formal-invocation:TW-formal-held-dirfd-ordinary-output",
+  "observed_result": "The formal contract retained every ordinary held-directory output operation with exact expected bytes.",
+  "support_summary": "This wrapper binds TW-formal-held-dirfd-ordinary-output to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "TW-formal-held-dirfd-ordinary-output",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

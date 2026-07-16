@@ -89,7 +89,7 @@
   "pass_tracked_upgrade_audit": {
     "aggregate_contract": {
       "command": "python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .",
-      "expected_cases": "36/36",
+      "expected_cases": "43/43",
       "evidence_kind": "synthetic-contract-not-runtime-authentication",
       "production_certifier_cli": true
     },
@@ -120,8 +120,19 @@
     },
     "formal_result_contract": {
       "companion_manifest": "exact report, gate, certificate, ledger, transcript, prompt, and target_snapshot path/sha256/bytes records",
+      "output_capability_policy": "formal output and compatibility JSON parents are acquired component-wise with O_DIRECTORY/O_NOFOLLOW before execution and held through descriptor-relative O_EXCL creation, link/rename installation, and directory fsync; canonical-result versus compatibility-JSON classification is frozen during pre-execution collision analysis against held identities and is not recomputed after writes; formal children receive only runner-owned /proc/<runner-pid>/fd/N via pass_fds, where procfs-visible Pid must equal the child's procfs-visible direct-parent PPid and child-FD close/rebind, self/unrelated PIDs, noncanonical or nonpositive PID/FD tokens, extra components, closed descriptors, and file descriptors are rejected; unavailable procfd inheritance is INVALID_INPUT before output mutation",
+      "output_check_policy": "exact nonempty all-passing projection recomputed from the bound report, certificate, ledger, and gate; arbitrary self-attested checks and coherently rehashed empty report or gate companions fail closed",
       "selection": "typed formal.result locator only; no basename or glob-first substitution; unrelated nonreserved files may remain",
-      "standalone_target_snapshot": "immutable",
+      "standalone_target_snapshot": "endpoint-checked permission-hardened copy; not temporally immutable",
+      "temporal_immutability_enforced": false,
+      "process_containment": {
+        "cleanup_after_leader_exit": true,
+        "detached_session_descendants_contained": true,
+        "mechanism": "linux-child-subreaper-plus-process-group"
+      },
+      "detached_descendant_survivor": false,
+      "process_containment_cleanup_complete": true,
+      "unavailable_process_containment_behavior": "fail-before-execution",
       "version": "2.0",
       "identities": [
         "package_tree_identity",
@@ -144,11 +155,11 @@
       "fresh deterministic checks with deterministic-capture-v2 projections",
       "fresh allowlisted official validators",
       "live fixture runtime evals",
-      "formal result 2.0 with immutable standalone target snapshot and trace auth",
+      "formal result 2.0 with standalone endpoint-checked target copy, explicit temporal/containment limitations, PASS-SCOPED cap, and trace auth",
       "strict gate PASS-TRACKED on generated certificate",
       "explicit downstream_review"
     ],
-    "safe_output_policy": "Caller-supplied certifier/formal paths reject symlinked ancestors, direct links, special files, and hardlink aliases with structured invalid-input results. Existing private regular --json files are intentionally replaced through same-directory exclusive temporaries plus atomic replacement; --output-dir must be a real directory or safely created new directory.",
+    "safe_output_policy": "gate Markdown, certifier JSON/Markdown, formal output and compatibility JSON, live transcripts and optional JSON, validator Markdown, and the gate/formal/regression/promotion contract JSON wrappers plus the fixed behavior and stable-release manifests acquire component-wise O_DIRECTORY/O_NOFOLLOW parent capabilities before their long-running work and retain them through descriptor-relative exclusive temporary or new-file creation, link/rename installation as applicable, and directory fsync; role and alias classifications are frozen from lexical names plus held identities, each output enforces its declared fresh-versus-replaceable final-name policy, and direct or ancestor links, special/hardlink sentinels, cross-output aliases, and lexical-parent substitution cannot redirect writes and fail closed; validator Markdown also rechecks that its held parent remains outside the package tree; endpoint and held-capability checks are not temporal isolation",
     "stream_binding_policy": "Official validator decisions and formal transcript authentication/hash/byte counts bind complete captured bytes. Public results may contain bounded sanitized excerpts and explicit truncation metadata; capture-limit excess fails closed and tail-only authentication is forbidden.",
     "live_result_bindings": {
       "artifact_sha256_by_fixture": {
@@ -198,7 +209,7 @@
         "Issue #5 consistency-sweep activation and resolution mechanics remain parent-enforced.",
         "Issue #5 REMOTE_GROUND_TRUTH_REQUIRED escalation mechanics remain parent-enforced."
       ],
-      "scope": "certify_pass_tracked_upgrade.py only; generic ntt_gate.py and formal-runner PASS-TRACKED semantics remain unchanged"
+      "scope": "certify_pass_tracked_upgrade.py applies the modeled-promotion cap; generic ntt_gate.py PASS-TRACKED semantics remain unchanged; the formal runner separately caps otherwise PASS-TRACKED results for unenforced temporal immutability, while unavailable process containment fails before execution"
     }
   },
   "remote_escalations": [

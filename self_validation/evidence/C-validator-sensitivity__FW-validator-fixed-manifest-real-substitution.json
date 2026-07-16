@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-validator-sensitivity",
+  "claim_proposition_sha256": "sha256:dc2dfd6a76bb8c4bf7cf9bfaaca1a161188aff38741fec6771cc1afccb021f4f",
+  "command_or_source": "validate_package.py --self-test",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:849165ca0fb7a994e543e33b6b79cddf4f469792b53654d9ad78ea1b9ad6b96c",
+  "observation_id": "obs:C-validator-sensitivity:FW-validator-fixed-manifest-real-substitution",
+  "observed_result": "The validator self-test rejected real-root substitution for both manifest builders and preserved original and replacement bytes.",
+  "support_summary": "This wrapper binds FW-validator-fixed-manifest-real-substitution to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-validator-fixed-manifest-real-substitution",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

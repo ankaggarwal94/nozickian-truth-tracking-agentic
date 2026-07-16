@@ -12,8 +12,8 @@ jobs:
   deterministic-validation:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.11'
       - name: Validate package surface and modal fixtures
@@ -30,7 +30,7 @@ jobs:
           archive_root="$(mktemp -d)"
           trap 'rm -rf "$archive_root"' EXIT
           git archive --format=tar HEAD | tar -xf - -C "$archive_root"
-          python3 "$archive_root/skills/nozickian-verify/scripts/validate_package.py" "$archive_root"
+          python3 "$archive_root/skills/nozickian-verify/scripts/validate_package.py" "$archive_root" --self-test --markdown /tmp/ntt_ci_outputs/ARCHIVE_SELF_VALIDATION_REPORT.md
           cd "$archive_root"
           python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .
       - name: Run Nozickian gate on self-certificate

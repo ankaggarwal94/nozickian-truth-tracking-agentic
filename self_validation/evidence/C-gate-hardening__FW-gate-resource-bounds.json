@@ -1,14 +1,14 @@
 {
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-gate-hardening",
-  "claim_proposition_sha256": "sha256:c943a52556d1e129e758bf16d2a2e89804516e94d1e5c510d81a1b4b4ad9d62c",
+  "claim_proposition_sha256": "sha256:4bff8ccb92cb75bf893456a5777bc58a7075432de4546f01befa6f9541f5e35c",
   "command_or_source": "run_gate_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
-  "modal_case_sha256": "sha256:2a4268999c64cb52789b1c102dfeba8f7a01671772df3766f2ad0a508734fdb9",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:3f8973f7c7c76e7224dc4fdc349a7d18fd8b2d2e8691e3a853f5bc3858690653",
   "observation_id": "obs:C-gate-hardening:FW-gate-resource-bounds",
   "observed_result": "The gate contract bounded the recursive ledger and returned INVALID_INPUT without a traceback.",
   "support_summary": "This wrapper binds FW-gate-resource-bounds to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-gate-resource-bounds",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

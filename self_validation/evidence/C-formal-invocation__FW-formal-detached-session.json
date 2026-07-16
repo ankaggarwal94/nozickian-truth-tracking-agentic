@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-formal-invocation",
+  "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
+  "command_or_source": "run_formal_runner_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:d7e77ac14e0b43dc7a61d12e4cbcf2028e16752e8f124ddde3240b106d7c6ec7",
+  "observation_id": "obs:C-formal-invocation:FW-formal-detached-session",
+  "observed_result": "The formal contract contained the detached-session child on supported Linux or refused execution where containment was unavailable, with no sentinel left behind.",
+  "support_summary": "This wrapper binds FW-formal-detached-session to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-formal-detached-session",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

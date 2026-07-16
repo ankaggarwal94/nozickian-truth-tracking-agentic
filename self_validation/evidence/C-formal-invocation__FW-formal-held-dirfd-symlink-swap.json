@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-formal-invocation",
+  "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
+  "command_or_source": "run_formal_runner_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:d8d55dba7015f275c25f032997351d759f899e2fc038b64b191cf1b798cb8cdf",
+  "observation_id": "obs:C-formal-invocation:FW-formal-held-dirfd-symlink-swap",
+  "observed_result": "The formal contract rejected ancestor-to-symlink swaps across new-file, replace, and reserved-output writers without changing the external sentinel.",
+  "support_summary": "This wrapper binds FW-formal-held-dirfd-symlink-swap to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-formal-held-dirfd-symlink-swap",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

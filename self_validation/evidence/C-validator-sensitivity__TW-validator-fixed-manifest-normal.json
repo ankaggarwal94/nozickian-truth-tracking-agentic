@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-validator-sensitivity",
+  "claim_proposition_sha256": "sha256:dc2dfd6a76bb8c4bf7cf9bfaaca1a161188aff38741fec6771cc1afccb021f4f",
+  "command_or_source": "validate_package.py --self-test",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:216c607ad23b9e386bc63c0bc51e0a5236593b6705a1d5ab5df91605b1355f6b",
+  "observation_id": "obs:C-validator-sensitivity:TW-validator-fixed-manifest-normal",
+  "observed_result": "The validator self-test retained normal private-file replacement for both fixed manifests with mode 0644 and one link.",
+  "support_summary": "This wrapper binds TW-validator-fixed-manifest-normal to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "TW-validator-fixed-manifest-normal",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

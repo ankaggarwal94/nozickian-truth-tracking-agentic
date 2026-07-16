@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-formal-invocation",
+  "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
+  "command_or_source": "run_formal_runner_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:6944acd36beb2425342802e8b11002b26bef0c01ff5eb857ae932fbd12e1f8c6",
+  "observation_id": "obs:C-formal-invocation:FW-formal-empty-report-gate",
+  "observed_result": "The formal contract rejected empty report and gate companions despite internally recomputed metadata.",
+  "support_summary": "This wrapper binds FW-formal-empty-report-gate to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-formal-empty-report-gate",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

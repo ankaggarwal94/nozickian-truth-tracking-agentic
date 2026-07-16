@@ -1,14 +1,14 @@
 {
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-formal-invocation",
-  "claim_proposition_sha256": "sha256:ad5a976a1b91c94ca32386a493b58776f54a6fcf63bbdae479de86154acd2e43",
+  "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
   "command_or_source": "run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
-  "modal_case_sha256": "sha256:12ade9a186d7ced5cac024d10a324901de189c6cf9b53c5926e3210aed7719cf",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:6284793ca8b2936ce06cecb4bba94869574bf5152daccf0d98db299d06f65d05",
   "observation_id": "obs:C-formal-invocation:FW-formal-descendant-pipe",
-  "observed_result": "The formal contract terminated the inherited-pipe process group and completed within the bound.",
+  "observed_result": "The formal contract terminated the inherited-pipe process group, completed cleanup, and left no sentinel.",
   "support_summary": "This wrapper binds FW-formal-descendant-pipe to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-formal-descendant-pipe",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

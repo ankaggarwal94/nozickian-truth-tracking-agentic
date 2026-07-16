@@ -1899,33 +1899,289 @@ def to_markdown(result: Mapping[str, Any], cert_path: Path) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _atomic_write_new_text(path: Path, text: str) -> None:
-    # SECURITY-REVIEW: The caller-selected report path is installed only when
-    # absent via O_EXCL/O_NOFOLLOW plus an atomic hard-link operation. Existing
-    # symlinks, special files, regular files, and hardlink sentinels are never
-    # opened or overwritten.
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
-    descriptor: Optional[int] = None
+def _proc_status_pid(field: str) -> Optional[int]:
+    """Return one canonical procfs-visible Pid/PPid field."""
+    if field not in {"Pid", "PPid"}:
+        raise ValueError("unsupported proc status identity field")
     try:
-        descriptor = os.open(temporary, flags, 0o600)
-        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-            descriptor = None
-            stream.write(text)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.link(temporary, path, follow_symlinks=False)
-        temporary.unlink()
-    finally:
-        if descriptor is not None:
+        with Path("/proc/self/status").open(
+            "r", encoding="utf-8", errors="replace"
+        ) as stream:
+            payload = stream.read(64 * 1024)
+    except OSError:
+        return None
+    matches: List[int] = []
+    prefix = f"{field}:"
+    for line in payload.splitlines():
+        if not line.startswith(prefix):
+            continue
+        fields = line.split()
+        if len(fields) != 2 or not fields[1].isdigit():
+            return None
+        value = int(fields[1])
+        if value <= 0 or str(value) != fields[1]:
+            return None
+        matches.append(value)
+    if len(matches) != 1:
+        return None
+    return matches[0]
+
+
+def _open_output_parent(path: Path) -> Tuple[int, str]:
+    """Open/create an output parent by dirfd without following symlinks."""
+    raw = str(path)
+    if (
+        not raw
+        or any(
+            ord(character) < 32
+            or ord(character) == 127
+            or unicodedata.category(character) == "Cc"
+            for character in raw
+        )
+    ):
+        raise ValueError("output path contains a control character")
+    if path.name in {"", ".", ".."} or ".." in path.parts:
+        raise ValueError("output path is not canonical")
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory = getattr(os, "O_DIRECTORY", 0)
+    if not nofollow or not directory:
+        raise OSError("platform lacks no-follow directory traversal")
+    # The formal runner addresses its already-held output directory as
+    # /proc/<direct-parent-pid>/fd/N. Opening that exact kernel capability keeps
+    # the target bound to the runner even if this child closes/rebinds its own
+    # descriptor N. Self, unrelated-PID, malformed, closed-fd, and nested
+    # procfd spellings are rejected rather than traversed.
+    parent_parts = path.parent.parts
+    procfd_shape = (
+        os.name == "posix"
+        and len(parent_parts) == 5
+        and parent_parts[0:2] == ("/", "proc")
+        and parent_parts[3] == "fd"
+    )
+    if procfd_shape:
+        pid_token = parent_parts[2]
+        fd_token = parent_parts[4]
+        if not (
+            pid_token.isascii()
+            and pid_token.isdecimal()
+            and fd_token.isascii()
+            and fd_token.isdecimal()
+        ):
+            raise ValueError("procfd output capability is not canonical")
+        pid_value = int(pid_token)
+        fd_value = int(fd_token)
+        if (
+            pid_value <= 0
+            or fd_value <= 0
+            or str(pid_value) != pid_token
+            or str(fd_value) != fd_token
+        ):
+            raise ValueError("procfd output capability is not canonical")
+        proc_parent_pid = _proc_status_pid("PPid")
+        if (
+            proc_parent_pid is None
+            or pid_token != str(proc_parent_pid)
+        ):
+            raise ValueError(
+                "procfd output capability is not owned by the direct parent"
+            )
+        descriptor = os.open(
+            str(path.parent),
+            os.O_RDONLY | directory,
+        )
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISDIR(metadata.st_mode):
             os.close(descriptor)
+            raise ValueError("parent output capability is not a directory")
+        return descriptor, path.name
+    if path.is_absolute():
+        descriptor = os.open(path.anchor, os.O_RDONLY | directory)
+        parts = path.parent.parts[1:]
+    else:
+        descriptor = os.open(".", os.O_RDONLY | directory)
+        parts = path.parent.parts
+    try:
+        for part in parts:
+            if part in {"", "."}:
+                continue
+            try:
+                child = os.open(
+                    part,
+                    os.O_RDONLY | directory | nofollow,
+                    dir_fd=descriptor,
+                )
+            except FileNotFoundError:
+                os.mkdir(part, mode=0o700, dir_fd=descriptor)
+                child = os.open(
+                    part,
+                    os.O_RDONLY | directory | nofollow,
+                    dir_fd=descriptor,
+                )
+            os.close(descriptor)
+            descriptor = child
+        return descriptor, path.name
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _canonical_output_path(path: Path) -> Path:
+    raw = str(path)
+    absolute = Path(os.path.abspath(path))
+    if (
+        not raw
+        or any(
+            ord(character) < 32
+            or ord(character) == 127
+            or unicodedata.category(character) == "Cc"
+            for character in raw
+        )
+        or absolute.name in {"", ".", ".."}
+        or ".." in absolute.parts
+    ):
+        raise ValueError("output path is not canonical")
+    return absolute
+
+
+def _directory_path_matches_fd(path: Path, descriptor: int) -> bool:
+    observed: Optional[int] = None
+    try:
+        parent_parts = path.parts
+        procfd_shape = (
+            os.name == "posix"
+            and len(parent_parts) == 5
+            and parent_parts[0:2] == ("/", "proc")
+            and parent_parts[3] == "fd"
+        )
+        if procfd_shape:
+            observed, _name = _open_output_parent(
+                path / "identity-probe"
+            )
+        else:
+            nofollow = getattr(os, "O_NOFOLLOW", 0)
+            directory = getattr(os, "O_DIRECTORY", 0)
+            if not nofollow or not directory:
+                return False
+            flags = os.O_RDONLY | nofollow | directory
+            if hasattr(os, "O_CLOEXEC"):
+                flags |= os.O_CLOEXEC
+            absolute = Path(os.path.abspath(path))
+            observed = os.open(os.path.sep, flags)
+            for component in absolute.parts[1:]:
+                child = os.open(component, flags, dir_fd=observed)
+                os.close(observed)
+                observed = child
+        expected_metadata = os.fstat(descriptor)
+        observed_metadata = os.fstat(observed)
+        return (
+            expected_metadata.st_dev,
+            expected_metadata.st_ino,
+        ) == (
+            observed_metadata.st_dev,
+            observed_metadata.st_ino,
+        )
+    except (OSError, ValueError):
+        return False
+    finally:
+        if observed is not None:
+            os.close(observed)
+
+
+def _require_new_markdown_target(directory_fd: int, name: str) -> None:
+    try:
+        os.stat(
+            name,
+            dir_fd=directory_fd,
+            follow_symlinks=False,
+        )
+    except FileNotFoundError:
+        return
+    raise ValueError("Markdown output target already exists")
+
+
+def _acquire_markdown_output_capability(path: Path) -> Tuple[Path, int]:
+    absolute = _canonical_output_path(path)
+    descriptor, _name = _open_output_parent(absolute)
+    try:
+        _require_new_markdown_target(descriptor, absolute.name)
+        if not _directory_path_matches_fd(absolute.parent, descriptor):
+            raise ValueError("Markdown output parent identity is unstable")
+        return absolute, descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _atomic_write_new_text(
+    path: Path,
+    text: str,
+    *,
+    directory_fd: Optional[int] = None,
+) -> None:
+    # SECURITY-REVIEW: Traverse the caller-selected report parent by dirfd so
+    # no ancestor symlink is followed, then install only to an absent final
+    # name. Existing symlinks, special files, regular files, and hardlink
+    # sentinels are never opened or overwritten.
+    if directory_fd is None:
+        absolute, parent_fd = _acquire_markdown_output_capability(path)
+    else:
+        absolute = _canonical_output_path(path)
+        parent_fd = os.dup(directory_fd)
+    target_name = absolute.name
+    temporary_name = f".{target_name}.{uuid.uuid4().hex}.tmp"
+    temporary_created = False
+    try:
+        _require_new_markdown_target(parent_fd, target_name)
+        if not _directory_path_matches_fd(absolute.parent, parent_fd):
+            raise ValueError("Markdown output parent changed before write")
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+        descriptor = os.open(
+            temporary_name,
+            flags,
+            0o600,
+            dir_fd=parent_fd,
+        )
+        temporary_created = True
         try:
-            temporary.unlink()
-        except FileNotFoundError:
-            pass
+            payload = text.encode("utf-8")
+            offset = 0
+            while offset < len(payload):
+                written = os.write(descriptor, payload[offset:])
+                if written <= 0:
+                    raise OSError("short write while creating Markdown report")
+                offset += written
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+        _require_new_markdown_target(parent_fd, target_name)
+        if not _directory_path_matches_fd(absolute.parent, parent_fd):
+            raise ValueError("Markdown output parent changed before install")
+        os.link(
+            temporary_name,
+            target_name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        os.unlink(temporary_name, dir_fd=parent_fd)
+        temporary_created = False
+        installed = os.stat(
+            target_name,
+            dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        if not stat.S_ISREG(installed.st_mode) or installed.st_nlink != 1:
+            raise OSError("installed Markdown report is not a private regular file")
+        os.fsync(parent_fd)
+        if not _directory_path_matches_fd(absolute.parent, parent_fd):
+            raise ValueError("Markdown output parent changed during install")
+    finally:
+        if temporary_created:
+            try:
+                os.unlink(temporary_name, dir_fd=parent_fd)
+            except FileNotFoundError:
+                pass
+        os.close(parent_fd)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -1937,6 +2193,19 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         default="generic",
     )
     args = ap.parse_args(argv)
+    markdown_path: Optional[Path] = None
+    markdown_directory_fd: Optional[int] = None
+    if args.markdown is not None:
+        try:
+            markdown_path, markdown_directory_fd = (
+                _acquire_markdown_output_capability(args.markdown)
+            )
+        except (OSError, RuntimeError, ValueError):
+            invalid = _invalid_certificate_result(
+                "unsafe --markdown output path was rejected"
+            )
+            print(json.dumps(invalid, indent=2, sort_keys=True))
+            return 2
     evidence_root = args.evidence_root
     try:
         result = evaluate_certificate(
@@ -1958,14 +2227,29 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "claim_results": [],
         }
     display_result = normalize_cli_display(result, evidence_root)
-    print(json.dumps(display_result, indent=2, sort_keys=True))
-    if args.markdown:
+    if markdown_path is not None and markdown_directory_fd is not None:
         report = to_markdown(display_result, args.certificate)
         report = normalize_cli_display(report, evidence_root)
         try:
-            _atomic_write_new_text(args.markdown, report)
+            _atomic_write_new_text(
+                markdown_path,
+                report,
+                directory_fd=markdown_directory_fd,
+            )
         except (OSError, ValueError):
+            failed_result = dict(display_result)
+            failed_result.update({
+                "status": "INVALID_INPUT",
+                "failure_kind": "invalid_input",
+                "reasons": [
+                    "held --markdown output path changed or became unsafe"
+                ],
+            })
+            print(json.dumps(failed_result, indent=2, sort_keys=True))
+            os.close(markdown_directory_fd)
             return 2
+        os.close(markdown_directory_fd)
+    print(json.dumps(display_result, indent=2, sort_keys=True))
     return 0 if result["status"] in {"PASS-TRACKED", "PASS-SCOPED"} else 2
 
 if __name__ == "__main__":

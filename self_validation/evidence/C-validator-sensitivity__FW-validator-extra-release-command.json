@@ -1,14 +1,14 @@
 {
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-validator-sensitivity",
-  "claim_proposition_sha256": "sha256:e4e6acbc0083f1f73159c71e58191cb9c07df06d162929ed2bfbd2bb684df8b4",
+  "claim_proposition_sha256": "sha256:dc2dfd6a76bb8c4bf7cf9bfaaca1a161188aff38741fec6771cc1afccb021f4f",
   "command_or_source": "validate_package.py --self-test",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
-  "modal_case_sha256": "sha256:f87f5cb5d7ffddccd17a6c16ae947dc10c06e5ef2ad8fd2baf961d2d22de51dc",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:f9140ef14e9657bc9e16cfb4bd14134fc05a4c9e5c1f723968eeaf8051ac0880",
   "observation_id": "obs:C-validator-sensitivity:FW-validator-extra-release-command",
   "observed_result": "The validator mutation lane rejected the extra release-lock executable command after manifest refresh.",
   "support_summary": "This wrapper binds FW-validator-extra-release-command to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-validator-extra-release-command",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

@@ -16,7 +16,11 @@ A promotion bundle contains deterministic captures, official validator policy re
 
 The certifier reruns deterministic suites and compares the captures through suite-specific semantic projections. It also executes allowlisted official validators fresh. Claude runs with the exact normalized argv `claude plugin validate <package-root> --strict`; after ANSI normalization, the real `✔ Validation passed` output is accepted only when neither complete output stream contains a failure or contradiction. Full captured bytes, not bounded excerpts or tails, determine semantics, hashes, and byte counts. Prewritten text captures never authorize; a missing official executable can be scoped only with the explicit exclusion flag, but both official-policy nodes and their canonical dependencies remain mandatory. A discovered executable that fails remains a failure.
 
-Formal result `2.0` binds an immutable standalone target snapshot; the exact report, gate, certificate, ledger, complete stream-json transcript, prompt, and target-snapshot companion manifest; package-tree identity; run ID; target identity; and target pre/post stability. Transcript authentication and its SHA-256/byte count cover the complete bounded capture, never a tail-only view. Promotion follows only the typed `formal.result` locator. It does not substitute basenames or pick the first glob match, although unrelated nonreserved files may remain in the directory.
+Formal result `2.0` binds a standalone endpoint-checked target copy; the exact report, gate, certificate, ledger, complete stream-json transcript, prompt, and target-copy companion manifest; package-tree identity; run ID; target identity; and target pre/post endpoint stability. `temporal_immutability_enforced` is `false`, which caps an otherwise `PASS-TRACKED` formal result at `PASS-SCOPED`. Execution also requires supported Linux subreaper containment before `Popen`; same-group and detached-session descendants are killed/reaped to a bounded quiet state, while unavailable containment or incomplete cleanup fails closed. Transcript authentication and its SHA-256/byte count cover the complete bounded capture, never a tail-only view. Promotion follows only the typed `formal.result` locator. It does not substitute basenames or pick the first glob match, although unrelated nonreserved files may remain in the directory.
+
+Gate Markdown, certifier JSON/Markdown, formal output plus compatibility JSON, live transcripts plus optional JSON, validator Markdown, deterministic wrapper JSON, and fixed behavior/stable-release manifest outputs retain component-wise no-follow directory descriptors from before long-running work through descriptor-relative exclusive creation, link/rename installation as applicable, and directory fsync. Role/alias classification is frozen against held identities. Ancestor-to-symlink or real-directory replacement cannot redirect writes, certifier aliases and live JSON/selected-transcript aliases fail, and validator Markdown remains external. Observed mismatch fails closed, but capability/endpoint checks are not temporal isolation.
+
+Formal coordinator and gate children receive only the runner-owned `/proc/<runner-pid>/fd/N` alias through `pass_fds`; the procfs-visible runner `Pid:` must equal the gate child's procfs-visible direct-parent `PPid:`. Child-FD close/rebind, self/unrelated PIDs, noncanonical or nonpositive PID/FD tokens, extra components, closed descriptors, and file descriptors are rejected. Live formal execution requires POSIX no-follow directory descriptors and procfd inheritance; absence returns `INVALID_INPUT` before requested output creation.
 
 ## Certifier
 
@@ -36,7 +40,7 @@ For v1.0.3, satisfying every modeled check does not authorize promotion. The cer
 - `Issue #5 consistency-sweep activation and resolution mechanics remain parent-enforced.`
 - `Issue #5 REMOTE_GROUND_TRUTH_REQUIRED escalation mechanics remain parent-enforced.`
 
-This cap applies only to the v1.0.3 certifier. Generic `ntt_gate.py` and formal-runner `PASS-TRACKED` semantics remain unchanged.
+The modeled-promotion cap applies to the v1.0.3 certifier. Generic `ntt_gate.py` `PASS-TRACKED` semantics remain unchanged. The formal runner has a separate temporal-immutability cap; process containment is mandatory and fails before execution when unavailable.
 
 Run the synthetic contract suite separately:
 
@@ -44,7 +48,7 @@ Run the synthetic contract suite separately:
 python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .
 ```
 
-Its expected `36/36` result invokes the production certifier CLI for the complete baseline and every negative case. It is synthetic contract evidence, not real runtime authentication.
+Its expected `43/43` result invokes the production certifier CLI for the complete baseline and every negative case. It is synthetic contract evidence, not real runtime authentication.
 
 ## Non-closure reminder
 

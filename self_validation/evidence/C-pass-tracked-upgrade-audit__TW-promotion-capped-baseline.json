@@ -1,14 +1,14 @@
 {
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-pass-tracked-upgrade-audit",
-  "claim_proposition_sha256": "sha256:a158800f4ad4e017c722b9ceff1e29439caffbceda1e627529dfa9cf391da536",
+  "claim_proposition_sha256": "sha256:af6dd806f1832342970a4c3a945bfd9964b1b8072def1be83cdef7feac81ef8b",
   "command_or_source": "run_promotion_certifier_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:8ba39c0a8eea34efcb65b2e7f22ae9801efaa23f3936b94bdbbe29b0c6ce92b3",
-  "modal_case_sha256": "sha256:9dc347209f25546fb46b1ed574592790fb21e636068d5e0cec98f8a781b51f00",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:4912fca71d64c5c818f622d2785c95e45e5b31b1dcce9323a2b82c0c20fa5f03",
   "observation_id": "obs:C-pass-tracked-upgrade-audit:TW-promotion-capped-baseline",
   "observed_result": "The complete synthetic baseline satisfied the modeled contract and retained PASS-SCOPED/CAPPED.",
   "support_summary": "This wrapper binds TW-promotion-capped-baseline to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "TW-promotion-capped-baseline",
-  "timestamp_utc": "2026-07-14T00:00:00Z"
+  "timestamp_utc": "2026-07-16T05:15:11Z"
 }

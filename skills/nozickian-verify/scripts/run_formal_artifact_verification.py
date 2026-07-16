@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import ctypes
 import hashlib
 import importlib.util
 import io
@@ -35,7 +36,7 @@ import time
 import tempfile
 import uuid
 from pathlib import Path, PurePosixPath
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
 PASS_STATUSES = {"PASS-TRACKED", "PASS-SCOPED"}
 FINAL_STATUSES = PASS_STATUSES | {"LIMITED", "FAIL", "UNVERIFIED", "UNVERIFIED_RUNTIME"}
@@ -69,10 +70,27 @@ FORMAL_AUXILIARY_OUTPUT_SPECS = {
     "precheck": "_NOZICKIAN_FORMAL_PRECHECKS.json",
 }
 FORMAL_VERIFICATION_CONTEXT = {
-    "mode": "standalone-immutable-snapshot",
+    "mode": "standalone-endpoint-checked-copy",
     "relative_sibling_context": "unavailable",
     "execution_working_directory": "snapshot-parent",
+    "temporal_immutability_enforced": False,
 }
+PROCESS_CONTAINMENT_SCOPE = {
+    "mechanism": (
+        "initial-posix-process-group"
+        if os.name == "posix"
+        else "leader-process-only"
+    ),
+    "cleanup_after_leader_exit": os.name == "posix",
+    # A descendant can call setsid(2) before group cleanup.  Portable Python
+    # has no cross-platform child-process jail that can prevent or enumerate
+    # every such escape, so this limitation is explicit and status-affecting.
+    "detached_session_descendants_contained": False,
+}
+DETACHED_CLEANUP_TIMEOUT_SEC = 1.0
+DETACHED_CLEANUP_QUIET_SEC = 0.05
+MAX_PROC_SCAN_ENTRIES = 100_000
+PR_SET_CHILD_SUBREAPER = 36
 TRACE_AUTHENTICATION_FIELDS = (
     "authenticated",
     "events_seen",
@@ -104,6 +122,278 @@ MAX_TRACE_DEPTH = 64
 def _debug(msg: str) -> None:
     if os.environ.get("NTT_DEBUG_FORMAL_RUNNER"):
         print(f"[formal-runner] {msg}", file=sys.stderr, flush=True)
+
+
+def _linux_status_process_identity(
+    path: Path,
+    namespace_index: int,
+    expected_host_pid: Optional[int] = None,
+) -> Optional[Tuple[int, int]]:
+    """Return (host PPid, innermost namespace pid) from one proc status."""
+    try:
+        with path.open("r", encoding="utf-8", errors="replace") as stream:
+            payload = stream.read(64 * 1024)
+    except OSError:
+        return None
+    parent_host_pid: Optional[int] = None
+    namespace_pid: Optional[int] = None
+    host_pid_matches = expected_host_pid is None
+    for line in payload.splitlines():
+        if line.startswith("PPid:"):
+            fields = line.split()
+            if len(fields) == 2 and fields[1].isdigit():
+                parent_host_pid = int(fields[1])
+        elif line.startswith("NSpid:"):
+            fields = line.split()[1:]
+            if (
+                len(fields) > namespace_index
+                and all(field.isdigit() for field in fields)
+            ):
+                namespace_pid = int(fields[namespace_index])
+                host_pid_matches = (
+                    expected_host_pid is None
+                    or int(fields[0]) == expected_host_pid
+                )
+    if (
+        parent_host_pid is None
+        or namespace_pid is None
+        or not host_pid_matches
+    ):
+        return None
+    return parent_host_pid, namespace_pid
+
+
+def _linux_self_host_pid() -> Optional[int]:
+    fallback: Optional[int] = None
+    try:
+        with Path("/proc/self/status").open(
+            "r", encoding="utf-8", errors="replace"
+        ) as stream:
+            payload = stream.read(64 * 1024)
+    except OSError:
+        return None
+    for line in payload.splitlines():
+        if line.startswith("NSpid:"):
+            fields = line.split()[1:]
+            if fields and all(field.isdigit() for field in fields):
+                return int(fields[0])
+        elif line.startswith("Pid:"):
+            fields = line.split()
+            if len(fields) == 2 and fields[1].isdigit():
+                fallback = int(fields[1])
+    return fallback
+
+
+def _linux_self_namespace_index() -> Optional[int]:
+    try:
+        with Path("/proc/self/status").open(
+            "r", encoding="utf-8", errors="replace"
+        ) as stream:
+            payload = stream.read(64 * 1024)
+    except OSError:
+        return None
+    for line in payload.splitlines():
+        if line.startswith("NSpid:"):
+            fields = line.split()[1:]
+            if fields and all(field.isdigit() for field in fields):
+                return len(fields) - 1
+    return None
+
+
+def _linux_process_graph(
+    namespace_index: int,
+) -> Optional[Dict[int, Tuple[int, int]]]:
+    """Map host pid to (host PPid, signalable namespace pid)."""
+    graph: Dict[int, Tuple[int, int]] = {}
+    scanned = 0
+    try:
+        with os.scandir("/proc") as entries:
+            for entry in entries:
+                if not entry.name.isdigit():
+                    continue
+                scanned += 1
+                if scanned > MAX_PROC_SCAN_ENTRIES:
+                    return None
+                identity = _linux_status_process_identity(
+                    Path(entry.path) / "status",
+                    namespace_index,
+                    int(entry.name),
+                )
+                if identity is None:
+                    continue
+                graph[int(entry.name)] = identity
+    except OSError:
+        return None
+    return graph
+
+
+def _host_descendant_closure(
+    graph: Mapping[int, Tuple[int, int]],
+    roots: Set[int],
+) -> Set[int]:
+    children: Dict[int, List[int]] = {}
+    for host_pid, (parent_host_pid, _namespace_pid) in graph.items():
+        children.setdefault(parent_host_pid, []).append(host_pid)
+    closure: Set[int] = set()
+    pending = list(roots)
+    while pending:
+        host_pid = pending.pop()
+        if host_pid in closure:
+            continue
+        closure.add(host_pid)
+        pending.extend(children.get(host_pid, ()))
+    return closure
+
+
+def prepare_process_containment() -> Dict[str, Any]:
+    """Enable Linux subreaping and snapshot pre-existing direct children."""
+    unavailable = {
+        "enabled": False,
+        "parent_host_pid": None,
+        "baseline_host_pids": set(),
+        "scope": dict(PROCESS_CONTAINMENT_SCOPE),
+    }
+    if not sys.platform.startswith("linux") or not Path("/proc").is_dir():
+        return unavailable
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+        prctl = libc.prctl
+        prctl.argtypes = [
+            ctypes.c_int,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+        ]
+        prctl.restype = ctypes.c_int
+        if prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
+            return unavailable
+    except (AttributeError, OSError):
+        return unavailable
+    parent_host_pid = _linux_self_host_pid()
+    namespace_index = _linux_self_namespace_index()
+    if parent_host_pid is None or namespace_index is None:
+        return unavailable
+    baseline_graph = _linux_process_graph(namespace_index)
+    if baseline_graph is None:
+        return unavailable
+    baseline_direct = {
+        host_pid
+        for host_pid, (parent_pid, _namespace_pid) in baseline_graph.items()
+        if parent_pid == parent_host_pid
+    }
+    return {
+        "enabled": True,
+        "parent_host_pid": parent_host_pid,
+        "namespace_index": namespace_index,
+        "baseline_host_pids": baseline_direct,
+        "scope": {
+            "mechanism": "linux-child-subreaper-plus-process-group",
+            "cleanup_after_leader_exit": True,
+            "detached_session_descendants_contained": True,
+        },
+    }
+
+
+def cleanup_detached_descendants(
+    containment: Mapping[str, Any],
+) -> Tuple[bool, bool]:
+    """Kill/reap the complete new transitive closure to a quiet state."""
+    if containment.get("enabled") is not True:
+        # The capture caller fails before Popen when this capability is absent.
+        return False, True
+    parent_host_pid = containment.get("parent_host_pid")
+    namespace_index = containment.get("namespace_index")
+    baseline = containment.get("baseline_host_pids")
+    if (
+        type(parent_host_pid) is not int
+        or type(namespace_index) is not int
+        or not isinstance(baseline, set)
+    ):
+        return False, False
+    deadline = time.monotonic() + DETACHED_CLEANUP_TIMEOUT_SEC
+    quiet_since: Optional[float] = None
+    survivor_seen = False
+    while time.monotonic() < deadline:
+        graph = _linux_process_graph(namespace_index)
+        if graph is None:
+            return survivor_seen, False
+        runner_closure = _host_descendant_closure(
+            graph,
+            {parent_host_pid},
+        ) - {parent_host_pid}
+        excluded = _host_descendant_closure(graph, set(baseline))
+        candidate_host_pids = runner_closure - excluded
+        candidates = {
+            host_pid: graph[host_pid][1]
+            for host_pid in candidate_host_pids
+            if host_pid in graph
+        }
+        if candidates:
+            survivor_seen = True
+            quiet_since = None
+            for namespace_pid in candidates.values():
+                try:
+                    os.kill(namespace_pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                except OSError:
+                    return survivor_seen, False
+            for namespace_pid in candidates.values():
+                try:
+                    os.waitpid(namespace_pid, os.WNOHANG)
+                except (ChildProcessError, ProcessLookupError):
+                    pass
+                except OSError:
+                    return survivor_seen, False
+        else:
+            now = time.monotonic()
+            if quiet_since is None:
+                quiet_since = now
+            elif now - quiet_since >= DETACHED_CLEANUP_QUIET_SEC:
+                return survivor_seen, True
+        time.sleep(0.01)
+    # The bounded quiescence window expired.  Take one final complete closure
+    # snapshot and signal every remaining nonbaseline descendant before
+    # returning.  This does not turn a deadline expiry into success by itself:
+    # only a fresh post-kill scan that proves the closure empty may do so.
+    graph = _linux_process_graph(namespace_index)
+    if graph is None:
+        return survivor_seen, False
+    runner_closure = _host_descendant_closure(
+        graph,
+        {parent_host_pid},
+    ) - {parent_host_pid}
+    excluded = _host_descendant_closure(graph, set(baseline))
+    final_host_pids = runner_closure - excluded
+    if final_host_pids:
+        survivor_seen = True
+    for host_pid in final_host_pids:
+        namespace_pid = graph[host_pid][1]
+        try:
+            os.kill(namespace_pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        except OSError:
+            return survivor_seen, False
+    for host_pid in final_host_pids:
+        namespace_pid = graph[host_pid][1]
+        try:
+            os.waitpid(namespace_pid, os.WNOHANG)
+        except (ChildProcessError, ProcessLookupError):
+            pass
+        except OSError:
+            return survivor_seen, False
+    time.sleep(0.005)
+    fresh_graph = _linux_process_graph(namespace_index)
+    if fresh_graph is None:
+        return survivor_seen, False
+    fresh_closure = _host_descendant_closure(
+        fresh_graph,
+        {parent_host_pid},
+    ) - {parent_host_pid}
+    fresh_excluded = _host_descendant_closure(fresh_graph, set(baseline))
+    return survivor_seen, not (fresh_closure - fresh_excluded)
 
 
 def load_module_without_bytecode(name: str, path: Path) -> Any:
@@ -178,6 +468,124 @@ def lexical_directory_ancestor_error(path: Path) -> Optional[str]:
     return None
 
 
+def _directory_open_flags() -> int:
+    """Return flags for a held, no-follow directory capability."""
+    if not all(
+        hasattr(os, name)
+        for name in ("O_DIRECTORY", "O_NOFOLLOW")
+    ):
+        raise OSError("no-follow directory descriptors are unavailable")
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    return flags
+
+
+def _open_directory_no_follow(path: Path) -> int:
+    """Open every component beneath a held parent without following links."""
+    absolute = Path(os.path.abspath(path))
+    flags = _directory_open_flags()
+    descriptor = os.open(os.path.sep, flags)
+    try:
+        for component in absolute.parts[1:]:
+            if component in ("", ".", ".."):
+                raise ValueError("unsafe output directory component")
+            child = os.open(component, flags, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        return descriptor
+    except Exception:
+        os.close(descriptor)
+        raise
+
+
+def _safe_output_name(path: Path) -> str:
+    name = path.name
+    if name in ("", ".", "..") or os.path.sep in name:
+        raise ValueError("unsafe output file name")
+    if os.path.altsep and os.path.altsep in name:
+        raise ValueError("unsafe output file name")
+    return name
+
+
+def _directory_path_matches_fd(path: Path, descriptor: int) -> bool:
+    """Confirm the lexical directory still denotes the held directory."""
+    reopened: Optional[int] = None
+    try:
+        reopened = _open_directory_no_follow(path)
+        expected = os.fstat(descriptor)
+        observed = os.fstat(reopened)
+        return (expected.st_dev, expected.st_ino) == (
+            observed.st_dev,
+            observed.st_ino,
+        )
+    except (OSError, ValueError):
+        return False
+    finally:
+        if reopened is not None:
+            os.close(reopened)
+
+
+def _acquire_output_parent(
+    path: Path,
+    *,
+    directory_fd: Optional[int],
+    lexical_parent: Optional[Path],
+) -> Tuple[str, int, Path]:
+    name = _safe_output_name(path)
+    if directory_fd is None:
+        parent = path.parent
+        descriptor = _open_directory_no_follow(parent)
+    else:
+        parent = lexical_parent if lexical_parent is not None else path.parent
+        descriptor = os.dup(directory_fd)
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISDIR(metadata.st_mode):
+            os.close(descriptor)
+            raise ValueError("held output parent is not a directory")
+    return name, descriptor, parent
+
+
+def _stat_at_no_follow(
+    directory_fd: int,
+    name: str,
+) -> Optional[os.stat_result]:
+    try:
+        return os.stat(
+            name,
+            dir_fd=directory_fd,
+            follow_symlinks=False,
+        )
+    except FileNotFoundError:
+        return None
+
+
+def _replaceable_regular_at(directory_fd: int, name: str) -> None:
+    metadata = _stat_at_no_follow(directory_fd, name)
+    if metadata is None:
+        return
+    if stat.S_ISLNK(metadata.st_mode):
+        raise ValueError("output target is a symbolic link")
+    if not stat.S_ISREG(metadata.st_mode):
+        raise ValueError("output target is a special file")
+    if metadata.st_nlink != 1:
+        raise ValueError("output target is a hardlink alias")
+
+
+def _require_new_output_at(directory_fd: int, name: str) -> None:
+    if _stat_at_no_follow(directory_fd, name) is not None:
+        raise FileExistsError(name)
+
+
+def _write_all(descriptor: int, payload: bytes) -> None:
+    remaining = memoryview(payload)
+    while remaining:
+        written = os.write(descriptor, remaining)
+        if written <= 0:
+            raise OSError("short write while creating output")
+        remaining = remaining[written:]
+
+
 def path_lexists(path: Path) -> bool:
     return os.path.lexists(path)
 
@@ -199,108 +607,209 @@ def replaceable_regular_output_error(path: Path) -> Optional[str]:
     return None
 
 
-def atomic_write_new(path: Path, payload: bytes, mode: int = 0o600) -> None:
+def atomic_write_new(
+    path: Path,
+    payload: bytes,
+    mode: int = 0o600,
+    *,
+    directory_fd: Optional[int] = None,
+    lexical_parent: Optional[Path] = None,
+) -> None:
     """Atomically create one new regular file without following final links."""
-    # SECURITY-REVIEW: Formal output paths can be caller-controlled. A private
-    # O_EXCL/O_NOFOLLOW temporary file is linked into the final name only when
-    # that name does not exist, so links and special-file sentinels are neither
-    # followed nor overwritten.
-    ancestor_error = lexical_directory_ancestor_error(path)
-    if ancestor_error is not None:
-        raise ValueError(f"unsafe output path: {ancestor_error}")
-    parent_error = directory_error(path.parent)
-    if parent_error is not None:
-        raise ValueError(f"unsafe output parent: {parent_error}")
-    temporary = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"
+    # SECURITY-REVIEW: Hold the exact parent directory throughout validation,
+    # creation, and installation. All mutations are relative to that descriptor
+    # so an ancestor rename cannot redirect them through a replacement link.
+    name, parent_fd, parent = _acquire_output_parent(
+        path,
+        directory_fd=directory_fd,
+        lexical_parent=lexical_parent,
+    )
+    temporary = f".{name}.{uuid.uuid4().hex}.tmp"
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
+    flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
     descriptor: Optional[int] = None
     try:
-        descriptor = os.open(temporary, flags, mode)
-        with os.fdopen(descriptor, "wb") as stream:
-            descriptor = None
-            stream.write(payload)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.link(temporary, path, follow_symlinks=False)
-        temporary.unlink()
-        created = path.stat(follow_symlinks=False)
+        _require_new_output_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before write")
+        descriptor = os.open(
+            temporary,
+            flags,
+            mode,
+            dir_fd=parent_fd,
+        )
+        _write_all(descriptor, payload)
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = None
+        _require_new_output_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before install")
+        os.link(
+            temporary,
+            name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        os.unlink(temporary, dir_fd=parent_fd)
+        created = os.stat(
+            name,
+            dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
         if not stat.S_ISREG(created.st_mode) or created.st_nlink != 1:
             raise OSError("created output is not a private regular file")
+        os.fsync(parent_fd)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed during install")
     finally:
         if descriptor is not None:
             os.close(descriptor)
         try:
-            temporary.unlink()
+            os.unlink(temporary, dir_fd=parent_fd)
         except FileNotFoundError:
             pass
+        finally:
+            os.close(parent_fd)
 
 
-def atomic_replace_regular(path: Path, payload: bytes, mode: int = 0o600) -> None:
+def atomic_replace_regular(
+    path: Path,
+    payload: bytes,
+    mode: int = 0o600,
+    *,
+    directory_fd: Optional[int] = None,
+    lexical_parent: Optional[Path] = None,
+) -> None:
     """Atomically create or replace one private regular compatibility output."""
-    # SECURITY-REVIEW: An explicitly supplied existing compatibility --json
-    # regular file is intentionally replaceable for CLI regeneration. Existing
-    # lexical ancestors and the final target are inspected with lstat; payload
-    # bytes go to a same-directory O_EXCL/O_NOFOLLOW temporary, and os.replace
-    # swaps directory entries without opening or following the final target.
-    ancestor_error = lexical_directory_ancestor_error(path)
-    if ancestor_error is not None:
-        raise ValueError(f"unsafe output path: {ancestor_error}")
-    parent_error = directory_error(path.parent)
-    if parent_error is not None:
-        raise ValueError(f"unsafe output parent: {parent_error}")
-    target_error = replaceable_regular_output_error(path)
-    if target_error is not None:
-        raise ValueError(f"unsafe output target: {target_error}")
-    temporary = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"
+    name, parent_fd, parent = _acquire_output_parent(
+        path,
+        directory_fd=directory_fd,
+        lexical_parent=lexical_parent,
+    )
+    temporary = f".{name}.{uuid.uuid4().hex}.tmp"
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
+    flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
     descriptor: Optional[int] = None
     try:
-        descriptor = os.open(temporary, flags, mode)
-        with os.fdopen(descriptor, "wb") as stream:
-            descriptor = None
-            stream.write(payload)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
-        created = path.stat(follow_symlinks=False)
+        _replaceable_regular_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before write")
+        descriptor = os.open(
+            temporary,
+            flags,
+            mode,
+            dir_fd=parent_fd,
+        )
+        _write_all(descriptor, payload)
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = None
+        _replaceable_regular_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before install")
+        os.replace(
+            temporary,
+            name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+        )
+        created = os.stat(
+            name,
+            dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
         if not stat.S_ISREG(created.st_mode) or created.st_nlink != 1:
             raise OSError("installed output is not a private regular file")
+        os.fsync(parent_fd)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed during install")
     finally:
         if descriptor is not None:
             os.close(descriptor)
         try:
-            temporary.unlink()
+            os.unlink(temporary, dir_fd=parent_fd)
         except FileNotFoundError:
             pass
+        finally:
+            os.close(parent_fd)
 
 
-def atomic_write_new_text(path: Path, text: str) -> None:
-    atomic_write_new(path, text.encode("utf-8"))
+def atomic_write_new_text(
+    path: Path,
+    text: str,
+    *,
+    directory_fd: Optional[int] = None,
+    lexical_parent: Optional[Path] = None,
+) -> None:
+    atomic_write_new(
+        path,
+        text.encode("utf-8"),
+        directory_fd=directory_fd,
+        lexical_parent=lexical_parent,
+    )
 
 
-def reserve_regular_output(path: Path) -> None:
+def reserve_regular_output(
+    path: Path,
+    *,
+    directory_fd: Optional[int] = None,
+    lexical_parent: Optional[Path] = None,
+) -> None:
     """Reserve an externally populated output as a private regular file."""
-    # SECURITY-REVIEW: The external coordinator receives only output slots that
-    # this process created with O_EXCL/O_NOFOLLOW; pre-existing aliases cannot
-    # be opened through these paths.
-    ancestor_error = lexical_directory_ancestor_error(path)
-    if ancestor_error is not None:
-        raise ValueError(f"unsafe output path: {ancestor_error}")
-    parent_error = directory_error(path.parent)
-    if parent_error is not None:
-        raise ValueError(f"unsafe output parent: {parent_error}")
+    # SECURITY-REVIEW: Reserve beneath the same held directory capability later
+    # inherited by the external coordinator.
+    name, parent_fd, parent = _acquire_output_parent(
+        path,
+        directory_fd=directory_fd,
+        lexical_parent=lexical_parent,
+    )
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
-    descriptor = os.open(path, flags, 0o600)
-    os.close(descriptor)
-    created = path.stat(follow_symlinks=False)
-    if not stat.S_ISREG(created.st_mode) or created.st_nlink != 1:
-        raise OSError("reserved output is not a private regular file")
+    flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    descriptor: Optional[int] = None
+    created_output = False
+    try:
+        _require_new_output_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before reservation")
+        descriptor = os.open(
+            name,
+            flags,
+            0o600,
+            dir_fd=parent_fd,
+        )
+        created_output = True
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = None
+        created = os.stat(
+            name,
+            dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        if not stat.S_ISREG(created.st_mode) or created.st_nlink != 1:
+            raise OSError("reserved output is not a private regular file")
+        os.fsync(parent_fd)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed during reservation")
+    except Exception:
+        if created_output:
+            try:
+                os.unlink(name, dir_fd=parent_fd)
+            except FileNotFoundError:
+                pass
+        raise
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        os.close(parent_fd)
 
 
 def file_snapshot_identity(path: Path) -> Dict[str, Any]:
@@ -367,12 +876,19 @@ def target_snapshot_stability(
         )
         and len(set(digests)) == 1
     )
-    return {
-        "stable": (
+    endpoint_stable = (
             digest_stable
             and source_metadata_stable
             and snapshot_metadata_stable
-        ),
+    )
+    return {
+        # ``stable`` is retained for schema compatibility, but its scope is
+        # now explicit: this is a pre/post endpoint check, not a claim that the
+        # same-UID coordinator could never alter bytes between observations.
+        "stable": endpoint_stable,
+        "endpoint_stable": endpoint_stable,
+        "stability_scope": "pre-post-endpoint",
+        "temporal_immutability_enforced": False,
         "digest_stable": digest_stable,
         "source_metadata_stable": source_metadata_stable,
         "snapshot_metadata_stable": snapshot_metadata_stable,
@@ -386,7 +902,7 @@ def cap_status_by_target_stability(
     if status in PASS_STATUSES and stability.get("stable") is not True:
         return (
             "FAIL",
-            "target or immutable snapshot changed during formal verification",
+            "target or endpoint-checked target copy changed during formal verification",
         )
     return status, None
 
@@ -573,10 +1089,106 @@ def _read_release_file_no_follow(root: Path, relative: PurePosixPath) -> bytes:
     return current.read_bytes()
 
 
+def execution_copy_endpoint_identity(root: Path) -> Dict[str, Any]:
+    """Hash no-follow metadata observed at one copy endpoint.
+
+    Comparing two such identities detects many persistent changes, but it
+    cannot exclude an A->B->A mutation between observations: timestamp
+    resolution and same-UID control make that a false portability claim.  The
+    separate temporal-immutability field and PASS-SCOPED cap are load-bearing.
+    """
+    records: List[Dict[str, Any]] = []
+    pending: List[Tuple[PurePosixPath, Path]] = [
+        (PurePosixPath("."), root)
+    ]
+    try:
+        while pending:
+            relative, path = pending.pop()
+            metadata = path.stat(follow_symlinks=False)
+            mode = metadata.st_mode
+            if stat.S_ISDIR(mode):
+                kind = "directory"
+            elif stat.S_ISREG(mode):
+                kind = "regular"
+            else:
+                return {
+                    "algorithm": "no-follow-endpoint-metadata-v1",
+                    "sha256": None,
+                    "entries": len(records),
+                    "valid": False,
+                }
+            records.append(
+                {
+                    "path": relative.as_posix(),
+                    "kind": kind,
+                    "device": metadata.st_dev,
+                    "inode": metadata.st_ino,
+                    "mode": stat.S_IMODE(mode),
+                    "nlink": metadata.st_nlink,
+                    "uid": metadata.st_uid,
+                    "gid": metadata.st_gid,
+                    "bytes": metadata.st_size,
+                    "mtime_ns": metadata.st_mtime_ns,
+                    "ctime_ns": metadata.st_ctime_ns,
+                }
+            )
+            if kind == "directory":
+                with os.scandir(path) as iterator:
+                    children = sorted(
+                        (entry.name for entry in iterator),
+                        reverse=True,
+                    )
+                for name in children:
+                    child_relative = (
+                        PurePosixPath(name)
+                        if relative == PurePosixPath(".")
+                        else relative / name
+                    )
+                    pending.append((child_relative, path / name))
+    except OSError:
+        return {
+            "algorithm": "no-follow-endpoint-metadata-v1",
+            "sha256": None,
+            "entries": len(records),
+            "valid": False,
+        }
+    records.sort(key=lambda item: item["path"])
+    payload = json.dumps(
+        records,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return {
+        "algorithm": "no-follow-endpoint-metadata-v1",
+        "sha256": f"sha256:{hashlib.sha256(payload).hexdigest()}",
+        "entries": len(records),
+        "valid": True,
+    }
+
+
+def endpoint_identity_is_valid(identity: Any) -> bool:
+    return (
+        type(identity) is dict
+        and set(identity) == {"algorithm", "sha256", "entries", "valid"}
+        and identity.get("algorithm") == "no-follow-endpoint-metadata-v1"
+        and type(identity.get("sha256")) is str
+        and bool(re.fullmatch(r"sha256:[0-9a-f]{64}", identity["sha256"]))
+        and type(identity.get("entries")) is int
+        and identity.get("entries") > 0
+        and identity.get("valid") is True
+    )
+
+
 def materialize_execution_package_snapshot(
     root: Path,
 ) -> Tuple[tempfile.TemporaryDirectory[str], Path, Dict[str, Any]]:
-    """Copy the manifest-bound release surface into a private read-only tree."""
+    """Copy the manifest-bound surface into a permission-hardened tree.
+
+    Mode 0400/0500 is defense in depth only: the owner can chmod it.  The
+    caller therefore gets explicit pre/post endpoint evidence and a scoped
+    status rather than a false claim of an immutable same-UID boundary.
+    """
     source_pre = package_tree_identity(root)
     if not package_tree_identity_is_valid(source_pre):
         raise ValueError("source package tree is invalid")
@@ -641,15 +1253,25 @@ def materialize_execution_package_snapshot(
         ):
             directory.chmod(0o500)
         snapshot.chmod(0o500)
+        snapshot_endpoint_pre = execution_copy_endpoint_identity(snapshot)
+        if not endpoint_identity_is_valid(snapshot_endpoint_pre):
+            raise ValueError("execution copy endpoint identity is invalid")
+        process_containment_scope = prepare_process_containment()["scope"]
     except Exception:
         holder.cleanup()
         raise
     return holder, snapshot, {
-        "mode": "private-read-only-stable-release-snapshot",
+        "mode": "private-permission-hardened-endpoint-checked-release-copy",
         "source_pre": source_pre,
         "snapshot_pre": snapshot_pre,
         "source_post": None,
         "snapshot_post": None,
+        "snapshot_endpoint_pre": snapshot_endpoint_pre,
+        "snapshot_endpoint_post": None,
+        "endpoint_stable": False,
+        "stability_scope": "pre-post-endpoint",
+        "temporal_immutability_enforced": False,
+        "process_containment": dict(process_containment_scope),
         "stable": False,
     }
 
@@ -662,15 +1284,25 @@ def finalize_execution_package_snapshot(
     finalized = dict(identity)
     finalized["source_post"] = package_tree_identity(root)
     finalized["snapshot_post"] = package_tree_identity(snapshot)
+    finalized["snapshot_endpoint_post"] = execution_copy_endpoint_identity(
+        snapshot
+    )
     comparable = [
         finalized.get("source_pre"),
         finalized.get("source_post"),
         finalized.get("snapshot_pre"),
         finalized.get("snapshot_post"),
     ]
+    finalized["endpoint_stable"] = (
+        endpoint_identity_is_valid(finalized.get("snapshot_endpoint_pre"))
+        and endpoint_identity_is_valid(finalized.get("snapshot_endpoint_post"))
+        and finalized.get("snapshot_endpoint_pre")
+        == finalized.get("snapshot_endpoint_post")
+    )
     finalized["stable"] = (
         all(package_tree_identity_is_valid(item) for item in comparable)
         and all(item == comparable[0] for item in comparable[1:])
+        and finalized["endpoint_stable"] is True
     )
     return finalized
 
@@ -682,7 +1314,28 @@ def cap_status_by_execution_package_snapshot(
     if status in PASS_STATUSES and (
         not isinstance(identity, dict) or identity.get("stable") is not True
     ):
-        return "FAIL", "execution package snapshot identity was not stable"
+        return "FAIL", "execution package copy endpoint identity was not stable"
+    missing_assurances: List[str] = []
+    if identity.get("temporal_immutability_enforced") is not True:
+        missing_assurances.append("temporal immutability")
+    process_scope = identity.get("process_containment")
+    if (
+        not isinstance(process_scope, dict)
+        or process_scope.get("detached_session_descendants_contained")
+        is not True
+    ):
+        missing_assurances.append("detached-session descendant containment")
+    if status == "PASS-TRACKED" and missing_assurances:
+        return (
+            "PASS-SCOPED",
+            "execution copies were endpoint-stable, but "
+            + " and ".join(missing_assurances)
+            + (
+                " was not mechanically enforced"
+                if len(missing_assurances) == 1
+                else " were not mechanically enforced"
+            ),
+        )
     return status, None
 
 
@@ -733,35 +1386,98 @@ def output_location_error(root: Path, output_dir: Path, json_path: Optional[Path
     return None
 
 
+def _prepare_output_directory_fd(path: Path) -> int:
+    """Create/traverse an output directory and return its held descriptor."""
+    # SECURITY-REVIEW: Each mkdirat/openat is rooted in the directory descriptor
+    # obtained from the preceding component. Replacing any lexical ancestor
+    # cannot redirect creation into a symlink target; a final identity check
+    # rejects a renamed-away directory even though the held traversal was safe.
+    absolute = Path(os.path.abspath(path))
+    descriptor: Optional[int] = None
+    try:
+        flags = _directory_open_flags()
+        descriptor = os.open(os.path.sep, flags)
+        for component in absolute.parts[1:]:
+            if component in ("", ".", ".."):
+                raise ValueError("unsafe output directory component")
+            try:
+                child = os.open(component, flags, dir_fd=descriptor)
+            except FileNotFoundError:
+                os.mkdir(component, mode=0o700, dir_fd=descriptor)
+                os.fsync(descriptor)
+                child = os.open(component, flags, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        if not _directory_path_matches_fd(absolute, descriptor):
+            raise ValueError("output directory changed during creation")
+        os.fsync(descriptor)
+        result = descriptor
+        descriptor = None
+        return result
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
 def prepare_output_directory(path: Path) -> Optional[str]:
-    """Create missing directories one component at a time without links."""
-    # SECURITY-REVIEW: --output-dir is caller-controlled. The nearest existing
-    # ancestor and every newly created component are inspected without
-    # following links; recursive mkdir traversal is not used.
-    ancestor_error = lexical_directory_ancestor_error(path)
-    if ancestor_error is not None:
-        return ancestor_error
-    if path_lexists(path):
-        return directory_error(path)
-    missing: List[Path] = []
-    ancestor = path
-    while not path_lexists(ancestor):
-        missing.append(ancestor)
-        if ancestor.parent == ancestor:
-            return "no existing safe output ancestor"
-        ancestor = ancestor.parent
-    ancestor_error = directory_error(ancestor)
-    if ancestor_error is not None:
-        return f"unsafe output ancestor: {ancestor_error}"
-    for directory in reversed(missing):
-        try:
-            directory.mkdir(mode=0o700)
-        except OSError as exc:
-            return f"{type(exc).__name__} while creating output directory"
-        created_error = directory_error(directory)
-        if created_error is not None:
-            return f"unsafe created output directory: {created_error}"
-    return directory_error(path)
+    """Create missing directories safely while retaining no open descriptor."""
+    descriptor: Optional[int] = None
+    try:
+        descriptor = _prepare_output_directory_fd(path)
+        return None
+    except (OSError, ValueError) as exc:
+        return f"{type(exc).__name__} while creating output directory"
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
+def _inherited_directory_alias(descriptor: int) -> Path:
+    """Return a child-visible alias to this runner's held directory fd."""
+    if os.name != "posix":
+        raise OSError("held output-directory inheritance requires POSIX")
+    # Name the runner PID, not ``self``. A child can close/rebind its inherited
+    # descriptor number; it cannot thereby alter the runner's fd table.
+    proc_visible_pid: Optional[int] = None
+    try:
+        with Path("/proc/self/status").open(
+            "r", encoding="utf-8", errors="replace"
+        ) as stream:
+            for line in stream.read(64 * 1024).splitlines():
+                if line.startswith("Pid:"):
+                    fields = line.split()
+                    if len(fields) == 2 and fields[1].isdigit():
+                        candidate = int(fields[1])
+                        if candidate > 0 and str(candidate) == fields[1]:
+                            proc_visible_pid = candidate
+                    break
+    except OSError:
+        proc_visible_pid = None
+    if proc_visible_pid is None:
+        raise OSError("runner proc-visible PID is unavailable")
+    proc_fd_root = Path("/proc") / str(proc_visible_pid) / "fd"
+    if not proc_fd_root.is_dir():
+        raise OSError("runner-owned /proc fd directory is unavailable")
+    alias = proc_fd_root / str(descriptor)
+    held = os.fstat(descriptor)
+    observed = alias.stat()
+    if not stat.S_ISDIR(observed.st_mode) or (
+        held.st_dev,
+        held.st_ino,
+    ) != (observed.st_dev, observed.st_ino):
+        raise OSError("held output-directory alias identity mismatch")
+    return alias
+
+
+def _preflight_held_output_capability() -> None:
+    """Prove dirfd/procfd support before any caller output is created."""
+    descriptor: Optional[int] = None
+    try:
+        descriptor = _open_directory_no_follow(Path(os.path.sep))
+        _inherited_directory_alias(descriptor)
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
 
 
 def _paths_alias(first: Path, second: Path) -> bool:
@@ -777,52 +1493,65 @@ def formal_output_collision_error(
     target: Path,
     out: Dict[str, Path],
     json_path: Optional[Path] = None,
+    *,
+    output_directory_fd: Optional[int] = None,
 ) -> Optional[str]:
     """Reject output aliases that could overwrite the target or companions."""
+    held_parent = (
+        _inherited_directory_alias(output_directory_fd)
+        if output_directory_fd is not None
+        else None
+    )
+    held_out = {
+        role: (
+            held_parent / path.name
+            if held_parent is not None
+            else path
+        )
+        for role, path in out.items()
+    }
     output_paths = list(out.values())
     # SECURITY-REVIEW: Caller-controlled output paths are compared by resolved
-    # path and, when they exist, file identity before any target/output write.
-    if any(_paths_alias(target, output_path) for output_path in output_paths):
-        return "target_artifact aliases a reserved formal output path"
-    if json_path is not None and not _paths_alias(
-        json_path,
-        out["formal_result"],
+    # path and, when they exist, held file identity before any target/output
+    # write. The lexical names preserve exact-path collision detection while
+    # the held aliases prevent a substituted real directory from influencing
+    # inode comparisons.
+    if any(
+        target == out[role]
+        or _paths_alias(target, held_out[role])
+        for role in out
     ):
+        return "target_artifact aliases a reserved formal output path"
+    json_is_canonical = (
+        json_path is not None
+        and (
+            json_path == out["formal_result"]
+            or _paths_alias(json_path, held_out["formal_result"])
+        )
+    )
+    if json_path is not None and not json_is_canonical:
         if _paths_alias(json_path, target):
             return "json compatibility path aliases target_artifact"
         if any(
-            _paths_alias(json_path, output_path)
-            for output_path in output_paths
+            json_path == out[role]
+            or _paths_alias(json_path, held_out[role])
+            for role in out
         ):
             return "json compatibility path aliases a formal companion"
         output_paths.append(json_path)
-    for role, path in [
-        *out.items(),
-        *(
-            [("json compatibility", json_path)]
-            if json_path is not None
-            and not _paths_alias(json_path, out["formal_result"])
-            else []
-        ),
-    ]:
-        if path is None:
-            continue
-        ancestor_error = lexical_directory_ancestor_error(path)
-        if ancestor_error is not None:
-            return (
-                f"unsafe formal output path for {role}: {ancestor_error}"
-            )
-        parent_error = directory_error(path.parent)
-        if parent_error is not None:
-            return (
-                f"unsafe formal output parent for {role}: {parent_error}"
-            )
-        if not path_lexists(path):
-            continue
+    for role, path in out.items():
         try:
-            metadata = path.lstat()
+            metadata = (
+                _stat_at_no_follow(output_directory_fd, path.name)
+                if output_directory_fd is not None
+                else path.lstat()
+                if path_lexists(path)
+                else None
+            )
         except OSError as exc:
             return f"pre-existing formal output is unreadable: {type(exc).__name__}"
+        if metadata is None:
+            continue
         if stat.S_ISLNK(metadata.st_mode):
             kind = "symbolic link"
         elif not stat.S_ISREG(metadata.st_mode):
@@ -831,9 +1560,41 @@ def formal_output_collision_error(
             kind = "hardlink alias"
         else:
             kind = "regular file"
-        if role == "json compatibility" and kind == "regular file":
-            continue
         return f"pre-existing formal output for {role} is a {kind}"
+    if json_path is not None and not json_is_canonical:
+        ancestor_error = lexical_directory_ancestor_error(json_path)
+        if ancestor_error is not None:
+            return (
+                "unsafe formal output path for json compatibility: "
+                f"{ancestor_error}"
+            )
+        parent_error = directory_error(json_path.parent)
+        if parent_error is not None:
+            return (
+                "unsafe formal output parent for json compatibility: "
+                f"{parent_error}"
+            )
+        if path_lexists(json_path):
+            try:
+                metadata = json_path.lstat()
+            except OSError as exc:
+                return (
+                    "pre-existing formal output is unreadable: "
+                    f"{type(exc).__name__}"
+                )
+            if stat.S_ISLNK(metadata.st_mode):
+                kind = "symbolic link"
+            elif not stat.S_ISREG(metadata.st_mode):
+                kind = "special file"
+            elif metadata.st_nlink != 1:
+                kind = "hardlink alias"
+            else:
+                kind = "regular file"
+            if kind != "regular file":
+                return (
+                    "pre-existing formal output for json compatibility "
+                    f"is a {kind}"
+                )
     return None
 
 
@@ -853,6 +1614,7 @@ def _bounded_process_capture(
     cwd: Optional[Path],
     timeout: int,
     env: Dict[str, str],
+    pass_fds: Sequence[int] = (),
 ) -> Dict[str, Any]:
     """Run one process while bounding each captured stream during execution.
 
@@ -864,14 +1626,23 @@ def _bounded_process_capture(
     always fail-closed and therefore the retained prefix is never used for an
     authentication decision.
     """
-    proc = subprocess.Popen(
-        cmd,
-        cwd=str(cwd) if cwd else None,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=env,
-        start_new_session=(os.name == "posix"),
-    )
+    containment = prepare_process_containment()
+    if containment.get("enabled") is not True:
+        raise OSError(
+            "detached-session process containment is unavailable"
+        )
+    if pass_fds and os.name != "posix":
+        raise OSError("inherited directory descriptors require POSIX")
+    popen_kwargs: Dict[str, Any] = {
+        "cwd": str(cwd) if cwd else None,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+        "env": env,
+        "start_new_session": (os.name == "posix"),
+    }
+    if pass_fds:
+        popen_kwargs["pass_fds"] = tuple(pass_fds)
+    proc = subprocess.Popen(cmd, **popen_kwargs)
     stop = threading.Event()
     states: Dict[str, Dict[str, Any]] = {}
 
@@ -918,38 +1689,41 @@ def _bounded_process_capture(
     deadline = time.monotonic() + timeout
     timed_out = False
     descendant_pipe_leak = False
+    normal_exit_group_survivor = False
     process_group_terminated = False
-    leader_exited_at: Optional[float] = None
+    process_group_cleanup_attempted = False
 
-    def terminate_group() -> None:
-        nonlocal process_group_terminated
-        process_group_terminated = True
+    def terminate_group() -> bool:
+        nonlocal process_group_cleanup_attempted, process_group_terminated
+        process_group_cleanup_attempted = True
         try:
             if os.name == "posix":
                 os.killpg(proc.pid, signal.SIGKILL)
+                process_group_terminated = True
             else:
                 proc.kill()
+                process_group_terminated = True
         except ProcessLookupError:
             pass
         except OSError:
             try:
                 proc.kill()
+                process_group_terminated = True
             except OSError:
                 pass
+        return process_group_terminated
 
     while True:
         if stop.is_set():
             terminate_group()
             break
         if proc.poll() is not None:
-            if not any(reader.is_alive() for reader in readers):
-                break
-            if leader_exited_at is None:
-                leader_exited_at = time.monotonic()
-            if time.monotonic() - leader_exited_at >= PIPE_CLOSE_GRACE_SEC:
-                descendant_pipe_leak = True
-                terminate_group()
-                break
+            # Pipe state is not a containment oracle. Kill/probe the original
+            # group immediately, then sweep the complete transitive /proc
+            # closure before waiting for reader threads.
+            if terminate_group():
+                normal_exit_group_survivor = True
+            break
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             timed_out = True
@@ -964,6 +1738,10 @@ def _bounded_process_capture(
             proc.wait(timeout=READER_JOIN_GRACE_SEC)
         except subprocess.TimeoutExpired:
             pass
+    (
+        detached_descendant_survivor,
+        process_containment_cleanup_complete,
+    ) = cleanup_detached_descendants(containment)
     join_deadline = time.monotonic() + READER_JOIN_GRACE_SEC
     for reader in readers:
         reader.join(timeout=max(0.0, join_deadline - time.monotonic()))
@@ -986,7 +1764,13 @@ def _bounded_process_capture(
             else 126
             if exceeded
             else 125
-            if descendant_pipe_leak or reader_join_timed_out
+            if (
+                descendant_pipe_leak
+                or normal_exit_group_survivor
+                or detached_descendant_survivor
+                or not process_containment_cleanup_complete
+                or reader_join_timed_out
+            )
             else proc.returncode
         ),
         "stdout_state": stdout,
@@ -994,8 +1778,15 @@ def _bounded_process_capture(
         "capture_limit_exceeded": exceeded,
         "timed_out": timed_out,
         "descendant_pipe_leak": descendant_pipe_leak,
+        "normal_exit_group_survivor": normal_exit_group_survivor,
+        "detached_descendant_survivor": detached_descendant_survivor,
+        "process_containment_cleanup_complete": (
+            process_containment_cleanup_complete
+        ),
         "reader_join_timed_out": reader_join_timed_out,
+        "process_group_cleanup_attempted": process_group_cleanup_attempted,
         "process_group_terminated": process_group_terminated,
+        "process_containment": dict(containment["scope"]),
     }
 
 
@@ -1011,7 +1802,13 @@ def _bounded_stream_fields(state: Mapping[str, Any], name: str) -> Dict[str, Any
     }
 
 
-def run_cmd(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300, env: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+def run_cmd(
+    cmd: List[str],
+    cwd: Optional[Path] = None,
+    timeout: int = 300,
+    env: Optional[Dict[str, str]] = None,
+    pass_fds: Sequence[int] = (),
+) -> Dict[str, Any]:
     started = time.time()
     try:
         # SECURITY-REVIEW: Callers construct fixed argv and invoke executables
@@ -1024,6 +1821,7 @@ def run_cmd(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300, env:
             cwd=cwd,
             timeout=timeout,
             env=process_env,
+            pass_fds=pass_fds,
         )
         result = {
             "cmd": cmd,
@@ -1032,13 +1830,25 @@ def run_cmd(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300, env:
             **_bounded_stream_fields(captured["stdout_state"], "stdout"),
             **_bounded_stream_fields(captured["stderr_state"], "stderr"),
             "capture_limit_exceeded": captured["capture_limit_exceeded"],
+            "timed_out": captured["timed_out"],
             "descendant_pipe_leak": captured["descendant_pipe_leak"],
+            "normal_exit_group_survivor": captured[
+                "normal_exit_group_survivor"
+            ],
+            "detached_descendant_survivor": captured[
+                "detached_descendant_survivor"
+            ],
+            "process_containment_cleanup_complete": captured[
+                "process_containment_cleanup_complete"
+            ],
             "reader_join_timed_out": captured["reader_join_timed_out"],
+            "process_group_cleanup_attempted": captured[
+                "process_group_cleanup_attempted"
+            ],
             "process_group_terminated": captured["process_group_terminated"],
+            "process_containment": captured["process_containment"],
             "duration_sec": round(time.time() - started, 3),
         }
-        if captured["timed_out"]:
-            result["timed_out"] = True
         return result
     except Exception as exc:
         stderr_raw = repr(exc).encode("utf-8", errors="replace")
@@ -1049,6 +1859,15 @@ def run_cmd(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300, env:
             **_captured_stream_fields(b"", "stdout"),
             **_captured_stream_fields(stderr_raw, "stderr"),
             "capture_limit_exceeded": False,
+            "timed_out": False,
+            "descendant_pipe_leak": False,
+            "reader_join_timed_out": False,
+            "normal_exit_group_survivor": False,
+            "detached_descendant_survivor": False,
+            "process_containment_cleanup_complete": False,
+            "process_group_cleanup_attempted": False,
+            "process_group_terminated": False,
+            "process_containment": dict(PROCESS_CONTAINMENT_SCOPE),
             "duration_sec": round(time.time() - started, 3),
         }
 
@@ -1056,6 +1875,9 @@ def run_cmd(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300, env:
 def write_complete_stream_transcript(
     path: Path,
     invocation: Mapping[str, Any],
+    *,
+    directory_fd: Optional[int] = None,
+    lexical_parent: Optional[Path] = None,
 ) -> Dict[str, Any]:
     """Persist the complete Claude stdout stream or fail closed."""
     # SECURITY-REVIEW: The full stream is retained only in the private formal
@@ -1075,7 +1897,12 @@ def write_complete_stream_transcript(
         payload = stdout.encode("utf-8")
     if len(payload) > MAX_CAPTURE_BYTES:
         raise ValueError("formal stream exceeds the capture safety limit")
-    atomic_write_new(path, payload)
+    atomic_write_new(
+        path,
+        payload,
+        directory_fd=directory_fd,
+        lexical_parent=lexical_parent,
+    )
     return {
         "bytes": len(payload),
         "sha256": f"sha256:{hashlib.sha256(payload).hexdigest()}",
@@ -1149,13 +1976,16 @@ def build_formal_prompt(
 
 FORMAL_INVOCATION_REQUIRED.
 
-Immutable target snapshot to verify:
+Endpoint-checked target copy to verify:
 {target}
 
 Verification context:
-- Mode: standalone-immutable-snapshot.
+- Mode: standalone-endpoint-checked-copy.
 - Relative sibling context from the mutable source location is intentionally unavailable.
-- Evaluate only the immutable snapshot bytes and explicitly supplied evidence.
+- Evaluate only the copied target bytes and explicitly supplied evidence.
+- The copy is permission-hardened and checked before/after, but same-UID
+  temporal immutability is not enforced; a would-be PASS-TRACKED result is
+  capped to PASS-SCOPED.
 - Do not infer claims from files adjacent to the original source target.
 
 Required output artifacts:
@@ -1908,7 +2738,16 @@ def check_required_outputs(
     return checks
 
 
-def run_package_prechecks(root: Path, out: Dict[str, Path], timeout: int, full_self_test: bool = False) -> List[Dict[str, Any]]:
+def run_package_prechecks(
+    root: Path,
+    out: Dict[str, Path],
+    timeout: int,
+    full_self_test: bool = False,
+    claude_executable: Optional[Path] = None,
+    *,
+    output_directory_fd: Optional[int] = None,
+    lexical_output_dir: Optional[Path] = None,
+) -> List[Dict[str, Any]]:
     py = sys.executable
     validator_cmd = [py, str(root / SKILL_PATH / "scripts/validate_package.py"), str(root)]
     if full_self_test:
@@ -1919,9 +2758,20 @@ def run_package_prechecks(root: Path, out: Dict[str, Path], timeout: int, full_s
         [py, str(root / SKILL_PATH / "scripts/ntt_gate.py"), str(root / "self_validation/self_certificate.json"), "--evidence-root", str(root), "--strict-evidence"],
     ]
     results = [run_cmd(cmd, cwd=root, timeout=timeout) for cmd in commands]
-    claude = shutil.which("claude")
-    if claude:
-        results.append(run_cmd([claude, "plugin", "validate", str(root), "--strict"], cwd=root, timeout=timeout))
+    if claude_executable is not None:
+        results.append(
+            run_cmd(
+                [
+                    str(claude_executable),
+                    "plugin",
+                    "validate",
+                    str(root),
+                    "--strict",
+                ],
+                cwd=root,
+                timeout=timeout,
+            )
+        )
     public_results = [
         _normalized_command_record(
             result,
@@ -1934,6 +2784,8 @@ def run_package_prechecks(root: Path, out: Dict[str, Path], timeout: int, full_s
     atomic_write_new_text(
         out["precheck"],
         json.dumps(public_results, indent=2, sort_keys=True),
+        directory_fd=output_directory_fd,
+        lexical_parent=lexical_output_dir,
     )
     return results
 
@@ -1974,7 +2826,10 @@ def _companion_records(
             digest = f"sha256:{sha256_regular_file(path)}"
             size = path.stat().st_size
         records[role] = {
-            "path": path.relative_to(output_dir).as_posix(),
+            # Companions are direct children of the held output directory. The
+            # The live path may be a runner-PID-qualified procfd alias, while
+            # the public result records the stable basename only.
+            "path": path.name,
             "sha256": digest,
             "bytes": size,
             "present": file_error is None,
@@ -2000,6 +2855,15 @@ def _normalized_command_record(
             "stdout_truncated": False,
             "stderr_truncated": False,
             "capture_limit_exceeded": False,
+            "timed_out": False,
+            "descendant_pipe_leak": False,
+            "reader_join_timed_out": False,
+            "normal_exit_group_survivor": False,
+            "detached_descendant_survivor": False,
+            "process_containment_cleanup_complete": False,
+            "process_group_cleanup_attempted": False,
+            "process_group_terminated": False,
+            "process_containment": dict(PROCESS_CONTAINMENT_SCOPE),
         }
     replacements = (
         *(
@@ -2017,6 +2881,31 @@ def _normalized_command_record(
         if isinstance(raw_cmd, list)
         else []
     )
+    if (
+        isinstance(raw_cmd, list)
+        and raw_cmd
+        and raw_cmd[0] == sys.executable
+        and argv
+    ):
+        # Bind package-local Python commands to the runner's interpreter role
+        # instead of accepting an arbitrary executable with a matching script
+        # basename in downstream certification.
+        argv[0] = "<python>"
+    if (
+        isinstance(raw_cmd, list)
+        and len(raw_cmd) >= 2
+        and "--agent" in raw_cmd
+        and FORMAL_COORDINATOR in raw_cmd
+        and isinstance(raw_cmd[-1], str)
+        and argv
+    ):
+        # The raw prompt contains ephemeral absolute execution paths, so the
+        # public argv binds its exact UTF-8 bytes by digest.  The certifier
+        # compares this digest with the declared prompt companion.
+        argv[-1] = (
+            "sha256:"
+            + hashlib.sha256(raw_cmd[-1].encode("utf-8")).hexdigest()
+        )
     stdout = record.get("stdout")
     stderr = record.get("stderr")
     stdout_raw = record.get("_stdout_bytes")
@@ -2070,6 +2959,33 @@ def _normalized_command_record(
         ),
         "capture_limit_exceeded": (
             record.get("capture_limit_exceeded") is True
+        ),
+        "timed_out": record.get("timed_out") is True,
+        "descendant_pipe_leak": (
+            record.get("descendant_pipe_leak") is True
+        ),
+        "reader_join_timed_out": (
+            record.get("reader_join_timed_out") is True
+        ),
+        "normal_exit_group_survivor": (
+            record.get("normal_exit_group_survivor") is True
+        ),
+        "detached_descendant_survivor": (
+            record.get("detached_descendant_survivor") is True
+        ),
+        "process_containment_cleanup_complete": (
+            record.get("process_containment_cleanup_complete") is True
+        ),
+        "process_group_cleanup_attempted": (
+            record.get("process_group_cleanup_attempted") is True
+        ),
+        "process_group_terminated": (
+            record.get("process_group_terminated") is True
+        ),
+        "process_containment": (
+            dict(record["process_containment"])
+            if isinstance(record.get("process_containment"), dict)
+            else dict(PROCESS_CONTAINMENT_SCOPE)
         ),
     }
 
@@ -2142,7 +3058,7 @@ def build_formal_result_v2(
         _normalized_command_record(
             item,
             root,
-            output_dir,
+            out["formal_result"].parent,
             target,
             Path(str(result["_execution_root"]))
             if result.get("_execution_root")
@@ -2154,7 +3070,7 @@ def build_formal_result_v2(
         _normalized_command_record(
             item,
             root,
-            output_dir,
+            out["formal_result"].parent,
             target,
             Path(str(result["_execution_root"]))
             if result.get("_execution_root")
@@ -2181,6 +3097,11 @@ def build_formal_result_v2(
             "pre_sha256": pre_digest,
             "post_sha256": post_digest,
             "stable": stability["stable"],
+            "endpoint_stable": stability["endpoint_stable"],
+            "stability_scope": stability["stability_scope"],
+            "temporal_immutability_enforced": stability[
+                "temporal_immutability_enforced"
+            ],
             "digest_stable": stability["digest_stable"],
             "source_metadata_stable": stability["source_metadata_stable"],
             "snapshot_metadata_stable": stability[
@@ -2191,14 +3112,20 @@ def build_formal_result_v2(
         "evidence_root": (
             "."
             if evidence_root is None
-            or evidence_root.resolve() == output_dir.resolve()
+            or _paths_alias(
+                evidence_root,
+                out["formal_result"].parent,
+            )
             else str(evidence_root.resolve())
         ),
         "companions": companions,
         "prechecks": prechecks,
         "precheck_summary": result.get("precheck_summary", {}),
         "commands": commands,
-        "output_checks": result.get("output_checks", []),
+        "output_checks": normalize_display_paths(
+            result.get("output_checks", []),
+            ((str(out["formal_result"].parent), "<output-dir>"),),
+        ),
         "gate_status": result.get("gate_status"),
         "trace_authentication": result.get("trace_authentication"),
         "output_dir": str(output_dir),
@@ -2221,6 +3148,11 @@ def write_formal_result_v2(
     snapshot_post_identity: Optional[Dict[str, Any]] = None,
     evidence_root: Optional[Path] = None,
     json_path: Optional[Path] = None,
+    output_directory_fd: Optional[int] = None,
+    lexical_output_dir: Optional[Path] = None,
+    json_directory_fd: Optional[int] = None,
+    lexical_json_parent: Optional[Path] = None,
+    json_is_canonical: bool = False,
 ) -> Dict[str, Any]:
     canonical = build_formal_result_v2(
         result,
@@ -2238,9 +3170,34 @@ def write_formal_result_v2(
     payload = (
         json.dumps(canonical, indent=2, sort_keys=True) + "\n"
     ).encode("utf-8")
-    atomic_write_new(out["formal_result"], payload)
-    if json_path is not None and json_path != out["formal_result"]:
-        atomic_replace_regular(json_path, payload)
+    atomic_write_new(
+        out["formal_result"],
+        payload,
+        directory_fd=output_directory_fd,
+        lexical_parent=lexical_output_dir,
+    )
+    if output_directory_fd is None or lexical_output_dir is None:
+        raise ValueError("formal result requires a held output directory")
+    if not _directory_path_matches_fd(
+        lexical_output_dir,
+        output_directory_fd,
+    ):
+        raise ValueError("formal output directory changed after final write")
+    # `json_is_canonical` is frozen during pre-execution collision analysis.
+    # Re-resolving lexical aliases here would let an ancestor substitution turn
+    # the canonical destination into a late compatibility copy outside the held
+    # output directory.
+    if json_path is not None and not json_is_canonical:
+        if json_directory_fd is None or lexical_json_parent is None:
+            raise ValueError(
+                "compatibility JSON requires a pre-acquired held parent"
+            )
+        atomic_replace_regular(
+            json_path,
+            payload,
+            directory_fd=json_directory_fd,
+            lexical_parent=lexical_json_parent,
+        )
     return canonical
 
 
@@ -2263,6 +3220,21 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--effort", default="max")
     args = parser.parse_args(argv)
 
+    try:
+        # This probe precedes even the default temporary output-directory
+        # allocation, so unsupported platforms fail without output residue.
+        _preflight_held_output_capability()
+    except (OSError, ValueError) as exc:
+        invalid = {
+            "status": "INVALID_INPUT",
+            "reason": (
+                "held no-follow formal output capability is unavailable "
+                f"({type(exc).__name__})"
+            ),
+        }
+        print(json.dumps(invalid, indent=2, sort_keys=True))
+        return 2
+
     root = args.plugin_root.resolve()
     # SECURITY-REVIEW: Keep the caller-controlled final target entry lexical
     # so regular_file_error rejects a symlink instead of following resolve().
@@ -2279,10 +3251,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.json
         else None
     )
-    effective_evidence_root = (
+    requested_evidence_root = (
         args.evidence_root.resolve()
         if args.evidence_root
-        else output_dir
+        else None
     )
     output_ancestor_error = lexical_directory_ancestor_error(output_dir)
     if output_ancestor_error is not None:
@@ -2325,19 +3297,31 @@ def main(argv: Optional[List[str]] = None) -> int:
         }
         print(json.dumps(invalid, indent=2, sort_keys=True))
         return 2
-    creation_error = prepare_output_directory(output_dir)
-    if creation_error is not None:
+    output_directory_fd: Optional[int] = None
+    try:
+        # Creation returns the same descriptor used for every later output
+        # operation; there is no lexical reopen gap in which a different real
+        # directory can become the trusted destination.
+        output_directory_fd = _prepare_output_directory_fd(output_dir)
+        held_output_dir = _inherited_directory_alias(output_directory_fd)
+    except (OSError, ValueError) as exc:
+        if output_directory_fd is not None:
+            os.close(output_directory_fd)
         invalid = {
             "status": "INVALID_INPUT",
-            "reason": f"unsafe --output-dir: {creation_error}",
+            "reason": (
+                "unsafe --output-dir: held no-follow output directory "
+                f"is unavailable ({type(exc).__name__})"
+            ),
         }
         print(json.dumps(invalid, indent=2, sort_keys=True))
         return 2
-    out = output_paths(target, output_dir)
+    display_out = output_paths(target, output_dir)
     collision_error = formal_output_collision_error(
         target,
-        out,
+        display_out,
         json_path,
+        output_directory_fd=output_directory_fd,
     )
     if collision_error:
         invalid = {
@@ -2345,7 +3329,47 @@ def main(argv: Optional[List[str]] = None) -> int:
             "reason": collision_error,
         }
         print(json.dumps(invalid, indent=2, sort_keys=True))
+        os.close(output_directory_fd)
         return 2
+    out = output_paths(target, held_output_dir)
+    json_directory_fd: Optional[int] = None
+    json_is_canonical = (
+        json_path is not None
+        and (
+            json_path == display_out["formal_result"]
+            or _paths_alias(json_path, out["formal_result"])
+        )
+    )
+    if json_path is not None and not json_is_canonical:
+        try:
+            json_directory_fd = _open_directory_no_follow(json_path.parent)
+            if not _directory_path_matches_fd(
+                json_path.parent,
+                json_directory_fd,
+            ):
+                raise ValueError("json output parent identity is unstable")
+            _replaceable_regular_at(
+                json_directory_fd,
+                _safe_output_name(json_path),
+            )
+        except (OSError, ValueError) as exc:
+            if json_directory_fd is not None:
+                os.close(json_directory_fd)
+            os.close(output_directory_fd)
+            invalid = {
+                "status": "INVALID_INPUT",
+                "reason": (
+                    "unsafe --json: held no-follow output parent is "
+                    f"unavailable ({type(exc).__name__})"
+                ),
+            }
+            print(json.dumps(invalid, indent=2, sort_keys=True))
+            return 2
+    effective_evidence_root = (
+        requested_evidence_root
+        if requested_evidence_root is not None
+        else held_output_dir
+    )
     target_error = regular_file_error(target)
     source_pre_identity: Optional[Dict[str, Any]] = None
     source_post_identity: Optional[Dict[str, Any]] = None
@@ -2369,7 +3393,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             # SECURITY-REVIEW: The caller-selected target is read only after a
             # no-follow regular-file check. The fixed snapshot destination is
             # created atomically with O_EXCL/O_NOFOLLOW.
-            atomic_write_new(out["target_snapshot"], target.read_bytes())
+            atomic_write_new(
+                out["target_snapshot"],
+                target.read_bytes(),
+                directory_fd=output_directory_fd,
+                lexical_parent=output_dir,
+            )
             snapshot_pre_identity = file_snapshot_identity(
                 out["target_snapshot"]
             )
@@ -2393,7 +3422,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             ) = materialize_execution_package_snapshot(root)
         except (OSError, ValueError) as exc:
             package_snapshot_error = (
-                f"{type(exc).__name__} while preparing immutable execution package"
+                f"{type(exc).__name__} while preparing endpoint-checked execution package copy"
             )
     prompt = build_formal_prompt(
         execution_root,
@@ -2402,13 +3431,21 @@ def main(argv: Optional[List[str]] = None) -> int:
         effective_evidence_root,
     )
     try:
-        atomic_write_new_text(out["prompt"], prompt)
+        atomic_write_new_text(
+            out["prompt"],
+            prompt,
+            directory_fd=output_directory_fd,
+            lexical_parent=output_dir,
+        )
     except (OSError, ValueError):
         invalid = {
             "status": "INVALID_INPUT",
             "reason": "formal prompt output could not be safely created",
         }
         print(json.dumps(invalid, indent=2, sort_keys=True))
+        if json_directory_fd is not None:
+            os.close(json_directory_fd)
+        os.close(output_directory_fd)
         return 2
 
     result: Dict[str, Any] = {
@@ -2443,68 +3480,112 @@ def main(argv: Optional[List[str]] = None) -> int:
     elif package_snapshot_error is not None:
         result.update({"status": "FAIL", "reason": package_snapshot_error})
     else:
-        if args.skip_prechecks:
+        resolved_claude: Optional[Path] = None
+        claude_resolution_error: Optional[str] = None
+        claude_candidate = shutil.which("claude")
+        if claude_candidate:
+            try:
+                # Resolve and hash the exact regular-file endpoint before the
+                # plugin validator, version probe, or coordinator can execute.
+                # Every later Claude argv uses this same absolute path.
+                resolved_claude = resolve_regular_executable(claude_candidate)
+                runtime_identity = result["runtime_identity"]
+                runtime_identity["resolved_executable_path"] = str(
+                    resolved_claude
+                )
+                executable_identity_pre = file_snapshot_identity(
+                    resolved_claude
+                )
+                runtime_identity["executable_identity_pre"] = (
+                    executable_identity_pre
+                )
+                runtime_identity["executable_sha256_pre"] = str(
+                    executable_identity_pre["sha256"]
+                )[len("sha256:") :]
+            except (OSError, ValueError) as exc:
+                claude_resolution_error = (
+                    f"{type(exc).__name__} while resolving or fingerprinting "
+                    "the Claude executable before execution"
+                )
+                result["runtime_identity"]["error"] = (
+                    claude_resolution_error
+                )
+                resolved_claude = None
+
+        if claude_resolution_error is not None:
+            prechecks = []
+            result["prechecks"] = []
+            result["precheck_summary"] = {
+                "total": 0,
+                "failed": 0,
+                "passed": 0,
+                "failed_commands": [],
+            }
+            result.update({
+                "status": "FAIL",
+                "reason": claude_resolution_error,
+            })
+        elif args.skip_prechecks:
             prechecks = []
             result["prechecks"] = []
             result["precheck_summary"] = {"total": 0, "failed": 0, "passed": 0, "failed_commands": []}
         else:
-            prechecks = run_package_prechecks(execution_root, out, timeout=min(args.timeout_sec, 900), full_self_test=args.full_package_self_test)
+            prechecks = run_package_prechecks(
+                execution_root,
+                out,
+                timeout=min(args.timeout_sec, 900),
+                full_self_test=args.full_package_self_test,
+                claude_executable=resolved_claude,
+                output_directory_fd=output_directory_fd,
+                lexical_output_dir=output_dir,
+            )
             result["prechecks"] = prechecks
             result["precheck_summary"] = summarize_prechecks(prechecks)
-        if result["precheck_summary"]["failed"]:
+        if claude_resolution_error is not None:
+            pass
+        elif result["precheck_summary"]["failed"]:
             result.update({"status": "FAIL", "reason": "deterministic package prechecks failed"})
         elif args.dry_run:
             result.update({"status": "UNVERIFIED_RUNTIME", "reason": "dry-run requested; formal prompt written but Claude Code was not invoked"})
+        elif resolved_claude is None:
+            result.update({"status": "UNVERIFIED_RUNTIME", "reason": "Claude Code CLI not found on PATH; formal coordinator was not invoked"})
         else:
-            claude = shutil.which("claude")
-            resolved_claude: Optional[Path] = None
-            if not claude:
-                result.update({"status": "UNVERIFIED_RUNTIME", "reason": "Claude Code CLI not found on PATH; formal coordinator was not invoked"})
-            else:
-                try:
-                    resolved_claude = resolve_regular_executable(claude)
-                    runtime_identity = result["runtime_identity"]
-                    runtime_identity["resolved_executable_path"] = str(
-                        resolved_claude
+            coordinator_ready = False
+            try:
+                runtime_identity = result["runtime_identity"]
+                version_probe = run_cmd(
+                    [str(resolved_claude), "--version"],
+                    cwd=execution_root,
+                    timeout=min(args.timeout_sec, 60),
+                )
+                result["commands"].append(version_probe)
+                version_output = str(
+                    version_probe.get("stdout")
+                    or version_probe.get("stderr")
+                    or ""
+                ).strip()
+                runtime_identity["version_output"] = version_output
+                runtime_identity["version_pattern_match"] = bool(
+                    re.search(CLAUDE_VERSION_PATTERN, version_output)
+                )
+                if (
+                    version_probe.get("returncode") != 0
+                    or runtime_identity["version_pattern_match"] is not True
+                ):
+                    raise ValueError("Claude version identity preflight failed")
+                for role in ("report", "certificate", "ledger"):
+                    reserve_regular_output(
+                        out[role],
+                        directory_fd=output_directory_fd,
+                        lexical_parent=output_dir,
                     )
-                    executable_identity_pre = file_snapshot_identity(
-                        resolved_claude
-                    )
-                    runtime_identity["executable_identity_pre"] = (
-                        executable_identity_pre
-                    )
-                    runtime_identity["executable_sha256_pre"] = str(
-                        executable_identity_pre["sha256"]
-                    )[len("sha256:") :]
-                    version_probe = run_cmd(
-                        [str(resolved_claude), "--version"],
-                        cwd=execution_root,
-                        timeout=min(args.timeout_sec, 60),
-                    )
-                    result["commands"].append(version_probe)
-                    version_output = str(
-                        version_probe.get("stdout")
-                        or version_probe.get("stderr")
-                        or ""
-                    ).strip()
-                    runtime_identity["version_output"] = version_output
-                    runtime_identity["version_pattern_match"] = bool(
-                        re.search(CLAUDE_VERSION_PATTERN, version_output)
-                    )
-                    if (
-                        version_probe.get("returncode") != 0
-                        or runtime_identity["version_pattern_match"] is not True
-                    ):
-                        raise ValueError("Claude version identity preflight failed")
-                    for role in ("report", "certificate", "ledger"):
-                        reserve_regular_output(out[role])
-                except (OSError, ValueError):
-                    result.update({
-                        "status": "FAIL",
-                        "reason": "formal coordinator outputs could not be safely reserved",
-                    })
-                    resolved_claude = None
-            if resolved_claude is not None:
+                coordinator_ready = True
+            except (OSError, ValueError):
+                result.update({
+                    "status": "FAIL",
+                    "reason": "formal coordinator identity preflight or output reservation failed",
+                })
+            if coordinator_ready:
                 cmd = [
                     str(resolved_claude),
                     "--plugin-dir", str(execution_root),
@@ -2524,6 +3605,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                     cmd,
                     cwd=out["target_snapshot"].parent,
                     timeout=args.timeout_sec,
+                    pass_fds=(output_directory_fd,),
                 )
                 _debug(f"after claude invocation rc={invocation.get('returncode')}")
                 result["commands"].append(invocation)
@@ -2532,6 +3614,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                     write_complete_stream_transcript(
                         out["transcript"],
                         invocation,
+                        directory_fd=output_directory_fd,
+                        lexical_parent=output_dir,
                     )
                 except (OSError, ValueError):
                     transcript_error = (
@@ -2572,6 +3656,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                         gate_cmd,
                         cwd=out["target_snapshot"].parent,
                         timeout=900,
+                        pass_fds=(output_directory_fd,),
                     )
                     _debug(f"after gate rc={gate.get('returncode')}")
                     result["commands"].append(gate)
@@ -2656,6 +3741,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             "reason": runtime_reason,
         })
 
+    if not _directory_path_matches_fd(output_dir, output_directory_fd):
+        result.update({
+            "status": "FAIL",
+            "reason": "formal output directory changed during execution",
+        })
+
     _debug("before final write")
     try:
         canonical_result = write_formal_result_v2(
@@ -2670,6 +3761,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             snapshot_post_identity=snapshot_post_identity,
             evidence_root=effective_evidence_root,
             json_path=json_path,
+            output_directory_fd=output_directory_fd,
+            lexical_output_dir=output_dir,
+            json_directory_fd=json_directory_fd,
+            lexical_json_parent=(
+                json_path.parent if json_path is not None else None
+            ),
+            json_is_canonical=json_is_canonical,
         )
     except (OSError, ValueError):
         invalid = {
@@ -2680,11 +3778,17 @@ def main(argv: Optional[List[str]] = None) -> int:
             ),
         }
         print(json.dumps(invalid, indent=2, sort_keys=True))
+        if json_directory_fd is not None:
+            os.close(json_directory_fd)
+        os.close(output_directory_fd)
         return 2
     if args.refresh_release_manifest:
         refresh_stable_release_manifest_if_available(root)
     _debug("before final print")
     print(json.dumps(canonical_result, indent=2, sort_keys=True))
+    if json_directory_fd is not None:
+        os.close(json_directory_fd)
+    os.close(output_directory_fd)
     if execution_snapshot_holder is not None:
         execution_snapshot_holder.cleanup()
     _debug("after final print")

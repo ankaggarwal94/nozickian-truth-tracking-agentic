@@ -179,7 +179,7 @@ The v1.0.1 release did not itself claim PASS-TRACKED, and the current release st
 The release includes a documentation-only README tree under `docs/` plus `self_validation/README.md`. The validator requires this GitHub documentation set, checks that it covers quickstart, audit model, evidence, PASS-TRACKED upgrade, runtime trace authentication, security, development, release, FAQ, and repository presentation topics, and rejects degraded or missing documentation. The documentation tree is treated as stable package content without adding plugin-loadable runtime surfaces.
 
 
-## v1.0.3 addendum (updated 2026-07-14)
+## v1.0.3 addendum (updated 2026-07-16)
 
 This dated addendum is the current-release audit record for **v1.0.3**. Everything above it is the preserved historical first-patch audit record.
 
@@ -199,10 +199,11 @@ This dated addendum is the current-release audit record for **v1.0.3**. Everythi
 | Validator: entry type and allowlist parity | Package traversal uses no-follow entry typing. Every declared allowed/forbidden `PACKAGE_SURFACE` set, including CI files, plugin-manifest files, skill runtime directories, runtime fields, and forbidden surfaces, must be a unique string set exactly equal to executable policy; contradictions and unknown schema keys fail |
 | Validator: reachable schema and harness errors | `PACKAGE_SURFACE` must be an object and `allowed_agents` a unique string array. Non-UTF-8 provenance becomes a named critical hit. Validator-copy exceptions are `HARNESS_ERROR`, never successful false-world rejection evidence |
 | Validator: single-document stdout | All seven fixed package-local dynamic loaders contain import-time stdout. The PASS-TRACKED certifier pass-stub mutation asserts empty outer stdout while the copied validator still completes with ordinary FAIL/nonzero behavior. Raw basic/full validation, gate, contract, regression, aggregate, and formal dry-run result streams are accepted only when direct `json.load` consumes exactly one document |
-| Validator: CI semantic reachability | Required workflow commands count only when they are direct top-level commands in active named `run:` blocks. Statically false job conditions, conditional steps, comments, heredocs, functions, loops, conditionals, case statements, and shell grouping cannot satisfy checkout/archive aggregate policy. Dedicated false worlds disable the entire job and hide both exact aggregate commands inside `if false`; each must fail the three intended aggregate assertions |
+| Validator: CI semantic reachability | Required workflow commands count only when they are direct top-level commands in active named `run:` blocks. Statically false job conditions, conditional steps, comments, heredocs, functions, loops, conditionals, case statements, and shell grouping cannot satisfy checkout/archive policy. Dedicated false worlds disable the entire job, hide both exact aggregate commands inside `if false`, and place the required archive self-test only in a comment or uncalled function. A true-world parser control retains one direct archive self-test while ignoring both decoys |
 | Validator: historical-version adherence | The two context-free bare-version patterns were removed because they rejected legitimate history and were future-brittle. Context-bearing stale package/work/artifact markers and the field-aware self-certificate/plugin version equality check remain; explicit historical prose for both prior versions is a retained true world |
 | Validator: cert-version check (kept) | Critical field-aware check that the active self-certificate `artifact.version` equals plugin.json's version (the real fix for the version-provenance issue); its false-world mutation is retained |
-| CI: archive validation | The deterministic workflow now creates a Git archive, unpacks it, and runs the package validator against that Git-free tree. This source-level audit does not claim that a hosted CI run occurred in this local redress |
+| CI: archive validation | The deterministic workflow creates a Git archive, unpacks it, runs the full validator `--self-test` with Markdown outside that Git-free tree, and only then runs the archive promotion aggregate. The exact workflow model and reachability checks require that order. This source-level audit does not claim that a hosted CI run occurred for the current revision |
+| CI: immutable action identity | The allowlisted workflow pins `actions/checkout` to `34e114876b0b11c390a56381ad16ebd13914f8d5` and `actions/setup-python` to `a26af69be951a213d495a4c3e4e4022e16d87065`. The restricted workflow model requires those exact identities, and dedicated false worlds reject reverting either dependency to a mutable major-version tag |
 | Semantic evidence contracts | Charter observed behavior uses citation-only prose rather than volatile digest echoes. Consistency records require unique canonical `affected_claim_ids`, unique `locations`/`edited_locations`, classification/resolution pairings, recommended edits, and resolution-conditional evidence; these remain parent/auditor-enforced and are not mechanically checked by `ntt_gate.py` or the formal runner (issue #5 deferred) |
 | Runtime evidence provenance | New harness runs require zero-returning version/plugin preflight, fingerprint the resolved executable, and accept only a structured JSON object whose substantive `result`/`content` report alone satisfies status/term/artifact checks. Provenance schema is 1.0 and identity explicitly says `observed-not-cryptographically-authenticated`; no official-binary proof is claimed. Legacy checked-in summaries retain unknown producing-run release/time/identity with null `carried_forward` and remain `UNVERIFIED_RUNTIME` |
 | Boundary-aware display normalization | Validator, gate, regression, and live harness normalize an exact package root or rooted child path while preserving adjacent lookalikes such as `/tmp/root-old` |
@@ -212,11 +213,11 @@ This dated addendum is the current-release audit record for **v1.0.3**. Everythi
 | Promotion v2: fresh deterministic and official execution | `deterministic-capture-v2` records are non-authorizing and are compared through exact typed suite projections against fresh fixed-argv executions. Claude uses exact ordered strict argv and accepts the real ANSI-normalized `✔ Validation passed` form only when neither complete stream contradicts it. Full captured bytes determine decisions, hashes, and byte counts; public excerpts carry explicit truncation metadata. Text captures do not authorize; absent tools scope only through the explicit flag while both official-policy nodes and their dependencies remain present; installed failures fail |
 | Promotion v2: typed evidence DAG | Exact-string `promotion_schema_version="2.0"` and exact required top-level field types are enforced. `evidence.schema_version=promotion-evidence-v2` replaces flat promotion refs. The fixed nine semantic roles bind distinct canonical regular non-symlink bundle files by exact bytes and SHA-256, carry one environment-independent bounded acyclic dependency graph, receive role-specific validation, and require explicit `downstream_review` |
 | Promotion v2: canonical claims/downstream review | `claims` is nonempty; every entry has exact required types and a unique canonical ID, is evaluated through the canonical strict gate at the bundle evidence root, and must produce a nonempty all-PASS result set before the actual results enter promotion-strict downstream non-closure evaluation. Empty downstream conclusions remain valid only with a real passing promotion claim, performed review, and substantive reason |
-| Formal result 2.0 | Promotion follows only the typed `formal.result` locator. The result binds the immutable standalone target snapshot, exact report/gate/certificate/ledger/complete-transcript/prompt/target-snapshot manifest, package-tree identity, run identity, and target pre/post identity. Complete transcript bytes are written, hashed, and authenticated; capture-limit excess fails closed and tail-only authentication is forbidden. No basename/glob-first selection is allowed; unrelated nonreserved files may remain |
+| Formal result 2.0 | Promotion follows only the typed `formal.result` locator. The result binds the standalone endpoint-checked target copy, exact report/gate/certificate/ledger/complete-transcript/prompt/target-copy manifest, package-tree identity, run identity, and target pre/post endpoint identity. Permission hardening is not temporal immutability, so that declared limitation caps an otherwise `PASS-TRACKED` formal result at `PASS-SCOPED`. Execution requires supported Linux child-subreaper plus process-group containment before `Popen`; same-group and detached-session descendants must be killed and reaped with no survivor and complete cleanup, while unavailable containment refuses execution. Complete transcript bytes are written, hashed, and authenticated; capture-limit excess fails closed and tail-only authentication is forbidden. No basename/glob-first selection is allowed; unrelated nonreserved files may remain |
 | Structured promotion failures | Malformed, duplicate, invalid, or empty claims and other malformed bundle data return canonical `FAIL` plus `failure_kind` (`INVALID_INPUT`, `CHECK_FAILED`, or `INTERNAL_ERROR`) rather than an unhandled traceback |
-| Safe certifier/formal output paths | Caller-supplied paths reject symlinked ancestors, direct links, special files, and hardlink aliases with bounded structured invalid-input results and no external overwrite. Existing private regular `--json` files are intentionally regenerated via same-directory exclusive temporary plus atomic replacement; `--output-dir` must be a real or safely created directory |
-| v1.0.3 certifier-only cap | Every complete modeled result is `PASS-SCOPED` / `CAPPED`, `promotion_authorized=false`, `satisfied_profile=promotion-contract-v2-complete`, records both exact unresolved Issue #5 obligations, and exits nonzero. Generic `ntt_gate.py` and formal-runner `PASS-TRACKED` semantics remain unchanged |
-| Aggregate promotion contract | The dedicated synthetic suite expects 36/36 and invokes the production certifier CLI for the complete baseline and every negative. It covers exact strict-validator argv/real output, complete-stream early failures, fixed-DAG retention under explicit unavailable-validator scope, canonical positive downstream evaluation, malformed/empty claims, safe output paths, exact ordered Issue #5 obligations, and complete formal transcript binding. It is contract evidence, not real runtime authentication |
+| Held caller-output capabilities | Gate Markdown, certifier JSON/Markdown, formal output/compatibility JSON, live transcript/optional JSON, validator Markdown, deterministic wrapper JSON, and fixed behavior/stable-release manifest parents are acquired component-by-component before long-running work and held through descriptor-relative installation and fsync. Role/alias classification is frozen against held identities; ancestor substitution cannot redirect writes; validator Markdown remains external. These checks are not temporal isolation. Formal children additionally receive only authenticated runner-owned `/proc/<runner-pid>/fd/N` via `pass_fds`; child-FD close/rebind and invalid capability forms fail, while missing procfd support is `INVALID_INPUT` before requested formal output mutation |
+| v1.0.3 promotion and formal caps | Every complete modeled result is `PASS-SCOPED` / `CAPPED`, `promotion_authorized=false`, `satisfied_profile=promotion-contract-v2-complete`, records both exact unresolved Issue #5 obligations, and exits nonzero. Generic `ntt_gate.py` `PASS-TRACKED` semantics remain unchanged. The formal runner independently caps an otherwise `PASS-TRACKED` result at `PASS-SCOPED` for the declared temporal-immutability limit; required process containment is a fail-before-execution prerequisite rather than another scope relaxation |
+| Aggregate promotion contract | The dedicated synthetic suite expects 43/43 and invokes the production certifier CLI for the complete baseline and every negative. It covers exact strict-validator argv/real output, complete-stream early failures, fixed-DAG retention under explicit unavailable-validator scope, canonical positive downstream evaluation, malformed/empty claims, coordinator identity substitution, safe output paths, exact ordered Issue #5 obligations, and complete formal transcript binding. It is contract evidence, not real runtime authentication |
 | Slice F: path boundaries | Validator, gate, regression, and live normalization retain `root@sibling`, `root old`, Unicode suffixes, and `root-old`, while still normalizing root and rooted child paths |
 | Slice G: one-to-one live binding | Every live fixture records the exact canonical normalized-display prompt SHA-256 and exact written transcript JSON byte SHA-256. Promotion requires distinct canonical transcript paths, regular non-symlink files, exact transcript bytes, and transcript-command prompt text/hash binding to the exact current fixture ID plus expected artifact before independent stdout replay |
 | Slice G: independent inventory policy | `package_tree_sha256` loads the current regular `validate_package.py`, executes `iter_release_inventory_files`, and requires manifest inventory paths plus volatile file/prefix exclusions to equal the current executable policy exactly. Manifest-authored exclusions cannot remove a behavior or stable file |
@@ -227,24 +228,25 @@ This dated addendum is the current-release audit record for **v1.0.3**. Everythi
 | Slice I: contradictory text counts | Official text validation rejects anchored nonzero numeric `error`/`errors`/`failure`/`failures`/`failed` summaries before positive markers, case-insensitively and with punctuation. Focused controls reject pass-plus-nonzero contradictions, retain pass-plus-zero summaries, and preserve the `invalid`/`valid` boundary |
 | Slice J: index-derived tracked cruft | Verified worktree validation classifies cruft from every typed Git index entry with `_is_cruft_relpath`, independently of the physical walker that intentionally does not descend into `__pycache__`. The exact historical `skills/nozickian-verify/scripts/__pycache__/ntt_gate.cpython-312.pyc` checkout false world is force-added and must produce one ordinary critical failure at the named cruft check, whose details enumerate every tracked cruft index path; ignored untracked checkout bytecode remains a retained true world |
 | Ultra-review: evidence substitution resistance | Every claim wrapper binds the canonical proposition digest; every modal wrapper additionally binds the complete false-/true-world case digest and one exact observation. Coordinated edits to certificate prose, case fields, wrappers, or copied ledgers therefore fail unless the current observation itself is recomputed and re-established |
-| Ultra-review: bounded gate and trace inputs | Strict evidence reads, JSON depth/node/string counts, trace records, node positions, public excerpts, subprocess output, and join time are all bounded. Trace order is total rather than line-local, and parent-exit descendants retaining output pipes are terminated as one process group |
-| Ultra-review: immutable execution identity | Formal and live runs preserve independent read-only package/target snapshots and bind pre/post source and snapshot identity plus the exact resolved executable entrypoint identity. This does not attest the transitive interpreter, shared-library, kernel, or host closure |
-| Ultra-review: literal release replay | Release idempotence now snapshots the complete no-follow package entry graph, including modes, empty directories, hardlinks, and timestamps, around the actual outer self-test and two literal deterministic CLI passes. Markdown and caller-controlled output writes are lexically checked and atomically replaced |
+| Ultra-review: bounded gate and trace inputs | Strict evidence reads, JSON depth/node/string counts, trace records, node positions, public excerpts, subprocess output, and join time are all bounded. Trace order is total rather than line-local. Before execution, capture requires supported Linux child-subreaper setup plus original-process-group tracking; after normal leader exit, timeout, or overflow it kills and reaps adopted same-group and detached-session descendants to a bounded quiet state. Unavailable containment refuses execution, and any survivor or incomplete cleanup fails closed |
+| Ultra-review: endpoint-checked execution identity | Formal and live runs preserve independent permission-hardened package/target copies and bind pre/post source, copy, and no-follow endpoint identity plus the exact resolved executable entrypoint identity. They explicitly record `temporal_immutability_enforced=false`: same-UID A→B→A mutation between observations is not mechanically excluded. This also does not attest the transitive interpreter, shared-library, kernel, or host closure |
+| Ultra-review: held output capabilities | Gate Markdown, certifier JSON/Markdown, formal output/compatibility JSON, live transcript/optional JSON, validator Markdown, gate/formal/regression/promotion wrapper JSON, and fixed-manifest parents are acquired component-by-component before long-running work and retained through descriptor-relative installation. Formal canonical classification and cross-output alias decisions are frozen against held identities. Ancestor replacement cannot redirect writes; validator Markdown must remain external. Observed drift fails closed, but these checks are not temporal isolation |
+| Ultra-review: literal release replay | Release idempotence now snapshots the complete no-follow package entry graph, including modes, empty directories, hardlinks, and timestamps, around the actual outer self-test and two literal deterministic CLI passes. Validator Markdown uses a held external parent and rechecks identity plus package ancestry around installation |
 | Ultra-review: current evidence inventory | The active certificate contains seven proposition-bound claims and one current observation ledger. Stale v1.0.1/v1.0.2 probe ledgers, redundant text mirrors, and orphaned wrapper inventories were removed; official validators remain explicitly `NOT_EXECUTED` in this environment |
 
 ### Consistency sweep for this release (dogfood record)
 
-The final sweep covers proposition and modal-case binding, observation identity, downstream proposition binding, bounded parsing and capture, process-group cleanup, immutable package/target snapshots, executable-entrypoint identity, literal release-command replay, complete no-follow entry snapshots, lexical output-path safety, current charter wording, single-document stdout, and regenerated release evidence. Every active correction locator in `self_validation/self_certificate.json` was checked against its semantic target. Historical counts above this addendum remain explicitly historical; they are not current-release evidence.
+The final sweep covers proposition and modal-case binding, observation identity, downstream proposition binding, bounded parsing and capture, required Linux child-subreaper/process-group containment of same-group and detached-session descendants, fail-before-execution behavior when containment is unavailable, endpoint-checked permission-hardened package/target copies with temporal immutability explicitly unenforced, executable-entrypoint identity, pre-acquired held output capabilities for every long-running release CLI, frozen formal/alias classification, live JSON/transcript non-aliasing, validator Markdown's external-parent check, runner-owned procfd output capabilities resilient to child-FD close/rebind and lexical ancestor substitution, literal release-command replay, complete no-follow entry snapshots, current charter wording, single-document stdout, and regenerated release evidence. Every active correction locator in `self_validation/self_certificate.json` must be rechecked against its semantic target after the current regeneration. Historical counts above this addendum remain explicitly historical; they are not current-release evidence.
 
 ### Final v1.0.3 self-test and gate record
 
 | Command | Result |
 |---|---|
-| checked-in `validate_package.py . --self-test` | PASS - 1459/1459 checks, 0 critical failures, 76/76 false-world mutations rejected, 12/12 true-world variants retained; raw stdout parses directly as one JSON document |
-| checked-in basic `validate_package.py .` | PASS - 1335/1335 checks, 0 critical failures; raw stdout parses directly as one JSON document |
+| checked-in `validate_package.py . --self-test` | PASS - 1717/1717 checks, 0 critical or noncritical failures, 82/82 false-world mutations rejected through ordinary completed failures, 13/13 true-world variants retained, and two literal release passes with zero changed files; raw stdout parses directly as one JSON document |
+| checked-in basic `validate_package.py .` | PASS - 1577/1577 checks, 0 critical or noncritical failures; raw stdout parses directly as one JSON document |
 | checked-in `ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence` | PASS-SCOPED - 0 critical, 0 major, 7 claims, 3 derived/downstream non-closure records, strict local evidence verified |
-| `run_gate_contract_tests.py` | 119/119 contract cases PASS |
-| `run_formal_runner_contract_tests.py` | 119/119 contract cases PASS |
+| `run_gate_contract_tests.py` | 123/123 contract cases PASS |
+| `run_formal_runner_contract_tests.py` | 171/171 contract cases PASS |
 | `run_regression_evals.py .` | 166/166 checks PASS |
 | optional official validators | `claude plugin validate . --strict` and `skills-ref validate skills/nozickian-verify` were not installed and were not executed; no official-validator pass is claimed |
 | mode-aware package-surface checks | PASS - clean Git-free export and ignored untracked bytecode retained; all tracked cruft paths are derived from typed index entries independently of physical traversal; exported/direct force-tracked/exact historical nested bytecode and untracked non-bytecode cruft, Git-evidence failure, tracked/Git-free/untracked symlinks, untracked/Git-free FIFOs, nonzero stages, and index-only gitlink mode 160000 rejected before later reads; the exact nested probe failed only the named critical cruft check and its details contained every tracked cruft index path |
@@ -256,10 +258,10 @@ The final sweep covers proposition and modal-case binding, observation identity,
 | live harness contracts | PASS (offline controls) - valid structured report accepted; recursive metadata echo and non-object JSON rejected; fixed fake CLI plugin-preflight failure returned normal FAIL without fixture execution. No real Claude runtime was invoked |
 | producer display normalization | PASS - validator, gate, regression, and live-harness serialized displays normalize exact roots/rooted children and preserve adjacent prefix lookalikes |
 | exact live executable controls | PASS (offline controls) - relative-PATH candidates under distinct producer/fixture working directories executed only the fingerprinted absolute target for all five version/plugin/fixture calls; pre/post fingerprint remained stable; no resolved executable path was bundled |
-| promotion aggregate contracts | PASS - 36/36 synthetic cases invoked the production certifier CLI for the complete baseline and all negatives. The complete modeled baseline traversed all 248 checks, retained the exact fixed role DAG, evaluated a real promotion claim, recorded both ordered Issue #5 obligations, and returned the mandatory `PASS-SCOPED` / `CAPPED` non-authorizing result; this is not real runtime authentication |
+| promotion aggregate contracts | PASS - 43/43 synthetic cases invoked the production certifier CLI for the complete baseline and all negatives; the complete modeled baseline passed 252/252 checks. Both coordinator result/argv identity substitutions returned the exact `INVALID_INPUT` oracle. The suite retained the fixed role DAG, evaluated a real promotion claim, recorded both ordered Issue #5 obligations, and returned the mandatory `PASS-SCOPED` / `CAPPED` non-authorizing result. JSON and stdout were byte-identical; a raw result digest is intentionally not presented as stable-tree evidence because valid runs retain elapsed-time telemetry. This remains synthetic contract evidence, not runtime authentication |
 | shared package-tree implementation | PASS - live capture and certification both invoke `validate_package.compute_stable_release_tree`; no second `ntt-stable-release-tree-v1` algorithm body remains |
 | promotion package/formal false worlds | PASS - missing/wrong-type promotion schema, wrong-tree deterministic capture, wrong strict-validator argv, realistic ANSI success plus complete-stream contradictions, decoy/swapped formal companions, an untyped existing DAG node, malformed/empty claim arrays, duplicate/invalid IDs, failed canonical claims, unsafe output targets/ancestors, a transcript with an early disallowed event before a large valid-looking tail, missing formal trace-authentication metadata, noncanonical paths, graph bounds, and target/package identity defects failed their exact named checks without unrelated failures |
-| independent inventory derivation | PASS - 98 stable manifest paths exactly matched the current validator policy; volatile file/prefix arrays exactly matched current constants; every derived path was regular/non-symlink with matching hash and byte count |
+| independent inventory derivation | PASS - 152 stable manifest paths exactly matched the current validator policy; volatile file/prefix arrays exactly matched current constants; every derived path was regular/non-symlink with matching hash and byte count |
 | unconditional fresh package validation | PASS - omission of the compatibility flag still ran the current basic validator; the fixed stale-package false world returned FAIL with one critical failure |
 | official-validator controls | PASS - allowlisted validators execute fresh; prewritten text cannot authorize; absent tools scope only through the explicit flag while both official policy nodes and the canonical DAG remain intact; installed failures fail. Exact integer zero is required and structured/plain/JSONL negative status on either stream dominates positive output |
 | certifier no-follow controls | PASS - fixed symlink/FIFO inputs were recorded as critical failures, external sentinel content was not consumed, and plugin.json symlink/FIFO cases failed cleanly |
@@ -342,7 +344,7 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - RESOLUTION: Canonicalize claim text, hash the canonical UTF-8 bytes, and require certificate proposition_sha256 plus every wrapper claim_proposition_sha256 to match.
 - RECURRENCE: Recompute all proposition bindings after any claim wording change, including editorial-looking changes.
 - APPLIES TO: Strict gates, promotion claims, self-certificates, and evidence migrations.
-- LAST VERIFIED: 2026-07-15; gate contracts 119/119 and strict gate PASS-SCOPED.
+- LAST VERIFIED: 2026-07-15; gate contracts 123/123 and strict gate PASS-SCOPED.
 - SOURCE: skills/nozickian-verify/references/EVIDENCE_SCHEMA.md; scripts/ntt_gate.py; run_gate_contract_tests.py.
 - COUNTEREXAMPLE: Coordinated certificate-text substitution with unchanged evidence bytes.
 - RETENTION TEST: Proposition-substitution false worlds.
@@ -358,7 +360,7 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - RESOLUTION: Bind the canonical proposition, kind, test ID, target claims, variation, expected and observed behavior, outcome, and result in modal_case_sha256. Require an exact observation_id match in the versioned current ledger; otherwise count independence by underlying artifact bytes.
 - RECURRENCE: Regenerate the digest and observation record after any case edit; never count filenames as independent observations.
 - APPLIES TO: False-world sensitivity, true-world adherence, and modal thresholds.
-- LAST VERIFIED: 2026-07-15; 76/76 false worlds rejected and 12/12 nearby true worlds retained.
+- LAST VERIFIED: 2026-07-15; 82/82 false worlds rejected through ordinary completed failures and 13/13 nearby true worlds retained.
 - SOURCE: self_validation/current_observations.json; modal wrappers; gate contracts.
 - COUNTEREXAMPLE: Reuse one passing aggregate record for multiple different modal cases.
 - RETENTION TEST: Modal-substitution and shared-ledger true-world cases.
@@ -406,7 +408,7 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - RESOLUTION: Parse only recognized event positions; treat tool nodes as hard boundaries; require assistant-origin tool use, a matching later user-origin substantive result, exact unique IDs and native selectors, no unexpected lanes, total line/node ordering, bounded per-record structure, and complete-transcript authentication.
 - RECURRENCE: Add a false-world trace for every newly accepted event shape or parser relaxation.
 - APPLIES TO: Formal runner, live trace authentication, and PASS-TRACKED evidence.
-- LAST VERIFIED: 2026-07-15; formal contracts 119/119.
+- LAST VERIFIED: 2026-07-15; formal contracts 171/171.
 - SOURCE: docs/runtime-trace-auth/README.md; run_formal_artifact_verification.py; run_formal_runner_contract_tests.py.
 - COUNTEREXAMPLE: An early disallowed event is hidden before a large valid-looking tail.
 - RETENTION TEST: Malformed JSONL, descendant ordering, masquerade, mismatched-ID, and tail cases.
@@ -414,35 +416,35 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - OWNER / FOLLOW-UP: Formal-runner maintainer; keep accepted event grammar explicit.
 - PROMOTION RATIONALE: Prevents a broad demonstrated transcript-spoofing family.
 
-### L-PR3-009 — Bound subprocess capture and terminate the process group
+### L-PR3-009 — Bound subprocess capture and state the process-containment boundary
 
 - DATE: 2026-07-15
 - DURABILITY: PERMANENT
 - ISSUE: Sequential reads could deadlock, descendants could retain output pipes, capture could grow without bound, and tail-only handling could discard an early failure.
-- RESOLUTION: Drain stdout and stderr concurrently under explicit ceilings; decide and hash from complete retained bytes; on timeout or overflow kill the whole POSIX process group, close pipes, and use bounded joins. Excess fails closed.
+- RESOLUTION: Drain stdout and stderr concurrently under explicit ceilings; decide and hash from complete retained bytes. Before execution, require supported Linux `PR_SET_CHILD_SUBREAPER` plus process-group and bounded `/proc` adopted-child tracking. On normal leader exit, timeout, or overflow, kill and reap original-group and detached-session descendants to a bounded quiet state, close pipes, and use bounded joins. Refuse execution when containment cannot be established, and fail closed on any survivor or incomplete cleanup.
 - RECURRENCE: Use this wrapper for every verifier or runtime subprocess.
 - APPLIES TO: Live fixtures, formal runs, official validators, and promotion certification.
-- LAST VERIFIED: 2026-07-15; descendant-pipe and large reordered-result cases passed.
+- LAST VERIFIED: 2026-07-15; current fixed-point evidence must include normal-exit closed-stdio survivor, detached-session adoption/kill/reap, and unavailable-containment fail-before-execution cases.
 - SOURCE: run_live_skill_evals.py; run_formal_artifact_verification.py; certify_pass_tracked_upgrade.py.
-- COUNTEREXAMPLE: Parent exits while a child keeps the pipe open indefinitely.
-- RETENTION TEST: Descendant-pipe, timeout, oversized-output, and early-failure/valid-tail probes.
-- RESIDUAL: POSIX process-group semantics are platform-scoped.
+- COUNTEREXAMPLE: A parent exits successfully after a child closes inherited stdio; without normal-exit cleanup the child survives and mutates state later. A child that calls `setsid()` escapes the original group unless a child subreaper adopts, enumerates, kills, and reaps it.
+- RETENTION TEST: Inherited-pipe, closed-stdio normal-exit survivor, detached-session adoption/kill/reap, unavailable-containment, timeout, oversized-output, and early-failure/valid-tail probes.
+- RESIDUAL: The containment mechanism depends on Linux `prctl` and `/proc`; unsupported platforms or runtimes refuse execution rather than claim a narrower successful run.
 - OWNER / FOLLOW-UP: Runtime/process owner; specify platform behavior before porting.
 - PROMOTION RATIONALE: General process-safety and evidence-integrity rule.
 
-### L-PR3-010 — Execute immutable snapshots and state runtime identity narrowly
+### L-PR3-010 — Use endpoint-checked copies and state runtime identity narrowly
 
 - DATE: 2026-07-15
 - DURABILITY: PERMANENT
-- ISSUE: Mutable package/target bytes and ambient PATH resolution could let executed content differ from certified content.
-- RESOLUTION: Materialize independent immutable package and target snapshots, bind their identities, and verify source/snapshot pre/post stability. Resolve one absolute regular non-symlink executable entrypoint, fingerprint it before and after, and use that exact path for every invocation.
-- RECURRENCE: Re-snapshot after behavior changes and fail on any snapshot or entrypoint drift.
+- ISSUE: Mutable package/target bytes, same-UID A→B→A replacement, and ambient PATH resolution could let executed content differ from certified content.
+- RESOLUTION: Materialize independent permission-hardened package and target copies, bind source/copy/no-follow endpoint identities, and verify pre/post endpoint stability without calling that temporal immutability. Record `temporal_immutability_enforced=false` and cap an otherwise `PASS-TRACKED` formal result at `PASS-SCOPED`. Resolve one absolute regular non-symlink executable entrypoint, fingerprint it before and after, and use that exact path for every invocation.
+- RECURRENCE: Re-copy after behavior changes, fail on observed endpoint or entrypoint drift, and preserve the formal cap until a real isolation boundary prevents same-UID intermediate mutation.
 - APPLIES TO: Live fixtures, formal artifact runs, and promotion bundles.
-- LAST VERIFIED: 2026-07-15; snapshot-mutation and runtime-identity contracts passed.
+- LAST VERIFIED: 2026-07-15; current fixed-point evidence must include same-UID A→B→A and truthful-cap contracts.
 - SOURCE: run_live_skill_evals.py; run_formal_artifact_verification.py; docs/release/README.md.
-- COUNTEREXAMPLE: A different executable earlier on PATH is selected after changing working directory.
-- RETENTION TEST: Two-cwd PATH false world and pre/post identity checks.
-- RESIDUAL: Entrypoint fingerprinting does not attest the transitive interpreter, libraries, kernel, host, or official provenance.
+- COUNTEREXAMPLE: The coordinator chmods a `0400` copy, changes A→B→A, and restores its mode between the two endpoint observations.
+- RETENTION TEST: Same-UID A→B→A, truthful temporal-cap, two-cwd PATH, and pre/post endpoint-identity checks.
+- RESIDUAL: Endpoint equality does not prove temporal immutability; entrypoint fingerprinting does not attest the transitive interpreter, libraries, kernel, host, or official provenance.
 - OWNER / FOLLOW-UP: Runtime evidence owner; expand the identity boundary only with explicit new evidence.
 - PROMOTION RATIONALE: Binds what ran while keeping the assurance boundary honest.
 
@@ -450,15 +452,15 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 
 - DATE: 2026-07-15
 - DURABILITY: PERMANENT
-- ISSUE: Output paths could traverse linked ancestors, overwrite external sentinels, target special files, or alias protected inputs.
-- RESOLUTION: Validate path components lexically without following attacker-controlled links; reject direct links, special files, hardlink aliases, and a regular file at the output-directory path; accept an existing real directory or safely create a new one. Regenerate an allowed private regular JSON file only through an exclusive same-directory temporary and atomic replacement.
+- ISSUE: A caller-controlled output parent could be validated and then reopened after long-running work, allowing a same-UID ancestor substitution to redirect the eventual write; final entries could also traverse links, overwrite external sentinels, target special/hardlinked files, or alias another output or protected input.
+- RESOLUTION: Acquire every long-running release CLI's output parent component-by-component with `O_DIRECTORY`/`O_NOFOLLOW` before work and retain the descriptor through descriptor-relative exclusive temporary/new-file creation, link/rename installation as applicable, and directory fsync. Freeze role/alias classification from lexical names plus held identities; never recompute the formal canonical-result decision after writes; reject certifier output aliases and live JSON/selected-transcript aliases. Enforce each output's declared fresh-versus-replaceable final-name policy. Validator Markdown additionally rechecks that its held parent remains outside the package tree.
 - RECURRENCE: Apply to every new JSON, Markdown, transcript, manifest, or output-directory option.
-- APPLIES TO: Gate, validator, formal runner, certifier, and manifest writers.
-- LAST VERIFIED: 2026-07-15; path-control and external-sentinel probes passed.
+- APPLIES TO: Gate, validator, live/formal runners, certifier, deterministic wrapper CLIs, and manifest writers.
+- LAST VERIFIED: 2026-07-15; exact current gate/formal contracts and five validator Markdown checks cover early capability acquisition, private true controls, final-entry safety, alias rejection, symlink/real-directory parent substitution, and wrapper stdout/file equality.
 - SOURCE: README.md; docs/release/README.md; relevant scripts and contract suites.
-- COUNTEREXAMPLE: A destination symlink points to an external sentinel.
-- RETENTION TEST: Symlink, FIFO, hardlink, linked-ancestor, and protected-input probes.
-- RESIDUAL: Atomic replacement guarantees destination semantics only on the supported filesystem model.
+- COUNTEREXAMPLE: Validate `/safe/out`, run a long suite, rename `/safe/out` aside, replace it with a symlink or different real directory, and reopen the lexical path only when publishing the result.
+- RETENTION TEST: Pre-execution capability-acquisition, direct/ancestor symlink, real-parent substitution, FIFO/hardlink, cross-output alias, frozen-classification, external-validator-Markdown, update-manifest CLI preflight substitution, both fixed-manifest writers, and ordinary true-control probes.
+- RESIDUAL: Held capabilities and pre/post endpoint checks prevent redirection within the declared parent-write boundary and detect observed mismatch; they are not temporal isolation and cannot exclude every transient same-UID mutation between the last precheck and a descriptor-relative create/install.
 - OWNER / FOLLOW-UP: Every CLI owner; keep structured bounded INVALID_INPUT behavior.
 - PROMOTION RATIONALE: Cross-cutting filesystem safety invariant.
 
@@ -470,7 +472,7 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - RESOLUTION: Bind a complete no-follow non-cruft entry snapshot around the actual outer self-test, then execute two literal deterministic CLI passes with external outputs and require zero drift in type, mode, identity, bytes, and relevant metadata.
 - RECURRENCE: Preserve the reviewed literal command list and rerun after every release-affecting edit.
 - APPLIES TO: validate_package.py --self-test, release lock, and release certification.
-- LAST VERIFIED: 2026-07-15; full self-test 1459/1459 and two-pass replay succeeded.
+- LAST VERIFIED: 2026-07-15; full self-test 1717/1717 and two-pass replay succeeded with zero changed files.
 - SOURCE: validate_package.py; RELEASE_LOCK.json; PACKAGE_SURFACE.json.
 - COUNTEREXAMPLE: A simulated command passes while the actual CLI writes inside the package.
 - RETENTION TEST: Actual outer invocation binding plus two literal passes.
@@ -486,7 +488,7 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - RESOLUTION: Independently derive inventory and exclusions from the current validator; require exact manifest equality; verify the manifest self-hash and every path, type, byte count, and SHA before computing one canonical stable-tree digest.
 - RECURRENCE: Refresh manifests after policy/content changes, then independently recompute and verify.
 - APPLIES TO: Stable release identity, live results, promotion certificates, and archives.
-- LAST VERIFIED: 2026-07-15; 98-file stable inventory and 99-file repository tree verified.
+- LAST VERIFIED: 2026-07-16; 152-file stable inventory and 153-file stable closure including `STABLE_RELEASE_MANIFEST.json` verified.
 - SOURCE: validate_package.py; STABLE_RELEASE_MANIFEST.json; MANIFEST.sha256.
 - COUNTEREXAMPLE: A behavior file is added to a manifest-authored volatile exclusion.
 - RETENTION TEST: Exact policy parity and refreshed-manifest false worlds.
@@ -499,10 +501,10 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - DATE: 2026-07-15
 - DURABILITY: PROJECT
 - ISSUE: Prior-version ledgers, redundant text artifacts, and checked-in generated outputs created stale provenance, orphan evidence, and divergent copies.
-- RESOLUTION: Keep seven current claims, forty current structured wrappers, and one current_observations.json; reference every wrapper exactly once; remove stale v1.0.1/v1.0.2 ledgers, redundant text mirrors, and obsolete output ledgers.
+- RESOLUTION: Keep seven current claims, 94 current structured wrappers, and one current_observations.json; reference every wrapper exactly once; remove stale v1.0.1/v1.0.2 ledgers, redundant text mirrors, and obsolete output ledgers.
 - RECURRENCE: On regeneration, check wrapper-reference bijection, hashes, version, stale roots, and orphan/missing files.
 - APPLIES TO: This repository’s self-validation evidence.
-- LAST VERIFIED: 2026-07-15; 40/40 wrappers uniquely referenced with zero missing, orphaned, or stale hashes.
+- LAST VERIFIED: 2026-07-16; 94/94 wrappers uniquely referenced with zero missing, orphaned, or stale hashes.
 - SOURCE: self_validation/self_certificate.json; current_observations.json; self_validation/evidence/.
 - COUNTEREXAMPLE: Two “current” ledgers disagree while both remain cited.
 - RETENTION TEST: Inventory bijection and stale-provenance scans.
@@ -518,7 +520,7 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - RESOLUTION: Require the fixed nine-role promotion-evidence-v2 DAG with canonical bundle-local paths, exact bytes, hashes, dependencies, and role validation. Rerun deterministic suites and allowlisted tools with fixed argv. Invoke the production certifier CLI for the full baseline and every negative; sanitize and restore inherited control variables without mutating fake executable bytes.
 - RECURRENCE: Version the graph when semantics change and prove every negative reached production.
 - APPLIES TO: Modeled PASS-SCOPED to PASS-TRACKED certification.
-- LAST VERIFIED: 2026-07-15; 36/36 cases and production baseline 248/248.
+- LAST VERIFIED: 2026-07-15; authoritative 43/43 cases and production baseline 252/252 passed.
 - SOURCE: PASS_TRACKED_UPGRADE_AUDIT.md; certify_pass_tracked_upgrade.py; run_promotion_certifier_contract_tests.py.
 - COUNTEREXAMPLE: The harness passes while bypassing production parsing or inherits NTT_CONTRACT_CLAUDE_OUTPUT_MODE.
 - RETENTION TEST: Production-CLI invocation inventory, fixed-DAG negatives, and environment isolation.
@@ -563,13 +565,13 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - DATE: 2026-07-15
 - DURABILITY: PERMANENT
 - ISSUE: Required command text hidden in comments, false conditions, heredocs, functions, loops, or disabled jobs could satisfy superficial checks; checkout-only testing could miss shipped-archive defects.
-- RESOLUTION: Validate a restricted exact workflow surface and count commands only as direct top-level commands in active named run blocks. Validate package and promotion behavior in both checkout and unpacked git archive with GitHub token permissions restricted to contents: read.
+- RESOLUTION: Validate a restricted exact workflow surface and count commands only as direct top-level commands in active named run blocks. Run the full package `--self-test` with external Markdown and then the promotion aggregate in both checkout and unpacked Git archive, with GitHub token permissions restricted to contents: read.
 - RECURRENCE: Treat new triggers, permissions, jobs, steps, actions, environments, or shell structures as policy changes requiring nearby worlds.
 - APPLIES TO: .github/workflows/nozickian-team-ci.yml and package-surface policy.
-- LAST VERIFIED: 2026-07-15; Actions run 29388907116 and job 87267813190 completed successfully on synthetic merge 08572eb286dcb6802cf7f5eccc92a38d86cf4649 from head c34fceb7b49617ed0aea007f1f6849e763c8c63b and base 4d655d72c91002a33050f7be0733c5dbc3d06452.
-- SOURCE: Workflow file; PACKAGE_SURFACE.json; validate_package.py; Actions job 87267813190.
-- COUNTEREXAMPLE: Exact command text exists only inside if false or a comment.
-- RETENTION TEST: Disabled-job/comment/conditional false worlds plus structurally equivalent YAML true world.
+- LAST VERIFIED: 2026-07-16; the exact workflow model, archive full-self-test command, and nearby false/true worlds passed locally. Hosted execution of the current archive command is pending publication; earlier Actions runs predate it and are not evidence for this invariant.
+- SOURCE: Workflow file; PACKAGE_SURFACE.json; validate_package.py; current local workflow-policy results.
+- COUNTEREXAMPLE: The archive runs only basic validation before promotion, or exact self-test text exists only inside `if false`, a comment, or an uncalled function.
+- RETENTION TEST: Disabled-job/comment/conditional/function false worlds, a direct-command parser control, and a structurally equivalent YAML true world.
 - RESIDUAL: Green CI is evidence for its exact merge snapshot, not semantic truth or future base states.
 - OWNER / FOLLOW-UP: CI and validator maintainers; rerun after any base/head or workflow change.
 - PROMOTION RATIONALE: Prevents presentation-only CI compliance and checkout-only assurance.
@@ -598,8 +600,8 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - RESOLUTION: Refresh only the integrity artifacts actually affected, rerun basic validation, strict gate, regression, gate/formal contracts, promotion aggregate, formal dry run, and full self-test; reconcile counts and status across all current records; repeat until commands and tree stop drifting; finish with JSON parsing, diff checks, orphan/stale evidence, and cache scans. Count a false-world rejection only when the intended named semantic check fails in an ordinary completed result; HARNESS_ERROR, INTERNAL_ERROR, an unrelated INVALID_INPUT, or a parser crash is not sensitivity evidence. Require true worlds to complete and pass so fail-closed does not become reject-all.
 - RECURRENCE: Required after every release-affecting edit and again after publication.
 - APPLIES TO: High-assurance release closure.
-- LAST VERIFIED: 2026-07-15; basic 1335/1335, full 1459/1459, gate/formal 119/119 each, regression 166/166, promotion 36/36, 76/76 false and 12/12 true worlds.
-- SOURCE: Current AUDIT_REPORT.md fixed-point record and Actions run 29388907116.
+- LAST VERIFIED: 2026-07-16; local current-tree results recorded basic 1577/1577, full 1717/1717, gate 123/123, formal 171/171, regression 166/166, promotion 43/43 with a 252/252 baseline, 82/82 false and 13/13 true worlds.
+- SOURCE: Current local machine results for the exact commands recorded in this addendum; hosted execution is pending for the current revision.
 - COUNTEREXAMPLE: A count or manifest from an earlier green tree is presented as current after a documentation edit, or a crashed mutation harness is counted as a successful false-world rejection.
 - RETENTION TEST: Two literal release passes, exact-tree comparison, causal named-check inspection for false worlds, completed PASS for true worlds, and new CI for every new head/base merge snapshot.
 - RESIDUAL: A fixed point is relative to declared commands, policy, environment, and threat model.

@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-formal-invocation",
+  "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
+  "command_or_source": "run_formal_runner_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:5805a1e3dd3155d2312cfa94051a8a3465e77784c1751502db4f220ae50552ac",
+  "observation_id": "obs:C-formal-invocation:FW-formal-closed-stdio-descendant",
+  "observed_result": "The formal contract discovered and killed the closed-stdio group descendant after normal parent exit and left no sentinel.",
+  "support_summary": "This wrapper binds FW-formal-closed-stdio-descendant to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-formal-closed-stdio-descendant",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}

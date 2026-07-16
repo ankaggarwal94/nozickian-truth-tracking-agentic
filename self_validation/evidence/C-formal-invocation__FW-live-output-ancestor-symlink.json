@@ -1,0 +1,14 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_id": "C-formal-invocation",
+  "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
+  "command_or_source": "run_formal_runner_contract_tests.py",
+  "evidence_schema_version": "1.0",
+  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
+  "modal_case_sha256": "sha256:bc9632aec38662c8fb019368e4aae10b9a63b920123ef940b7c9078c6b3f244f",
+  "observation_id": "obs:C-formal-invocation:FW-live-output-ancestor-symlink",
+  "observed_result": "The formal contract rejected the linked transcript ancestor with zero runtime subprocess calls.",
+  "support_summary": "This wrapper binds FW-live-output-ancestor-symlink to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "test_id": "FW-live-output-ancestor-symlink",
+  "timestamp_utc": "2026-07-16T05:15:11Z"
+}
