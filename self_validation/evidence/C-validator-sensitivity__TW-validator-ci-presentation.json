@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-validator-sensitivity",
   "claim_proposition_sha256": "sha256:dc2dfd6a76bb8c4bf7cf9bfaaca1a161188aff38741fec6771cc1afccb021f4f",
-  "command_or_source": "validate_package.py --self-test",
+  "command_or_source": "Declared case context (not authenticated execution): validate_package.py --self-test",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:ebf6ef9121ecf58966aa2be95a0d45f478419e9c4321ece5243bee1e58c04d4f",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:6a7d238e7f0b33bb4aafc351c8d029b30bd36d83cd052d559391ddfb5d91afa4",
   "observation_id": "obs:C-validator-sensitivity:TW-validator-ci-presentation",
-  "observed_result": "The validator true-world lane retained the structurally identical workflow with benign YAML presentation changes.",
-  "support_summary": "This wrapper binds TW-validator-ci-presentation to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The validator true-world lane retained the structurally identical workflow with benign YAML presentation changes.",
+  "support_summary": "This wrapper binds TW-validator-ci-presentation to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "TW-validator-ci-presentation",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

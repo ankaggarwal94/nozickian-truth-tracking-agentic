@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-pass-tracked-upgrade-audit",
   "claim_proposition_sha256": "sha256:af6dd806f1832342970a4c3a945bfd9964b1b8072def1be83cdef7feac81ef8b",
-  "command_or_source": "run_promotion_certifier_contract_tests.py",
+  "command_or_source": "Declared case context (not authenticated execution): run_promotion_certifier_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:4f333327e971e5d24d7cbfdf6c5dad6aa67da53240bbee30437ec2c1daf1cb89",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:b556371e1fe35fd56184c3148ce888c86f6c7e992d8fcfac407ef4ec9d7c7843",
   "observation_id": "obs:C-pass-tracked-upgrade-audit:FW-promotion-auto-closure",
-  "observed_result": "The promotion contract rejected the fake own-claim authorization and preserved the cap.",
-  "support_summary": "This wrapper binds FW-promotion-auto-closure to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The promotion contract rejected the fake own-claim authorization and preserved the cap.",
+  "support_summary": "This wrapper binds FW-promotion-auto-closure to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-promotion-auto-closure",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

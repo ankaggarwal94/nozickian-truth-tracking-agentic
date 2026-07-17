@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-charter-caps",
   "claim_proposition_sha256": "sha256:59845efcc628f15149c6bea69aff553ed1aa99d835f450b9e7e529740c877536",
-  "command_or_source": "focused charter integrity probe",
+  "command_or_source": "Declared case context (not authenticated execution): focused charter integrity probe",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:0530f5e7577647edb3e07d1e99759c87f080a6eaa89a282903b182080e3968c8",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:3928f1330f27de8c4fedfca116cbc3c7c2369a31a828c98cdea6717e4848cd03",
   "observation_id": "obs:C-charter-caps:FW-charter-sweep-removed",
-  "observed_result": "The charter integrity probe rejected the package after the consistency-sweep rule was removed.",
-  "support_summary": "This wrapper binds FW-charter-sweep-removed to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The charter integrity probe rejected the package after the consistency-sweep rule was removed.",
+  "support_summary": "This wrapper binds FW-charter-sweep-removed to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-charter-sweep-removed",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-validator-sensitivity",
   "claim_proposition_sha256": "sha256:dc2dfd6a76bb8c4bf7cf9bfaaca1a161188aff38741fec6771cc1afccb021f4f",
-  "command_or_source": "validate_package.py --self-test",
+  "command_or_source": "Declared case context (not authenticated execution): validate_package.py --self-test",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:064a52f0c10c167afcf639536d6a6af66b89e1256547d7001364573bce3fcc2b",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:b97bc7edb6d63268ad69057dd07238f216ef87ff54222dada658c73aab55121f",
   "observation_id": "obs:C-validator-sensitivity:FW-validator-mutable-checkout-action",
-  "observed_result": "The validator mutation lane rejected the mutable checkout action tag after manifest refresh.",
-  "support_summary": "This wrapper binds FW-validator-mutable-checkout-action to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The validator mutation lane rejected the mutable checkout action tag after manifest refresh.",
+  "support_summary": "This wrapper binds FW-validator-mutable-checkout-action to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-validator-mutable-checkout-action",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

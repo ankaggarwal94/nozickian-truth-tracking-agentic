@@ -79,7 +79,7 @@ The template's `consistency_sweep` and `remote_escalations` fields are parent-en
   "upgrade_from_status": "PASS-SCOPED",
   "requested_status": "PASS-TRACKED",
   "package_version": "<plugin.json version>",
-  "package_tree_sha256": "sha256:<lowercase digest from ntt-stable-release-tree-v1>",
+  "package_tree_sha256": "sha256:<lowercase digest from ntt-stable-release-tree-v2>",
   "method_m_upgrade": {
     "claude_code_version": "...",
     "plugin_load": "--plugin-dir <package-root>",
@@ -94,7 +94,7 @@ The template's `consistency_sweep` and `remote_escalations` fields are parent-en
     ]
   },
   "live_result_bindings": {
-    "package_tree_algorithm": "ntt-stable-release-tree-v1",
+    "package_tree_algorithm": "ntt-stable-release-tree-v2",
     "package_tree_sha256": "<64 lowercase hex from current shared validator helper>",
     "fixture_spec_sha256": "<64 lowercase hex over exact evals.json bytes>",
     "run_config": {

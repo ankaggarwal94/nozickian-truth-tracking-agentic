@@ -4,7 +4,7 @@
   "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
   "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:6cde58dd8972365c7d736618b734a5777eba549b2d6d5669ba9342a9cc9fce1a",
+  "hash_or_version": "sha256:8ff5de66c31332b36819217cd17e7c81aee9263a0ac12aaab33c0281c05562e8",
   "observed_result": "Current source bytes support the scoped proposition for C-formal-invocation.",
   "support_summary": "This wrapper binds C-formal-invocation to current package artifact skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py by exact SHA-256 and to the canonical claim proposition digest.",
   "timestamp_utc": "2026-07-16T05:15:11Z"

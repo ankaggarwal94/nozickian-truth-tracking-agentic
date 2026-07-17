@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-formal-invocation",
   "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
-  "command_or_source": "run_formal_runner_contract_tests.py",
+  "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:4380f5178e8a5f7c1c499f228e695c5567f7d54950bc2cba04e811b0616bc1ed",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:1289f1c4b0d5b51aed0338b5acee434c26b49d9ed9dd3d627161857a12707ae1",
   "observation_id": "obs:C-formal-invocation:FW-live-transcript-real-substitution",
-  "observed_result": "The formal contract wrote into neither replacement path and rejected the long-run parent substitution.",
-  "support_summary": "This wrapper binds FW-live-transcript-real-substitution to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The formal contract wrote into neither replacement path and rejected the long-run parent substitution.",
+  "support_summary": "This wrapper binds FW-live-transcript-real-substitution to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-live-transcript-real-substitution",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

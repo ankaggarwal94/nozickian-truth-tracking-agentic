@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-formal-invocation",
   "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
-  "command_or_source": "run_formal_runner_contract_tests.py",
+  "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:dde29a4109132f14ea28c861518059505b0e9be2b1cf11391349b7c49743faba",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:7baf458a8b7a1e89e8444a7e9f3bfc6a4696921d720be08b93237e89fb354ead",
   "observation_id": "obs:C-formal-invocation:FW-formal-companion-substitution",
-  "observed_result": "The formal contract independently rejected prompt, transcript, and coordinated gate/certificate companion substitutions.",
-  "support_summary": "This wrapper binds FW-formal-companion-substitution to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The formal contract independently rejected prompt, transcript, and coordinated gate/certificate companion substitutions.",
+  "support_summary": "This wrapper binds FW-formal-companion-substitution to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-formal-companion-substitution",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

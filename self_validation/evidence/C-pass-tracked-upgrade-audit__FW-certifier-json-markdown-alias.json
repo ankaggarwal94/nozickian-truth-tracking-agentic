@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-pass-tracked-upgrade-audit",
   "claim_proposition_sha256": "sha256:af6dd806f1832342970a4c3a945bfd9964b1b8072def1be83cdef7feac81ef8b",
-  "command_or_source": "run_formal_runner_contract_tests.py",
+  "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:0515520a88955a3f723f8fbff4440038c234b3aaa1ba78dcaef1cd7ba5a60981",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:86b2eed12a5a655b4ccda92e5778f16af6745c74f1caebda20d3fad21fc5be9d",
   "observation_id": "obs:C-pass-tracked-upgrade-audit:FW-certifier-json-markdown-alias",
-  "observed_result": "The formal contract rejected identical and hardlinked JSON/Markdown destinations and preserved their sentinel bytes.",
-  "support_summary": "This wrapper binds FW-certifier-json-markdown-alias to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The formal contract rejected identical and hardlinked JSON/Markdown destinations and preserved their sentinel bytes.",
+  "support_summary": "This wrapper binds FW-certifier-json-markdown-alias to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-certifier-json-markdown-alias",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

@@ -7,7 +7,7 @@ optionally missing or semantically unbound evidence artifacts when --evidence-ro
 is supplied.
 
 This gate is intentionally conservative: it checks declared certificate structure,
-local evidence-ref containment, hardlink-aware evidence identity, case-bound modal observations, proposition-bound downstream passes, structured evidence binding for every cited local ref, exact SHA-256 equality between artifact_path and hash_or_version, and URI-scheme rejection for both evidence refs and artifact_path. In strict local evidence mode, every cited evidence ref must be a valid in-root JSON evidence artifact; one good ref cannot mask a bad cited ref, duplicate or physically aliased refs count once for minimum evidence thresholds, and duplicate modal observations count once for sensitivity/adherence thresholds. It is not a substitute
+local evidence-ref containment, hardlink-aware evidence identity, case-bound modal release declarations, proposition-bound downstream passes, structured evidence binding for every cited local ref, exact SHA-256 equality between artifact_path and hash_or_version, and URI-scheme rejection for both evidence refs and artifact_path. In strict local evidence mode, every cited evidence ref must be a valid in-root JSON evidence artifact; one good ref cannot mask a bad cited ref, duplicate or physically aliased refs count once for minimum evidence thresholds, and duplicate declaration identities count once for sensitivity/adherence thresholds. These declarations are not execution provenance. It is not a substitute
 for expert judgment about whether every source semantically proves every claim, but
 it prevents a bare README, LICENSE, or unrelated nonempty file from counting as
 claim evidence for PASS-TRACKED.
@@ -40,7 +40,21 @@ NEG_TRUE = ("rejected equivalent", "overfit", "failed benign", "did not retain",
 UNKNOWN = {"", "unknown", "inferred_unknown", "n/a", "none"}
 STRUCTURED_EVIDENCE_FIELDS = ("evidence_schema_version", "claim_id", "claim_proposition_sha256", "artifact_path", "command_or_source", "observed_result", "support_summary", "timestamp_utc", "hash_or_version")
 STRUCTURED_TEST_FIELDS = ("test_id",)
-OBSERVATION_SCHEMA_VERSION = "1.0"
+OBSERVATION_SCHEMA_VERSION = "1.1"
+OBSERVATION_LEDGER_FIELDS = frozenset({
+    "observation_schema_version",
+    "observations",
+})
+OBSERVATION_RECORD_FIELDS = frozenset({
+    "claim_id",
+    "test_id",
+    "kind",
+    "claim_proposition_sha256",
+    "modal_case_sha256",
+    "result",
+    "outcome",
+    "observed_result",
+})
 PROPOSITION_BINDING_SCHEMA_VERSION = "1.0"
 MAX_CERTIFICATE_DEPTH = 128
 MAX_CERTIFICATE_NODES = 100_000
@@ -48,6 +62,7 @@ MAX_CERTIFICATE_FIELDS = 100_000
 MAX_CERTIFICATE_BYTES = 8_388_608
 MAX_EVIDENCE_WRAPPER_BYTES = 1_048_576
 MAX_OBSERVATION_LEDGER_BYTES = 8_388_608
+MAX_EVIDENCE_ARTIFACT_BYTES = 67_108_864
 MAX_EVIDENCE_JSON_DEPTH = 64
 MAX_EVIDENCE_JSON_NODES = 100_000
 MAX_EVIDENCE_JSON_FIELDS = 100_000
@@ -116,7 +131,66 @@ class BoundedJsonResult:
     reason: str = ""
 
 
+@dataclass
+class EvidenceRootCapability:
+    """A held directory descriptor defining the evidence-root boundary."""
+
+    path: Path
+    descriptor: int
+
+    def close(self) -> None:
+        if self.descriptor >= 0:
+            os.close(self.descriptor)
+            self.descriptor = -1
+
+
+@dataclass(frozen=True)
+class ResolvedEvidenceFile:
+    """A canonical relative file addressed through a held root capability."""
+
+    root: EvidenceRootCapability
+    relative: str
+
+    @property
+    def display_path(self) -> Path:
+        return self.root.path / PurePosixPath(self.relative)
+
+    def __str__(self) -> str:
+        return str(self.display_path)
+
+
 JsonCacheKey = Tuple[str, int, str, int, int, int]
+
+
+class DuplicateJsonKeyError(ValueError):
+    """A JSON object repeats a key and is therefore semantically ambiguous."""
+
+
+def _strict_json_object(pairs: List[Tuple[str, Any]]) -> Dict[str, Any]:
+    value: Dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise DuplicateJsonKeyError(f"duplicate JSON object key: {key}")
+        value[key] = item
+    return value
+
+
+def strict_json_loads(text: str) -> Any:
+    def reject_nonfinite(value: str) -> Any:
+        raise ValueError(f"non-finite JSON number is not allowed: {value}")
+
+    def parse_finite_float(value: str) -> float:
+        parsed = float(value)
+        if not math.isfinite(parsed):
+            reject_nonfinite(value)
+        return parsed
+
+    return json.loads(
+        text,
+        object_pairs_hook=_strict_json_object,
+        parse_constant=reject_nonfinite,
+        parse_float=parse_finite_float,
+    )
 
 @dataclass
 class TestResult:
@@ -188,9 +262,54 @@ def normalize_cli_display(value: Any, package_root: Optional[Path]) -> Any:
 
 
 def _unknown_item(v: Any) -> bool:
-    if isinstance(v, bool): return False
-    if isinstance(v, (int, float)): return False
-    return _nonempty(v)
+    """Return whether an unknown-bearing field declares a real limitation.
+
+    Sentinel-looking text is still an unknown when it occurs inside an
+    ``unknowns``/``method_unknowns``/``scope_limitations`` collection. The
+    canonical representation for "no unknowns" is an empty collection, not a
+    magic word such as ``unknown``, ``none``, or ``n/a``.
+    """
+    # Once an item is present in an unknown-bearing collection it declares a
+    # limitation, even when its shape is malformed or its text resembles a
+    # placeholder. The only canonical representation for no limitations is an
+    # empty list.
+    del v
+    return True
+
+
+def _unknown_collection_shape_error(cert: Mapping[str, Any]) -> Optional[str]:
+    """Require unknown-bearing fields to use the canonical list container."""
+    for field in ("scope_limitations", "unknowns", "method_unknowns"):
+        if field in cert and type(cert.get(field)) is not list:
+            return f"certificate {field} is not a list"
+    method_roots: List[Tuple[str, Any]] = [
+        ("method_manifest", cert.get("method_manifest"))
+    ]
+    claims = cert.get("claims")
+    if isinstance(claims, list):
+        for index, claim in enumerate(claims):
+            if isinstance(claim, Mapping):
+                method_roots.append(
+                    (
+                        f"claims[{index}].method",
+                        claim.get("method_m", claim.get("method")),
+                    )
+                )
+    for root_name, root in method_roots:
+        stack: List[Tuple[str, Any]] = [(root_name, root)]
+        while stack:
+            path, node = stack.pop()
+            if isinstance(node, Mapping):
+                for key, value in node.items():
+                    child_path = f"{path}.{key}"
+                    if key in {"unknowns", "method_unknowns"}:
+                        if type(value) is not list:
+                            return f"{child_path} is not a list"
+                    else:
+                        stack.append((child_path, value))
+            elif isinstance(node, list):
+                stack.extend((f"{path}[]", value) for value in node)
+    return None
 
 
 def _validate_json_bounds(
@@ -316,27 +435,123 @@ def load_json(path: Path) -> Any:
     return result.data
 
 
-def sha256_path(path: Path) -> str:
-    """Hash one stable regular file without following a swapped-in symlink."""
-    descriptor: Optional[int] = None
+def _open_evidence_root_capability(path: Path) -> EvidenceRootCapability:
+    """Open one stable no-follow evidence-root endpoint and hold it."""
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory = getattr(os, "O_DIRECTORY", 0)
+    if not nofollow or not directory:
+        raise OSError("platform lacks no-follow directory traversal")
     before = os.lstat(path)
-    if not stat.S_ISREG(before.st_mode):
-        raise OSError("path is not a regular file")
-    flags = os.O_RDONLY
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
+    if stat.S_ISLNK(before.st_mode):
+        raise OSError("evidence_root must not be a symlink")
+    if not stat.S_ISDIR(before.st_mode):
+        raise OSError("evidence_root is not an existing directory")
+    flags = os.O_RDONLY | nofollow | directory
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    descriptor = os.open(path, flags)
     try:
-        descriptor = os.open(path, flags)
+        opened = os.fstat(descriptor)
+        if not stat.S_ISDIR(opened.st_mode):
+            raise OSError("evidence_root is not a directory")
+        if (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
+            raise OSError("evidence_root changed before open")
+        return EvidenceRootCapability(Path(os.path.abspath(path)), descriptor)
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _open_resolved_evidence_file(path: ResolvedEvidenceFile) -> int:
+    """Open every relative component beneath the held root with O_NOFOLLOW."""
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory = getattr(os, "O_DIRECTORY", 0)
+    if not nofollow or not directory:
+        raise OSError("platform lacks no-follow directory traversal")
+    if path.root.descriptor < 0:
+        raise OSError("evidence_root capability is closed")
+    common = os.O_RDONLY | nofollow
+    if hasattr(os, "O_CLOEXEC"):
+        common |= os.O_CLOEXEC
+    descriptor = os.dup(path.root.descriptor)
+    try:
+        parts = PurePosixPath(path.relative).parts
+        for part in parts[:-1]:
+            child = os.open(
+                part,
+                common | directory,
+                dir_fd=descriptor,
+            )
+            os.close(descriptor)
+            descriptor = child
+        final_descriptor = os.open(
+            parts[-1],
+            common,
+            dir_fd=descriptor,
+        )
+        os.close(descriptor)
+        descriptor = -1
+        metadata = os.fstat(final_descriptor)
+        if not stat.S_ISREG(metadata.st_mode):
+            os.close(final_descriptor)
+            raise OSError("resolved evidence path is not a regular file")
+        return final_descriptor
+    except BaseException:
+        if descriptor >= 0:
+            os.close(descriptor)
+        raise
+
+
+def _resolved_evidence_stat(path: ResolvedEvidenceFile) -> os.stat_result:
+    descriptor = _open_resolved_evidence_file(path)
+    try:
+        return os.fstat(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def sha256_path(
+    path: Path | ResolvedEvidenceFile,
+    *,
+    max_bytes: Optional[int] = None,
+) -> str:
+    """Hash one stable regular file without following a swapped-in symlink."""
+    if max_bytes is not None and (
+        type(max_bytes) is not int or max_bytes < 0
+    ):
+        raise ValueError("max_bytes must be a nonnegative integer")
+    descriptor: Optional[int] = None
+    try:
+        before: Optional[os.stat_result] = None
+        if isinstance(path, ResolvedEvidenceFile):
+            descriptor = _open_resolved_evidence_file(path)
+        else:
+            before = os.lstat(path)
+            if not stat.S_ISREG(before.st_mode):
+                raise OSError("path is not a regular file")
+            flags = os.O_RDONLY
+            if hasattr(os, "O_NOFOLLOW"):
+                flags |= os.O_NOFOLLOW
+            descriptor = os.open(path, flags)
         opened = os.fstat(descriptor)
         if not stat.S_ISREG(opened.st_mode):
             raise OSError("opened path is not a regular file")
-        if (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
+        if max_bytes is not None and opened.st_size > max_bytes:
+            raise ValueError(f"file exceeds byte limit {max_bytes}")
+        if before is not None and (
+            (opened.st_dev, opened.st_ino)
+            != (before.st_dev, before.st_ino)
+        ):
             raise OSError("path changed before hash read")
         digest = hashlib.sha256()
+        observed_bytes = 0
         while True:
             chunk = os.read(descriptor, 1024 * 1024)
             if not chunk:
                 break
+            observed_bytes += len(chunk)
+            if max_bytes is not None and observed_bytes > max_bytes:
+                raise ValueError(f"file exceeds byte limit {max_bytes}")
             digest.update(chunk)
         after = os.fstat(descriptor)
         if (
@@ -351,7 +566,7 @@ def sha256_path(path: Path) -> str:
 
 
 def _bounded_json_read(
-    path: Path,
+    path: Path | ResolvedEvidenceFile,
     *,
     max_bytes: int,
     label: str,
@@ -379,23 +594,30 @@ def _bounded_json_read(
 
     descriptor: Optional[int] = None
     try:
-        before = os.lstat(path)
-        if not stat.S_ISREG(before.st_mode):
-            return finish(BoundedJsonResult(reason=f"{label} is not a regular file"))
-        if before.st_size > max_bytes:
-            return finish(
-                BoundedJsonResult(
-                    reason=f"{label} exceeds byte limit {max_bytes}"
+        before: Optional[os.stat_result] = None
+        if isinstance(path, ResolvedEvidenceFile):
+            descriptor = _open_resolved_evidence_file(path)
+        else:
+            before = os.lstat(path)
+            if not stat.S_ISREG(before.st_mode):
+                return finish(BoundedJsonResult(reason=f"{label} is not a regular file"))
+            if before.st_size > max_bytes:
+                return finish(
+                    BoundedJsonResult(
+                        reason=f"{label} exceeds byte limit {max_bytes}"
+                    )
                 )
-            )
-        flags = os.O_RDONLY
-        if hasattr(os, "O_NOFOLLOW"):
-            flags |= os.O_NOFOLLOW
-        descriptor = os.open(path, flags)
+            flags = os.O_RDONLY
+            if hasattr(os, "O_NOFOLLOW"):
+                flags |= os.O_NOFOLLOW
+            descriptor = os.open(path, flags)
         opened = os.fstat(descriptor)
         if not stat.S_ISREG(opened.st_mode):
             return finish(BoundedJsonResult(reason=f"{label} is not a regular file"))
-        if (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
+        if before is not None and (
+            (opened.st_dev, opened.st_ino)
+            != (before.st_dev, before.st_ino)
+        ):
             return finish(BoundedJsonResult(reason=f"{label} changed before read"))
         if opened.st_size > max_bytes:
             return finish(
@@ -427,10 +649,10 @@ def _bounded_json_read(
         raw_bytes = bytes(raw)
         try:
             text = raw_bytes.decode("utf-8")
-            data = json.loads(text)
+            data = strict_json_loads(text)
         except (
             UnicodeError,
-            json.JSONDecodeError,
+            ValueError,
             RecursionError,
             MemoryError,
             OverflowError,
@@ -487,7 +709,10 @@ def _canonical_claimed_sha256(value: Any) -> Optional[str]:
     return None
 
 
-def _artifact_under_root(artifact_path: Any, evidence_root: Optional[Path]) -> Tuple[Optional[Path], Optional[str]]:
+def _artifact_under_root(
+    artifact_path: Any,
+    evidence_root: Optional[Path | EvidenceRootCapability],
+) -> Tuple[Optional[Path | ResolvedEvidenceFile], Optional[str]]:
     if evidence_root is None:
         return None, "evidence_root unavailable for artifact hash verification"
     rel, canonical_error = _canonical_relative_path(
@@ -506,7 +731,10 @@ def _artifact_under_root(artifact_path: Any, evidence_root: Optional[Path]) -> T
     )
 
 
-def _verify_artifact_sha256(data: Mapping[str, Any], evidence_root: Optional[Path]) -> Tuple[List[str], Optional[str], Optional[str]]:
+def _verify_artifact_sha256(
+    data: Mapping[str, Any],
+    evidence_root: Optional[Path | EvidenceRootCapability],
+) -> Tuple[List[str], Optional[ResolvedEvidenceFile | Path], Optional[str]]:
     """Verify structured evidence provenance and return artifact identity.
 
     For PASS-TRACKED evidence, hash_or_version must be an actual SHA-256 digest
@@ -522,23 +750,29 @@ def _verify_artifact_sha256(data: Mapping[str, Any], evidence_root: Optional[Pat
     claimed = _canonical_claimed_sha256(data.get("hash_or_version"))
     if claimed is None:
         reasons.append("hash_or_version must be a SHA-256 digest, optionally prefixed by sha256:")
-        return reasons, str(artifact), None
+        return reasons, artifact, None
     try:
-        actual = sha256_path(artifact)
+        artifact_limit = (
+            MAX_OBSERVATION_LEDGER_BYTES
+            if data.get("observation_id") is not None
+            else MAX_EVIDENCE_ARTIFACT_BYTES
+        )
+        actual = sha256_path(artifact, max_bytes=artifact_limit)
     except (OSError, RuntimeError, ValueError) as exc:
         reasons.append(
             "artifact_path SHA-256 read failed: "
-            f"{type(exc).__name__}"
+            f"{type(exc).__name__}: {exc}"
         )
-        return reasons, str(artifact), None
+        return reasons, artifact, None
     if actual != claimed:
         reasons.append(f"hash_or_version does not match artifact_path SHA-256: claimed={claimed} actual={actual}")
-    return reasons, str(artifact), actual
+    return reasons, artifact, actual
 
 
 def _verify_observation_binding(
     data: Mapping[str, Any],
-    artifact_path_resolved: Optional[str],
+    artifact_path_resolved: Optional[ResolvedEvidenceFile | Path],
+    artifact_sha256: Optional[str],
     claim_id: Optional[str],
     test_id: Optional[str],
     test_kind: Optional[str],
@@ -551,8 +785,10 @@ def _verify_observation_binding(
     """Verify an optional case-level observation inside a hashed JSON ledger.
 
     Distinct evidence wrappers over one aggregate file are not independent by
-    themselves. A wrapper may name an observation only when the hashed artifact
-    contains an exact, passing claim/test/kind-bound observation record.
+    themselves. A wrapper may name a declaration only when the hashed artifact
+    contains an exact claim/test/kind-bound release record. The record is a
+    deduplication identity, not execution provenance or a claim that a named
+    suite result was reconciled to this modal case.
     """
     raw_observation_id = data.get("observation_id")
     if raw_observation_id is None:
@@ -567,13 +803,17 @@ def _verify_observation_binding(
     if not artifact_path_resolved:
         return ["observation_id cannot be verified without artifact_path"], ""
     ledger_result = _bounded_json_read(
-        Path(artifact_path_resolved),
+        artifact_path_resolved,
         max_bytes=MAX_OBSERVATION_LEDGER_BYTES,
         label="observation ledger",
         cache=json_cache,
     )
     if ledger_result.reason:
         raise InvalidInputError(ledger_result.reason)
+    if artifact_sha256 and ledger_result.sha256 != artifact_sha256:
+        return [
+            "observation ledger changed between artifact hashing and JSON read"
+        ], ""
     ledger = ledger_result.data
     if not isinstance(ledger, Mapping):
         return ["observation ledger JSON is not an object"], ""
@@ -582,9 +822,106 @@ def _verify_observation_binding(
             "observation ledger schema is not "
             f"{OBSERVATION_SCHEMA_VERSION}"
         ], ""
+    ledger_fields = set(ledger)
+    if ledger_fields != OBSERVATION_LEDGER_FIELDS:
+        missing = sorted(OBSERVATION_LEDGER_FIELDS - ledger_fields)
+        extra = sorted(ledger_fields - OBSERVATION_LEDGER_FIELDS)
+        return [
+            "observation ledger fields are not exact for schema "
+            f"{OBSERVATION_SCHEMA_VERSION}: missing={missing}; extra={extra}"
+        ], ""
     observations = ledger.get("observations")
     if not isinstance(observations, Mapping):
         return ["observation ledger lacks an observations object"], ""
+    # Schema 1.1 is closed for the complete ledger, not merely the selected
+    # record. Otherwise unsupported provenance claims can be hidden in an
+    # unreferenced sibling while one valid record authenticates the artifact.
+    for candidate_id in sorted(observations):
+        if (
+            type(candidate_id) is not str
+            or candidate_id != candidate_id.strip()
+            or not re.fullmatch(
+                r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}",
+                candidate_id,
+            )
+        ):
+            return [
+                "observation ledger contains a noncanonical record identifier"
+            ], ""
+        candidate = observations.get(candidate_id)
+        if not isinstance(candidate, Mapping):
+            return [
+                f"observation {candidate_id} is not an object"
+            ], ""
+        candidate_fields = set(candidate)
+        if candidate_fields != OBSERVATION_RECORD_FIELDS:
+            missing = sorted(
+                OBSERVATION_RECORD_FIELDS - candidate_fields
+            )
+            extra = sorted(
+                candidate_fields - OBSERVATION_RECORD_FIELDS
+            )
+            return [
+                f"observation {candidate_id} fields are not exact for schema "
+                f"{OBSERVATION_SCHEMA_VERSION}: missing={missing}; "
+                f"extra={extra}"
+            ], ""
+        non_string_fields = sorted(
+            field
+            for field in OBSERVATION_RECORD_FIELDS
+            if type(candidate.get(field)) is not str
+        )
+        if non_string_fields:
+            return [
+                f"observation {candidate_id} fields must all be strings: "
+                f"{non_string_fields}"
+            ], ""
+        for identity_field in ("claim_id", "test_id"):
+            identity_value = candidate.get(identity_field)
+            if (
+                not identity_value
+                or identity_value != identity_value.strip()
+                or len(identity_value) > 256
+            ):
+                return [
+                    f"observation {candidate_id} {identity_field} is not a "
+                    "canonical bounded identifier"
+                ], ""
+        candidate_kind = _lower(candidate.get("kind"))
+        if candidate_kind not in {"false_world", "true_world"}:
+            return [
+                f"observation {candidate_id} kind is not recognized"
+            ], ""
+        for digest_field in (
+            "claim_proposition_sha256",
+            "modal_case_sha256",
+        ):
+            if _canonical_claimed_sha256(
+                candidate.get(digest_field)
+            ) is None:
+                return [
+                    f"observation {candidate_id} {digest_field} is not a "
+                    "canonical SHA-256"
+                ], ""
+        if _lower(candidate.get("result")) != "pass":
+            return [
+                f"observation {candidate_id} result is not pass"
+            ], ""
+        candidate_outcome = _lower(candidate.get("outcome"))
+        candidate_outcomes = (
+            FALSE_OUTCOMES
+            if candidate_kind == "false_world"
+            else TRUE_OUTCOMES
+        )
+        if candidate_outcome not in candidate_outcomes:
+            return [
+                f"observation {candidate_id} outcome is not accepted for "
+                f"{candidate_kind}"
+            ], ""
+        if len(str(candidate.get("observed_result") or "").strip()) < 10:
+            return [
+                f"observation {candidate_id} observed_result is too short"
+            ], ""
     record = observations.get(observation_id)
     if not isinstance(record, Mapping):
         return [
@@ -671,10 +1008,23 @@ def _canonical_relative_path(
 
 def _resolve_regular_under_root(
     relative: str,
-    evidence_root: Path,
+    evidence_root: Path | EvidenceRootCapability,
     field: str,
-) -> Tuple[Optional[Path], Optional[str]]:
+) -> Tuple[Optional[Path | ResolvedEvidenceFile], Optional[str]]:
     """Resolve a canonical relative path without following in-root symlinks."""
+    if isinstance(evidence_root, EvidenceRootCapability):
+        resolved = ResolvedEvidenceFile(evidence_root, relative)
+        descriptor: Optional[int] = None
+        try:
+            descriptor = _open_resolved_evidence_file(resolved)
+            return resolved, None
+        except FileNotFoundError:
+            return None, f"{field} is not an existing local file"
+        except (OSError, RuntimeError, ValueError) as exc:
+            return None, f"{field} resolution failed: {type(exc).__name__}"
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
     try:
         root = evidence_root.resolve(strict=True)
         root_stat = os.stat(root, follow_symlinks=False)
@@ -734,7 +1084,10 @@ def _ref_to_path(ref: Any, evidence_root: Optional[Path]) -> Optional[Path]:
     return p if p.is_absolute() else evidence_root / p
 
 
-def _ref_to_path_checked(ref: Any, evidence_root: Path) -> Tuple[Optional[Path], Optional[str]]:
+def _ref_to_path_checked(
+    ref: Any,
+    evidence_root: Path | EvidenceRootCapability,
+) -> Tuple[Optional[Path | ResolvedEvidenceFile], Optional[str]]:
     """Resolve a cited evidence JSON path under evidence_root.
 
     This is deliberately stricter than merely checking artifact_path inside an
@@ -753,7 +1106,12 @@ def _ref_to_path_checked(ref: Any, evidence_root: Path) -> Tuple[Optional[Path],
     if resolution_error is not None or resolved is None:
         return None, resolution_error
     try:
-        if os.stat(resolved, follow_symlinks=False).st_size <= 0:
+        metadata = (
+            _resolved_evidence_stat(resolved)
+            if isinstance(resolved, ResolvedEvidenceFile)
+            else os.stat(resolved, follow_symlinks=False)
+        )
+        if metadata.st_size <= 0:
             return None, "evidence ref is empty"
     except (OSError, ValueError) as exc:
         return None, f"evidence ref stat failed: {type(exc).__name__}"
@@ -896,6 +1254,7 @@ def _load_structured_evidence(
     observation_reasons, observation_id = _verify_observation_binding(
         data,
         artifact_path_resolved,
+        artifact_sha256,
         claim_id,
         test_id,
         test_kind,
@@ -910,7 +1269,11 @@ def _load_structured_evidence(
         not reasons,
         reasons,
         canonical_ref=canonical_ref,
-        artifact_path_resolved=artifact_path_resolved,
+        artifact_path_resolved=(
+            str(artifact_path_resolved)
+            if artifact_path_resolved is not None
+            else None
+        ),
         artifact_sha256=artifact_sha256,
         observation_id=observation_id,
         wrapper_sha256=wrapper_result.sha256,
@@ -1040,8 +1403,19 @@ def evaluate_test(
     elif claim_id is not None and not _target_claim_matches(t, claim_id):
         reasons.append(f"test target_claim does not match evaluated claim {claim_id}")
     for field in ("expected_behavior", "observed_behavior"):
-        if not _nonempty(t.get(field)): reasons.append(f"missing {field}")
-    if not (_nonempty(t.get("perturbation")) or _nonempty(t.get("variant"))): reasons.append("missing perturbation/variant")
+        if _canonical_proposition_text(t.get(field)) is None:
+            reasons.append(f"{field} must be a nonempty string")
+    variation_fields = [
+        field for field in ("perturbation", "variant") if field in t
+    ]
+    if len(variation_fields) != 1:
+        reasons.append(
+            "modal test must contain exactly one perturbation/variant field"
+        )
+    elif _canonical_proposition_text(t.get(variation_fields[0])) is None:
+        reasons.append(
+            f"{variation_fields[0]} must be a nonempty string"
+        )
     _, ev_reasons, evidence_checks = _test_evidence_checks(
         t,
         evidence_root,
@@ -1114,20 +1488,33 @@ def _canonical_test_evidence_keys(t: Mapping[str, Any], evidence_root: Optional[
     return tuple(sorted(_canonical_evidence_key(r, evidence_root) for r in refs))
 
 
-def _modal_test_key(t: Mapping[str, Any], expected_kind: str, evidence_root: Optional[Path]) -> Tuple[str, str, str, str, Tuple[str, ...]]:
-    """Return a stable identity for modal-test uniqueness thresholds.
+def _modal_test_key(
+    t: Mapping[str, Any],
+    expected_kind: str,
+    evidence_root: Optional[Path],
+    evaluated_claim_id: str,
+) -> Tuple[str, str, str]:
+    """Return the semantic nearby-world identity for coverage thresholds.
 
-    Nozickian sensitivity/adherence thresholds are modal coverage claims. Reusing
-    the same test id, perturbation/variant, and evidence set twice does not add a
-    second nearby world. Evidence refs are canonicalized so :: aliases to one file
-    cannot inflate false-world or true-world coverage.
+    Test IDs, result prose, and evidence filenames are labels or observations;
+    changing them does not construct a second nearby world. World identity is
+    therefore limited to the kind, the enclosing evaluated claim, and the
+    canonicalized perturbation/variant itself. Extra target labels cannot
+    manufacture a second world.
     """
+    del evidence_root  # Kept in the signature for compatibility with callers.
     kind = _lower(t.get("kind") or expected_kind)
-    identifier = _test_id(t)
-    variant = str(t.get("perturbation") or t.get("variant") or "").strip()
-    expected = str(t.get("expected_behavior") or "").strip()
-    evidence_keys = _canonical_test_evidence_keys(t, evidence_root)
-    return (kind, identifier, variant, expected, evidence_keys)
+    variation = (
+        t.get("perturbation")
+        if _nonempty(t.get("perturbation"))
+        else t.get("variant")
+    )
+    canonical_variation = _canonical_proposition_text(variation) or ""
+    return (
+        kind,
+        evaluated_claim_id,
+        canonical_variation,
+    )
 
 
 def _distinct_observation_capacity(
@@ -1185,6 +1572,7 @@ def _modal_test_uniqueness_reasons(
     expected_kind: str,
     required: int,
     evidence_root: Optional[Path],
+    evaluated_claim_id: str,
 ) -> List[str]:
     reasons: List[str] = []
     label = "false-world" if expected_kind == "false_world" else "true-world"
@@ -1205,10 +1593,21 @@ def _modal_test_uniqueness_reasons(
         reasons.append(f"missing {label} test IDs present: {missing_count}")
     if duplicate_ids:
         reasons.append(f"duplicate {label} test IDs present: {', '.join(duplicate_ids)}")
-    keys = [_modal_test_key(t, expected_kind, evidence_root) for t in tests]
+    keys = [
+        _modal_test_key(
+            test,
+            expected_kind,
+            evidence_root,
+            evaluated_claim_id,
+        )
+        for test in tests
+    ]
     unique_keys = set(keys)
     if len(unique_keys) < required:
-        reasons.append(f"unique {label} tests {len(unique_keys)} < required {required}")
+        reasons.append(
+            f"semantically distinct {label} cases {len(unique_keys)} "
+            f"< required {required}"
+        )
     if evidence_root is not None:
         observation_sets = _modal_observation_sets(results)
         distinct_observations = _distinct_observation_capacity(
@@ -1217,7 +1616,8 @@ def _modal_test_uniqueness_reasons(
         )
         if distinct_observations < required:
             reasons.append(
-                f"independent {label} observations {distinct_observations} "
+                f"distinct {label} case-bound declaration identities "
+                f"{distinct_observations} "
                 f"< required {required}"
             )
     else:
@@ -1350,6 +1750,7 @@ def evaluate_claim(
             "false_world",
             req["false_tests"],
             evidence_root,
+            cid,
         )
     )
     reasons.extend(
@@ -1359,6 +1760,7 @@ def evaluate_claim(
             "true_world",
             req["true_tests"],
             evidence_root,
+            cid,
         )
     )
     fails = [r for r in fr + tr if r.status != "PASS"]
@@ -1765,19 +2167,28 @@ def evaluate_certificate(
                 "structured_evidence_checked": False,
             },
         )
+    raw_claims = cert.get("claims")
+    if raw_claims is not None and not isinstance(raw_claims, list):
+        return _invalid_certificate_result("certificate claims is not a list")
+    if isinstance(raw_claims, list) and any(
+        not isinstance(claim, Mapping) for claim in raw_claims
+    ):
+        return _invalid_certificate_result(
+            "certificate claims contains a non-object entry"
+        )
+    unknown_shape_error = _unknown_collection_shape_error(cert)
+    if unknown_shape_error is not None:
+        return _invalid_certificate_result(unknown_shape_error)
     evidence_root_error: Optional[str] = None
+    evidence_root_capability: Optional[EvidenceRootCapability] = None
     if evidence_root is not None:
         if not isinstance(evidence_root, Path):
             evidence_root_error = "evidence_root is not a pathlib Path"
         else:
             try:
-                root_stat = os.lstat(evidence_root)
-                if stat.S_ISLNK(root_stat.st_mode):
-                    evidence_root_error = "evidence_root must not be a symlink"
-                elif not stat.S_ISDIR(root_stat.st_mode):
-                    evidence_root_error = (
-                        "evidence_root is not an existing directory"
-                    )
+                evidence_root_capability = (
+                    _open_evidence_root_capability(evidence_root)
+                )
             except (OSError, RuntimeError, ValueError) as exc:
                 evidence_root_error = (
                     "evidence_root stat failed: "
@@ -1793,48 +2204,42 @@ def evaluate_certificate(
                 "structured_evidence_checked": False,
             },
         )
-    raw_claims = cert.get("claims")
-    if raw_claims is not None and not isinstance(raw_claims, list):
-        return _invalid_certificate_result("certificate claims is not a list")
-    if isinstance(raw_claims, list) and any(
-        not isinstance(claim, Mapping) for claim in raw_claims
-    ):
-        return _invalid_certificate_result(
-            "certificate claims contains a non-object entry"
-        )
-
     thresholds, notes = merge_thresholds(cert.get("gate_thresholds"))
     reasons: List[str] = list(notes)
     claims = list(raw_claims or [])
     if not claims: reasons.append("no claims in certificate")
     method_score, method_missing = method_completeness(cert.get("method_manifest") if isinstance(cert.get("method_manifest"), Mapping) else None)
     if method_score < DEFAULT_THRESHOLDS["major"]["method_completeness"]: reasons.append(f"certificate-level method_manifest incomplete: missing {method_missing}")
-    effective_evidence_root = evidence_root
+    effective_evidence_root = evidence_root_capability
     json_cache: Dict[JsonCacheKey, BoundedJsonResult] = {}
     try:
-        results = [
-            evaluate_claim(
-                claim,
-                thresholds,
-                evidence_root=effective_evidence_root,
-                json_cache=json_cache,
+        try:
+            results = [
+                evaluate_claim(
+                    claim,
+                    thresholds,
+                    evidence_root=effective_evidence_root,
+                    json_cache=json_cache,
+                )
+                for claim in claims
+            ]
+        except InvalidInputError as exc:
+            return _invalid_certificate_result(
+                str(exc),
+                {
+                    "evidence_root_checked": bool(evidence_root),
+                    "strict_evidence": bool(
+                        strict_evidence or evidence_root is not None
+                    ),
+                    "structured_evidence_required": bool(
+                        strict_evidence or evidence_root is not None
+                    ),
+                    "structured_evidence_checked": bool(evidence_root),
+                },
             )
-            for claim in claims
-        ]
-    except InvalidInputError as exc:
-        return _invalid_certificate_result(
-            str(exc),
-            {
-                "evidence_root_checked": bool(evidence_root),
-                "strict_evidence": bool(
-                    strict_evidence or evidence_root is not None
-                ),
-                "structured_evidence_required": bool(
-                    strict_evidence or evidence_root is not None
-                ),
-                "structured_evidence_checked": bool(evidence_root),
-            },
-        )
+    finally:
+        if evidence_root_capability is not None:
+            evidence_root_capability.close()
     result_by_id = {
         result.claim_id: result
         for result in results
@@ -1846,10 +2251,18 @@ def evaluate_certificate(
         policy=selected_downstream_policy,
     )
     reasons.extend(downstream_reasons)
+    if evidence_root is None:
+        reasons.append(
+            "local evidence was not checked; PASS-TRACKED requires evidence_root"
+        )
     fail_count = sum(r.status == "FAIL" for r in results)
     critical_fail = sum(r.status == "FAIL" and r.importance == "critical" for r in results)
     major_fail = sum(r.status == "FAIL" and r.importance == "major" for r in results)
-    scope_unknowns = [x for x in _as_list(cert.get("scope_limitations")) if _nonempty(x)]
+    scope_unknowns = [
+        x
+        for x in _as_list(cert.get("scope_limitations"))
+        if _unknown_item(x)
+    ]
     cert_method_unknowns = _collect_method_unknowns(cert)
     if critical_fail or major_fail or not claims or downstream_reasons:
         status = "FAIL"
@@ -1895,7 +2308,7 @@ def to_markdown(result: Mapping[str, Any], cert_path: Path) -> str:
     for r in result.get("claim_results", []):
         reasons = "; ".join(r.get("reasons") or []) or "—"
         lines.append(f"| {r['claim_id']} | {r['importance']} | {r['status']} | {r['sensitivity_rate']:.2f} | {r['adherence_rate']:.2f} | {r['method_completeness']:.2f} | {r['evidence_count']} | {r.get('structured_evidence_count', 0)} | {r['false_world_tests']} | {r['true_world_tests']} | {reasons} |")
-    lines.append("\nThis deterministic result checks declared fields, thresholds, tests, outcomes, local evidence-ref containment, hardlink-aware evidence and artifact identity, case-bound modal observation independence, proposition-bound downstream passes, structured evidence binding for every cited local ref, exact SHA-256 equality between artifact_path and hash_or_version, and URI-scheme rejection for both evidence refs and artifact_path. It does not independently prove expert-level semantic adequacy of every evidence artifact or perturbation.")
+    lines.append("\nThis deterministic result checks declared fields, thresholds, tests, outcomes, local evidence-ref containment, hardlink-aware evidence and artifact identity, case-bound modal release-declaration identity deduplication, proposition-bound downstream passes, structured evidence binding for every cited local ref, exact SHA-256 equality between artifact_path and hash_or_version, and URI-scheme rejection for both evidence refs and artifact_path. It does not independently prove expert-level semantic adequacy of every evidence artifact or perturbation.")
     return "\n".join(lines) + "\n"
 
 

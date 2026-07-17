@@ -284,6 +284,91 @@ def normalize_display(
     return value
 
 
+def _cleanup_spawned_process_after_setup_failure(
+    proc: subprocess.Popen[Any],
+    baseline: Mapping[str, Any],
+    readers: Sequence[threading.Thread],
+) -> None:
+    """Own and clean a child if pipe-reader setup fails after Popen."""
+    try:
+        if os.name == "posix":
+            os.killpg(proc.pid, signal.SIGKILL)
+        else:
+            proc.kill()
+    except (OSError, ProcessLookupError):
+        try:
+            proc.kill()
+        except OSError:
+            pass
+    try:
+        proc.wait(timeout=READER_JOIN_GRACE_SEC)
+    except (OSError, subprocess.TimeoutExpired):
+        try:
+            proc.kill()
+            proc.wait(timeout=READER_JOIN_GRACE_SEC)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    try:
+        _cleanup_detached_descendants(baseline)
+    except Exception:
+        pass
+    for stream in (proc.stdout, proc.stderr):
+        if stream is None:
+            continue
+        try:
+            stream.close()
+        except (OSError, ValueError):
+            pass
+    for reader in readers:
+        if reader.ident is None:
+            continue
+        try:
+            reader.join(timeout=READER_JOIN_GRACE_SEC)
+        except RuntimeError:
+            pass
+
+
+def _drain_bounded_stream(
+    stream: Any,
+    stop: threading.Event,
+) -> Dict[str, Any]:
+    """Drain one pipe completely or record a fail-closed reader error."""
+    retained = bytearray()
+    digest = hashlib.sha256()
+    observed = 0
+    exceeded = False
+    read_error: str | None = None
+    try:
+        while True:
+            chunk = stream.read(64 * 1024)
+            if not chunk:
+                break
+            raw_chunk = bytes(chunk)
+            observed += len(raw_chunk)
+            digest.update(raw_chunk)
+            remaining = max(0, MAX_CAPTURE_BYTES - len(retained))
+            if remaining:
+                retained.extend(raw_chunk[:remaining])
+            if observed > MAX_CAPTURE_BYTES:
+                exceeded = True
+                stop.set()
+    except (OSError, ValueError) as exc:
+        read_error = f"{type(exc).__name__}: stream read failed"
+        stop.set()
+    finally:
+        try:
+            stream.close()
+        except Exception:
+            pass
+    return {
+        "raw": bytes(retained),
+        "observed": observed,
+        "sha256": digest.hexdigest(),
+        "exceeded": exceeded,
+        "read_error": read_error,
+    }
+
+
 def run_cmd(
     cmd: List[str],
     cwd: Path | None = None,
@@ -317,6 +402,12 @@ def run_cmd(
                 if parent_host_pid == self_host_pid
             },
         }
+        stop = threading.Event()
+        states: Dict[str, Dict[str, Any]] = {}
+
+        def drain(name: str, stream: Any) -> None:
+            states[name] = _drain_bounded_stream(stream, stop)
+
         # SECURITY-REVIEW: Fixed argv invokes the PATH-resolved Claude executable
         # directly; no shell parsing or command-string interpolation is used.
         # Each pipe is drained concurrently and bounded while the child runs.
@@ -327,49 +418,22 @@ def run_cmd(
             stderr=subprocess.PIPE,
             start_new_session=(os.name == "posix"),
         )
-        stop = threading.Event()
-        states: Dict[str, Dict[str, Any]] = {}
-
-        def drain(name: str, stream: Any) -> None:
-            retained = bytearray()
-            digest = hashlib.sha256()
-            observed = 0
-            exceeded = False
-            try:
-                while True:
-                    chunk = stream.read(64 * 1024)
-                    if not chunk:
-                        break
-                    raw_chunk = bytes(chunk)
-                    observed += len(raw_chunk)
-                    digest.update(raw_chunk)
-                    remaining = max(0, MAX_CAPTURE_BYTES - len(retained))
-                    if remaining:
-                        retained.extend(raw_chunk[:remaining])
-                    if observed > MAX_CAPTURE_BYTES:
-                        exceeded = True
-                        stop.set()
-            except (OSError, ValueError):
-                pass
-            finally:
-                try:
-                    stream.close()
-                except Exception:
-                    pass
-                states[name] = {
-                    "raw": bytes(retained),
-                    "observed": observed,
-                    "sha256": digest.hexdigest(),
-                    "exceeded": exceeded,
-                }
-
-        assert proc.stdout is not None and proc.stderr is not None
-        readers = [
-            threading.Thread(target=drain, args=("stdout", proc.stdout), daemon=True),
-            threading.Thread(target=drain, args=("stderr", proc.stderr), daemon=True),
-        ]
-        for reader in readers:
-            reader.start()
+        readers: List[threading.Thread] = []
+        try:
+            assert proc.stdout is not None and proc.stderr is not None
+            readers = [
+                threading.Thread(target=drain, args=("stdout", proc.stdout), daemon=True),
+                threading.Thread(target=drain, args=("stderr", proc.stderr), daemon=True),
+            ]
+            for reader in readers:
+                reader.start()
+        except BaseException:
+            _cleanup_spawned_process_after_setup_failure(
+                proc,
+                baseline,
+                readers,
+            )
+            raise
         deadline = time.monotonic() + timeout
         timed_out = False
         descendant_pipe_leak = False
@@ -448,9 +512,13 @@ def run_cmd(
         reader_join_timed_out = any(reader.is_alive() for reader in readers)
         descendant_pipe_leak = reader_join_timed_out
         empty_sha = hashlib.sha256(b"").hexdigest()
-        stdout_state = states.get("stdout", {"raw": b"", "observed": 0, "sha256": empty_sha, "exceeded": False})
-        stderr_state = states.get("stderr", {"raw": b"", "observed": 0, "sha256": empty_sha, "exceeded": False})
+        stdout_state = states.get("stdout", {"raw": b"", "observed": 0, "sha256": empty_sha, "exceeded": False, "read_error": "reader state missing"})
+        stderr_state = states.get("stderr", {"raw": b"", "observed": 0, "sha256": empty_sha, "exceeded": False, "read_error": "reader state missing"})
         exceeded = bool(stdout_state["exceeded"] or stderr_state["exceeded"])
+        stream_read_error = bool(
+            stdout_state.get("read_error")
+            or stderr_state.get("read_error")
+        )
         stdout_text = bytes(stdout_state["raw"]).decode("utf-8", errors="replace")
         stderr_text = bytes(stderr_state["raw"]).decode("utf-8", errors="replace")
         return {
@@ -467,6 +535,7 @@ def run_cmd(
                     or reader_join_timed_out
                     or normal_exit_group_survivor
                     or detached_descendant_survivor
+                    or stream_read_error
                     or (
                         detached_cleanup.get("supported") is True
                         and not process_containment_cleanup_complete
@@ -494,7 +563,7 @@ def run_cmd(
             "process_containment": containment_scope,
             "duration_sec": round(time.time()-started, 3),
         }
-    except OSError as exc:
+    except Exception as exc:
         return {
             "cmd": display_cmd,
             "command_metadata": command_metadata,

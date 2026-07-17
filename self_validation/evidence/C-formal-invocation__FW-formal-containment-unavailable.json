@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-formal-invocation",
   "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
-  "command_or_source": "run_formal_runner_contract_tests.py",
+  "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:e51332354c4a190382dcb2316e2c39b189abb8e79f833933799b734edf4e97f4",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:7a868a106ddc8ea288a92b7fb4ad162044642a6e50163a9815695948188618ff",
   "observation_id": "obs:C-formal-invocation:FW-formal-containment-unavailable",
-  "observed_result": "The formal contract returned its containment-unavailable failure and proved the child command never ran.",
-  "support_summary": "This wrapper binds FW-formal-containment-unavailable to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The formal contract returned its containment-unavailable failure and proved the child command never ran.",
+  "support_summary": "This wrapper binds FW-formal-containment-unavailable to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-formal-containment-unavailable",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

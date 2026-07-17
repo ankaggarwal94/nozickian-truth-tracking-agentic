@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-formal-invocation",
   "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
-  "command_or_source": "run_formal_runner_contract_tests.py",
+  "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:591b698e3d87174de2754bc52252f2ac0ad6c8ecb8b33e76e04c0fff1df2e44d",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:65ec1ed207e513762d416095a9ca841833b7a77db7e6af881f91276ce449773f",
   "observation_id": "obs:C-formal-invocation:FW-formal-canonical-json-classification",
-  "observed_result": "The formal contract retained the frozen canonical classification and rejected the changed lexical parent without writing into its replacement.",
-  "support_summary": "This wrapper binds FW-formal-canonical-json-classification to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The formal contract retained the frozen canonical classification and rejected the changed lexical parent without writing into its replacement.",
+  "support_summary": "This wrapper binds FW-formal-canonical-json-classification to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-formal-canonical-json-classification",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

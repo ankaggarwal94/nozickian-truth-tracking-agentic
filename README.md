@@ -7,7 +7,7 @@ A closed-surface Claude Code plugin for method-relative, Nozickian truth-trackin
 **Intended audience:** trusted team/internal reviewers  
 **Runtime posture:** closed by default; no hooks, MCP servers, commands, monitors, bins, or broad skill tool grants
 
-Final checked-in release evidence records 1577/1577 basic package checks, 1717/1717 package self-test checks, 123/123 gate contracts, 171/171 formal-runner contracts, and 166/166 regression checks. The authoritative required-before-re-review promotion aggregate passes 43/43 cases with a complete 252/252 certifier baseline. The self-test rejects 82/82 false worlds and retains 13/13 nearby true worlds. Every machine-readable release CLI is also checked to emit exactly one directly parseable JSON document.
+Final checked-in release evidence records 1733/1733 basic package checks, 1878/1878 package self-test checks, 141/141 gate contracts, 199/199 formal-runner contracts, and 166/166 regression checks. The authoritative required-before-re-review promotion aggregate passes 43/43 cases with a complete 252/252 certifier baseline. The self-test rejects 82/82 false worlds and retains 13/13 nearby true worlds. Every machine-readable release CLI is also checked to emit exactly one directly parseable JSON document.
 
 ## Documentation map
 
@@ -126,3 +126,5 @@ GitHub-facing README files live under `docs/` and `self_validation/`. They are d
 - `FAIL`: one or more critical claims fail the gate.
 
 Normal internal reuse keeps v1.0.3 at `PASS-SCOPED`. A complete v2 audit bundle demonstrates the modeled promotion contract, but the v1.0.3 certifier still applies the mandatory Issue #5 cap.
+
+Open Issues #6 and #7 remain additional explicit assurance limits: remote fetch specifications are not yet mechanically declarative/SSRF-guarded, and semantic charter presence is not yet enforced beyond manifest sealing. The current CI validates an unpacked Git tar archive; it does not produce or verify a release ZIP.

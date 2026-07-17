@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-formal-invocation",
   "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
-  "command_or_source": "run_formal_runner_contract_tests.py",
+  "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:ff3b5122f605195903e01af3069c02c655deb5b9c33a0fdfa33a980594ddd4ec",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:0748112b0c967f02ea5ac457ee16ba86d03a113bcad0d47b57df39ad483f009a",
   "observation_id": "obs:C-formal-invocation:FW-live-explicit-output-a-b-a",
-  "observed_result": "The formal contract proved explicit transcript capability acquisition preceded preflight and prevented alternate-directory output.",
-  "support_summary": "This wrapper binds FW-live-explicit-output-a-b-a to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The formal contract proved explicit transcript capability acquisition preceded preflight and prevented alternate-directory output.",
+  "support_summary": "This wrapper binds FW-live-explicit-output-a-b-a to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-live-explicit-output-a-b-a",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

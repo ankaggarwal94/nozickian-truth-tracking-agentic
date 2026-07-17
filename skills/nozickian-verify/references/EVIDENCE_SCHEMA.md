@@ -10,9 +10,9 @@ Required fields:
   "claim_id": "C-001",
   "claim_proposition_sha256": "sha256:<digest of the canonical certificate claim text>",
   "artifact_path": "relative/path/under/evidence_root/to/the/evidence/source",
-  "command_or_source": "command, file, trace, source URL, or manual audit record that produced the observation",
-  "observed_result": "what was actually observed",
-  "support_summary": "why this observation supports the claim or modal test",
+  "command_or_source": "command, file, trace, source URL, or manual-audit context declared by the wrapper",
+  "observed_result": "result text declared by the wrapper",
+  "support_summary": "why the wrapper claims support for the claim or modal test",
   "timestamp_utc": "2026-05-25T00:00:00Z",
   "hash_or_version": "sha256:<64-hex digest of artifact_path>"
 }
@@ -20,7 +20,7 @@ Required fields:
 
 The package writes wrapper schema `1.0`. The gate requires a nonempty
 `evidence_schema_version`; the separately versioned observation-ledger field
-described below is checked for the exact value `"1.0"`. `claim_id` must match the
+described below is checked for the exact value `"1.1"`. `claim_id` must match the
 claim being evaluated, or optional `applies_to_claims` must contain that claim ID
 or `*`.
 
@@ -46,9 +46,9 @@ Test-level wrappers add the modal bindings shown here:
   "modal_case_sha256": "sha256:<canonical modal-case digest>",
   "observation_id": "obs.C-001.FW-001",
   "artifact_path": "observations/current_observations.json",
-  "command_or_source": "the exact command or source that produced this case observation",
-  "observed_result": "the exact observation text copied into the named ledger record",
-  "support_summary": "why this observation supports this particular nearby-world case",
+  "command_or_source": "declared source context for this case; not authenticated by the declaration ledger",
+  "observed_result": "declared release result copied into the named ledger record; not execution provenance",
+  "support_summary": "why this case-bound release declaration supports this nearby-world case",
   "timestamp_utc": "2026-05-25T00:00:00Z",
   "hash_or_version": "sha256:<digest of the complete observation-ledger bytes>"
 }
@@ -80,8 +80,10 @@ otherwise from `target_claim`; a scalar is treated as a one-element list before
 the values are stripped, deduplicated, and sorted. `variation_field` is
 `perturbation` when that value is nonempty and otherwise is `variant`. The four
 prose values use the same NFC/whitespace canonicalization as claim text. In
-particular, `observed_result` comes from the evidence wrapper, so changing either
-the case declaration or the observation text changes the modal-case digest.
+particular, `observed_result` comes from the evidence wrapper, so changing
+either the case declaration or its declared release-result text changes the
+modal-case digest. For ledger-backed modal wrappers, neither this text nor
+`command_or_source` authenticates execution.
 
 ## Observation ledger binding
 
@@ -92,7 +94,7 @@ JSON ledger with this shape:
 
 ```json
 {
-  "observation_schema_version": "1.0",
+  "observation_schema_version": "1.1",
   "observations": {
     "obs.C-001.FW-001": {
       "claim_id": "C-001",
@@ -102,14 +104,17 @@ JSON ledger with this shape:
       "modal_case_sha256": "sha256:<canonical modal-case digest>",
       "result": "pass",
       "outcome": "rejected_false_claim",
-      "observed_result": "the exact observation text copied into the evidence wrapper"
+      "observed_result": "the exact declared release-result text copied into the evidence wrapper"
     }
   }
 }
 ```
 
-The ledger must have exact `observation_schema_version: "1.0"` and an
-`observations` object containing the named record. The record's `claim_id`,
+The ledger must have exact `observation_schema_version: "1.1"` and exactly two
+top-level fields: `observation_schema_version` and `observations`. Each named
+record must have exactly these fields and no others: `claim_id`, `test_id`,
+`kind`, `claim_proposition_sha256`, `modal_case_sha256`, `result`, `outcome`,
+and `observed_result`. Every record value must be a JSON string. The record's `claim_id`,
 `test_id`, and `kind` must exactly equal the evaluated claim ID, modal test ID,
 and expected kind (`false_world` or `true_world`). Its two digests must match the
 gate-derived claim and modal-case digests. `result`, after stripping and
@@ -122,10 +127,14 @@ accepted false-world outcomes are
 `observed_result`, after outer whitespace is stripped, must be at least ten
 characters and exactly equal the stripped wrapper `observed_result`.
 
-A named, verified `observation_id` is the modal observation identity used for
-independence counting. Without one, the gate falls back to the cited artifact's
-SHA-256, so multiple wrappers over the same aggregate bytes do not create
-multiple observations merely by using different filenames or test labels.
+A named, verified `observation_id` is a distinct proposition- and case-bound
+release-declaration identity used for threshold deduplication. It is not
+execution provenance and does not establish that a named test suite or source
+case ran. Fresh self-test outcomes are established separately; this ledger does
+not reconcile them per record. Without an `observation_id`, the gate falls back
+to the cited artifact's SHA-256, so multiple wrappers over the same aggregate
+bytes do not create multiple identities merely by using different filenames or
+test labels.
 
 ## Byte-backed local evidence
 
@@ -134,11 +143,12 @@ POSIX paths beneath `evidence_root`. Strict mode rejects absolute paths, `.` or
 `..` segments, backslashes, control characters, alias suffixes, URI schemes,
 missing paths, directories, special files, and any path that traverses a
 symlink. The wrapper must be a nonempty regular JSON file; the artifact must be a
-regular non-symlink file. Wrappers are limited to 1 MiB, and a named observation
-ledger is limited to 8 MiB and bounded to depth 64, 100,000 JSON nodes, and
-100,000 object fields. No-follow descriptor reads bind the opened regular file,
-reject an inode swap before open, and reject size or modification-time changes
-to that opened file during the read. `hash_or_version` must be an actual SHA-256
+regular non-symlink file. Wrappers are limited to 1 MiB, generic cited artifacts
+to 64 MiB, and a named observation ledger to 8 MiB and depth 64, 100,000 JSON
+nodes, and 100,000 object fields. No-follow component traversal and descriptor reads bind
+whichever regular file is opened and reject size or modification-time changes
+to that opened file during the read; they do not bind an earlier resolved inode
+across separate opens. `hash_or_version` must be an actual SHA-256
 digest of the complete artifact bytes. When `observation_id` is present, those
 same hashed artifact bytes must parse as the bounded observation ledger above.
 

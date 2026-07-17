@@ -1,14 +1,14 @@
 {
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-gate-hardening",
-  "claim_proposition_sha256": "sha256:4bff8ccb92cb75bf893456a5777bc58a7075432de4546f01befa6f9541f5e35c",
-  "command_or_source": "run_gate_contract_tests.py",
+  "claim_proposition_sha256": "sha256:660a57afa0de4790d393de02455a86c4c08fb48d0852e596c4a172094fd22884",
+  "command_or_source": "Declared case context (not authenticated execution): run_gate_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:bb984de395aae830ffac0f2aeb1af2c98d2811e6bd86faf655e408bcb733de65",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:758b8ab6974ac2503aec6f3ab2c9adb953ce776794f9279e891ccb0497dfd992",
   "observation_id": "obs:C-gate-hardening:FW-gate-modal-substitution",
-  "observed_result": "The gate contract rejected the substituted modal case because its bound digest no longer matched.",
-  "support_summary": "This wrapper binds FW-gate-modal-substitution to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The gate contract rejected the substituted modal case because its bound digest no longer matched.",
+  "support_summary": "This wrapper binds FW-gate-modal-substitution to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-gate-modal-substitution",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

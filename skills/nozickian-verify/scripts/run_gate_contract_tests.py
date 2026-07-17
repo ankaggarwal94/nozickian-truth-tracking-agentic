@@ -26,6 +26,7 @@ import io
 import json
 import os
 import re
+import shutil
 import stat
 import sys
 import tempfile
@@ -381,6 +382,73 @@ def write_structured_evidence_tree(
     return root, outside
 
 
+def exercise_evidence_ancestor_swap(
+    gate_mod: Any,
+    cert: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Swap a checked evidence ancestor to an external symlink at open time."""
+    evidence_root, outside_root = write_structured_evidence_tree(cert)
+    source = evidence_root / "self_validation"
+    parked = evidence_root / "self_validation.parked"
+    outside_tree = outside_root / "self_validation"
+    shutil.copytree(source, outside_tree, copy_function=os.link)
+    first_ref = Path(cert["claims"][0]["evidence_refs"][0])
+    lexical_wrapper = evidence_root / first_ref
+    original_open = os.open
+    swapped = False
+    outside_read = False
+
+    def swapping_open(
+        path: Any,
+        flags: int,
+        mode: int = 0o777,
+        *,
+        dir_fd: Optional[int] = None,
+    ) -> int:
+        nonlocal swapped, outside_read
+        path_text = str(path)
+        trigger = (
+            (dir_fd is not None and path_text == "self_validation")
+            or (dir_fd is None and path_text == str(lexical_wrapper))
+        )
+        if not swapped and trigger:
+            os.rename(source, parked)
+            os.symlink(outside_tree, source, target_is_directory=True)
+            swapped = True
+            if dir_fd is None and path_text == str(lexical_wrapper):
+                outside_read = True
+            try:
+                if dir_fd is None:
+                    return original_open(path, flags, mode)
+                return original_open(path, flags, mode, dir_fd=dir_fd)
+            finally:
+                source.unlink()
+                os.rename(parked, source)
+        if dir_fd is None:
+            return original_open(path, flags, mode)
+        return original_open(path, flags, mode, dir_fd=dir_fd)
+
+    os.open = swapping_open
+    try:
+        result = gate_mod.evaluate_certificate(
+            cert,
+            evidence_root=evidence_root,
+            strict_evidence=True,
+        )
+    finally:
+        os.open = original_open
+        if source.is_symlink():
+            source.unlink()
+        if parked.exists():
+            os.rename(parked, source)
+    return {
+        "status": result.get("status"),
+        "swapped": swapped,
+        "outside_read": outside_read,
+        "reasons": list(result.get("reasons") or []),
+    }
+
+
 def run_cases(gate_mod) -> List[Dict[str, Any]]:
     cases: List[Dict[str, Any]] = []
 
@@ -413,6 +481,12 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         downstream_policy: str = "generic",
         reason_contains: tuple[str, ...] = (),
     ) -> None:
+        effective_allowed = set(allowed)
+        # Structure-only evaluation is deliberately non-authorizing. Cases
+        # that would pass with checked evidence are LIMITED without a root.
+        if effective_allowed & {"PASS-TRACKED", "PASS-SCOPED"}:
+            effective_allowed -= {"PASS-TRACKED", "PASS-SCOPED"}
+            effective_allowed.add("LIMITED")
         result = gate_mod.evaluate_certificate(
             cert,
             downstream_policy=downstream_policy,
@@ -423,8 +497,8 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
             {
                 "name": name,
                 "status": status,
-                "expected_any": sorted(allowed),
-                "passed": status in allowed
+                "expected_any": sorted(effective_allowed),
+                "passed": status in effective_allowed
                 and all(
                     any(expected in reason for reason in reasons)
                     for expected in reason_contains
@@ -674,14 +748,53 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
             observations["OBS-FW-002"]["modal_case_sha256"] = (
                 "sha256:" + "0" * 64
             )
+        elif observation_mode == "extra-record-field":
+            observations["OBS-FW-001"]["source_suite"] = (
+                "fabricated-suite-result.json"
+            )
+        elif observation_mode == "missing-record-field":
+            observations["OBS-FW-001"].pop("observed_result")
+        elif observation_mode == "unreferenced-extra-record-field":
+            observations["OBS-UNREFERENCED"] = {
+                **copy.deepcopy(observations["OBS-FW-001"]),
+                "test_id": "FW-UNREFERENCED",
+                "source_suite": "fabricated-suite-result.json",
+            }
+        elif observation_mode == "unreferenced-invalid-record-semantics":
+            observations["OBS-UNREFERENCED"] = {
+                "claim_id": "C-001",
+                "test_id": "FW-UNREFERENCED",
+                "kind": "garbage",
+                "claim_proposition_sha256": "not-a-digest",
+                "modal_case_sha256": "not-a-digest",
+                "result": "FAIL",
+                "outcome": "invented_outcome",
+                "observed_result": "x",
+            }
         ledger = {
-            "observation_schema_version": "1.0",
+            "observation_schema_version": "1.1",
             "observations": observations,
         }
+        if observation_mode == "extra-ledger-field":
+            ledger["suite_summaries"] = {
+                "fabricated": {"status": "PASS"}
+            }
+        elif observation_mode == "old-schema":
+            ledger["observation_schema_version"] = "1.0"
         ledger_path.write_text(
             json.dumps(ledger, indent=2, sort_keys=True),
             encoding="utf-8",
         )
+        if observation_mode == "duplicate-record-key":
+            ledger_text = ledger_path.read_text(encoding="utf-8")
+            ledger_path.write_text(
+                ledger_text.replace(
+                    '"result": "pass"',
+                    '"result": "FAIL",\n      "result": "pass"',
+                    1,
+                ),
+                encoding="utf-8",
+            )
         digest = sha256_path(ledger_path)
         for index, (path, data) in enumerate(
             zip(wrappers, wrapper_data),
@@ -689,7 +802,16 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         ):
             data["artifact_path"] = ledger_rel
             data["hash_or_version"] = f"sha256:{digest}"
-            if observation_mode == "valid":
+            if observation_mode in {
+                "valid",
+                "extra-record-field",
+                "missing-record-field",
+                "unreferenced-extra-record-field",
+                "unreferenced-invalid-record-semantics",
+                "duplicate-record-key",
+                "extra-ledger-field",
+                "old-schema",
+            }:
                 data["observation_id"] = f"OBS-FW-{index:03d}"
             elif observation_mode == "wrong-modal-digest":
                 data["observation_id"] = f"OBS-FW-{index:03d}"
@@ -711,11 +833,44 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
             strict_evidence=True,
         )
         status = result.get("status")
+        schema_reason_tokens = {
+            "old-schema": (
+                "observation ledger schema is not 1.1",
+            ),
+            "extra-ledger-field": (
+                "observation ledger fields are not exact for schema 1.1",
+                "suite_summaries",
+            ),
+            "extra-record-field": (
+                "fields are not exact for schema 1.1",
+                "source_suite",
+            ),
+            "missing-record-field": (
+                "fields are not exact for schema 1.1",
+                "observed_result",
+            ),
+            "unreferenced-extra-record-field": (
+                "observation OBS-UNREFERENCED fields are not exact for schema 1.1",
+                "source_suite",
+            ),
+            "unreferenced-invalid-record-semantics": (
+                "observation OBS-UNREFERENCED kind is not recognized",
+            ),
+            "duplicate-record-key": (
+                "observation ledger JSON parse failed",
+                "DuplicateJsonKeyError",
+            ),
+        }.get(observation_mode, ())
+        serialized_result = json.dumps(result, sort_keys=True)
+        reason_contract_met = all(
+            token in serialized_result for token in schema_reason_tokens
+        )
         cases.append({
             "name": name,
             "status": status,
             "expected_any": sorted(allowed),
-            "passed": status in allowed,
+            "passed": status in allowed and reason_contract_met,
+            "reason_contract_met": reason_contract_met,
             "evidence_root": "<temporary strict-evidence root>",
             "outside_root": "<temporary outside-root probe>",
             "reasons": summarize(result),
@@ -770,6 +925,38 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         "non_object_claim_entry_is_invalid_input",
         malformed_claim_entry,
     )
+    proc_fds = Path("/proc/self/fd")
+    if proc_fds.is_dir():
+        with tempfile.TemporaryDirectory(prefix="ntt-gate-fd-lifecycle-") as raw:
+            fd_test_root = Path(raw)
+            before_fds = len(os.listdir(proc_fds))
+            for _index in range(32):
+                gate_mod.evaluate_certificate(
+                    malformed_claims,
+                    evidence_root=fd_test_root,
+                )
+                gate_mod.evaluate_certificate(
+                    malformed_claim_entry,
+                    evidence_root=fd_test_root,
+                )
+            after_fds = len(os.listdir(proc_fds))
+        cases.append({
+            "name": "malformed_claims_do_not_leak_evidence_root_capability",
+            "status": "PASS" if after_fds == before_fds else "FAIL",
+            "expected_any": ["PASS"],
+            "passed": after_fds == before_fds,
+            "reasons": [
+                f"before={before_fds}; after={after_fds}"
+            ],
+        })
+    else:
+        cases.append({
+            "name": "malformed_claims_do_not_leak_evidence_root_capability",
+            "status": "PASS",
+            "expected_any": ["PASS"],
+            "passed": True,
+            "reasons": ["procfs fd inventory unavailable; portable skip"],
+        })
 
     shared_method_cert = copy.deepcopy(base)
     shared_method_object = method()
@@ -779,8 +966,8 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     cases.append({
         "name": "shared_noncyclic_method_object_is_allowed",
         "status": shared_method_result.get("status"),
-        "expected_any": ["PASS-TRACKED"],
-        "passed": shared_method_result.get("status") == "PASS-TRACKED",
+        "expected_any": ["LIMITED"],
+        "passed": shared_method_result.get("status") == "LIMITED",
         "reasons": summarize(shared_method_result),
     })
 
@@ -836,14 +1023,18 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     structural_claim = (structural_only.get("claim_results") or [{}])[0]
     structural_summary = structural_only.get("summary") or {}
     cases.append({
-        "name": "unchecked_refs_not_reported_as_structured_evidence",
+        "name": "unchecked_refs_cannot_authorize_pass_tracked",
         "status": structural_only.get("status"),
-        "expected_any": ["PASS-TRACKED"],
+        "expected_any": ["LIMITED"],
         "passed": (
-            structural_only.get("status") == "PASS-TRACKED"
+            structural_only.get("status") == "LIMITED"
             and structural_claim.get("structured_evidence_count") == 0
             and structural_summary.get("structured_evidence_checked") is False
             and structural_summary.get("structured_evidence_required") is False
+            and any(
+                "PASS-TRACKED requires evidence_root" in reason
+                for reason in structural_only.get("reasons", [])
+            )
         ),
         "reasons": summarize(structural_only),
     })
@@ -862,6 +1053,22 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         "reasons": summarize(missing_root_result),
     })
     add_strict("valid_structured_evidence_hashes", copy.deepcopy(base), {"PASS-TRACKED"})
+
+    ancestor_swap = exercise_evidence_ancestor_swap(
+        gate_mod,
+        copy.deepcopy(base),
+    )
+    cases.append({
+        "name": "strict_evidence_ancestor_symlink_swap_cannot_escape_root",
+        "status": ancestor_swap.get("status"),
+        "expected_any": ["FAIL", "INVALID_INPUT"],
+        "passed": (
+            ancestor_swap.get("swapped") is True
+            and ancestor_swap.get("outside_read") is False
+            and ancestor_swap.get("status") in {"FAIL", "INVALID_INPUT"}
+        ),
+        "reasons": ancestor_swap.get("reasons"),
+    })
 
     claim_substitution = copy.deepcopy(base)
     substitution_root, _ = write_structured_evidence_tree(
@@ -962,6 +1169,88 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         "reasons": summarize(oversized_wrapper_result),
     })
 
+    with tempfile.TemporaryDirectory(
+        prefix="ntt-gate-sparse-ledger-bound-"
+    ) as sparse_raw:
+        sparse_ledger = Path(sparse_raw) / "sparse-ledger.json"
+        with sparse_ledger.open("wb") as stream:
+            stream.truncate(gate_mod.MAX_OBSERVATION_LEDGER_BYTES + 1)
+        original_os_read = gate_mod.os.read
+        bounded_hash_reads = 0
+
+        def count_bounded_hash_reads(*args: Any, **kwargs: Any) -> bytes:
+            nonlocal bounded_hash_reads
+            bounded_hash_reads += 1
+            return original_os_read(*args, **kwargs)
+
+        bounded_hash_error = ""
+        gate_mod.os.read = count_bounded_hash_reads
+        try:
+            gate_mod.sha256_path(
+                sparse_ledger,
+                max_bytes=gate_mod.MAX_OBSERVATION_LEDGER_BYTES,
+            )
+        except ValueError as exc:
+            bounded_hash_error = str(exc)
+        finally:
+            gate_mod.os.read = original_os_read
+        cases.append({
+            "name": "oversized_sparse_ledger_hash_rejects_before_read",
+            "status": "PASS",
+            "expected_any": ["PASS"],
+            "passed": (
+                bounded_hash_reads == 0
+                and "exceeds byte limit" in bounded_hash_error
+            ),
+            "reasons": [
+                f"read_calls={bounded_hash_reads}; error={bounded_hash_error}"
+            ],
+        })
+
+    oversized_byte_ledger_cert = copy.deepcopy(base)
+    oversized_byte_ledger_root, _ = write_structured_evidence_tree(
+        oversized_byte_ledger_cert
+    )
+    oversized_byte_wrapper = oversized_byte_ledger_root / ev("FW-001")
+    oversized_byte_data = json.loads(
+        oversized_byte_wrapper.read_text(encoding="utf-8")
+    )
+    oversized_byte_path = (
+        oversized_byte_ledger_root / "observations/oversized-ledger.json"
+    )
+    with oversized_byte_path.open("wb") as stream:
+        stream.truncate(gate_mod.MAX_OBSERVATION_LEDGER_BYTES + 1)
+    oversized_byte_data["artifact_path"] = (
+        "observations/oversized-ledger.json"
+    )
+    oversized_byte_data["hash_or_version"] = f"sha256:{'0' * 64}"
+    oversized_byte_data["observation_id"] = "OBS-BYTE-LIMIT"
+    oversized_byte_wrapper.write_text(
+        json.dumps(oversized_byte_data, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    oversized_byte_result = gate_mod.evaluate_certificate(
+        oversized_byte_ledger_cert,
+        evidence_root=oversized_byte_ledger_root,
+        strict_evidence=True,
+    )
+    oversized_byte_serialized = json.dumps(
+        oversized_byte_result,
+        sort_keys=True,
+    )
+    cases.append({
+        "name": "oversized_observation_ledger_is_invalid_input",
+        "status": oversized_byte_result.get("status"),
+        "expected_any": ["INVALID_INPUT"],
+        "passed": (
+            oversized_byte_result.get("status") == "INVALID_INPUT"
+            and "observation ledger exceeds byte limit" in (
+                oversized_byte_serialized
+            )
+        ),
+        "reasons": summarize(oversized_byte_result),
+    })
+
     oversized_ledger_cert = copy.deepcopy(base)
     oversized_ledger_root, _ = write_structured_evidence_tree(
         oversized_ledger_cert
@@ -975,7 +1264,7 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     )
     oversized_ledger_path.write_text(
         json.dumps({
-            "observation_schema_version": "1.0",
+            "observation_schema_version": "1.1",
             "observations": {},
             "padding": {
                 f"field-{index}": index
@@ -1160,6 +1449,48 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         allowed={"PASS-TRACKED"},
     )
     add_shared_modal_ledger(
+        "observation_schema_1_0_is_rejected",
+        copy.deepcopy(base),
+        observation_mode="old-schema",
+        allowed={"FAIL"},
+    )
+    add_shared_modal_ledger(
+        "observation_ledger_extra_provenance_field_is_rejected",
+        copy.deepcopy(base),
+        observation_mode="extra-ledger-field",
+        allowed={"FAIL"},
+    )
+    add_shared_modal_ledger(
+        "observation_record_source_provenance_field_is_rejected",
+        copy.deepcopy(base),
+        observation_mode="extra-record-field",
+        allowed={"FAIL"},
+    )
+    add_shared_modal_ledger(
+        "observation_record_missing_required_field_is_rejected",
+        copy.deepcopy(base),
+        observation_mode="missing-record-field",
+        allowed={"FAIL"},
+    )
+    add_shared_modal_ledger(
+        "unreferenced_observation_record_extra_field_is_rejected",
+        copy.deepcopy(base),
+        observation_mode="unreferenced-extra-record-field",
+        allowed={"FAIL"},
+    )
+    add_shared_modal_ledger(
+        "unreferenced_observation_record_invalid_semantics_is_rejected",
+        copy.deepcopy(base),
+        observation_mode="unreferenced-invalid-record-semantics",
+        allowed={"FAIL"},
+    )
+    add_shared_modal_ledger(
+        "duplicate_observation_record_key_is_invalid_input",
+        copy.deepcopy(base),
+        observation_mode="duplicate-record-key",
+        allowed={"INVALID_INPUT"},
+    )
+    add_shared_modal_ledger(
         "shared_ledger_duplicate_observation_id_rejected",
         copy.deepcopy(base),
         observation_mode="duplicate",
@@ -1190,6 +1521,42 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
 
     unique_false_tests = copy.deepcopy(base)
     add_strict("unique_false_world_tests_with_distinct_ids_still_pass", unique_false_tests, {"PASS-TRACKED"})
+
+    relabeled_false_world = copy.deepcopy(base)
+    original_world = copy.deepcopy(
+        relabeled_false_world["claims"][0]["false_world_tests"][0]
+    )
+    relabeled_world = copy.deepcopy(original_world)
+    relabeled_world["id"] = "FW-RELABEL"
+    relabeled_world["evidence_refs"] = [ev("FW-RELABEL")]
+    relabeled_world["variant"] = relabeled_world.pop("perturbation")
+    relabeled_world.pop("target_claim", None)
+    relabeled_world["target_claim_ids"] = ["C-001", "arbitrary-label"]
+    relabeled_false_world["claims"][0]["false_world_tests"] = [
+        original_world,
+        relabeled_world,
+    ]
+    add_strict(
+        "relabeling_one_false_world_does_not_create_modal_coverage",
+        relabeled_false_world,
+        {"FAIL"},
+    )
+
+    container_modal_fields = copy.deepcopy(base)
+    container_modal_fields["claims"][0]["false_world_tests"][0][
+        "perturbation"
+    ] = {"not": "a proposition"}
+    container_modal_fields["claims"][0]["false_world_tests"][1][
+        "expected_behavior"
+    ] = ["not", "a", "behavior"]
+    container_modal_fields["claims"][0]["true_world_tests"][0][
+        "observed_behavior"
+    ] = {"not": "an observation"}
+    add_strict(
+        "modal_variation_and_behavior_containers_are_rejected",
+        container_modal_fields,
+        {"FAIL"},
+    )
 
     duplicate_true_id = copy.deepcopy(base)
     duplicate_true_id["claims"][0]["true_world_tests"] = [true_test("TW-001"), true_test("TW-001")]
@@ -1616,7 +1983,15 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
 
     scoped = copy.deepcopy(base)
     scoped["scope_limitations"] = ["Live Claude Code runtime was not executed in this deterministic contract test."]
-    add("valid_scoped_unknown_downgrades", scoped, {"PASS-SCOPED"})
+    add_strict("valid_scoped_unknown_downgrades", scoped, {"PASS-SCOPED"})
+
+    literal_scope_unknown = copy.deepcopy(base)
+    literal_scope_unknown["scope_limitations"] = ["unknown"]
+    add_strict(
+        "literal_unknown_scope_limitation_downgrades_scoped",
+        literal_scope_unknown,
+        {"PASS-SCOPED"},
+    )
 
     zero = copy.deepcopy(base)
     zero["gate_thresholds"] = {"critical": {"method_completeness": 0, "sensitivity": 0, "adherence": 0}}
@@ -1665,27 +2040,27 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     minor["claims"][0]["importance"] = "minor"
     minor["claims"][0]["false_world_tests"] = []
     minor["claims"][0]["true_world_tests"] = []
-    add("minor_claim_without_modal_tests", minor, {"PASS-TRACKED"})
+    add_strict("minor_claim_without_modal_tests", minor, {"PASS-TRACKED"})
 
     manifest_unknowns = copy.deepcopy(base)
     manifest_unknowns["scope_limitations"] = []
     manifest_unknowns["method_manifest"]["unknowns"] = ["x"]
-    add("manifest_unknowns_downgrades_scoped", manifest_unknowns, {"PASS-SCOPED"})
+    add_strict("manifest_unknowns_downgrades_scoped", manifest_unknowns, {"PASS-SCOPED"})
 
     manifest_method_unknowns = copy.deepcopy(base)
     manifest_method_unknowns["scope_limitations"] = []
     manifest_method_unknowns["method_manifest"]["method_unknowns"] = ["x"]
-    add("manifest_method_unknowns_synonym_downgrades", manifest_method_unknowns, {"PASS-SCOPED"})
+    add_strict("manifest_method_unknowns_synonym_downgrades", manifest_method_unknowns, {"PASS-SCOPED"})
 
     top_level_unknowns = copy.deepcopy(base)
     top_level_unknowns["scope_limitations"] = []
     top_level_unknowns["unknowns"] = ["x"]
-    add("top_level_unknowns_downgrades", top_level_unknowns, {"PASS-SCOPED"})
+    add_strict("top_level_unknowns_downgrades", top_level_unknowns, {"PASS-SCOPED"})
 
     nested_manifest_unknowns = copy.deepcopy(base)
     nested_manifest_unknowns["scope_limitations"] = []
     nested_manifest_unknowns["method_manifest"]["runtime"] = {"unknowns": ["x"]}
-    add("nested_manifest_unknowns_downgrades", nested_manifest_unknowns, {"PASS-SCOPED"})
+    add_strict("nested_manifest_unknowns_downgrades", nested_manifest_unknowns, {"PASS-SCOPED"})
 
     deeply_nested_unknowns = copy.deepcopy(base)
     deeply_nested_unknowns["scope_limitations"] = []
@@ -1695,7 +2070,7 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         nested_node["nested"] = child
         nested_node = child
     nested_node["unknowns"] = ["deep material unknown"]
-    add(
+    add_strict(
         "deep_method_unknowns_are_collected_exhaustively",
         deeply_nested_unknowns,
         {"PASS-SCOPED"},
@@ -1776,17 +2151,59 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     nested_clean_manifest = copy.deepcopy(base)
     nested_clean_manifest["scope_limitations"] = []
     nested_clean_manifest["method_manifest"]["runtime"] = {"env": "local", "notes": ["fine"]}
-    add("nested_clean_manifest_still_tracked", nested_clean_manifest, {"PASS-TRACKED"})
+    add_strict("nested_clean_manifest_still_tracked", nested_clean_manifest, {"PASS-TRACKED"})
 
     placeholder_unknowns = copy.deepcopy(base)
     placeholder_unknowns["scope_limitations"] = []
     placeholder_unknowns["method_manifest"]["unknowns"] = ["none", "n/a", ""]
-    add("placeholder_unknowns_still_tracked", placeholder_unknowns, {"PASS-TRACKED"})
+    add_strict(
+        "placeholder_words_in_unknowns_are_not_laundered",
+        placeholder_unknowns,
+        {"PASS-SCOPED"},
+    )
+
+    literal_method_unknowns = copy.deepcopy(base)
+    literal_method_unknowns["scope_limitations"] = []
+    literal_method_unknowns["method_manifest"]["unknowns"] = [
+        "inferred_unknown"
+    ]
+    add_strict(
+        "literal_inferred_unknown_downgrades_scoped",
+        literal_method_unknowns,
+        {"PASS-SCOPED"},
+    )
 
     scalar_zero_unknowns = copy.deepcopy(base)
     scalar_zero_unknowns["scope_limitations"] = []
     scalar_zero_unknowns["method_manifest"]["unknowns"] = 0
-    add("scalar_zero_unknowns_still_tracked", scalar_zero_unknowns, {"PASS-TRACKED"})
+    add_invalid(
+        "scalar_zero_unknowns_cannot_erase_limitations",
+        scalar_zero_unknowns,
+    )
+
+    null_scope_unknowns = copy.deepcopy(base)
+    null_scope_unknowns["scope_limitations"] = None
+    add_invalid(
+        "null_scope_limitations_cannot_erase_limitations",
+        null_scope_unknowns,
+    )
+
+    object_method_unknowns = copy.deepcopy(base)
+    object_method_unknowns["scope_limitations"] = []
+    object_method_unknowns["method_manifest"]["unknowns"] = {}
+    add_invalid(
+        "object_method_unknowns_cannot_erase_limitations",
+        object_method_unknowns,
+    )
+
+    item_shape_unknowns = copy.deepcopy(base)
+    item_shape_unknowns["scope_limitations"] = []
+    item_shape_unknowns["method_manifest"]["unknowns"] = [{}]
+    add_strict(
+        "malformed_unknown_list_item_still_scopes_certificate",
+        item_shape_unknowns,
+        {"PASS-SCOPED"},
+    )
 
     major_claim_unknowns = copy.deepcopy(base)
     major_claim_unknowns["claims"][0]["importance"] = "major"
@@ -1809,7 +2226,7 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     minor_claim_unknowns = copy.deepcopy(base)
     minor_claim_unknowns["claims"][0]["importance"] = "minor"
     minor_claim_unknowns["claims"][0]["method_m"]["method_unknowns"] = ["x"]
-    add(
+    add_strict(
         "minor_claim_method_unknowns_scope_the_certificate",
         minor_claim_unknowns,
         {"PASS-SCOPED"},

@@ -1,14 +1,14 @@
 {
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-gate-hardening",
-  "claim_proposition_sha256": "sha256:4bff8ccb92cb75bf893456a5777bc58a7075432de4546f01befa6f9541f5e35c",
-  "command_or_source": "run_gate_contract_tests.py",
+  "claim_proposition_sha256": "sha256:660a57afa0de4790d393de02455a86c4c08fb48d0852e596c4a172094fd22884",
+  "command_or_source": "Declared case context (not authenticated execution): run_gate_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:8b195db590a159f7f07816e2aa405af4beb0f3ce05454b5952b27cc56224124e",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:c5e92b8ba284b91e96c22d797cc4d14137809f9b60f92319131003c5d80e91d9",
   "observation_id": "obs:C-gate-hardening:FW-gate-markdown-parent-substitution",
-  "observed_result": "The gate contract preserved both the held and replacement sentinels and rejected the substituted Markdown parent.",
-  "support_summary": "This wrapper binds FW-gate-markdown-parent-substitution to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The gate contract preserved both the held and replacement sentinels and rejected the substituted Markdown parent.",
+  "support_summary": "This wrapper binds FW-gate-markdown-parent-substitution to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-gate-markdown-parent-substitution",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

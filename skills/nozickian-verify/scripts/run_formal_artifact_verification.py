@@ -24,6 +24,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import math
 import os
 import re
 import signal
@@ -37,6 +38,37 @@ import tempfile
 import uuid
 from pathlib import Path, PurePosixPath
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
+
+
+class DuplicateJsonKeyError(ValueError):
+    """A JSON object repeats a key and is therefore semantically ambiguous."""
+
+
+def _strict_json_object(pairs: List[Tuple[str, Any]]) -> Dict[str, Any]:
+    value: Dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise DuplicateJsonKeyError(f"duplicate JSON object key: {key}")
+        value[key] = item
+    return value
+
+
+def strict_json_loads(text: str) -> Any:
+    def reject_nonfinite(value: str) -> Any:
+        raise ValueError(f"non-finite JSON number is not allowed: {value}")
+
+    def parse_finite_float(value: str) -> float:
+        parsed = float(value)
+        if not math.isfinite(parsed):
+            reject_nonfinite(value)
+        return parsed
+
+    return json.loads(
+        text,
+        object_pairs_hook=_strict_json_object,
+        parse_constant=reject_nonfinite,
+        parse_float=parse_finite_float,
+    )
 
 PASS_STATUSES = {"PASS-TRACKED", "PASS-SCOPED"}
 FINAL_STATUSES = PASS_STATUSES | {"LIMITED", "FAIL", "UNVERIFIED", "UNVERIFIED_RUNTIME"}
@@ -113,6 +145,19 @@ TRACE_AUTHENTICATION_FIELDS = (
 )
 MAX_CAPTURE_BYTES = 64 * 1024 * 1024
 PUBLIC_STREAM_BOUND_BYTES = 2048
+MAX_FORMAL_JSON_BYTES = 32 * 1024 * 1024
+MAX_FORMAL_TEXT_BYTES = 16 * 1024 * 1024
+MAX_FORMAL_LEDGER_BYTES = 8 * 1024 * 1024
+MAX_JSON_STRUCTURE_NODES = 200_000
+MAX_JSON_STRUCTURE_DEPTH = 64
+FORMAL_COMPANION_MAX_BYTES = {
+    "report": MAX_FORMAL_TEXT_BYTES,
+    "gate": MAX_FORMAL_TEXT_BYTES,
+    "certificate": MAX_FORMAL_JSON_BYTES,
+    "ledger": MAX_FORMAL_LEDGER_BYTES,
+    "transcript": MAX_CAPTURE_BYTES,
+    "prompt": MAX_FORMAL_TEXT_BYTES,
+}
 CLAUDE_VERSION_PATTERN = r"\b\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?(?:\s+\(Claude Code\))?\b"
 PIPE_CLOSE_GRACE_SEC = 0.5
 READER_JOIN_GRACE_SEC = 1.0
@@ -929,17 +974,48 @@ def cap_status_by_package_identity(
     return status, None
 
 
-def sha256_regular_file(path: Path) -> str:
-    # SECURITY-REVIEW: Caller-controlled target and companion paths are
-    # lstat-checked as regular files before bounded streaming reads.
-    error = regular_file_error(path)
-    if error:
-        raise ValueError(error)
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+def _hash_regular_file(
+    path: Path,
+    *,
+    max_bytes: Optional[int] = None,
+) -> Tuple[str, int]:
+    """Hash one no-follow regular fd, optionally enforcing a byte ceiling."""
+    if max_bytes is not None and (
+        type(max_bytes) is not int or max_bytes < 0
+    ):
+        raise ValueError("max_bytes must be a nonnegative integer")
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    if not nofollow:
+        raise OSError("platform lacks no-follow file opens")
+    flags = os.O_RDONLY | nofollow
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    descriptor = os.open(path, flags)
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+            raise ValueError(f"{path.name} is not a single-link regular file")
+        if max_bytes is not None and metadata.st_size > max_bytes:
+            raise ValueError(f"file exceeds {max_bytes} bytes")
+        digest = hashlib.sha256()
+        observed = 0
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            observed += len(chunk)
+            if max_bytes is not None and observed > max_bytes:
+                raise ValueError(f"file exceeds {max_bytes} bytes")
             digest.update(chunk)
-    return digest.hexdigest()
+        return digest.hexdigest(), observed
+    finally:
+        os.close(descriptor)
+
+
+def sha256_regular_file(path: Path) -> str:
+    return _hash_regular_file(path)[0]
 
 
 def resolve_regular_executable(which_value: str) -> Path:
@@ -1195,10 +1271,9 @@ def materialize_execution_package_snapshot(
     manifest_path = root / "STABLE_RELEASE_MANIFEST.json"
     if regular_file_error(manifest_path) is not None:
         raise ValueError("stable release manifest is not a regular file")
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError("stable release manifest is unreadable") from exc
+    manifest = load_json(manifest_path)
+    if "_error" in manifest:
+        raise ValueError("stable release manifest is unreadable")
     inventory = manifest.get("file_inventory") if isinstance(manifest, dict) else None
     if not isinstance(inventory, list) or not inventory:
         raise ValueError("stable release inventory is unavailable")
@@ -1608,6 +1683,141 @@ def _captured_stream_fields(raw: bytes, name: str) -> Dict[str, Any]:
     }
 
 
+class SpawnedProcessCaptureError(RuntimeError):
+    """Preserve post-spawn cleanup telemetry across the capture boundary."""
+
+    def __init__(
+        self,
+        cause: Exception,
+        cleanup: Mapping[str, Any],
+    ) -> None:
+        super().__init__(str(cause))
+        self.cause = cause
+        self.cleanup = dict(cleanup)
+
+
+def _cleanup_owned_spawned_process(
+    proc: subprocess.Popen[Any],
+    containment: Mapping[str, Any],
+    readers: Sequence[threading.Thread],
+) -> Dict[str, Any]:
+    """Best-effort fail-closed cleanup after ``Popen`` transfers ownership.
+
+    Every exceptional exit from the post-spawn lifetime uses this path, not
+    only reader setup failures.  That keeps the original process group, adopted
+    detached descendants, pipes, and reader threads owned until they are
+    killed/reaped/closed/joined as far as the platform permits.
+    """
+    process_group_terminated = False
+    process_reaped = False
+    detached_descendant_survivor = False
+    process_containment_cleanup_complete = False
+    try:
+        if os.name == "posix":
+            os.killpg(proc.pid, signal.SIGKILL)
+            process_group_terminated = True
+        else:
+            proc.kill()
+            process_group_terminated = True
+    except ProcessLookupError:
+        pass
+    except OSError:
+        try:
+            proc.kill()
+            process_group_terminated = True
+        except OSError:
+            pass
+    try:
+        proc.wait(timeout=READER_JOIN_GRACE_SEC)
+        process_reaped = proc.returncode is not None
+    except (OSError, subprocess.TimeoutExpired):
+        try:
+            proc.kill()
+            process_group_terminated = True
+            proc.wait(timeout=READER_JOIN_GRACE_SEC)
+            process_reaped = proc.returncode is not None
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    try:
+        (
+            detached_descendant_survivor,
+            process_containment_cleanup_complete,
+        ) = cleanup_detached_descendants(containment)
+    except Exception:
+        pass
+    for stream in (proc.stdout, proc.stderr):
+        if stream is None:
+            continue
+        try:
+            stream.close()
+        except (OSError, ValueError):
+            pass
+    for reader in readers:
+        if reader.ident is None:
+            continue
+        try:
+            reader.join(timeout=READER_JOIN_GRACE_SEC)
+        except RuntimeError:
+            pass
+    return {
+        "process_group_cleanup_attempted": True,
+        "process_group_terminated": process_group_terminated,
+        "process_reaped": process_reaped,
+        "detached_descendant_survivor": detached_descendant_survivor,
+        "process_containment_cleanup_complete": (
+            process_containment_cleanup_complete
+        ),
+        "reader_join_timed_out": any(
+            reader.ident is not None and reader.is_alive()
+            for reader in readers
+        ),
+        "process_containment": dict(
+            containment.get("scope") or PROCESS_CONTAINMENT_SCOPE
+        ),
+    }
+
+
+def _drain_bounded_stream(
+    stream: Any,
+    stop: threading.Event,
+) -> Dict[str, Any]:
+    """Drain one pipe completely or record a fail-closed reader error."""
+    retained = bytearray()
+    digest = hashlib.sha256()
+    observed = 0
+    exceeded = False
+    read_error: Optional[str] = None
+    try:
+        while True:
+            chunk = stream.read(64 * 1024)
+            if not chunk:
+                break
+            raw_chunk = bytes(chunk)
+            observed += len(raw_chunk)
+            digest.update(raw_chunk)
+            remaining = max(0, MAX_CAPTURE_BYTES - len(retained))
+            if remaining:
+                retained.extend(raw_chunk[:remaining])
+            if observed > MAX_CAPTURE_BYTES:
+                exceeded = True
+                stop.set()
+    except (OSError, ValueError) as exc:
+        read_error = f"{type(exc).__name__}: stream read failed"
+        stop.set()
+    finally:
+        try:
+            stream.close()
+        except Exception:
+            pass
+    return {
+        "raw": bytes(retained),
+        "observed": observed,
+        "sha256": f"sha256:{digest.hexdigest()}",
+        "exceeded": exceeded,
+        "read_error": read_error,
+    }
+
+
 def _bounded_process_capture(
     cmd: List[str],
     *,
@@ -1642,152 +1852,137 @@ def _bounded_process_capture(
     }
     if pass_fds:
         popen_kwargs["pass_fds"] = tuple(pass_fds)
-    proc = subprocess.Popen(cmd, **popen_kwargs)
     stop = threading.Event()
     states: Dict[str, Dict[str, Any]] = {}
 
     def drain(name: str, stream: Any) -> None:
-        retained = bytearray()
-        digest = hashlib.sha256()
-        observed = 0
-        exceeded = False
-        try:
-            while True:
-                chunk = stream.read(64 * 1024)
-                if not chunk:
-                    break
-                raw_chunk = bytes(chunk)
-                observed += len(raw_chunk)
-                digest.update(raw_chunk)
-                remaining = max(0, MAX_CAPTURE_BYTES - len(retained))
-                if remaining:
-                    retained.extend(raw_chunk[:remaining])
-                if observed > MAX_CAPTURE_BYTES:
-                    exceeded = True
-                    stop.set()
-        except (OSError, ValueError):
-            pass
-        finally:
-            try:
-                stream.close()
-            except Exception:
-                pass
-            states[name] = {
-                "raw": bytes(retained),
-                "observed": observed,
-                "sha256": f"sha256:{digest.hexdigest()}",
-                "exceeded": exceeded,
-            }
+        states[name] = _drain_bounded_stream(stream, stop)
 
-    assert proc.stdout is not None and proc.stderr is not None
-    readers = [
-        threading.Thread(target=drain, args=("stdout", proc.stdout), daemon=True),
-        threading.Thread(target=drain, args=("stderr", proc.stderr), daemon=True),
-    ]
-    for reader in readers:
-        reader.start()
-    deadline = time.monotonic() + timeout
-    timed_out = False
-    descendant_pipe_leak = False
-    normal_exit_group_survivor = False
-    process_group_terminated = False
-    process_group_cleanup_attempted = False
-
-    def terminate_group() -> bool:
-        nonlocal process_group_cleanup_attempted, process_group_terminated
-        process_group_cleanup_attempted = True
-        try:
-            if os.name == "posix":
-                os.killpg(proc.pid, signal.SIGKILL)
-                process_group_terminated = True
-            else:
-                proc.kill()
-                process_group_terminated = True
-        except ProcessLookupError:
-            pass
-        except OSError:
-            try:
-                proc.kill()
-                process_group_terminated = True
-            except OSError:
-                pass
-        return process_group_terminated
-
-    while True:
-        if stop.is_set():
-            terminate_group()
-            break
-        if proc.poll() is not None:
-            # Pipe state is not a containment oracle. Kill/probe the original
-            # group immediately, then sweep the complete transitive /proc
-            # closure before waiting for reader threads.
-            if terminate_group():
-                normal_exit_group_survivor = True
-            break
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            timed_out = True
-            terminate_group()
-            break
-        time.sleep(min(0.01, remaining))
+    proc = subprocess.Popen(cmd, **popen_kwargs)
+    readers: List[threading.Thread] = []
     try:
-        proc.wait(timeout=READER_JOIN_GRACE_SEC)
-    except subprocess.TimeoutExpired:
-        terminate_group()
+        assert proc.stdout is not None and proc.stderr is not None
+        readers.extend([
+            threading.Thread(target=drain, args=("stdout", proc.stdout), daemon=True),
+            threading.Thread(target=drain, args=("stderr", proc.stderr), daemon=True),
+        ])
+        for reader in readers:
+            reader.start()
+        deadline = time.monotonic() + timeout
+        timed_out = False
+        descendant_pipe_leak = False
+        normal_exit_group_survivor = False
+        process_group_terminated = False
+        process_group_cleanup_attempted = False
+
+        def terminate_group() -> bool:
+            nonlocal process_group_cleanup_attempted, process_group_terminated
+            process_group_cleanup_attempted = True
+            try:
+                if os.name == "posix":
+                    os.killpg(proc.pid, signal.SIGKILL)
+                    process_group_terminated = True
+                else:
+                    proc.kill()
+                    process_group_terminated = True
+            except ProcessLookupError:
+                pass
+            except OSError:
+                try:
+                    proc.kill()
+                    process_group_terminated = True
+                except OSError:
+                    pass
+            return process_group_terminated
+
+        while True:
+            if stop.is_set():
+                terminate_group()
+                break
+            if proc.poll() is not None:
+                # Pipe state is not a containment oracle. Kill/probe the original
+                # group immediately, then sweep the complete transitive /proc
+                # closure before waiting for reader threads.
+                if terminate_group():
+                    normal_exit_group_survivor = True
+                break
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                timed_out = True
+                terminate_group()
+                break
+            time.sleep(min(0.01, remaining))
         try:
             proc.wait(timeout=READER_JOIN_GRACE_SEC)
         except subprocess.TimeoutExpired:
-            pass
-    (
-        detached_descendant_survivor,
-        process_containment_cleanup_complete,
-    ) = cleanup_detached_descendants(containment)
-    join_deadline = time.monotonic() + READER_JOIN_GRACE_SEC
-    for reader in readers:
-        reader.join(timeout=max(0.0, join_deadline - time.monotonic()))
-    if any(reader.is_alive() for reader in readers):
-        for stream in (proc.stdout, proc.stderr):
+            terminate_group()
             try:
-                os.close(stream.fileno())
-            except OSError:
+                proc.wait(timeout=READER_JOIN_GRACE_SEC)
+            except subprocess.TimeoutExpired:
                 pass
+        (
+            detached_descendant_survivor,
+            process_containment_cleanup_complete,
+        ) = cleanup_detached_descendants(containment)
+        join_deadline = time.monotonic() + READER_JOIN_GRACE_SEC
         for reader in readers:
             reader.join(timeout=max(0.0, join_deadline - time.monotonic()))
-    reader_join_timed_out = any(reader.is_alive() for reader in readers)
-    stdout = states.get("stdout", {"raw": b"", "observed": 0, "sha256": f"sha256:{hashlib.sha256(b'').hexdigest()}", "exceeded": False})
-    stderr = states.get("stderr", {"raw": b"", "observed": 0, "sha256": f"sha256:{hashlib.sha256(b'').hexdigest()}", "exceeded": False})
-    exceeded = bool(stdout["exceeded"] or stderr["exceeded"])
-    return {
-        "returncode": (
-            124
-            if timed_out
-            else 126
-            if exceeded
-            else 125
-            if (
-                descendant_pipe_leak
-                or normal_exit_group_survivor
-                or detached_descendant_survivor
-                or not process_containment_cleanup_complete
-                or reader_join_timed_out
-            )
-            else proc.returncode
-        ),
-        "stdout_state": stdout,
-        "stderr_state": stderr,
-        "capture_limit_exceeded": exceeded,
-        "timed_out": timed_out,
-        "descendant_pipe_leak": descendant_pipe_leak,
-        "normal_exit_group_survivor": normal_exit_group_survivor,
-        "detached_descendant_survivor": detached_descendant_survivor,
-        "process_containment_cleanup_complete": (
-            process_containment_cleanup_complete
-        ),
-        "reader_join_timed_out": reader_join_timed_out,
-        "process_group_cleanup_attempted": process_group_cleanup_attempted,
-        "process_group_terminated": process_group_terminated,
-        "process_containment": dict(containment["scope"]),
-    }
+        if any(reader.is_alive() for reader in readers):
+            for stream in (proc.stdout, proc.stderr):
+                try:
+                    os.close(stream.fileno())
+                except OSError:
+                    pass
+            for reader in readers:
+                reader.join(timeout=max(0.0, join_deadline - time.monotonic()))
+        reader_join_timed_out = any(reader.is_alive() for reader in readers)
+        stdout = states.get("stdout", {"raw": b"", "observed": 0, "sha256": f"sha256:{hashlib.sha256(b'').hexdigest()}", "exceeded": False, "read_error": "reader state missing"})
+        stderr = states.get("stderr", {"raw": b"", "observed": 0, "sha256": f"sha256:{hashlib.sha256(b'').hexdigest()}", "exceeded": False, "read_error": "reader state missing"})
+        exceeded = bool(stdout["exceeded"] or stderr["exceeded"])
+        stream_read_error = bool(
+            stdout.get("read_error") or stderr.get("read_error")
+        )
+        return {
+            "returncode": (
+                124
+                if timed_out
+                else 126
+                if exceeded
+                else 125
+                if (
+                    descendant_pipe_leak
+                    or normal_exit_group_survivor
+                    or detached_descendant_survivor
+                    or not process_containment_cleanup_complete
+                    or reader_join_timed_out
+                    or stream_read_error
+                )
+                else proc.returncode
+            ),
+            "stdout_state": stdout,
+            "stderr_state": stderr,
+            "capture_limit_exceeded": exceeded,
+            "timed_out": timed_out,
+            "descendant_pipe_leak": descendant_pipe_leak,
+            "normal_exit_group_survivor": normal_exit_group_survivor,
+            "detached_descendant_survivor": detached_descendant_survivor,
+            "process_containment_cleanup_complete": (
+                process_containment_cleanup_complete
+            ),
+            "reader_join_timed_out": reader_join_timed_out,
+            "process_group_cleanup_attempted": process_group_cleanup_attempted,
+            "process_group_terminated": process_group_terminated,
+            "process_containment": dict(containment["scope"]),
+        }
+    except BaseException as exc:
+        cleanup = _cleanup_owned_spawned_process(
+            proc,
+            containment,
+            readers,
+        )
+        if isinstance(exc, Exception):
+            raise SpawnedProcessCaptureError(exc, cleanup) from exc
+        raise
 
 
 def _bounded_stream_fields(state: Mapping[str, Any], name: str) -> Dict[str, Any]:
@@ -1851,7 +2046,17 @@ def run_cmd(
         }
         return result
     except Exception as exc:
-        stderr_raw = repr(exc).encode("utf-8", errors="replace")
+        cleanup = (
+            exc.cleanup
+            if isinstance(exc, SpawnedProcessCaptureError)
+            else {}
+        )
+        observed_exc = (
+            exc.cause
+            if isinstance(exc, SpawnedProcessCaptureError)
+            else exc
+        )
+        stderr_raw = repr(observed_exc).encode("utf-8", errors="replace")
         return {
             "cmd": cmd,
             "cwd": str(cwd) if cwd else None,
@@ -1861,13 +2066,29 @@ def run_cmd(
             "capture_limit_exceeded": False,
             "timed_out": False,
             "descendant_pipe_leak": False,
-            "reader_join_timed_out": False,
+            "reader_join_timed_out": bool(
+                cleanup.get("reader_join_timed_out", False)
+            ),
             "normal_exit_group_survivor": False,
-            "detached_descendant_survivor": False,
-            "process_containment_cleanup_complete": False,
-            "process_group_cleanup_attempted": False,
-            "process_group_terminated": False,
-            "process_containment": dict(PROCESS_CONTAINMENT_SCOPE),
+            "detached_descendant_survivor": bool(
+                cleanup.get("detached_descendant_survivor", False)
+            ),
+            "process_containment_cleanup_complete": bool(
+                cleanup.get(
+                    "process_containment_cleanup_complete",
+                    False,
+                )
+            ),
+            "process_group_cleanup_attempted": bool(
+                cleanup.get("process_group_cleanup_attempted", False)
+            ),
+            "process_group_terminated": bool(
+                cleanup.get("process_group_terminated", False)
+            ),
+            "process_containment": dict(
+                cleanup.get("process_containment")
+                or PROCESS_CONTAINMENT_SCOPE
+            ),
             "duration_sec": round(time.time() - started, 3),
         }
 
@@ -1911,9 +2132,70 @@ def write_complete_stream_transcript(
 
 def load_json(path: Path) -> Dict[str, Any]:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        value = strict_json_loads(
+            read_regular_text_bounded(
+                path,
+                max_bytes=MAX_FORMAL_JSON_BYTES,
+            )
+        )
+        validate_json_structure_bounds(value)
+        return value
     except Exception as exc:
         return {"_error": str(exc), "_path": str(path)}
+
+
+def read_regular_text_bounded(
+    path: Path,
+    *,
+    max_bytes: int = MAX_FORMAL_TEXT_BYTES,
+    errors: str = "strict",
+) -> str:
+    """Read one single-link regular final entry with a hard byte bound."""
+    if type(max_bytes) is not int or max_bytes < 0:
+        raise ValueError("max_bytes must be a nonnegative integer")
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    descriptor = os.open(path, flags)
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+            raise ValueError(f"{path.name} is not a single-link regular file")
+        if metadata.st_size > max_bytes:
+            raise ValueError(f"file exceeds {max_bytes} bytes")
+        with os.fdopen(descriptor, "rb") as stream:
+            descriptor = -1
+            payload = stream.read(max_bytes + 1)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+    if len(payload) > max_bytes:
+        raise ValueError(f"file exceeds {max_bytes} bytes")
+    return payload.decode("utf-8", errors=errors)
+
+
+def validate_json_structure_bounds(value: Any) -> None:
+    stack: List[Tuple[Any, int]] = [(value, 1)]
+    nodes = 0
+    while stack:
+        current, depth = stack.pop()
+        nodes += 1
+        if nodes > MAX_JSON_STRUCTURE_NODES:
+            raise ValueError(
+                f"JSON exceeds {MAX_JSON_STRUCTURE_NODES} structure nodes"
+            )
+        if depth > MAX_JSON_STRUCTURE_DEPTH:
+            raise ValueError(f"JSON exceeds depth {MAX_JSON_STRUCTURE_DEPTH}")
+        if isinstance(current, Mapping):
+            stack.extend((child, depth + 1) for child in current.values())
+        elif isinstance(current, list):
+            stack.extend((child, depth + 1) for child in current)
+        elif type(current) is float and not math.isfinite(current):
+            raise ValueError("JSON contains a non-finite number")
 
 
 def plugin_name(root: Path) -> str:
@@ -2024,14 +2306,21 @@ Formal invocation rules:
 def parse_gate_status(stdout: str, markdown_path: Optional[Path] = None) -> Optional[str]:
     text = stdout or ""
     try:
-        data = json.loads(text)
+        data = strict_json_loads(text)
         status = data.get("status")
         if isinstance(status, str) and status in FINAL_STATUSES:
             return status
     except Exception:
         pass
     if markdown_path and markdown_path.exists():
-        text += "\n" + markdown_path.read_text(encoding="utf-8", errors="replace")
+        try:
+            text += "\n" + read_regular_text_bounded(
+                markdown_path,
+                max_bytes=MAX_FORMAL_TEXT_BYTES,
+                errors="replace",
+            )
+        except (OSError, ValueError):
+            return None
     matches = re.findall(r"Status:\s*\*\*(PASS-TRACKED|PASS-SCOPED|LIMITED|FAIL|UNVERIFIED)\*\*", text)
     if matches:
         return matches[-1]
@@ -2064,8 +2353,13 @@ def _iter_json_lines(text: str) -> Iterable[Tuple[int, Dict[str, Any]]]:
         if not line:
             continue
         try:
-            obj = json.loads(line)
-        except json.JSONDecodeError as exc:
+            obj = strict_json_loads(line)
+        except (
+            ValueError,
+            RecursionError,
+            MemoryError,
+            OverflowError,
+        ) as exc:
             raise TraceFormatError(idx, "malformed JSON") from exc
         if not isinstance(obj, dict):
             raise TraceFormatError(
@@ -2076,19 +2370,47 @@ def _iter_json_lines(text: str) -> Iterable[Tuple[int, Dict[str, Any]]]:
 
 
 def _candidate_trace_nodes(event: Dict[str, Any]) -> Iterable[Tuple[int, Dict[str, Any], str, Optional[str]]]:
-    """Yield recognized stream-json event positions with optional role context.
+    """Yield only the supported Claude stream-json message event positions.
 
-    Candidate positions are top-level stream events and known message/content
-    envelopes. Once a node is itself a tool_use or tool_result event, it becomes a
-    hard event boundary: all children under content, data, payload, delta, message,
-    input, arguments, args, or parameters are treated as payload data and are not
-    recursively parsed as new runtime events. This prevents fake tool events hidden
-    inside tool_result.data/payload from authenticating PASS-TRACKED.
+    Authentication currently supports the observed/documented Claude Code shape
+    ``assistant|user -> message -> content[]``.  Unknown outer event types and
+    generic ``data``/``payload``/``delta`` keys are deliberately opaque: key names
+    alone do not establish a runtime event boundary.  The outer assistant/user
+    role is authoritative for every nested content block and cannot be overridden
+    by an attacker-controlled child ``role`` field.
+
+    Once a node is itself a tool_use or tool_result event, it is a hard event
+    boundary.  Its children are tool input/output data, never fresh runtime events.
+    Additional official stream shapes must be added as explicit true-world schemas
+    after capture from the official runtime, not inferred recursively.
+
+    SECURITY-REVIEW: recognized stream-json event positions are allowlisted;
+    each tool event is a hard event boundary, and tool_result.data remains opaque.
     """
+    # Bound the complete untrusted record independently of semantic parsing.
+    # Unknown envelopes stay opaque, but they cannot hide an over-deep or
+    # over-wide JSON object that defeats the parser's resource contract.
+    bound_items = 0
+    stack: List[Tuple[Any, int]] = [(event, 0)]
+    while stack:
+        value, depth = stack.pop()
+        if depth > MAX_TRACE_DEPTH:
+            raise TraceBoundError(
+                f"record nesting depth exceeds {MAX_TRACE_DEPTH}"
+            )
+        bound_items += 1
+        if bound_items > MAX_TRACE_ITEMS_PER_RECORD:
+            raise TraceBoundError(
+                f"record item count exceeds {MAX_TRACE_ITEMS_PER_RECORD}"
+            )
+        if isinstance(value, dict):
+            stack.extend((child, depth + 1) for child in value.values())
+        elif isinstance(value, list):
+            stack.extend((child, depth + 1) for child in value)
+
     index = 0
     visited = 0
     seen: Set[int] = set()
-    expanded: Set[int] = set()
 
     def account(depth: int) -> None:
         nonlocal visited
@@ -2108,6 +2430,8 @@ def _candidate_trace_nodes(event: Dict[str, Any]) -> Iterable[Tuple[int, Dict[st
         return str(container.get("type") or container.get("event") or container.get("kind") or "").strip().lower()
 
     def role_from(container: Any, inherited: Optional[str]) -> Optional[str]:
+        if inherited is not None:
+            return inherited
         if not isinstance(container, dict):
             return inherited
         role = container.get("role") or container.get("speaker")
@@ -2127,47 +2451,36 @@ def _candidate_trace_nodes(event: Dict[str, Any]) -> Iterable[Tuple[int, Dict[st
                 yield index, node, path, role
                 index += 1
 
-    def emit_child(child: Any, path: str, role: Optional[str], depth: int):
-        if isinstance(child, dict):
-            yield from emit_container(child, path, role, depth)
-        elif isinstance(child, list):
-            account(depth)
-            for i, item in enumerate(child):
-                yield from emit_container(item, f"{path}[{i}]", role, depth + 1)
-        else:
-            account(depth)
+    account(0)
+    outer_type = event.get("type")
+    if (
+        outer_type not in {"assistant", "user"}
+        or "event" in event
+        or "kind" in event
+    ):
+        return
+    role = outer_type
+    yield from emit(event, "$", role)
 
-    def emit_container(container: Any, path: str, inherited_role: Optional[str] = None, depth: int = 0):
-        account(depth)
-        if not isinstance(container, dict):
-            return
-        ident = id(container)
-        if ident in expanded:
-            return
-        expanded.add(ident)
-        role = role_from(container, inherited_role)
-        yield from emit(container, path, role)
-        typ = event_type(container)
-        if typ in TOOL_USE_TYPES or typ in TOOL_RESULT_TYPES:
-            # Hard event boundary. Children of an actual tool event are input/output
-            # payloads, not stream event envelopes.
-            return
+    message = event.get("message")
+    account(1)
+    if not isinstance(message, dict):
+        return
 
-        # Known non-tool envelopes. The role of an enclosing assistant/user message
-        # is propagated to its content blocks so role-inverted traces can be rejected.
-        for key in ("message", "delta", "data", "payload"):
-            if key in container:
-                yield from emit_child(
-                    container.get(key), f"{path}.{key}", role, depth + 1
-                )
-
-        for key in ("content", "blocks"):
-            if key in container:
-                yield from emit_child(
-                    container.get(key), f"{path}.{key}", role, depth + 1
-                )
-
-    yield from emit_container(event, "$", None, 0)
+    content = message.get("content")
+    account(2)
+    if not isinstance(content, list):
+        return
+    for item_index, item in enumerate(content):
+        account(3)
+        if not isinstance(item, dict):
+            continue
+        item_role = role_from(item, role)
+        yield from emit(
+            item,
+            f"$.message.content[{item_index}]",
+            item_role,
+        )
 
 def _stringify(obj: Any) -> str:
     try:
@@ -2191,19 +2504,19 @@ def _tool_call_ids(node: Dict[str, Any]) -> List[str]:
 def _tool_result_ids(node: Dict[str, Any]) -> List[str]:
     """Return the single ID that binds a result to one tool-use call.
 
-    A result authenticates a native lane only through tool_use_id / tool_call_id
-    style fields. Exactly one recognized binding field must be present; aliases
-    may not be fanned out, even when their values happen to agree. The result
-    object's own id and textual agent mentions are never matching evidence.
+    A result authenticates a native lane only through canonical ``tool_use_id``.
+    Alias fields may not be fanned out or substituted, even when their values
+    happen to agree. The result object's own id and textual agent mentions are
+    never matching evidence.
     """
     present = [
         key
         for key in ("tool_use_id", "toolUseId", "tool_call_id", "toolCallId")
         if key in node
     ]
-    if len(present) != 1:
+    if present != ["tool_use_id"]:
         return []
-    value = node.get(present[0])
+    value = node.get("tool_use_id")
     return [value] if isinstance(value, str) and value.strip() else []
 
 
@@ -2213,14 +2526,22 @@ def _tool_result_binding_error(node: Dict[str, Any]) -> Optional[str]:
         for key in ("tool_use_id", "toolUseId", "tool_call_id", "toolCallId")
         if key in node
     ]
-    if len(present) != 1:
+    if present != ["tool_use_id"]:
         return (
-            "tool-result must contain exactly one recognized binding field; "
+            "tool-result must contain only canonical tool_use_id binding; "
             f"observed {present!r}"
         )
-    value = node.get(present[0])
+    value = node.get("tool_use_id")
     if not isinstance(value, str) or not value.strip():
-        return f"tool-result binding {present[0]} is not a nonempty string"
+        return "tool-result binding tool_use_id is not a nonempty string"
+    payload_fields = [
+        key for key in ("content", "result", "output") if key in node
+    ]
+    if payload_fields != ["content"]:
+        return (
+            "tool-result must contain only canonical content payload; "
+            f"observed {payload_fields!r}"
+        )
     return None
 
 
@@ -2229,18 +2550,18 @@ def _normalized_event_type(node: Dict[str, Any]) -> str:
 
 
 def _is_tool_call_node(node: Dict[str, Any]) -> bool:
-    """Return True only for authentic tool-use event nodes.
+    """Return True only for typed tool-use event nodes.
 
     Recognized positions are necessary but not sufficient: a `message.content`
     block with type `text`, or a top-level assistant/message envelope that merely
     contains fields named `name` and `input`, must not masquerade as a native
     Agent/Task call. PASS-TRACKED depends on actual tool-use event types.
     """
-    typ = _normalized_event_type(node)
-    if typ not in TOOL_USE_TYPES:
-        return False
-    name = node.get("name") or node.get("tool_name") or node.get("toolName")
-    return name in TRACE_TOOL_NAMES
+    return (
+        node.get("type") == "tool_use"
+        and "event" not in node
+        and "kind" not in node
+    )
 
 
 def _is_tool_result_node(node: Dict[str, Any]) -> bool:
@@ -2250,8 +2571,15 @@ def _is_tool_result_node(node: Dict[str, Any]) -> bool:
     are not runtime results. This closes the v0.7.7 false world where non-tool
     text or top-level assistant messages authenticated native lanes.
     """
-    typ = _normalized_event_type(node)
-    return typ in TOOL_RESULT_TYPES
+    # Only the documented Claude stream content block is evidence. Accepting
+    # discriminator aliases (event/kind) or invented result spellings would
+    # authenticate a trace shape for which this package has no true-world
+    # fixture.
+    return (
+        node.get("type") == "tool_result"
+        and "event" not in node
+        and "kind" not in node
+    )
 
 
 def _result_content(node: Dict[str, Any]) -> Any:
@@ -2291,6 +2619,80 @@ def _has_meaningful_content(value: Any) -> bool:
         return any(_has_meaningful_content(v) for v in payload.values())
     return True
 
+
+def _direct_result_content_has_failure(value: Any) -> bool:
+    """Reject unambiguous completion failures in direct result content.
+
+    This deliberately does not walk arbitrary nested audit findings: a native
+    lane may successfully report that its target claim failed. Direct
+    tool-result envelopes and content blocks, however, cannot launder common
+    execution error fields beneath a top-level success signal.
+    """
+    candidates = value if isinstance(value, (list, tuple)) else [value]
+    for candidate in candidates:
+        if not isinstance(candidate, Mapping):
+            continue
+        if any(
+            alias in candidate
+            for alias in (
+                "isError",
+                "returnCode",
+                "exitCode",
+                "completionStatus",
+                "errorCode",
+            )
+        ):
+            return True
+        for field in ("error", "errors"):
+            if field not in candidate:
+                continue
+            field_value = candidate.get(field)
+            if field_value not in (None, False, 0, "") and not (
+                isinstance(field_value, (list, tuple, dict))
+                and not field_value
+            ):
+                return True
+        for field in (
+            "exit_code",
+            "returncode",
+            "return_code",
+            "error_code",
+        ):
+            if field in candidate and (
+                type(candidate.get(field)) is not int
+                or candidate.get(field) != 0
+            ):
+                return True
+        for field in ("executed", "completed", "success"):
+            if field in candidate and candidate.get(field) is not True:
+                return True
+        for field in (
+            "is_error",
+            "aborted",
+            "killed",
+            "cancelled",
+            "canceled",
+            "failed",
+            "failure",
+            "timed_out",
+            "timeout",
+            "terminated",
+            "skipped",
+            "not_executed",
+        ):
+            if field in candidate and candidate.get(field) is not False:
+                return True
+        direct_result = candidate.get("result")
+        if type(direct_result) is str and re.fullmatch(
+            r"\s*(?:fail|failed|failure|error|errored|aborted|killed|"
+            r"terminated|cancelled|canceled|timed[-_ ]?out|timeout|"
+            r"skipped|not[-_ ]?executed|unsuccessful)\s*",
+            direct_result,
+            flags=re.I,
+        ):
+            return True
+    return False
+
 def _result_is_success(node: Dict[str, Any]) -> bool:
     """Return True only for explicit, non-empty successful tool results.
 
@@ -2300,57 +2702,85 @@ def _result_is_success(node: Dict[str, Any]) -> bool:
     merely says an agent succeeded is not sufficient for PASS-TRACKED trace
     authentication.
     """
+    if "is_error" in node and type(node.get("is_error")) is not bool:
+        return False
     if node.get("is_error") is True:
         return False
-    negative_statuses = {
-        "error",
-        "failed",
-        "failure",
-        "timeout",
-        "timed-out",
-        "aborted",
-        "killed",
-        "terminated",
-        "unsuccessful",
-        "cancelled",
-        "canceled",
-        "not-executed",
-        "not-invoked",
-        "not-run",
-        "skipped",
-    }
-    status_values = [
-        re.sub(
-            r"[-_\s]+",
-            "-",
-            str(node.get(field) or "").strip().lower(),
+    if any(
+        alias in node
+        for alias in (
+            "isError",
+            "returnCode",
+            "exitCode",
+            "completionStatus",
+            "errorCode",
         )
-        for field in ("status", "outcome", "completion_status")
-    ]
-    if any(value in negative_statuses for value in status_values):
+    ):
         return False
-    if any(node.get(field) is False for field in ("executed", "completed", "success")):
-        return False
-    if any(node.get(field) is True for field in ("aborted", "killed", "cancelled", "canceled")):
-        return False
-    for field in ("exit_code", "returncode", "return_code", "error_code"):
+    for field in ("error", "errors"):
+        if field not in node:
+            continue
         value = node.get(field)
-        if (
-            isinstance(value, (int, float))
-            and not isinstance(value, bool)
-            and value != 0
+        if value not in (None, False, 0, "") and not (
+            isinstance(value, (list, tuple, dict)) and not value
         ):
             return False
-        if isinstance(value, str) and value.strip() and value.strip() not in {"0", "none", "null"}:
+    positive_statuses = {
+        "ok",
+        "success",
+        "succeeded",
+        "completed",
+        "complete",
+        "done",
+    }
+    status_values: List[str] = []
+    for field in ("status", "outcome", "completion_status"):
+        if field not in node:
+            continue
+        value = node.get(field)
+        if type(value) is not str:
             return False
-    status = re.sub(
-        r"[-_\s]+",
-        "-",
-        str(node.get("status") or node.get("outcome") or "").strip().lower(),
-    )
-    if status in negative_statuses:
-        return False
+        normalized = re.sub(
+            r"[-_\s]+",
+            "-",
+            value.strip().lower(),
+        )
+        if normalized not in positive_statuses:
+            return False
+        status_values.append(normalized)
+    for field in ("executed", "completed", "success"):
+        if field in node and (
+            type(node.get(field)) is not bool
+            or node.get(field) is not True
+        ):
+            return False
+    for field in (
+        "aborted",
+        "killed",
+        "cancelled",
+        "canceled",
+        "failed",
+        "failure",
+        "timed_out",
+        "timeout",
+        "terminated",
+        "skipped",
+        "not_executed",
+    ):
+        if field in node and (
+            type(node.get(field)) is not bool
+            or node.get(field) is not False
+        ):
+            return False
+    for field in ("exit_code", "returncode", "return_code", "error_code"):
+        if field in node and (
+            type(node.get(field)) is not int
+            or node.get(field) != 0
+        ):
+            return False
     content = _result_content(node)
+    if _direct_result_content_has_failure(content):
+        return False
     body = _stringify(content).lower()
     # Explicit contradiction markers dominate every success signal. Ordinary
     # negative-test prose needs narrower treatment: "0 failures", "no tests
@@ -2376,34 +2806,40 @@ def _result_is_success(node: Dict[str, Any]) -> bool:
     for pattern in benign_patterns:
         contradiction_candidate = re.sub(pattern, " ", contradiction_candidate)
     explicit_noncompletion_patterns = (
-        r"\b(?:did\s+not|was\s+not|never)\s+(?:execute|executed|run|ran|invoke|invoked|complete|completed)\b",
-        r"\bnot\s+(?:executed|run|invoked|completed|successful)\b",
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)\s+(?:did\s+not|was\s+not|never)\s+(?:execute|executed|run|ran|invoke|invoked|complete|completed)\b",
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)\s+not\s+(?:executed|run|invoked|completed|successful)\b",
         r"\b(?:execution|run|invocation|task|agent|subagent|lane)\s+(?:was\s+)?(?:skipped|aborted|killed|terminated|cancelled|canceled|unsuccessful)\b",
-        r"\b(?:aborted|killed|unsuccessful)\b",
-        r"\b(?:failed\s+(?:to|before|without)|failure\s+before)\b",
-        r"\b(?:agent|subagent|lane|task|execution|run|process)\b.{0,40}\b(?:timed\s+out|failed\s+before|produced\s+no\s+output)\b",
-        r"\bnon[- ]?zero\s+(?:exit|return|error)[ _-]?code\b",
-        r"\b(?:exit|return|error)[ _-]?code\s*(?:[:=]|was|is)?\s*non[- ]?zero\b",
-        r"\b(?:non[- ]?zero\s+)?(?:exit|return|error)[ _-]?code\s*(?:[:=]|was|is)?\s*-?[1-9][0-9]*\b",
-        r"\bwithout\s+producing\s+(?:findings|output|a\s+result)\b",
+        r"\bcompletion\s+was\s+unsuccessful\b",
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)\s+(?:was\s+)?failed\b",
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)\s+(?:encountered|returned)\s+(?:an?\s+)?error\b",
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)\s+(?:error|errored)\b",
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)\s+(?:did\s+not\s+succeed|could\s+not\s+complete)\b",
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)\b.{0,40}\b(?:timed\s+out|failed\s+before|produced\s+no\s+output|without\s+producing\s+(?:findings|output|a\s+result))\b",
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)(?:'s|\s+returned|\s+reported|\s+had)?\b.{0,40}\b(?:non[- ]?zero\s+(?:exit|return|error)[ _-]?code|(?:exit|return|error)[ _-]?code\s*(?:[:=]|was|is)?\s*(?:non[- ]?zero|-?[1-9][0-9]*))\b",
     )
     if any(
         re.search(pattern, contradiction_candidate)
         for pattern in explicit_noncompletion_patterns
     ):
         return False
-    explicit_success = status in {"ok", "success", "succeeded", "completed", "done"} or node.get("is_error") is False
+    explicit_success = (
+        bool(status_values)
+        or node.get("is_error") is False
+        or any(
+            node.get(field) is True
+            for field in ("executed", "completed", "success")
+        )
+    )
     return bool(explicit_success and _has_meaningful_content(content))
 
 
 def _tool_input_payload(node: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if any(
+        key in node
+        for key in ("arguments", "args", "parameters")
+    ):
+        return None
     payload = node.get("input")
-    if not isinstance(payload, dict):
-        payload = node.get("arguments")
-    if not isinstance(payload, dict):
-        payload = node.get("args")
-    if not isinstance(payload, dict):
-        payload = node.get("parameters")
     return payload if isinstance(payload, dict) else None
 
 
@@ -2414,17 +2850,40 @@ def _structured_subagent_selector(node: Dict[str, Any]) -> Optional[str]:
     Only exact structured selectors such as input.subagent_type authenticate a
     lane; this blocks the single-call-mentions-all-lanes false world.
     """
+    if any(
+        key in node
+        for key in (
+            "event",
+            "kind",
+            "tool_name",
+            "toolName",
+            "tool_use_id",
+            "toolUseId",
+            "tool_call_id",
+            "toolCallId",
+        )
+    ):
+        return None
     payload = _tool_input_payload(node)
     if not isinstance(payload, dict):
         return None
-    for key in ("subagent_type", "subagentType", "agent_type", "agentType"):
-        value = payload.get(key)
-        if isinstance(value, str):
-            return value
-    return None
+    selector_fields = [
+        key
+        for key in (
+            "subagent_type",
+            "subagentType",
+            "agent_type",
+            "agentType",
+        )
+        if key in payload
+    ]
+    if selector_fields != ["subagent_type"]:
+        return None
+    value = payload.get("subagent_type")
+    return value if isinstance(value, str) and value.strip() else None
 
 
-def _extract_trace_events(event: Dict[str, Any]) -> Tuple[List[Tuple[str, Dict[str, Any]]], Dict[str, List[Dict[str, Any]]], Set[str], List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
+def _extract_trace_events(event: Dict[str, Any]) -> Tuple[List[Tuple[str, Dict[str, Any]]], Dict[str, List[Dict[str, Any]]], Set[str], List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Extract authentic native Agent/Task calls and matching results.
 
     The parser is intentionally narrow: it reads only top-level stream-json
@@ -2439,12 +2898,23 @@ def _extract_trace_events(event: Dict[str, Any]) -> Tuple[List[Tuple[str, Dict[s
     unexpected_native_tool_calls: List[Dict[str, Any]] = []
     role_violations: List[Dict[str, Any]] = []
     invalid_result_bindings: List[Dict[str, Any]] = []
+    all_tool_calls: List[Dict[str, Any]] = []
     for node_index, node, path, role in _candidate_trace_nodes(event):
         if _is_tool_call_node(node):
             selector = _structured_subagent_selector(node)
             ids = _tool_call_ids(node)
-            tool_name = str(node.get("name") or node.get("tool_name") or node.get("toolName"))
+            tool_name = str(node.get("name") or "")
             event_type = str(node.get("type") or node.get("event") or node.get("kind") or "unknown")
+            for tool_id in ids:
+                all_tool_calls.append({
+                    "id": tool_id,
+                    "tool_name": tool_name,
+                    "event_type": event_type,
+                    "node_index": node_index,
+                    "path": path,
+                })
+            if tool_name not in TRACE_TOOL_NAMES:
+                continue
             if role not in (None, "assistant"):
                 role_violations.append({"phase": "tool-use", "role": role, "tool_ids": ids, "tool_name": tool_name, "selector": selector, "event_type": event_type, "node_index": node_index, "path": path})
                 evidence.append({"tool_ids": ids, "tool_name": tool_name, "selector": selector, "event_type": event_type, "phase": "role-violating-tool-use", "role": role, "node_index": node_index, "path": path})
@@ -2506,41 +2976,95 @@ def _extract_trace_events(event: Dict[str, Any]) -> Tuple[List[Tuple[str, Dict[s
             for tool_id in ids:
                 result_success_by_id.setdefault(tool_id, []).append({"success": success, "node_index": node_index, "path": path})
                 evidence.append({"tool_id": tool_id, "event_type": event_type, "phase": "tool-result", "success": success, "node_index": node_index, "path": path})
-    return calls, result_success_by_id, saw_general_purpose, evidence, unexpected_native_tool_calls, role_violations, invalid_result_bindings
+    return calls, result_success_by_id, saw_general_purpose, evidence, unexpected_native_tool_calls, role_violations, invalid_result_bindings, all_tool_calls
 
-def authenticate_trace(transcript_path: Path) -> Dict[str, Any]:
-    if not transcript_path.exists() or transcript_path.stat().st_size == 0:
-        return {
-            "authenticated": False,
-            "events_seen": 0,
-            "agent_calls_authenticated": [],
-            "agent_results_authenticated": [],
-            "missing_agents": REQUIRED_NATIVE_AGENTS,
-            "missing_result_agents": REQUIRED_NATIVE_AGENTS,
-            "saw_general_purpose": False,
-            "duplicate_tool_use_ids": {},
-            "duplicate_agent_calls": {},
-            "duplicate_tool_result_ids": {},
-            "invalid_result_bindings": [],
-            "malformed_stream_records": [],
-            "trace_bound_violations": [],
-            "result_before_call_ids": {},
-            "unexpected_native_tool_calls": [],
-            "role_violations": [],
-            "reasons": ["transcript is missing or empty"],
-            "evidence_events": [],
-        }
+def _empty_trace_authentication(reason: str) -> Dict[str, Any]:
+    return {
+        "authenticated": False,
+        "events_seen": 0,
+        "agent_calls_authenticated": [],
+        "agent_results_authenticated": [],
+        "missing_agents": list(REQUIRED_NATIVE_AGENTS),
+        "missing_result_agents": list(REQUIRED_NATIVE_AGENTS),
+        "saw_general_purpose": False,
+        "duplicate_tool_use_ids": {},
+        "duplicate_agent_calls": {},
+        "duplicate_tool_result_ids": {},
+        "invalid_result_bindings": [],
+        "malformed_stream_records": [],
+        "trace_bound_violations": [],
+        "result_before_call_ids": {},
+        "unexpected_native_tool_calls": [],
+        "role_violations": [],
+        "reasons": [reason],
+        "evidence_events": [],
+    }
+
+
+def authenticate_trace(
+    transcript_path: Path,
+    *,
+    expected_bytes: Optional[int] = None,
+    expected_sha256: Optional[str] = None,
+) -> Dict[str, Any]:
     try:
-        text = transcript_path.read_bytes().decode("utf-8", errors="strict")
+        text = read_regular_text_bounded(
+            transcript_path,
+            max_bytes=MAX_CAPTURE_BYTES,
+            errors="strict",
+        )
     except UnicodeDecodeError as exc:
-        empty = authenticate_trace(Path("/__ntt_missing_trace__"))
+        empty = _empty_trace_authentication("transcript is not valid UTF-8")
         empty["reasons"] = ["transcript is not valid UTF-8"]
         empty["malformed_stream_records"] = [
             {"line": 0, "error": "invalid UTF-8", "offset": exc.start}
         ]
         return empty
+    except (OSError, ValueError) as exc:
+        empty = _empty_trace_authentication(
+            "transcript is unavailable or violates the bounded regular-file contract"
+        )
+        if "exceeds" in str(exc):
+            empty["trace_bound_violations"] = [
+                {
+                    "line": 0,
+                    "error": f"transcript exceeds {MAX_CAPTURE_BYTES} bytes",
+                }
+            ]
+        return empty
+    if not text:
+        return _empty_trace_authentication("transcript is missing or empty")
+    payload = text.encode("utf-8")
+    expected_identity_typed = (
+        (expected_bytes is None or type(expected_bytes) is int)
+        and (
+            expected_sha256 is None
+            or (
+                type(expected_sha256) is str
+                and bool(
+                    re.fullmatch(
+                        r"sha256:[0-9a-f]{64}",
+                        expected_sha256,
+                    )
+                )
+            )
+        )
+    )
+    observed_sha256 = f"sha256:{hashlib.sha256(payload).hexdigest()}"
+    if (
+        not expected_identity_typed
+        or (expected_bytes is not None and len(payload) != expected_bytes)
+        or (
+            expected_sha256 is not None
+            and observed_sha256 != expected_sha256
+        )
+    ):
+        return _empty_trace_authentication(
+            "transcript bytes do not match the expected companion identity"
+        )
     calls_by_agent: Dict[str, List[Dict[str, Any]]] = {}
     tool_id_to_calls: Dict[str, List[str]] = {}
+    all_tool_id_to_calls: Dict[str, List[str]] = {}
     saw_general = False
     evidence_events: List[Dict[str, Any]] = []
     unexpected_native_tool_calls: List[Dict[str, Any]] = []
@@ -2554,13 +3078,19 @@ def authenticate_trace(transcript_path: Path) -> Dict[str, Any]:
         for line_no, event in _iter_json_lines(text):
             events_seen += 1
             try:
-                calls, results_by_id, general, evidence, unexpected_calls, role_calls, invalid_bindings = _extract_trace_events(event)
+                calls, results_by_id, general, evidence, unexpected_calls, role_calls, invalid_bindings, all_tool_calls = _extract_trace_events(event)
             except TraceBoundError as exc:
                 trace_bound_violations.append(
                     {"line": line_no, "error": str(exc)}
                 )
                 continue
             saw_general = saw_general or bool(general)
+            for raw_call in all_tool_calls:
+                tool_id = str(raw_call.get("id") or "")
+                if tool_id:
+                    all_tool_id_to_calls.setdefault(tool_id, []).append(
+                        str(raw_call.get("tool_name") or "<unnamed-tool>")
+                    )
             for u in unexpected_calls:
                 uu = dict(u)
                 uu["line"] = line_no
@@ -2607,9 +3137,9 @@ def authenticate_trace(transcript_path: Path) -> Dict[str, Any]:
         if len(records) == 1
     }
     duplicate_ids = {
-        tool_id: sorted(agents)
-        for tool_id, agents in tool_id_to_calls.items()
-        if len(agents) > 1
+        tool_id: sorted(tool_names)
+        for tool_id, tool_names in all_tool_id_to_calls.items()
+        if len(tool_names) > 1
     }
     duplicate_tool_result_ids = {
         tool_id: len(records)
@@ -2711,6 +3241,8 @@ def check_required_outputs(
             and metadata is not None
             and metadata.st_nlink == 1
             and metadata.st_size > 0
+            and metadata.st_size
+            <= FORMAL_COMPANION_MAX_BYTES.get(key, metadata.st_size)
         )
         checks.append({"name": f"output exists: {key}", "passed": exists, "path": str(path), "size": metadata.st_size if metadata is not None else 0})
     cert = out["certificate"]
@@ -2727,14 +3259,27 @@ def check_required_outputs(
         regular_file_error(ledger) is None
         and ledger.stat(follow_symlinks=False).st_nlink == 1
     ):
-        text = ledger.read_text(encoding="utf-8", errors="replace")
+        try:
+            text = read_regular_text_bounded(
+                ledger,
+                max_bytes=MAX_FORMAL_LEDGER_BYTES,
+                errors="replace",
+            )
+            ledger_read_error = None
+        except (OSError, ValueError) as exc:
+            text = ""
+            ledger_read_error = f"{type(exc).__name__}: {exc}"
         low = text.lower()
-        checks.append({"name": "ledger names formal coordinator", "passed": FORMAL_COORDINATOR in text})
-        checks.append({"name": "ledger records no substitution", "passed": "substitution used: none" in low})
-        checks.append({"name": "ledger delegates machine gate to runner", "passed": "machine gate run: runner-managed" in low})
-        checks.append({"name": "ledger has no formal subagent failure", "passed": "formal_subagent_failure" not in low})
+        checks.append({
+            "name": "ledger names formal coordinator",
+            "passed": ledger_read_error is None and FORMAL_COORDINATOR in text,
+            "details": ledger_read_error,
+        })
+        checks.append({"name": "ledger records no substitution", "passed": ledger_read_error is None and "substitution used: none" in low})
+        checks.append({"name": "ledger delegates machine gate to runner", "passed": ledger_read_error is None and "machine gate run: runner-managed" in low})
+        checks.append({"name": "ledger has no formal subagent failure", "passed": ledger_read_error is None and "formal_subagent_failure" not in low})
         for agent in REQUIRED_NATIVE_AGENTS:
-            checks.append({"name": f"ledger mentions native agent {agent}", "passed": agent in text})
+            checks.append({"name": f"ledger mentions native agent {agent}", "passed": ledger_read_error is None and agent in text})
     return checks
 
 
@@ -2823,8 +3368,18 @@ def _companion_records(
         digest = None
         size = None
         if file_error is None:
-            digest = f"sha256:{sha256_regular_file(path)}"
-            size = path.stat().st_size
+            role_max_bytes = FORMAL_COMPANION_MAX_BYTES.get(role)
+            try:
+                actual_digest, size = _hash_regular_file(
+                    path,
+                    max_bytes=role_max_bytes,
+                )
+                digest = f"sha256:{actual_digest}"
+            except (OSError, ValueError):
+                try:
+                    size = path.lstat().st_size
+                except OSError:
+                    size = None
         records[role] = {
             # Companions are direct children of the held output directory. The
             # The live path may be a runner-PID-qualified procfd alias, while
@@ -2832,7 +3387,7 @@ def _companion_records(
             "path": path.name,
             "sha256": digest,
             "bytes": size,
-            "present": file_error is None,
+            "present": file_error is None and digest is not None,
         }
     return records
 
@@ -3627,10 +4182,22 @@ def main(argv: Optional[List[str]] = None) -> int:
                         "reason": transcript_error,
                     })
                 _debug("before output checks")
-                output_checks = check_required_outputs(
-                    out,
-                    include_gate=False,
-                )
+                if (
+                    transcript_error is None
+                    and invocation.get("returncode") == 0
+                ):
+                    output_checks = check_required_outputs(
+                        out,
+                        include_gate=False,
+                    )
+                else:
+                    output_checks = [{
+                        "name": (
+                            "formal output parsing requires a successful "
+                            "bounded invocation"
+                        ),
+                        "passed": False,
+                    }]
                 _debug("after output checks")
                 result["output_checks"] = output_checks
                 _debug("before trace auth")
@@ -3660,10 +4227,27 @@ def main(argv: Optional[List[str]] = None) -> int:
                     )
                     _debug(f"after gate rc={gate.get('returncode')}")
                     result["commands"].append(gate)
-                    result["gate_status"] = parse_gate_status(gate.get("stdout", ""), out["gate"])
-                    gate_checks = check_required_outputs(
-                        out,
-                        include_gate=True,
+                    result["gate_status"] = (
+                        parse_gate_status(
+                            gate.get("stdout", ""),
+                            out["gate"],
+                        )
+                        if gate.get("returncode") == 0
+                        else None
+                    )
+                    gate_checks = (
+                        check_required_outputs(
+                            out,
+                            include_gate=True,
+                        )
+                        if gate.get("returncode") == 0
+                        else [{
+                            "name": (
+                                "post-gate output parsing requires a "
+                                "successful bounded gate invocation"
+                            ),
+                            "passed": False,
+                        }]
                     )
                     result["output_checks"] = gate_checks
                     if gate.get("returncode") != 0:

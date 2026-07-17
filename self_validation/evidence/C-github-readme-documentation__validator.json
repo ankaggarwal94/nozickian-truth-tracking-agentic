@@ -4,7 +4,7 @@
   "claim_proposition_sha256": "sha256:7aa3f6e8c7fafe0ac5e9ffe5a65d423e0a8695b381203fad4f74c6e174c64227",
   "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:1b1be0ed9c7692533d331cb3cd23afd2e2319084b0db3c135023df1b90e3ed97",
+  "hash_or_version": "sha256:63b9adf7a78ebbc784e5e7ef2d1325c5ab128e4028bfac035dee6fa8f7678e60",
   "observed_result": "Current source bytes support the scoped proposition for C-github-readme-documentation.",
   "support_summary": "This wrapper binds C-github-readme-documentation to current package artifact skills/nozickian-verify/scripts/validate_package.py by exact SHA-256 and to the canonical claim proposition digest.",
   "timestamp_utc": "2026-07-16T05:15:11Z"

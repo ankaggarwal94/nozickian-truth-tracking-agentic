@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-formal-invocation",
   "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
-  "command_or_source": "run_formal_runner_contract_tests.py",
+  "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:70f4f67438a40a8ae58de5f782bb0f83b7d8b7a5384ec6c15d787a6eb07ddde2",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:5dbcd7e85231f12119d95573b24ff7e9dfb81f82a1d7fcfbf96e5cdd597a4c94",
   "observation_id": "obs:C-formal-invocation:TW-formal-valid-role-direction",
-  "observed_result": "The formal contract authenticated every required lane in the valid role-directed trace.",
-  "support_summary": "This wrapper binds TW-formal-valid-role-direction to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The formal contract authenticated every required lane in the valid role-directed trace.",
+  "support_summary": "This wrapper binds TW-formal-valid-role-direction to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "TW-formal-valid-role-direction",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

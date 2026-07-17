@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-formal-invocation",
   "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
-  "command_or_source": "run_formal_runner_contract_tests.py",
+  "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:1db005af7fae6ac83c0153c081435bdde33e0cb54d3cac3cf46e8032cd35bacf",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:1a95a6f2a8a0269b7a20ec3b35bd0b3ddcb7c29bc2b7ddf8611457954e13689a",
   "observation_id": "obs:C-formal-invocation:FW-live-transcript-symlink-substitution",
-  "observed_result": "The formal contract rejected the transcript-parent symlink substitution and preserved both sentinels.",
-  "support_summary": "This wrapper binds FW-live-transcript-symlink-substitution to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The formal contract rejected the transcript-parent symlink substitution and preserved both sentinels.",
+  "support_summary": "This wrapper binds FW-live-transcript-symlink-substitution to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-live-transcript-symlink-substitution",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-pass-tracked-upgrade-audit",
   "claim_proposition_sha256": "sha256:af6dd806f1832342970a4c3a945bfd9964b1b8072def1be83cdef7feac81ef8b",
-  "command_or_source": "run_promotion_certifier_contract_tests.py",
+  "command_or_source": "Declared case context (not authenticated execution): run_promotion_certifier_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:1e9724f0a7aac6af2c15e0184401a258913b0a1129a288520bf7ccaa2e0bdff5",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:4a6dbd66d9cc70e3ccd74d87ca015cecf0eddc797873b289fc1f2f9d6c56484f",
   "observation_id": "obs:C-pass-tracked-upgrade-audit:FW-promotion-self-attested-output-check",
-  "observed_result": "The promotion contract used the production certifier CLI and rejected the arbitrary self-attested formal output check.",
-  "support_summary": "This wrapper binds FW-promotion-self-attested-output-check to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The promotion contract used the production certifier CLI and rejected the arbitrary self-attested formal output check.",
+  "support_summary": "This wrapper binds FW-promotion-self-attested-output-check to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-promotion-self-attested-output-check",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

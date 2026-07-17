@@ -789,7 +789,7 @@ def write_strict_gate_evidence(
     write_json(
         ledger,
         {
-            "observation_schema_version": "1.0",
+            "observation_schema_version": "1.1",
             "observations": observations,
         },
     )
@@ -2122,6 +2122,18 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 failed_check_inventory({"failed_checks": ["not-an-object"]})
             except ValueError:
                 malformed_failed_checks_rejected = True
+            oversized_json_probe = root / "oversized-audit-input.json"
+            with oversized_json_probe.open("wb") as stream:
+                stream.truncate(certifier.MAX_AUDIT_JSON_BYTES + 1)
+            oversized_json_data, oversized_json_error = (
+                certifier.try_load_json(oversized_json_probe)
+            )
+            oversized_json_probe.unlink()
+            bounded_json_reader_rejected_oversized = (
+                oversized_json_data is None
+                and isinstance(oversized_json_error, str)
+                and "ResourceBoundError" in oversized_json_error
+            )
             cases.append({
                 "name": "complete_synthetic_baseline_cli_is_capped",
                 "passed": (
@@ -2144,6 +2156,7 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                     and official_argv_exact
                     and production_certifier_cli_baseline
                     and malformed_failed_checks_rejected
+                    and bounded_json_reader_rejected_oversized
                     and baseline_roles_and_dag_exact
                     and obligations_exact
                 ),
@@ -2164,6 +2177,9 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 "cli_invocation": baseline_invocation,
                 "malformed_failed_checks_rejected": (
                     malformed_failed_checks_rejected
+                ),
+                "bounded_json_reader_rejected_oversized": (
+                    bounded_json_reader_rejected_oversized
                 ),
                 "promotion_roles_and_dag_exact": (
                     baseline_roles_and_dag_exact
@@ -2231,10 +2247,140 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 "✔ Validation passed",
                 "\x1b[32m✔ Validation passed\x1b[0m",
             )
+            contextual_negative_diagnostics = [
+                "warning: validator failed\n",
+                "traceback: error validating plugin\n",
+                "[ERROR] plugin invalid\n",
+                "warning: validation did not pass\n",
+                "[WARN] plugin not valid\n",
+                "validator rejected plugin\n",
+                "warning: validator unsuccessful\n",
+                "fatal: malformed plugin\n",
+                "validator could not validate plugin\n",
+                "plugin is not a valid package\n",
+                "plugin was not validated\n",
+                "validator cannot verify plugin\n",
+                "validator did not validate plugin\n",
+                "validation pending\n",
+                "validity unknown\n",
+                "validation indeterminate\n",
+                "validation aborted\n",
+                "validation canceled\n",
+                "validation cancelled\n",
+                "validation timed out\n",
+                "validation not run\n",
+                "validation not performed\n",
+                "validation deferred\n",
+                "validation blocked\n",
+                '{"level":"error","message":"plugin invalid"}\n',
+                '{"status":"PASS","returncode":0,"success":false}\n',
+                '{"status":"PASS","returncode":0,"valid":false}\n',
+                '{"status":"PASS","returncode":0,"passed":false}\n',
+                '{"status":"PASS","returncode":0,"errors":1}\n',
+                '{"status":"PASS","returncode":0,"failures":1}\n',
+                '{"status":"PASS","result":"rejected","returncode":0}\n',
+                '{"status":"PASS","result":"unsuccessful","returncode":0}\n',
+                '{"status":"PASS","result":"fatal","returncode":0}\n',
+                '{"status":"not valid","result":"PASS","returncode":0}\n',
+                '{"status":"validation did not pass","result":"PASS","returncode":0}\n',
+                '{"status":"validator could not validate plugin","result":"PASS","returncode":0}\n',
+                '{"status":"plugin was not validated","result":"PASS","returncode":0}\n',
+                '{"status":"PASS","result":"validation failed","returncode":0}\n',
+                '{"status":"PASS","result":"plugin invalid","returncode":0}\n',
+                '{"status":"PASS","result":"operation unsuccessful","returncode":0}\n',
+                '{"status":"PASS","result":"validator fatal","returncode":0}\n',
+                '{"status":"PASS","result":"validation error","returncode":0}\n',
+                '{"status":"validation incomplete","result":"PASS","returncode":0}\n',
+                '{"status":"unable to validate plugin","result":"PASS","returncode":0}\n',
+                '{"status":"validator did not finish","result":"PASS","returncode":0}\n',
+                '{"status":"validity unknown","result":"PASS","returncode":0}\n',
+                '{"status":"validation skipped","result":"PASS","returncode":0}\n',
+                '{"status":"garbage","result":"PASS","returncode":0}\n',
+                '{"status":"PASS","returncode":0,"diagnostics":[{"level":"error","message":"invalid"}]}\n',
+                '{"status":"PASS","returncode":0,"diagnostics":[{"success":false}]}\n',
+                '{"status":"PASS","returncode":0,"error":{"message":"plugin rejected"}}\n',
+                '{"status":"PASS","returncode":0,"error":1}\n',
+                '{"status":"PASS","returncode":0,"reason":{"message":"fatal"}}\n',
+                '{"status":"PASS","returncode":0,"detail":["invalid"]}\n',
+                '{"status":"FAIL","status":"PASS","returncode":0}\n',
+                '{"status":"PASS","returncode":2,"returncode":0}\n',
+                '{"status":"PASS","errors":1,"errors":0,"returncode":0}\n',
+                '{"status":"PASS","returncode":0,"extra":NaN}\n',
+                '{"status":"PASS","returncode":0,"extra":Infinity}\n',
+                '{"status":"PASS","returncode":0,"extra":-Infinity}\n',
+                "Traceback (most recent call last):\nValueError: boom\n",
+                "Unhandled exception\n",
+                "Exception: boom\n",
+                "RuntimeError: validation crashed\n",
+                "panic: boom\n",
+                "Segmentation fault\n",
+                "Killed\n",
+                "Aborted\n",
+                "Command timed out\n",
+                "Process exited with code 1\n",
+                "exit code: 1\n",
+                "returncode=1\n",
+                "command was terminated\n",
+                "validator crashed\n",
+                "could not complete\n",
+            ]
+            benign_zero_summaries = [
+                "0 failed\n",
+                "no errors\n",
+                "no validation errors\n",
+                "failures: 0\n",
+                "process exited with code 0\n",
+                "returncode=0\n",
+                "No command timeout occurred.\n",
+                "Reviewed a prior exception safely.\n",
+            ]
+            noncanonical_claude_successes = [
+                "PASS\n",
+                "Valid\n",
+                "OK\n",
+                "0 failed\n",
+                "Validation passed\n",
+                '{"status":"PASS","returncode":0}\n',
+                "✔ Validation passed\nvalidation pending\n",
+                "✔ Validation passed\nvalidity unknown\n",
+                "✔ Validation passed\nvalidation indeterminate\n",
+                "✔ Validation passed\nvalidation aborted\n",
+                "✔ Validation passed\nvalidation timed out\n",
+                "✔ Validation passed\nvalidation not run\n",
+                "✔ Validation passed\nvalidation deferred\n",
+                "✔ Validation passed\nvalidation blocked\n",
+            ]
+
+            class RaisingStream:
+                def __init__(self) -> None:
+                    self.reads = 0
+                    self.closed = False
+
+                def read(self, _size: int) -> bytes:
+                    self.reads += 1
+                    if self.reads == 1:
+                        return b'{"status":"PASS","returncode":0}\n'
+                    raise ValueError("injected reader failure")
+
+                def close(self) -> None:
+                    self.closed = True
+
+            reader_stop = certifier.threading.Event()
+            raising_stream = RaisingStream()
+            reader_error_state = certifier._drain_bounded_stream(
+                raising_stream,
+                reader_stop,
+            )
             cases.append({
                 "name": "official_fake_exact_argv_and_real_format",
                 "passed": (
                     exact_claude.returncode == 0
+                    and reader_error_state.get("read_error")
+                    == "ValueError: stream read failed"
+                    and reader_stop.is_set()
+                    and raising_stream.closed
+                    and reader_error_state.get("raw")
+                    == b'{"status":"PASS","returncode":0}\n'
                     and exact_claude.stdout == expected_claude_stdout
                     and exact_claude.stderr == ""
                     and certifier.official_validator_status(
@@ -2243,15 +2389,147 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                         validator_id="claude_plugin_validate",
                     )[0]
                     is True
+                    and certifier.json_validator_status({
+                        "status": "PASS",
+                        "returncode": 0,
+                        "success": True,
+                        "errors": 0,
+                        "diagnostics": [],
+                    })[0]
+                    is True
                     and missing_strict.returncode != 0
                     and wrong_strict.returncode != 0
                     and "unexpected argv" in missing_strict.stderr
                     and "unexpected argv" in wrong_strict.stderr
+                    and all(
+                        certifier.official_validator_status(
+                            ansi_success,
+                            diagnostic,
+                            validator_id="claude_plugin_validate",
+                        )[0]
+                        is False
+                        for diagnostic in contextual_negative_diagnostics
+                    )
+                    and all(
+                        certifier.official_validator_status(
+                            ansi_success,
+                            summary,
+                            validator_id="claude_plugin_validate",
+                        )[0]
+                        is True
+                        for summary in benign_zero_summaries
+                    )
+                    and all(
+                        certifier.official_validator_status(
+                            candidate,
+                            "",
+                            validator_id="claude_plugin_validate",
+                        )[0]
+                        is False
+                        for candidate in noncanonical_claude_successes
+                    )
+                    and certifier.official_validator_status(
+                        "[" * 20_000 + "0" + "]" * 20_000,
+                        "",
+                        validator_id="skills_ref_validate",
+                    )[0]
+                    is False
+                    and certifier.official_validator_status(
+                        '{"status":' + "9" * 10_000 + "}",
+                        "",
+                        validator_id="skills_ref_validate",
+                    )[0]
+                    is False
+                    and certifier.official_validator_status(
+                        '{"status":"PASS","returncode":0,"extra":1e999}',
+                        "",
+                        validator_id="skills_ref_validate",
+                    )[0]
+                    is False
+                    and certifier.official_validator_status(
+                        '{"status":"PASS","returncode":0,"extra":1e308}',
+                        "",
+                        validator_id="skills_ref_validate",
+                    )[0]
+                    is True
+                    and all(
+                        certifier.official_validator_status(
+                            candidate,
+                            "",
+                            validator_id="skills_ref_validate",
+                        )[0]
+                        is False
+                        for candidate in (
+                            '{"status":"PASS","returncode":0}\n'
+                            '{"status":"MAYBE","returncode":0}\n',
+                            '{"status":"MAYBE","returncode":0}\n'
+                            '{"status":"PASS","returncode":0}\n',
+                            '{"status":"PASS","returncode":0}\n'
+                            '{"result":"pending","returncode":0}\n',
+                        )
+                    )
+                    and certifier.official_validator_status(
+                        '{"status":"PASS","returncode":0,'
+                        '"diagnostics":[{"diagnostics":['
+                        '{"level":"error",'
+                        '"message":"validation failed"}]}]}',
+                        "",
+                        validator_id="skills_ref_validate",
+                    )[0]
+                    is False
+                    and certifier.official_validator_status(
+                        '{"status":"PASS","returncode":0,'
+                        '"diagnostics":[{"diagnostics":[]}]}',
+                        "",
+                        validator_id="skills_ref_validate",
+                    )[0]
+                    is True
+                    and all(
+                        certifier.official_validator_status(
+                            candidate,
+                            "",
+                            validator_id="skills_ref_validate",
+                        )[0]
+                        is False
+                        for candidate in (
+                            '{"status":"PASS","returncode":0,'
+                            '"is_error":true}',
+                            '{"status":"PASS","returncode":0,'
+                            '"exit_code":1}',
+                            '{"status":"PASS","returncode":0,'
+                            '"error_code":1}',
+                            '{"status":"PASS","returncode":0,'
+                            '"timed_out":true}',
+                            '{"status":"PASS","returncode":0,'
+                            '"completed":false}',
+                        )
+                    )
+                    and certifier.official_validator_status(
+                        '{"status":"PASS","returncode":0,'
+                        '"is_error":false,"exit_code":0,'
+                        '"error_code":0,"timed_out":false,'
+                        '"completed":true,"failed":false}',
+                        "",
+                        validator_id="skills_ref_validate",
+                    )[0]
+                    is True
                 ),
                 "exact_returncode": exact_claude.returncode,
                 "missing_strict_returncode": missing_strict.returncode,
                 "wrong_strict_returncode": wrong_strict.returncode,
                 "observed_stdout": exact_claude.stdout,
+                "contextual_negative_diagnostics": (
+                    contextual_negative_diagnostics
+                ),
+                "benign_zero_summaries": benign_zero_summaries,
+                "reader_error_state": {
+                    key: value
+                    for key, value in reader_error_state.items()
+                    if key != "raw"
+                },
+                "noncanonical_claude_successes": (
+                    noncanonical_claude_successes
+                ),
             })
 
             equal_content_bundle = root / "distinct_roles_equal_bytes"

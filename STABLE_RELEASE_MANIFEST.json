@@ -6,915 +6,1067 @@
   "file_inventory": [
     {
       "bytes": 664,
+      "mode": "100644",
       "path": ".claude-plugin/plugin.json",
       "role": "behavior",
       "sha256": "8e16ce008bbc7f71b2fe428342b1189d3862cf3b392e56773660cf26c634b10a"
     },
     {
       "bytes": 2719,
+      "mode": "100644",
       "path": ".github/workflows/nozickian-team-ci.yml",
       "role": "behavior",
       "sha256": "f0a7473600d8dc3622146076cab2027001bde8c1bdc25d290795f06637168221"
     },
     {
       "bytes": 71,
+      "mode": "100644",
       "path": ".gitignore",
       "role": "release-metadata",
       "sha256": "ad36bf2e524de5e768aa086d8091526564d95831afb4f6c513bc7a4d0a4948d9"
     },
     {
-      "bytes": 78038,
+      "bytes": 79594,
+      "mode": "100644",
       "path": "AUDIT_REPORT.md",
       "role": "release-metadata",
-      "sha256": "217520773eb51c82eae6c21c46ec7fbb01beebf2c95fb0bd2654ee138573126d"
+      "sha256": "4132404ff90d7c557dd42a146cdca1345d1510125ad750ba933effe4e4fa2541"
     },
     {
       "bytes": 1056,
+      "mode": "100644",
       "path": "LICENSE",
       "role": "release-metadata",
       "sha256": "1126322e2cc8d165adc4c792eeb195717de2bcc7b39be1ce77959d78e87ef685"
     },
     {
       "bytes": 4916,
+      "mode": "100644",
       "path": "MANIFEST.sha256",
       "role": "release-metadata",
-      "sha256": "65363072d422b9a0f94fc18dbb0ed1bb12b78b92ebcaf5e7f921184a13039dab"
+      "sha256": "0d74e4c40cda9e708f11ae5a5b8d1c8616f59253cbca5fa25f8195c98c540417"
     },
     {
-      "bytes": 21166,
+      "bytes": 21186,
+      "mode": "100644",
       "path": "PACKAGE_SURFACE.json",
       "role": "behavior",
-      "sha256": "6708677df73d17c2cec2b6568467c392a87cd9265af0ccda4b7d520b348cbacd"
+      "sha256": "2535c631e4a37423b698194f51fb092c575d83e648b9e714f84149ee86b35ae6"
     },
     {
-      "bytes": 12587,
+      "bytes": 12908,
+      "mode": "100644",
       "path": "README.md",
       "role": "release-metadata",
-      "sha256": "b63e157d472baed827eadde0e90776410a849e18cc60b947f5e7ffbbe37857be"
+      "sha256": "1ecd6a7b5570e2e41cee2cb4c865b2693ff077e5503bf3a86bdd56f720d9d0c2"
     },
     {
-      "bytes": 28970,
+      "bytes": 29486,
+      "mode": "100644",
       "path": "RELEASE_LOCK.json",
       "role": "behavior",
-      "sha256": "027f0d96290ec078fa040f41c793747808ce762617fda613b3aa97fd1ad50c5a"
+      "sha256": "0e36d5aa622c2d7cc750bc4a595a7243b8be877db9a6509dddf6e34a4b1a50c7"
     },
     {
       "bytes": 1060,
+      "mode": "100644",
       "path": "SECURITY.md",
       "role": "release-metadata",
       "sha256": "013455e005043b1a8f60fa0fb3e933e73c0fa58dbf1f1fc5cf5cb0a5514fb5fd"
     },
     {
-      "bytes": 15426,
+      "bytes": 15528,
+      "mode": "100644",
       "path": "TEAM_INTERNAL_USE.md",
       "role": "release-metadata",
-      "sha256": "e5cc71ee71875808cefbc30e23df1562f6c25bf8b0be4c3879dca4f295ce04c7"
+      "sha256": "3625419b75844c779e922e547425461991a0056cf4f5de107e772d9437cfa93c"
     },
     {
       "bytes": 4408,
+      "mode": "100644",
       "path": "agents/ntt-claim-extractor.md",
       "role": "behavior",
       "sha256": "41b20952dd3a06edb55927ee4fb8cff153d254ac58d352947436ab9f0c1f37bc"
     },
     {
       "bytes": 1461,
+      "mode": "100644",
       "path": "agents/ntt-code-verifier.md",
       "role": "behavior",
       "sha256": "692111ee9b6beb3a2331e3f4b46a98fb384ad2e66b7c9431246f67d450013a1c"
     },
     {
       "bytes": 1510,
+      "mode": "100644",
       "path": "agents/ntt-false-world-adversary.md",
       "role": "behavior",
       "sha256": "9f3edf5962f86ba87102a7b2ae6a1e7cbc527560faa3462392dc36108755f2f1"
     },
     {
       "bytes": 6566,
+      "mode": "100644",
       "path": "agents/ntt-formal-coordinator.md",
       "role": "behavior",
       "sha256": "a3b1861a1589c589d887fc6be72ace52364b49bb4febbc861b5d800009c81a8a"
     },
     {
       "bytes": 6641,
+      "mode": "100644",
       "path": "agents/ntt-gate-auditor.md",
       "role": "behavior",
       "sha256": "988689308ce84842bf7c2292ee70687bba2a71ff38aa5745b5ef6974f31fba0f"
     },
     {
       "bytes": 1492,
+      "mode": "100644",
       "path": "agents/ntt-method-cartographer.md",
       "role": "behavior",
       "sha256": "9037d9619d1d610bfc182255f73b0ec292bfcaac81a6570f45dbb5daa324f97f"
     },
     {
       "bytes": 1946,
+      "mode": "100644",
       "path": "agents/ntt-skill-self-auditor.md",
       "role": "behavior",
       "sha256": "b6dd14ce25cae9fd05a6f3af33f47640e2815d16ca642b046c8490290bafa363"
     },
     {
       "bytes": 4252,
+      "mode": "100644",
       "path": "agents/ntt-source-verifier.md",
       "role": "behavior",
       "sha256": "403507141e82dbb6920b2adad55307b5c975ab187a3c06ec2b4c4d69ca5c1d7d"
     },
     {
       "bytes": 1515,
+      "mode": "100644",
       "path": "agents/ntt-true-world-adherence.md",
       "role": "behavior",
       "sha256": "25d6eeab034d503e7e50ef5ca5089a75ef2a7347e681be199c23dada0e635bad"
     },
     {
       "bytes": 3143,
+      "mode": "100644",
       "path": "docs/README.md",
       "role": "behavior",
       "sha256": "818c02a841d60e0ac201c44fdd1a162d85710ae0c025ef40e0e18a40e63af060"
     },
     {
       "bytes": 1994,
+      "mode": "100644",
       "path": "docs/audit-model/README.md",
       "role": "behavior",
       "sha256": "3b5633bfadffd8f49602ecc4f19cb030dbcfc4dab4acfbf33e6cf327dc07b54d"
     },
     {
       "bytes": 2098,
+      "mode": "100644",
       "path": "docs/development/README.md",
       "role": "behavior",
       "sha256": "f49d9c62ec59495104c21f6db10811d46d80c1f63a81f3724b2c476a71db0048"
     },
     {
-      "bytes": 8271,
+      "bytes": 9032,
+      "mode": "100644",
       "path": "docs/evidence/README.md",
       "role": "behavior",
-      "sha256": "e7944fe713c3f39aebe73fd2cf53f0d9b67cccae03f75f25916beae800464882"
+      "sha256": "21950eca91ff8e212749f3256123b003b4e0d5bd3ea27fc9393e26d73732b17c"
     },
     {
       "bytes": 1729,
+      "mode": "100644",
       "path": "docs/faq/README.md",
       "role": "behavior",
       "sha256": "6fff4c181bc5cdf871562540c470ea456267dec749d61356e09438d8548d0a46"
     },
     {
       "bytes": 1241,
+      "mode": "100644",
       "path": "docs/github/README.md",
       "role": "behavior",
       "sha256": "442b559b3766e4ec885dc91161c94f40f834b50d58a435043a57e9e77c3e842d"
     },
     {
       "bytes": 7040,
+      "mode": "100644",
       "path": "docs/pass-tracked-upgrade/README.md",
       "role": "behavior",
       "sha256": "c3c6b7ef8a91e1066753dea4fce03ce7375de0f0b98fd4f520a6da3321fec930"
     },
     {
       "bytes": 2089,
+      "mode": "100644",
       "path": "docs/quickstart/README.md",
       "role": "behavior",
       "sha256": "63fedcd50ce0e702fc3a8e5781ea202edddd9e97ac2273cdddbd77d21682d7a1"
     },
     {
-      "bytes": 6796,
+      "bytes": 7158,
+      "mode": "100644",
       "path": "docs/release/README.md",
       "role": "behavior",
-      "sha256": "759a2de221027d42d6d7598e8a2452ad13b2a4ae088589dea3b9e3d4ef8654ee"
+      "sha256": "598e5dca6b29ebe0c4df5f5f4c06c83a5bba7a5005bff50242927444afcd661f"
     },
     {
       "bytes": 5756,
+      "mode": "100644",
       "path": "docs/runtime-trace-auth/README.md",
       "role": "behavior",
       "sha256": "18785fce067aa44a841b62784f1d3952e9b0df099c4a123b4ded94864001c35f"
     },
     {
       "bytes": 1581,
+      "mode": "100644",
       "path": "docs/security/README.md",
       "role": "behavior",
       "sha256": "915c052ee05ef9922aab5989cfbcab024ca12cf3b0e55ff61fd5eb88796a3533"
     },
     {
-      "bytes": 2116,
+      "bytes": 2382,
+      "mode": "100644",
       "path": "self_validation/README.md",
       "role": "self_validation",
-      "sha256": "0b612443098049fa1444073f6225c0e280a6817130657abcfddc9e2f6b2e5725"
+      "sha256": "cfbfd6ff16d5902147dfbf9afd811f30b37549016aeb9ce1684ca16a523bd945"
     },
     {
-      "bytes": 88708,
+      "bytes": 52762,
+      "mode": "100644",
       "path": "self_validation/current_observations.json",
       "role": "self_validation",
-      "sha256": "9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31"
+      "sha256": "5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85"
     },
     {
-      "bytes": 960,
+      "bytes": 1088,
+      "mode": "100644",
       "path": "self_validation/evidence/C-charter-caps__FW-charter-remote-fields-removed.json",
       "role": "self_validation",
-      "sha256": "7b4305f6512d1ca5bcbe509ac5d8dbf60e674b7a19dbc95f3670eaa639411751"
+      "sha256": "26b72bef5aeeac928e7f9002b6a67d2b968fe02c4f46748ed8eec015db1f83d7"
     },
     {
-      "bytes": 932,
+      "bytes": 1060,
+      "mode": "100644",
       "path": "self_validation/evidence/C-charter-caps__FW-charter-sweep-removed.json",
       "role": "self_validation",
-      "sha256": "b4cb5e946a0621e51b5208e9855432b16dd954e849c95d71e7fbbc8f0ad33920"
+      "sha256": "0ac6572ae5710afd52caa325d3a155902c15ef6533fc25b2fc11e35b62dea88c"
     },
     {
-      "bytes": 924,
+      "bytes": 1052,
+      "mode": "100644",
       "path": "self_validation/evidence/C-charter-caps__TW-charter-intact.json",
       "role": "self_validation",
-      "sha256": "520407a630e31d0afd308703a35cf7dfee584990c0fc59c24abc1b04b1aa4e10"
+      "sha256": "8c79c40fac37c924ce70158a88c4cbe0fead232708d404d406f54a32650d65c4"
     },
     {
       "bytes": 714,
+      "mode": "100644",
       "path": "self_validation/evidence/C-charter-caps__claim.json",
       "role": "self_validation",
       "sha256": "145c0f83986ae451e4eebabc4b8cd93602428f9aa39ac088939e3b4f489df780"
     },
     {
       "bytes": 762,
+      "mode": "100644",
       "path": "self_validation/evidence/C-charter-caps__protocols.json",
       "role": "self_validation",
       "sha256": "79725e5921c4d07c7215fd8e87d375ceab1fd831147d42d4dd56beda0c16f406"
     },
     {
-      "bytes": 1039,
+      "bytes": 1167,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-formal-canonical-json-classification.json",
       "role": "self_validation",
-      "sha256": "bd324517f56afeb8cb1f0d7471a0310008f956239a770f5e490ddf2223df6909"
+      "sha256": "a497ae2b58f9521143386c67ac1aa92925668fc388fe2e28c89b7cb88469826c"
     },
     {
-      "bytes": 1064,
+      "bytes": 1192,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-formal-child-fd-rebind.json",
       "role": "self_validation",
-      "sha256": "f5096fd2487130c24b1ed1ddffa41fdb967e8a5b487fb74d70442e6678cf22a1"
+      "sha256": "95cb21cad0e736576287ef721a6367ff610e8eb766af08e39ee1d3188f0ddcf7"
     },
     {
-      "bytes": 1001,
+      "bytes": 1129,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-formal-closed-stdio-descendant.json",
       "role": "self_validation",
-      "sha256": "b1940a0420aa37bd8e5caf8c178144b08d3907ebac5520ff6ff5f8c2a70a1bcb"
+      "sha256": "46e6cfef377cc3717e37919e3822d2ff486ca337e00d9c13bed0f40d600e9549"
     },
     {
-      "bytes": 996,
+      "bytes": 1124,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-formal-companion-substitution.json",
       "role": "self_validation",
-      "sha256": "b733d777d494bd0bbc9b1eaf3b897771f165d37d4eb9ae7a2d6f381051ce9ef1"
+      "sha256": "0c557b69cb9f00793ebbe95b5531efd2d0e76baf9a1618fcedc93718fa8d6811"
     },
     {
-      "bytes": 983,
+      "bytes": 1111,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-formal-containment-unavailable.json",
       "role": "self_validation",
-      "sha256": "d5c88e2efb806776d697331b98780e506f9be106b35e5aaac8514efa5cdcdb1b"
+      "sha256": "2fb3854306a2aba60151dd6672ca33d4cc1e9fedc85c2c013d9bb7e2131a3c14"
     },
     {
-      "bytes": 962,
+      "bytes": 1090,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-formal-deep-detached-chain.json",
       "role": "self_validation",
-      "sha256": "741e61ea96c7e8cc795ae1814c331f76d154dedf03716b9597868e1a4dee04f9"
+      "sha256": "dd276bbbc3516fd88813252f6ec5312f4bee333f43347ee90360cc1fdf0dbd21"
     },
     {
-      "bytes": 960,
+      "bytes": 1088,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-formal-descendant-pipe.json",
       "role": "self_validation",
-      "sha256": "47f822c1f83c11eb9b78cdf8c3a16dedb678707d40f86af29d30d705e0140c2d"
+      "sha256": "323ade5182be36bf24aaf35aa4dbfd43f3e9f792dab1f57f8566df1c423c38a3"
     },
     {
-      "bytes": 1019,
+      "bytes": 1147,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-formal-detached-session.json",
       "role": "self_validation",
-      "sha256": "4dae45df29684e0e2e4a075c3c08e8f01bca9ba95db80d85e2a7bb4d89bd1b9f"
+      "sha256": "2416244568814b6f0a71667144b6e4d50b14b294e794d4f4f0710c227e967016"
     },
     {
-      "bytes": 962,
+      "bytes": 1090,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-formal-empty-report-gate.json",
       "role": "self_validation",
-      "sha256": "de0f97af6ab83d64a74c78b0c36281bac30a6ecf76fd92696410d95c6a8b77f6"
+      "sha256": "b578927d6902522d238673651b98a2c02dece47a0d701b741d0164098e75673c"
     },
     {
-      "bytes": 1027,
+      "bytes": 1155,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-formal-held-dirfd-symlink-swap.json",
       "role": "self_validation",
-      "sha256": "cff1f33200a05c64dd9b8867caedb04e4db1da282a94574f27edb8b4a580b768"
+      "sha256": "01be5c01f05c4cf324c0f8c775b01639fcc4fe9d2a34e085a943d7aabd56d0af"
     },
     {
-      "bytes": 965,
+      "bytes": 1093,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-formal-large-reordered-result.json",
       "role": "self_validation",
-      "sha256": "cb764690ff91a53f1fca6b12c6b3bcfd23326954a11a057e21a27541dfcc047d"
+      "sha256": "d73e8fc8b0855e8abb3a7e05f2de76a610f0fe773c12133fd29b5d8b77fa7bda"
     },
     {
-      "bytes": 940,
+      "bytes": 1068,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-formal-malformed-jsonl.json",
       "role": "self_validation",
-      "sha256": "fcbd6e49b2c97714e42985f56b8190260ea4ba8c14ac918c09ba942b397f54b6"
+      "sha256": "3ea8efb40ab713e52f78c7b618b401db369eaa66557624843b9ccf62ecb93726"
     },
     {
-      "bytes": 972,
+      "bytes": 1100,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-formal-procfd-unavailable.json",
       "role": "self_validation",
-      "sha256": "fd3cb323ade3d57386dcdbc31d6b30ea5ce95f0764b0477e699f2f31517637c3"
+      "sha256": "e026a05af413ac83282c78184285d7256af969e2457847f12e94efb432792c67"
     },
     {
-      "bytes": 998,
+      "bytes": 1126,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-formal-self-attested-output-check.json",
       "role": "self_validation",
-      "sha256": "74eb068ff0c47e12d56a77f02f5935ee85a9b053ea235a26b937c384f1d87845"
+      "sha256": "52d1bb83f6fdbbc8f70001f8dfdc607b83e7f2c783cbf018a3f260b9d3a6bf95"
     },
     {
-      "bytes": 961,
+      "bytes": 1089,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-formal-temporal-cap.json",
       "role": "self_validation",
-      "sha256": "8f359a2f1824828b74c9c0cd6bf4f5129820f242dad1be25a2bb0aed6e83944a"
+      "sha256": "88464966dce1c376e52c548d961ed59bbfe25d04decf2c9ec4cf3b86e9f45b52"
     },
     {
-      "bytes": 997,
+      "bytes": 1125,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-live-explicit-output-a-b-a.json",
       "role": "self_validation",
-      "sha256": "a65a094fa205df6ccacd60ededb6792c6206b8f62058e84d55a1be2739d6e629"
+      "sha256": "13b088728129288f20c2320a54b37ab36bb1da70909338a7057e90e1a447ad39"
     },
     {
-      "bytes": 1044,
+      "bytes": 1172,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-live-explicit-output-persistent-substitution.json",
       "role": "self_validation",
-      "sha256": "2ac6141cc01d843e0608593d48dfcfb01c80b352c9affb22a6f829614af9c978"
+      "sha256": "9e8fe40d0f0ddd3620f469ff376a8b7cb3b9eeedc64100d4bc78be2af126db94"
     },
     {
-      "bytes": 971,
+      "bytes": 1099,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-live-json-real-substitution.json",
       "role": "self_validation",
-      "sha256": "b9ca86166b7508d375dce02cde090fc01066d84238dbd0f52144252432d80989"
+      "sha256": "5214e1defd29c3d1955b44e0b6fbb3d9444d6b2f387ce94c1d889399ac04c36c"
     },
     {
-      "bytes": 957,
+      "bytes": 1085,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-live-json-transcript-alias.json",
       "role": "self_validation",
-      "sha256": "bfc5e8bc198cebc149a0c57f06444570388c1b0c0d7cdd6f37fb5b4baa51f13c"
+      "sha256": "05bfd69dc020718a2e05e8c6b7acc293d6e63601f8da40fadce2d2ed93b1db99"
     },
     {
-      "bytes": 968,
+      "bytes": 1096,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-live-output-ancestor-symlink.json",
       "role": "self_validation",
-      "sha256": "b838bd5f7e00e1cbd70699807a8fdc3491d99cb36c384ecd83c8bf1b4fee05f8"
+      "sha256": "4f413d1d3b53b4c2c849e734bac0e7b4c515cf5758dc8c213dbe153b94096779"
     },
     {
-      "bytes": 971,
+      "bytes": 1099,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-live-output-direct-symlink.json",
       "role": "self_validation",
-      "sha256": "a5e315b0e27e853107ac5326f16b1674e194091e0fe381347b25e78cb2197a93"
+      "sha256": "f5985bcd14b3fca46c5059422e0d223c72f72dc05106c3ce834bbd6459d258c2"
     },
     {
-      "bytes": 990,
+      "bytes": 1118,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-live-transcript-real-substitution.json",
       "role": "self_validation",
-      "sha256": "0437d0ab98c0832b64a61a140a22183fcdd7873bafc91b9fce62c93a4e1dd611"
+      "sha256": "df2a344acdcabf7875bb353a77dc0a38ad1507b98bd50d96cbb74c8b6d069d49"
     },
     {
-      "bytes": 998,
+      "bytes": 1126,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-live-transcript-symlink-substitution.json",
       "role": "self_validation",
-      "sha256": "ef397d96551c51c9c5c88fa31567f6a881c4ea2fb8c00cd15286852c1b75266a"
+      "sha256": "411f355ee03131adf85426f13b17512dcebf13dcc62d63b846be9872c398a4ae"
     },
     {
-      "bytes": 999,
+      "bytes": 1127,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-wrapper-json-parent-substitution.json",
       "role": "self_validation",
-      "sha256": "a70a13e7ec72eb1f748f37567ccec4cf5d46fb7449aa7dcc51e2a248d28f1546"
+      "sha256": "28bbe2a70bb188c0ba6c1703dfd37cbca20c6391091ce1c234b45ef215e0cc4a"
     },
     {
-      "bytes": 980,
+      "bytes": 1108,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__FW-wrapper-json-unsafe-targets.json",
       "role": "self_validation",
-      "sha256": "5225f2e0ae14463c84ac41987b41bcd2b1aa5b72489635b0e686a07fb1acaa2a"
+      "sha256": "cffebfb168f0b262f15d62b9c039ea9655628fb3bcbef64bf8cfa73f86db2b1a"
     },
     {
-      "bytes": 990,
+      "bytes": 1118,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__TW-formal-held-dirfd-ordinary-output.json",
       "role": "self_validation",
-      "sha256": "ccc60cab3ab1f2c23bd94a0ff18a31c5b014f6799f90a9350565ec1d55f697a5"
+      "sha256": "d2acc75ed5b7ffb987a1ba2e3ec275f5909fc5e8a0bd6faed6da8e26ee4b3a1f"
     },
     {
-      "bytes": 957,
+      "bytes": 1085,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__TW-formal-valid-role-direction.json",
       "role": "self_validation",
-      "sha256": "acad442e4ddc159d70139f7b4302bc34488f307ad933b59ca89ee2d74aae553f"
+      "sha256": "67f8af721e29921275305ec50c7068abff06b941f68d8640c909df3d7c8df40d"
     },
     {
-      "bytes": 990,
+      "bytes": 1118,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__TW-live-explicit-output-early-capability.json",
       "role": "self_validation",
-      "sha256": "e052740a847a88670a0d2518a5890a84d1fbacf34b67d00af0667a9a0bd8e318"
+      "sha256": "10c6d6f5ee6e388cb2315588ed19ec29e3535e3136b00fc2a32d61c4afe110b2"
     },
     {
-      "bytes": 964,
+      "bytes": 1092,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__TW-wrapper-json-early-capability.json",
       "role": "self_validation",
-      "sha256": "eae5b30e0dc17f33df9ee6f3f39d620f0c053b5195de09741f9ea88b6e11f0ad"
+      "sha256": "f86976bd2e452c52fa09a93a8709e14be967de891cac8c0f1636b4d93f778428"
     },
     {
-      "bytes": 952,
+      "bytes": 1080,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__TW-wrapper-json-held-output.json",
       "role": "self_validation",
-      "sha256": "2597e9d623bfe73ebc38dc199e788c529665ef63298610e7c570f1b050366f03"
+      "sha256": "485fb3130349f079e5f512a7cf16aae4f2829ce8cfaa0b9f2a1d7a5adada1803"
     },
     {
       "bytes": 799,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__claim.json",
       "role": "self_validation",
-      "sha256": "2d5c99df847ae82cbc8707180649f0bd994d22565a0a6a829bbfdcf28f539006"
+      "sha256": "d9750e872e6f18a34bfae1b5a839d3bc8771c0eeb1840298666a0225bdd9ad03"
     },
     {
       "bytes": 799,
+      "mode": "100644",
       "path": "self_validation/evidence/C-formal-invocation__contracts.json",
       "role": "self_validation",
-      "sha256": "06bf4fc66c2fdcafb4971dc93682e55fb07c46213a828db7a1b5762bfd57c793"
+      "sha256": "2cfb452a521ec4bd64e62a41b23955a423eec1dc5029153894dfeca85248eca1"
     },
     {
-      "bytes": 960,
+      "bytes": 1088,
+      "mode": "100644",
       "path": "self_validation/evidence/C-gate-hardening__FW-gate-markdown-linked-target.json",
       "role": "self_validation",
-      "sha256": "fb65554ac7dd785903ff2fe211de68c52c6666376293d3ce8bffb0145d2b10fd"
+      "sha256": "c1c63de85710bba1e7ec4a24aee9e99c20101b05e61dc7d0951c2c623adcb7ea"
     },
     {
-      "bytes": 986,
+      "bytes": 1114,
+      "mode": "100644",
       "path": "self_validation/evidence/C-gate-hardening__FW-gate-markdown-parent-substitution.json",
       "role": "self_validation",
-      "sha256": "c68bbfd0c1e67b4b8c139d219aea2d6e494b2cda51ab85e96b966c8b9901c2ae"
+      "sha256": "8aedb68a7081f6a9970dba88bc13c06343e27c7b4778cbd4448a3720ecea26af"
     },
     {
-      "bytes": 959,
+      "bytes": 1087,
+      "mode": "100644",
       "path": "self_validation/evidence/C-gate-hardening__FW-gate-markdown-symlinked-ancestor.json",
       "role": "self_validation",
-      "sha256": "45feaf4ee8006eb1ca043e04d8218593e132060d8484314423126264fbb86319"
+      "sha256": "6eafbc569ade4c0530d5ca93db2177dc6a28c83dfee8c1bf9ccaa995ceacdc9c"
     },
     {
-      "bytes": 940,
+      "bytes": 1068,
+      "mode": "100644",
       "path": "self_validation/evidence/C-gate-hardening__FW-gate-modal-substitution.json",
       "role": "self_validation",
-      "sha256": "fc583fa99e953cce81e7e6b071ad757840a5079f580011be6f7d594d12edca6a"
+      "sha256": "cbfd94cbab74a91107d0cf67c1d7cb4ba24ae53cb5a06f6be65455d3fe550471"
     },
     {
-      "bytes": 926,
+      "bytes": 1054,
+      "mode": "100644",
       "path": "self_validation/evidence/C-gate-hardening__FW-gate-path-control.json",
       "role": "self_validation",
-      "sha256": "c82fba6cbdadb26205e2d33914803464209ee025b04fc2e68d741ad92b774182"
+      "sha256": "ca9d6c3be34a34662cd22928ac0d7b7993b0fe037fe08e9c0ca10065935e6846"
     },
     {
-      "bytes": 962,
+      "bytes": 1090,
+      "mode": "100644",
       "path": "self_validation/evidence/C-gate-hardening__FW-gate-proposition-substitution.json",
       "role": "self_validation",
-      "sha256": "d108dff5d8c597935aa4577c6c7ee1900f0bd2ffda4f550fccbe4fafa3ce0c36"
+      "sha256": "61262410a0d87346dd99f7d4c980b94f0e5762aed7fd4b32218ac73389ddba69"
     },
     {
-      "bytes": 928,
+      "bytes": 1056,
+      "mode": "100644",
       "path": "self_validation/evidence/C-gate-hardening__FW-gate-resource-bounds.json",
       "role": "self_validation",
-      "sha256": "8ed273ee321d2c573e079252eaf10cf0460db0f63b62fcc1816126f528cd60d4"
+      "sha256": "0a55aff5c6ff2d1dbf45dc23f9f9443d3002ad07b3f959a5edb757861082c1bd"
     },
     {
-      "bytes": 913,
+      "bytes": 1041,
+      "mode": "100644",
       "path": "self_validation/evidence/C-gate-hardening__FW-gate-strict-root.json",
       "role": "self_validation",
-      "sha256": "251193f964bebf3253c3577607f01c3d32ecd7c001ed47ba14af2bf6ac8a3b7c"
+      "sha256": "9c7a47b799ffd7bdd7d019da8bdf79b41172104db4b6075bb3f5862b9faa738c"
     },
     {
-      "bytes": 952,
+      "bytes": 1080,
+      "mode": "100644",
       "path": "self_validation/evidence/C-gate-hardening__TW-gate-private-markdown-output.json",
       "role": "self_validation",
-      "sha256": "b64ddd7abc968c151b0c8636d27d574481ce0ea427f35230a886f7a9486c3d6c"
+      "sha256": "9850def0514a3b599dc2549e9160cecb479ca10d22ee2eb10e2a7688ab8d11dc"
     },
     {
-      "bytes": 905,
+      "bytes": 1033,
+      "mode": "100644",
       "path": "self_validation/evidence/C-gate-hardening__TW-gate-shared-ledger.json",
       "role": "self_validation",
-      "sha256": "0337e7737dbea25942436818aa7e188e0a66f412b3d28d91b66ebff02ababc3d"
+      "sha256": "71d15a0c1479f6255a549807e0c1f5ddbc7fff9b424acaf2c8eb9b63f13df129"
     },
     {
       "bytes": 742,
+      "mode": "100644",
       "path": "self_validation/evidence/C-gate-hardening__claim.json",
       "role": "self_validation",
-      "sha256": "aab94a0b03a2f190cb6b10b06cdaa47112433d94b887d16e91eb0f02c62f6906"
+      "sha256": "4ba9667b37c55f41e5a0a53302c2f130f0226329852fcacad54ed7b5e3e77bf0"
     },
     {
       "bytes": 772,
+      "mode": "100644",
       "path": "self_validation/evidence/C-gate-hardening__contracts.json",
       "role": "self_validation",
-      "sha256": "e7761f0fa1f1cdf083b06ca10b7ac60a22ae21b606b5f2ca0a47e4e00015d21c"
+      "sha256": "3aed008f77ce3afc9c0c53577f993860cbac084fcead27a8ebbdb86040db9a4a"
     },
     {
-      "bytes": 952,
+      "bytes": 1080,
+      "mode": "100644",
       "path": "self_validation/evidence/C-github-readme-documentation__FW-github-readmes-degraded.json",
       "role": "self_validation",
-      "sha256": "341eeb33366de330dbeec994333c553e26c41cdd1c81fde93bbdadf68f406a78"
+      "sha256": "69b1de3da3157a6016603c7467da8f07b8d85051ea210234b2367a6d5dd93a0b"
     },
     {
-      "bytes": 975,
+      "bytes": 1103,
+      "mode": "100644",
       "path": "self_validation/evidence/C-github-readme-documentation__TW-github-readmes-benign-note.json",
       "role": "self_validation",
-      "sha256": "4ee685e3603d248b0c2920bb08e28189eead0afc1e28e676f62822476cc83c12"
+      "sha256": "940445c1a2b0c3a446005421656ea22de9e9388be06906042fe9737e57a30838"
     },
     {
       "bytes": 723,
+      "mode": "100644",
       "path": "self_validation/evidence/C-github-readme-documentation__docs-hub.json",
       "role": "self_validation",
       "sha256": "2023bd6341befb78e955b2abeb3ad5c549af8ed6d97ad575ee812030b340535d"
     },
     {
       "bytes": 797,
+      "mode": "100644",
       "path": "self_validation/evidence/C-github-readme-documentation__validator.json",
       "role": "self_validation",
-      "sha256": "245cb34eed3819d3d0a8b351cdf91ba132079967e6112baeda9f68098919b0c0"
+      "sha256": "811dbbcf01f6fa6af8048d680257de52064b73813c46c6c52f79a19a300dd04a"
     },
     {
-      "bytes": 1010,
+      "bytes": 1138,
+      "mode": "100644",
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__FW-certifier-json-markdown-alias.json",
       "role": "self_validation",
-      "sha256": "65dc7a78db4473781401c3334cab23a0b13a12d5d300a179657047b178ab2bea"
+      "sha256": "6b947975cf820f71d274f971de5fe2b04b1ae3e4d4ce2daecf1804763955ab61"
     },
     {
-      "bytes": 1042,
+      "bytes": 1170,
+      "mode": "100644",
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__FW-certifier-parent-substitution.json",
       "role": "self_validation",
-      "sha256": "b3227ac957a5cf448c37ff7524abb38ac7f89aa13e970c95f8d27906fb005ca4"
+      "sha256": "c6fd4e9f543bf26c00c6ed82024532b99ccf2c87ab1f89d55c87f63ad6dd440e"
     },
     {
-      "bytes": 966,
+      "bytes": 1094,
+      "mode": "100644",
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__FW-promotion-auto-closure.json",
       "role": "self_validation",
-      "sha256": "90c690e9ead11ca9b480d0bcd66bafaef19b94f4a73494af2091f6a632aeab58"
+      "sha256": "725bfc72cc28eb3ba9a0ee6ee90947073c7cfc59bdbf512955e83ea48002048d"
     },
     {
-      "bytes": 1040,
+      "bytes": 1168,
+      "mode": "100644",
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__FW-promotion-coordinator-argv-identity.json",
       "role": "self_validation",
-      "sha256": "e3bee06002484dc16f3513e36bc949e63c5755a6ea557f1c8d867411b9fa7080"
+      "sha256": "7d075163f968152a77a967f8e25b6ac46faa350ee1a443be09b2977445d23958"
     },
     {
-      "bytes": 1045,
+      "bytes": 1173,
+      "mode": "100644",
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__FW-promotion-coordinator-result-identity.json",
       "role": "self_validation",
-      "sha256": "90df01f636315e9393a8b2e13925d418f48385ceb31ba24159dd1ecb42f3332b"
+      "sha256": "7ea104c76a7f21d2f3c16ec54cb72385a9405cca9feaebe596c0492ae32c97a4"
     },
     {
-      "bytes": 1018,
+      "bytes": 1146,
+      "mode": "100644",
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__FW-promotion-empty-formal-output.json",
       "role": "self_validation",
-      "sha256": "d02759add9e8d545ca1206cd291ec506a770abf146c827cec541bec5e06cfbb9"
+      "sha256": "f9e1beca1a841bbbf3baaca475b94f31264095b2002b0d293d7b8b4cd06c5ef5"
     },
     {
-      "bytes": 961,
+      "bytes": 1089,
+      "mode": "100644",
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__FW-promotion-missing-trace.json",
       "role": "self_validation",
-      "sha256": "5dc95d7141d61d64d7cbda16835f10012abe29bd57de760025629be4426f6514"
+      "sha256": "b013d29304b0d5e395e5f471b2ec5b15f3640d08cad5ac04965abca6db19aecf"
     },
     {
-      "bytes": 1039,
+      "bytes": 1167,
+      "mode": "100644",
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__FW-promotion-self-attested-output-check.json",
       "role": "self_validation",
-      "sha256": "a18955cea96fb7a265fe2527c5511f865a599b24e6fd2105f334ac9354aacb5f"
+      "sha256": "093c83c6e6d5cb1236993253054d8cb8f8e059a8bae690ab105a2289eaa7f1a7"
     },
     {
-      "bytes": 969,
+      "bytes": 1097,
+      "mode": "100644",
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__FW-promotion-unsafe-output.json",
       "role": "self_validation",
-      "sha256": "0eb2367e6adf155724cd044ea2c0daff3599201bbab94c965d8d7db039ab28e2"
+      "sha256": "8c07c852d3f9238209f74462e89bd3b92230ce4b25e03a69df26f1e6896cc835"
     },
     {
-      "bytes": 1005,
+      "bytes": 1133,
+      "mode": "100644",
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__TW-certifier-distinct-outputs.json",
       "role": "self_validation",
-      "sha256": "7414edd2f4944925c56f3b44fa1a4dc553865b6751af8bb28dc1e393c11277a4"
+      "sha256": "7b3dfb0ef80e14ae2fe833ea39dd6cb07ff1726e70d143f2ad1467a3bfc336d4"
     },
     {
-      "bytes": 983,
+      "bytes": 1111,
+      "mode": "100644",
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__TW-promotion-capped-baseline.json",
       "role": "self_validation",
-      "sha256": "d20873ce72b0edea5cc3191b8b250bbf54e1c5c2b37023520ab1d0f59e7e0a06"
+      "sha256": "e3340d9565d8109068e6b1b88139ae049d57192ba9a9f78bcca851e67f4b4935"
     },
     {
       "bytes": 838,
+      "mode": "100644",
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json",
       "role": "self_validation",
-      "sha256": "5224e808bb7e107670e631122d14de861815f6a6f80dbb67210693ab1f24eef2"
+      "sha256": "21d0aaa5c0525e9112ff8f3d7c6fafcb6f385a3692de9ea5ca4ac3b12e662e30"
     },
     {
       "bytes": 820,
+      "mode": "100644",
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json",
       "role": "self_validation",
-      "sha256": "525a89675069dee865db3c321a0ee707fbb51c9d0cd24016937fe107c5432683"
+      "sha256": "75cf144924c782a8d24f8c89d2cd61bf0780298f2930f41be867686499d08141"
     },
     {
-      "bytes": 931,
+      "bytes": 1059,
+      "mode": "100644",
       "path": "self_validation/evidence/C-structure__FW-structure-dynamic-shell.json",
       "role": "self_validation",
-      "sha256": "5ad3c826b0b133327e802b0aeb5e2505e10f563da36677516b9642e4bfdad08b"
+      "sha256": "d4092afcf2072e55e6bdaa08da2094a726802660f0245a21e30dbfe5ea3dd123"
     },
     {
-      "bytes": 931,
+      "bytes": 1059,
+      "mode": "100644",
       "path": "self_validation/evidence/C-structure__FW-structure-missing-manifest.json",
       "role": "self_validation",
-      "sha256": "a0e127a1fccdefe37842eafaa5d27853625f2690d885a79bbf4890ac40d367fa"
+      "sha256": "7e92e27992a6367bf87c891672a7ff7d6d69d236b70650b4834dc08de87fa179"
     },
     {
-      "bytes": 924,
+      "bytes": 1052,
+      "mode": "100644",
       "path": "self_validation/evidence/C-structure__TW-structure-unused-asset.json",
       "role": "self_validation",
-      "sha256": "15bb67bd7b95543721564c1b0b48ed57683e3f821c772b46ee441198823420a1"
+      "sha256": "f8496cc00f2cd9e5dfc6b7e68231a4f340cf903f6f7808c5948be9945abe7bb1"
     },
     {
       "bytes": 681,
+      "mode": "100644",
       "path": "self_validation/evidence/C-structure__claim.json",
       "role": "self_validation",
-      "sha256": "304435f5931e945d4594b0f7aed641818de3e5982d8cb709de8ce6923065e5e2"
+      "sha256": "258d19f650f954d1926ecdbb1e0afdcb116564e1113a79e2a6e80cec9f582d91"
     },
     {
       "bytes": 693,
+      "mode": "100644",
       "path": "self_validation/evidence/C-structure__surface.json",
       "role": "self_validation",
       "sha256": "b676bb009e6ca0a23d79c98dfb09b99e47b70e14b5606cd948d95db67177e4be"
     },
     {
-      "bytes": 1018,
+      "bytes": 1146,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-archive-self-test-comment.json",
       "role": "self_validation",
-      "sha256": "85152e9b14b6158e7c907b3177021d33ad22e6767a9c6462677c5915ebe81268"
+      "sha256": "39000e0bd816bd9cf21a20cfd9c39f3809e51730c2000e3e8b92c2f68e39aad5"
     },
     {
-      "bytes": 1026,
+      "bytes": 1154,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-archive-self-test-function.json",
       "role": "self_validation",
-      "sha256": "f456a796b9880e065d57f9f6de24c1b2518aa3ee3590b2523b2e3e49c7d39a24"
+      "sha256": "8334ddd5b477265c3b4547537325ff1d42950a89105e2fa0e5703a7b4ad1b64d"
     },
     {
-      "bytes": 964,
+      "bytes": 1092,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-extra-ci-action.json",
       "role": "self_validation",
-      "sha256": "a19658e46e799f184f2ab240f6e43b43ff10d4792548272cdf0f5b5d90bbd41f"
+      "sha256": "b3eee227c8a436cafe81c7248ae36804157650f5ca0d571f83c065b1988d32e0"
     },
     {
-      "bytes": 988,
+      "bytes": 1116,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-extra-release-command.json",
       "role": "self_validation",
-      "sha256": "3572d44d60f9f964a0de7728665a6880d88ae4a78fb9c71e7a5a93f99749d2be"
+      "sha256": "83b622d8bf45c083730995cef876e16307fbb3f7d3d341cfd2cd1e0fa8cdc676"
     },
     {
-      "bytes": 999,
+      "bytes": 1127,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-fixed-manifest-hardlink.json",
       "role": "self_validation",
-      "sha256": "3e86d3adc48438ec25418442aa2b6b61dafbb0ac69cdb05f5b0769adfb57f0c3"
+      "sha256": "132517d5fc9c8ed0514e7b6dea31cd7492035650f3ea16d5ea12d69798018a98"
     },
     {
-      "bytes": 1018,
+      "bytes": 1146,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-fixed-manifest-linked-ancestor.json",
       "role": "self_validation",
-      "sha256": "7c82f60f99936df80f76a9a0c2f39995431b4be17f2bd179a3734a1633889de8"
+      "sha256": "79b42d6e5db692c82b96364971370f5b2da0048675a30dbc95537fa14b7cee70"
     },
     {
-      "bytes": 1047,
+      "bytes": 1175,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-fixed-manifest-real-substitution.json",
       "role": "self_validation",
-      "sha256": "39d01ec612cfd026580031d620a36eaf211f8178405a9a0c81cdd665aacfd166"
+      "sha256": "3b594d98852bf9ac6866c2afdfa52c264a43d6bded88f1ee6bb18368e2c36047"
     },
     {
-      "bytes": 955,
+      "bytes": 1083,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-fixed-manifest-special.json",
       "role": "self_validation",
-      "sha256": "ad180264d48088d09cd3bbb4929922045b3dca71f21391fd9b404296ea86d519"
+      "sha256": "adbea31a68992482ea221245c7a380addb108d50cb0ba43abcd31997cc92206c"
     },
     {
-      "bytes": 992,
+      "bytes": 1120,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-fixed-manifest-symlink.json",
       "role": "self_validation",
-      "sha256": "9f22feab331cefc86bd3bc8ab04dc9a5d1ad54cc8dc76aedabb130b67573159e"
+      "sha256": "64f2c7aaca74630a5373ae2dba7d6a70a812ccab8c0ede11438706775818699b"
     },
     {
-      "bytes": 1011,
+      "bytes": 1139,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-formal-output-invariant.json",
       "role": "self_validation",
-      "sha256": "9e84631185bbb822850af6802d8631b03485d7370be99414fc92b5d8b52d4da0"
+      "sha256": "050343b8e22b647e5bb00b6173a3e80938519b5b0f53190b32821ff4a0740faa"
     },
     {
-      "bytes": 1033,
+      "bytes": 1161,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-held-output-capability-invariant.json",
       "role": "self_validation",
-      "sha256": "8c59912806766ac0a5655ff819cded6136744911c34c3dc787e18c53f609bb8b"
+      "sha256": "f4f1dff026107ad4809d3436e25fa82b5e6847a7e9a0eabda48aa88c04a59772"
     },
     {
-      "bytes": 1006,
+      "bytes": 1134,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-markdown-moved-into-package.json",
       "role": "self_validation",
-      "sha256": "05a6f6220ae3703c08892519bf9a669267f43025508ca6234110f5a8feeb800c"
+      "sha256": "17e21187d3f12790d8cc65bb1848752733611dd2f56f0bfab5198036118c7f68"
     },
     {
-      "bytes": 1003,
+      "bytes": 1131,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-markdown-parent-substitution.json",
       "role": "self_validation",
-      "sha256": "27e2ba227638e550209c5f6908eb51291922daeeb62f66391fefb767b680d2f4"
+      "sha256": "d5d8d35eda0aaddbe106acfe14ffbe48d79e07e2eeecf0965df1791f24412a14"
     },
     {
-      "bytes": 984,
+      "bytes": 1112,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-mutable-checkout-action.json",
       "role": "self_validation",
-      "sha256": "abf68525a20be09e976fc5eb1d5234698f93ff8ca279d3f580747f3e1b4373f4"
+      "sha256": "2db99b746681288c4f959888a15d3cbe6cc41f1cd3092f9dceb0ec018a8e7f57"
     },
     {
-      "bytes": 1000,
+      "bytes": 1128,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-mutable-setup-python-action.json",
       "role": "self_validation",
-      "sha256": "a1d5731e56b4c293f0b8ecb25d08392fce6ed7c3a3b8b8ab0001dd071a59b7d1"
+      "sha256": "4832e129ff4210d2086254bb5c7c3b20074d64572453fb82fad4ab7249af56c2"
     },
     {
-      "bytes": 976,
+      "bytes": 1104,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-unsafe-fixture-id.json",
       "role": "self_validation",
-      "sha256": "f3e1c8e81bee6406fc72a060012cd38cb951434de4dd7f1fa0c60483d1c7f394"
+      "sha256": "be7c0862a4e0f8431baaa773b7dc51eecaef940d7b43fe3aa0407dbfd1f91bde"
     },
     {
-      "bytes": 1124,
+      "bytes": 1252,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__FW-validator-update-manifest-cli-preflight-substitution.json",
       "role": "self_validation",
-      "sha256": "90ccb66b5c168823b21d4774b683ea6581b9a023b841d0d713450077343025d7"
+      "sha256": "a0976956f5bdb3ce03c2c2bd16c7b82117b438ab3adb6b08ebc782b301aea4c1"
     },
     {
-      "bytes": 981,
+      "bytes": 1109,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__TW-validator-ci-presentation.json",
       "role": "self_validation",
-      "sha256": "d6be03d3feeedeae85d3c9549af0cea96df05a097bd1de19c4ef33b78fef92de"
+      "sha256": "9591e75f2febb2aa6bd34b9432cc801fd2a2f1b01115a1f6ac24e7b486ac7b18"
     },
     {
-      "bytes": 1003,
+      "bytes": 1131,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__TW-validator-direct-archive-command.json",
       "role": "self_validation",
-      "sha256": "e4db7935c400c22af4622faec90b2495202fa8c6f852d0e561484864e60d8cb0"
+      "sha256": "d47abfc8d4e07e76e3e082ca768d012a2993a12dcf778b0c1501ffc48adef948"
     },
     {
-      "bytes": 1004,
+      "bytes": 1132,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__TW-validator-fixed-manifest-normal.json",
       "role": "self_validation",
-      "sha256": "2af3a370fd01f05448438d9a2cd686f04af479ee2e9408e3320febce5b13409e"
+      "sha256": "d37c6eae25de8d1d7d1b18951905b4f01a976e577953b6de0bd9dec658d92e1a"
     },
     {
-      "bytes": 965,
+      "bytes": 1093,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__TW-validator-held-markdown.json",
       "role": "self_validation",
-      "sha256": "c73b32f8e29e2e8c11a7961df354dca6814258989e4b42002d719461c3df57d2"
+      "sha256": "dd988d55ce683c9cbb5fa48e473ef7fde4313a63ceb0d70e53cf7bffeaf453e2"
     },
     {
       "bytes": 779,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__claim.json",
       "role": "self_validation",
-      "sha256": "345164c23309589cbac01e129e2b48fd38f80030078a05ca433149b040f49fe7"
+      "sha256": "1b50d806acf25f64a3bf6cbfba8e6fe89ce9a879d9b0037ed4dead779e571cbf"
     },
     {
       "bytes": 757,
+      "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__fixtures.json",
       "role": "self_validation",
       "sha256": "cfd02486abed96aee41aa34519eca86939c272443fbf382eb188ae0f44119a81"
     },
     {
-      "bytes": 105308,
+      "bytes": 106366,
+      "mode": "100644",
       "path": "self_validation/self_certificate.json",
       "role": "self_validation",
-      "sha256": "61ba8b605d6d49f5edb5b43f3d5704dd7e360313194814f642bfe1d34363f977"
+      "sha256": "dbdea8e29d027955af70bfa2358c3f34b7668c28db99864ffc146621c1041518"
     },
     {
       "bytes": 22126,
+      "mode": "100644",
       "path": "skills/nozickian-verify/SKILL.md",
       "role": "behavior",
       "sha256": "7f0d9be95be2bd957378d52a5f9a30bd6a3d379f76c84227c3a766f9f3a194ed"
     },
     {
-      "bytes": 12603,
+      "bytes": 12693,
+      "mode": "100644",
       "path": "skills/nozickian-verify/assets/certificate-template.json",
       "role": "release-metadata",
-      "sha256": "ab9c35bcea406af10dae136af9e58724050edc38c1cf87ab307cc6b3dd8b3d49"
+      "sha256": "f9459f8dc854a28847d4e89d772df90078bae885e6f941f5b399bbacfe374b02"
     },
     {
       "bytes": 220,
+      "mode": "100644",
       "path": "skills/nozickian-verify/assets/subagent-task-card.md",
       "role": "release-metadata",
       "sha256": "7a4ae8170f2ea5718d44e55bb1f449462855eb337321de0c3aaaad26cbb2130d"
     },
     {
       "bytes": 7824,
+      "mode": "100644",
       "path": "skills/nozickian-verify/evals/evals.json",
       "role": "behavior",
       "sha256": "24b1fd98cd7890e18d43b3d89a891d821c6d5343980b8fb029a808fe39fd1193"
     },
     {
       "bytes": 348,
+      "mode": "100644",
       "path": "skills/nozickian-verify/evals/fixtures/fake_trace.json",
       "role": "behavior",
       "sha256": "5413eab7b6fc48fb0b5e1fe5c1b6c34163a5806eb6748c01e16e257317ac4b77"
     },
     {
       "bytes": 634,
+      "mode": "100644",
       "path": "skills/nozickian-verify/evals/fixtures/mini_code.py",
       "role": "behavior",
       "sha256": "7860013c7a31f00d3d89fc462a01da8f7ef7a4d747ad2e8e8b13c0691a8aedd9"
     },
     {
       "bytes": 213,
+      "mode": "100644",
       "path": "skills/nozickian-verify/evals/fixtures/mini_manual.md",
       "role": "behavior",
       "sha256": "510487a2eb7d9dbf658cacd5a1ea0341dd3fab66b499b887bc22f26c5d8c638a"
     },
     {
       "bytes": 1917,
+      "mode": "100644",
       "path": "skills/nozickian-verify/references/ARTIFACT_GUIDE.md",
       "role": "behavior",
       "sha256": "81a3b5b1569d8fa5c5cd9460aa2fa382e9f65dfc4153a04e1d3391b73ef72562"
     },
     {
       "bytes": 848,
+      "mode": "100644",
       "path": "skills/nozickian-verify/references/EVAL_BEST_PRACTICES.md",
       "role": "behavior",
       "sha256": "47f97cde1acf5054a4b70dfea7a47e76da98e41c533d2a882d04e3c179089455"
     },
     {
-      "bytes": 19103,
+      "bytes": 19871,
+      "mode": "100644",
       "path": "skills/nozickian-verify/references/EVIDENCE_SCHEMA.md",
       "role": "behavior",
-      "sha256": "f7656a5887abf76b29c0074a4ede330a430a2fcdc44dfe65db511440af475d23"
+      "sha256": "c755a455af7f20d90f7aaf018020bc17246e9743e77b0c965d74a1f47e416a3a"
     },
     {
       "bytes": 18058,
+      "mode": "100644",
       "path": "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md",
       "role": "behavior",
-      "sha256": "bb22d21afe4c5264ce1dfeed4c9ebdde2eb425a8a50156fcc2eafd79158e296b"
+      "sha256": "eb2fec217bfcb3dc2a37c8a32abc80b800ba138da4b97702f93bfd72ed273588"
     },
     {
-      "bytes": 29260,
+      "bytes": 29876,
+      "mode": "100644",
       "path": "skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
       "role": "behavior",
-      "sha256": "309e55ae678b2d90e8c685dac846f0b51f1428cb25a5d05040c07e3e4dcffa53"
+      "sha256": "496fc53dba5129557e8352c7f13562c6696e9011f39025c98dcf420db5337b83"
     },
     {
       "bytes": 1868,
+      "mode": "100644",
       "path": "skills/nozickian-verify/references/SOURCES.md",
       "role": "behavior",
       "sha256": "6d12e94adbfeea80f1c3594103d431934c3f8a546c752b0fd278033526a6c7ba"
     },
     {
       "bytes": 13503,
+      "mode": "100644",
       "path": "skills/nozickian-verify/references/STANDARD.md",
       "role": "behavior",
       "sha256": "d637a4c1f8ef880ae7716218bed3dca430f4cacc6f2ea1ee1870aefe364a0604"
     },
     {
       "bytes": 10426,
+      "mode": "100644",
       "path": "skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md",
       "role": "behavior",
       "sha256": "6930031ef6f7c27c9f49e7ef6d200ca75183cce207c11a594afb2a40d1423e72"
     },
     {
-      "bytes": 202584,
+      "bytes": 223074,
+      "mode": "100644",
       "path": "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
       "role": "behavior",
-      "sha256": "fa91d0a514190c9e0551d6acb83b83529f847f7983859f15067a1b252ba40a62"
+      "sha256": "6555426f375dca76654c23ff266329177e55b07d332aa2553e5abdb78ff79da4"
     },
     {
-      "bytes": 89828,
+      "bytes": 104542,
+      "mode": "100644",
       "path": "skills/nozickian-verify/scripts/ntt_gate.py",
       "role": "behavior",
-      "sha256": "ed9bfc95133c5a9f390c64947fe92ba0146121453ada97974dc45d065b3dc18a"
+      "sha256": "2b10b8c27c8e59c0bc68a379aa9f28948e7f364c41513a151306d76592124045"
     },
     {
-      "bytes": 151652,
+      "bytes": 171086,
+      "mode": "100644",
       "path": "skills/nozickian-verify/scripts/run_formal_artifact_verification.py",
       "role": "behavior",
-      "sha256": "3917a03bb36bd92fa46585fe931b1ebae332bc6beb35d3d4cce3ff973e0ac7c5"
+      "sha256": "2f03f384cc5a8d9ff82699808cea245a9019c5aa3d44d83782626ab3fedacc10"
     },
     {
-      "bytes": 212295,
+      "bytes": 243398,
+      "mode": "100644",
       "path": "skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py",
       "role": "behavior",
-      "sha256": "6cde58dd8972365c7d736618b734a5777eba549b2d6d5669ba9342a9cc9fce1a"
+      "sha256": "8ff5de66c31332b36819217cd17e7c81aee9263a0ac12aaab33c0281c05562e8"
     },
     {
-      "bytes": 93450,
+      "bytes": 108841,
+      "mode": "100644",
       "path": "skills/nozickian-verify/scripts/run_gate_contract_tests.py",
       "role": "behavior",
-      "sha256": "028819d328175184c11684be560b327a9af105d497164721ac089e10a71a7dc5"
+      "sha256": "f58a84e7687952caf659bd9cfcfd82f33289936cf1210548af060624234479dd"
     },
     {
-      "bytes": 78225,
+      "bytes": 80084,
+      "mode": "100644",
       "path": "skills/nozickian-verify/scripts/run_live_skill_evals.py",
       "role": "behavior",
-      "sha256": "fb635036f227885cdf9122861720d8282dd0e94bf288f5e77ce0f5ee5639e118"
+      "sha256": "d0ff57f3ceb452006047c13d54eea45b2381c6ca9a66031843252838d81bca33"
     },
     {
-      "bytes": 152108,
+      "bytes": 165700,
+      "mode": "100644",
       "path": "skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py",
       "role": "behavior",
-      "sha256": "c09928e8dffb03111922a705c2c743b8f1455468d3f6c5bc14c2d78bb7f72501"
+      "sha256": "2c40dcc3874ba0a3b7074242820120de000eacc9a38c8a5d268561120e09620c"
     },
     {
       "bytes": 13629,
+      "mode": "100644",
       "path": "skills/nozickian-verify/scripts/run_regression_evals.py",
       "role": "behavior",
       "sha256": "2c990635d2f1d8d5837c0d510562878f13b4d0c9e5cf2f42780931e3de3c33e3"
     },
     {
-      "bytes": 369256,
+      "bytes": 399405,
+      "mode": "100644",
       "path": "skills/nozickian-verify/scripts/validate_package.py",
       "role": "behavior",
-      "sha256": "1b1be0ed9c7692533d331cb3cd23afd2e2319084b0db3c135023df1b90e3ed97"
+      "sha256": "63b9adf7a78ebbc784e5e7ef2d1325c5ab128e4028bfac035dee6fa8f7678e60"
     }
   ],
   "generated_utc": "2026-05-26T00:00:00Z",
@@ -925,16 +1077,17 @@
   "plugin_version": "1.0.3",
   "release_lock_version": "1.0.3",
   "release_status": "PASS-SCOPED",
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "scope_limitations": [
     "Live Claude Code plugin runtime remains UNVERIFIED_RUNTIME unless run on a machine with the official Claude Code CLI.",
     "The release manifest proves unpacked stable-file integrity relative to this package snapshot; declared volatile/generated validation outputs are excluded and separately documented.",
     "The release manifest does not defend against a hostile maintainer rewriting validators, certificates, and manifests together.",
-    "Archive ZIP SHA-256 is computed after packaging and is reported outside this embedded manifest."
+    "The hosted workflow validates an unpacked Git tar archive; it does not produce or verify a release ZIP. Any ZIP publication requires separate entry validation and an external SHA-256 record."
   ],
-  "self_exclusion": "file_inventory intentionally excludes STABLE_RELEASE_MANIFEST.json to avoid a self-referential hash cycle; self_hash_sha256 is computed over canonical JSON with self_hash_sha256 set to null.",
+  "self_exclusion": "file_inventory intentionally excludes STABLE_RELEASE_MANIFEST.json to avoid a self-referential hash cycle; self_hash_sha256 is computed over canonical JSON with self_hash_sha256 set to null, and self_mode separately requires the installed manifest to be non-executable.",
   "self_file": "STABLE_RELEASE_MANIFEST.json",
-  "self_hash_sha256": "87ba770e68432c189235e2a3fe4583ceff6b7a4c5add2fe8e1ab502897d8d52c",
+  "self_hash_sha256": "b9198f041d4ae0687c038057ae984ff90080a4c4e4ddedc6048e6446bd962b90",
+  "self_mode": "100644",
   "validation_commands": [
     "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test",
     "python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence",

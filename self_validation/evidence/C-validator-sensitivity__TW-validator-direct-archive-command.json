@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-validator-sensitivity",
   "claim_proposition_sha256": "sha256:dc2dfd6a76bb8c4bf7cf9bfaaca1a161188aff38741fec6771cc1afccb021f4f",
-  "command_or_source": "validate_package.py --self-test",
+  "command_or_source": "Declared case context (not authenticated execution): validate_package.py --self-test",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:18098e87efd2cd7a2d8d51a3170cfec677d48daa14c2958aab4f046eeea8ebda",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:f0b0e1123364748bf675c0462392319c2dbd2995af4bebf2e8607e25a5622323",
   "observation_id": "obs:C-validator-sensitivity:TW-validator-direct-archive-command",
-  "observed_result": "The validator true-world control retained one direct archive self-test while ignoring comment and function decoys.",
-  "support_summary": "This wrapper binds TW-validator-direct-archive-command to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The validator true-world control retained one direct archive self-test while ignoring comment and function decoys.",
+  "support_summary": "This wrapper binds TW-validator-direct-archive-command to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "TW-validator-direct-archive-command",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

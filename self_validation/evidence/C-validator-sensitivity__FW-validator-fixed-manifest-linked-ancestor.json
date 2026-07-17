@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-validator-sensitivity",
   "claim_proposition_sha256": "sha256:dc2dfd6a76bb8c4bf7cf9bfaaca1a161188aff38741fec6771cc1afccb021f4f",
-  "command_or_source": "validate_package.py --self-test",
+  "command_or_source": "Declared case context (not authenticated execution): validate_package.py --self-test",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:9a60580712d83238605d3246f85a9c3b1564d859349165c80f0ab50396e9c27e",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:9a76c3a6fcd56f73dc8553dbeeae689340a8de15479a03d947ba2b314d847ecb",
   "observation_id": "obs:C-validator-sensitivity:FW-validator-fixed-manifest-linked-ancestor",
-  "observed_result": "The validator self-test rejected linked ancestors for both fixed manifests and preserved their sentinels.",
-  "support_summary": "This wrapper binds FW-validator-fixed-manifest-linked-ancestor to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The validator self-test rejected linked ancestors for both fixed manifests and preserved their sentinels.",
+  "support_summary": "This wrapper binds FW-validator-fixed-manifest-linked-ancestor to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-validator-fixed-manifest-linked-ancestor",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

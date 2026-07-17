@@ -20,6 +20,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import math
 import os
 import re
 import signal
@@ -35,6 +36,37 @@ from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+
+
+class DuplicateJsonKeyError(ValueError):
+    """A JSON object repeats a key and is therefore semantically ambiguous."""
+
+
+def _strict_json_object(pairs: List[Tuple[str, Any]]) -> Dict[str, Any]:
+    value: Dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise DuplicateJsonKeyError(f"duplicate JSON object key: {key}")
+        value[key] = item
+    return value
+
+
+def strict_json_loads(text: str) -> Any:
+    def reject_nonfinite(value: str) -> Any:
+        raise ValueError(f"non-finite JSON number is not allowed: {value}")
+
+    def parse_finite_float(value: str) -> float:
+        parsed = float(value)
+        if not math.isfinite(parsed):
+            reject_nonfinite(value)
+        return parsed
+
+    return json.loads(
+        text,
+        object_pairs_hook=_strict_json_object,
+        parse_constant=reject_nonfinite,
+        parse_float=parse_finite_float,
+    )
 
 PASS_TRACKED = "PASS-TRACKED"
 PASS_SCOPED = "PASS-SCOPED"
@@ -52,6 +84,18 @@ MAX_EVIDENCE_DEPENDENCIES = 8
 MAX_EVIDENCE_GRAPH_DEPTH = 8
 MAX_CAPTURE_BYTES = 64 * 1024 * 1024
 PUBLIC_STREAM_BOUND_BYTES = 2048
+MAX_AUDIT_JSON_BYTES = 32 * 1024 * 1024
+MAX_AUDIT_TEXT_BYTES = 16 * 1024 * 1024
+MAX_JSON_STRUCTURE_NODES = 200_000
+MAX_JSON_STRUCTURE_DEPTH = 64
+FORMAL_COMPANION_MAX_BYTES = {
+    "report": MAX_AUDIT_TEXT_BYTES,
+    "gate": MAX_AUDIT_TEXT_BYTES,
+    "certificate": MAX_AUDIT_JSON_BYTES,
+    "ledger": 8 * 1024 * 1024,
+    "transcript": MAX_CAPTURE_BYTES,
+    "prompt": MAX_AUDIT_TEXT_BYTES,
+}
 MAX_STALE_SCAN_ENTRIES = 20_000
 MAX_STALE_SCAN_FILE_BYTES = 8 * 1024 * 1024
 MAX_STALE_SCAN_TOTAL_BYTES = 128 * 1024 * 1024
@@ -192,15 +236,49 @@ class Check:
     failure_kind: str = "CHECK_FAILED"
 
 
+def _hash_regular_file(
+    path: Path,
+    *,
+    max_bytes: Optional[int] = None,
+) -> Tuple[str, int]:
+    """Hash one no-follow regular fd, optionally enforcing a byte ceiling."""
+    if max_bytes is not None and (
+        type(max_bytes) is not int or max_bytes < 0
+    ):
+        raise ValueError("max_bytes must be a nonnegative integer")
+    flags = os.O_RDONLY
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    if not nofollow:
+        raise OSError("platform lacks no-follow file opens")
+    flags |= nofollow
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    descriptor = os.open(path, flags)
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+            raise ValueError(f"{path.name} is not a single-link regular file")
+        if max_bytes is not None and metadata.st_size > max_bytes:
+            raise ResourceBoundError(f"file exceeds {max_bytes} bytes")
+        digest = hashlib.sha256()
+        observed = 0
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            observed += len(chunk)
+            if max_bytes is not None and observed > max_bytes:
+                raise ResourceBoundError(f"file exceeds {max_bytes} bytes")
+            digest.update(chunk)
+        return digest.hexdigest(), observed
+    finally:
+        os.close(descriptor)
+
+
 def sha256_path(path: Path) -> str:
-    error = regular_file_error(path)
-    if error:
-        raise ValueError(error)
-    h = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    return _hash_regular_file(path)[0]
 
 
 def regular_file_error(path: Path) -> Optional[str]:
@@ -436,17 +514,75 @@ def read_regular_text(
     *,
     encoding: str = "utf-8",
     errors: str = "strict",
+    max_bytes: int = MAX_AUDIT_TEXT_BYTES,
 ) -> str:
-    # SECURITY-REVIEW: Audit-bundle paths are untrusted. The final entry is
-    # lstat-checked before opening and symlink/special files are never read.
-    file_error = regular_file_error(path)
-    if file_error:
-        raise ValueError(file_error)
-    return path.read_text(encoding=encoding, errors=errors)
+    return _read_regular_bytes_bounded(path, max_bytes=max_bytes).decode(
+        encoding,
+        errors=errors,
+    )
+
+
+def _read_regular_bytes_bounded(path: Path, *, max_bytes: int) -> bytes:
+    """Read one regular final entry through a byte-bounded no-follow fd."""
+    if type(max_bytes) is not int or max_bytes < 0:
+        raise ValueError("max_bytes must be a nonnegative integer")
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    descriptor = os.open(path, flags)
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+            raise ValueError(f"{path.name} is not a single-link regular file")
+        if metadata.st_size > max_bytes:
+            raise ResourceBoundError(f"file exceeds {max_bytes} bytes")
+        with os.fdopen(descriptor, "rb") as stream:
+            descriptor = -1
+            payload = stream.read(max_bytes + 1)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+    if len(payload) > max_bytes:
+        raise ResourceBoundError(f"file exceeds {max_bytes} bytes")
+    return payload
+
+
+def _validate_json_structure_bounds(value: Any) -> None:
+    """Bound the materialized JSON graph before semantic consumers inspect it."""
+    stack: List[Tuple[Any, int]] = [(value, 1)]
+    nodes = 0
+    while stack:
+        current, depth = stack.pop()
+        nodes += 1
+        if nodes > MAX_JSON_STRUCTURE_NODES:
+            raise ResourceBoundError(
+                f"JSON exceeds {MAX_JSON_STRUCTURE_NODES} structure nodes"
+            )
+        if depth > MAX_JSON_STRUCTURE_DEPTH:
+            raise ResourceBoundError(
+                f"JSON exceeds depth {MAX_JSON_STRUCTURE_DEPTH}"
+            )
+        if isinstance(current, Mapping):
+            stack.extend((child, depth + 1) for child in current.values())
+        elif isinstance(current, list):
+            stack.extend((child, depth + 1) for child in current)
+        elif type(current) is float and not math.isfinite(current):
+            raise ResourceBoundError("JSON contains a non-finite number")
 
 
 def load_json(path: Path) -> Any:
-    return json.loads(read_regular_text(path))
+    value = strict_json_loads(
+        read_regular_text(
+            path,
+            max_bytes=MAX_AUDIT_JSON_BYTES,
+        )
+    )
+    _validate_json_structure_bounds(value)
+    return value
 
 
 def try_load_json(path: Path) -> Tuple[Optional[Any], Optional[str]]:
@@ -564,22 +700,7 @@ def read_regular_text_bounded(
     *,
     max_bytes: int,
 ) -> Tuple[str, int]:
-    error = regular_file_error(path)
-    if error is not None:
-        raise ValueError(error)
-    flags = os.O_RDONLY
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
-    descriptor = os.open(path, flags)
-    try:
-        with os.fdopen(descriptor, "rb") as stream:
-            payload = stream.read(max_bytes + 1)
-            descriptor = -1
-    finally:
-        if descriptor >= 0:
-            os.close(descriptor)
-    if len(payload) > max_bytes:
-        raise ResourceBoundError(f"file exceeds {max_bytes} bytes")
+    payload = _read_regular_bytes_bounded(path, max_bytes=max_bytes)
     return payload.decode("utf-8", errors="replace"), len(payload)
 
 
@@ -595,7 +716,19 @@ def valid_utc_timestamp(value: Any) -> bool:
 
 JSON_POSITIVE_STATUS_RE = re.compile(r"^(?:pass|passed|valid|success)$", re.I)
 JSON_NEGATIVE_STATUS_RE = re.compile(
-    r"^(?:fail|failed|failure|invalid|error|not[- ]?ok)\b",
+    r"^(?:"
+    r"(?:fail|failed|failure|fatal|invalid|error|not[- ]?ok|rejected|unsuccessful)\b"
+    r"|.*\b(?:fail|failed|failure|fatal|invalid|error|rejected|unsuccessful"
+    r"|not[- ]+valid|not[- ]+a[- ]+valid|not[- ]+validated"
+    r"|did[- ]+not[- ]+(?:pass|succeed|validate|verify)"
+    r"|cannot[- ]+(?:validate|verify)|could[- ]+not[- ]+(?:validate|verify)"
+    r"|unable[- ]+to[- ]+(?:validate|verify)"
+    r"|did[- ]+not[- ]+(?:finish|complete)"
+    r"|(?:validation|validator|validity)[- ]+(?:pending|unknown|indeterminate"
+    r"|incomplete|skipped|aborted|cancelled|canceled|timed[- ]+out"
+    r"|not[- ]+(?:run|performed)|deferred|blocked)"
+    r"|reject(?:ed|ion)?)\b"
+    r")",
     re.I,
 )
 TEXT_NEGATIVE_STATUS_RE = re.compile(
@@ -613,15 +746,188 @@ TEXT_NONZERO_FAILURE_SUMMARY_RE = re.compile(
     re.I,
 )
 TEXT_ZERO_FAILED_RE = re.compile(r"^\s*0\s+failed(?:\s|$)", re.I)
+TEXT_BENIGN_ZERO_NEGATIVE_RE = re.compile(
+    r"(?<![0-9A-Za-z_])0\s+(?:errors?|failures?|failed)\b"
+    r"|(?<![0-9A-Za-z_])no(?:\s+[A-Za-z][\w-]*){0,2}\s+"
+    r"(?:errors?|failures?|failed)\b"
+    r"|\b(?:errors?|failures?|failed)\s*[:=]\s*0(?![0-9])",
+    re.I,
+)
+TEXT_INLINE_NEGATIVE_DIAGNOSTIC_RE = re.compile(
+    r"(?:^|[\s:\[\](){}=])"
+    r"(?:fail|failed|failure|fatal|invalid|unsuccessful|errors?|not[\s-]?ok"
+    r"|not[\s-]+valid|did[\s-]+not[\s-]+(?:pass|succeed)"
+    r"|(?:cannot|could[\s-]+not|did[\s-]+not)[\s-]+(?:validate|verify)"
+    r"|unable[\s-]+to[\s-]+(?:validate|verify)"
+    r"|(?:validation|validator|validity)[\s-]+(?:pending|unknown|indeterminate"
+    r"|incomplete|skipped|aborted|cancelled|canceled|timed[\s-]+out"
+    r"|not[\s-]+(?:run|performed)|deferred|blocked)"
+    r"|did[\s-]+not[\s-]+(?:finish|complete)"
+    r"|not[\s-]+(?:a[\s-]+)?valid|not[\s-]+validated"
+    r"|reject(?:ed|ion)?)\b",
+    re.I,
+)
+TEXT_CRASH_OR_NONCOMPLETION_RE = re.compile(
+    r"(?:traceback\s*\(most\s+recent\s+call\s+last\)"
+    r"|unhandled\s+exception"
+    r"|\b(?:[A-Za-z_][A-Za-z0-9_]*(?:Error|Exception)|Exception)\s*:"
+    r"|\bpanic\s*:"
+    r"|\bsegmentation\s+fault\b"
+    r"|^\s*(?:killed|aborted)\s*[.!]?\s*$"
+    r"|\b(?:command|process|validator)\s+(?:was\s+)?(?:terminated|killed|aborted|crashed|timed\s+out)\b"
+    r"|\b(?:process|command)\s+exited\s+with\s+(?:code|status)\s*-?[1-9][0-9]*\b"
+    r"|\b(?:exit\s+code|returncode)\s*[:=]?\s*-?[1-9][0-9]*\b"
+    r"|\bcould\s+not\s+complete\b)",
+    re.I,
+)
+JSON_NEGATIVE_LEVEL_RE = re.compile(
+    r"^(?:error|fatal|critical|fail|failed|failure|invalid)$",
+    re.I,
+)
 ANSI_ESCAPE_RE = re.compile(
     r"(?:\x1B[@-_][0-?]*[ -/]*[@-~]|\x1B\][^\x07]*(?:\x07|\x1B\\))"
 )
 CLAUDE_PLUGIN_SUCCESS_RE = re.compile(r"^\s*✔\s+Validation passed\s*$")
+CLAUDE_PLUGIN_PRELUDE_RE = re.compile(
+    r"^\s*Validating plugin manifest:\s+.+[\\/]\.claude-plugin"
+    r"[\\/]plugin\.json\s*$"
+)
 
 
 def returncode_is_integer_zero(value: Any) -> bool:
     """Accept only JSON/Python integer zero, never bool or coercible scalars."""
     return type(value) is int and value == 0
+
+
+def common_json_negative_diagnostics(
+    data: Mapping[str, Any],
+    *,
+    _depth: int = 0,
+) -> List[str]:
+    """Return common contradictions that a positive status cannot override."""
+    contradictions: List[str] = []
+    if _depth > MAX_JSON_STRUCTURE_DEPTH:
+        return ["diagnostics exceed the maximum JSON depth"]
+    for field in (
+        "success",
+        "valid",
+        "passed",
+        "ok",
+        "completed",
+        "executed",
+    ):
+        if field in data and data.get(field) is not True:
+            contradictions.append(f"{field} is not true")
+    for field in (
+        "is_error",
+        "timed_out",
+        "timeout",
+        "aborted",
+        "killed",
+        "terminated",
+        "skipped",
+        "not_executed",
+        "cancelled",
+        "canceled",
+    ):
+        if field in data and data.get(field) is not False:
+            contradictions.append(f"{field} is not false")
+    for field in ("exit_code", "return_code", "error_code"):
+        if field in data and not returncode_is_integer_zero(data.get(field)):
+            contradictions.append(f"{field} is not integer zero")
+    for field in ("errors", "failures", "failed"):
+        if field not in data:
+            continue
+        value = data.get(field)
+        if field == "failed" and value is False:
+            continue
+        if type(value) is int and value == 0:
+            continue
+        if isinstance(value, (list, tuple, dict)) and not value:
+            continue
+        contradictions.append(f"{field} is not an exact zero/empty value")
+    structured_error = data.get("error")
+    if isinstance(structured_error, (Mapping, list)) and structured_error:
+        contradictions.append("error is a nonempty structured diagnostic")
+    for field in ("message", "error", "reason", "detail"):
+        if field not in data or type(data.get(field)) is str:
+            continue
+        value = data.get(field)
+        empty_value = (
+            value is None
+            or value is False
+            or (type(value) in {int, float} and value == 0)
+            or (
+                isinstance(value, (Mapping, list, tuple))
+                and not value
+            )
+        )
+        if not empty_value:
+            contradictions.append(
+                f"{field} is a nonempty non-string diagnostic"
+            )
+    diagnostics = data.get("diagnostics")
+    diagnostic_items = (
+        diagnostics
+        if isinstance(diagnostics, list)
+        else [diagnostics]
+        if diagnostics is not None
+        else []
+    )
+    for index, diagnostic in enumerate(diagnostic_items):
+        if isinstance(diagnostic, Mapping):
+            nested_common = common_json_negative_diagnostics({
+                key: value
+                for key, value in diagnostic.items()
+                if key != "diagnostics"
+            }, _depth=_depth + 1)
+            status = str(
+                diagnostic.get("status")
+                or diagnostic.get("result")
+                or ""
+            ).strip()
+            level = str(
+                diagnostic.get("level")
+                or diagnostic.get("severity")
+                or ""
+            ).strip()
+            messages = [
+                str(diagnostic.get(field))
+                for field in ("message", "error", "reason", "detail")
+                if type(diagnostic.get(field)) is str
+            ]
+            if (
+                JSON_NEGATIVE_STATUS_RE.match(status)
+                or JSON_NEGATIVE_LEVEL_RE.fullmatch(level)
+                or any(
+                    validator_contradiction(message) is not None
+                    for message in messages
+                )
+                or bool(nested_common)
+            ):
+                contradictions.append(
+                    f"diagnostics[{index}] is negative"
+                )
+            if "diagnostics" in diagnostic:
+                deeper_common = common_json_negative_diagnostics(
+                    {"diagnostics": diagnostic.get("diagnostics")},
+                    _depth=_depth + 1,
+                )
+                contradictions.extend(
+                    f"diagnostics[{index}].{reason}"
+                    for reason in deeper_common
+                )
+        elif type(diagnostic) is str and (
+            validator_contradiction(diagnostic) is not None
+        ):
+            contradictions.append(
+                f"diagnostics[{index}] is negative"
+            )
+        elif not isinstance(diagnostic, (Mapping, str)):
+            contradictions.append(
+                f"diagnostics[{index}] has an unsupported shape"
+            )
+    return contradictions
 
 
 def json_validator_status(data: Any) -> Tuple[bool, str, Dict[str, Any]]:
@@ -635,14 +941,47 @@ def json_validator_status(data: Any) -> Tuple[bool, str, Dict[str, Any]]:
     ]
     negative = [value for value in status_values if JSON_NEGATIVE_STATUS_RE.match(value)]
     positive = [value for value in status_values if JSON_POSITIVE_STATUS_RE.fullmatch(value)]
+    unknown = [
+        value
+        for value in status_values
+        if not JSON_NEGATIVE_STATUS_RE.match(value)
+        and not JSON_POSITIVE_STATUS_RE.fullmatch(value)
+    ]
+    negative_levels = [
+        str(data.get(field) or "").strip()
+        for field in ("level", "severity")
+        if field in data
+        and JSON_NEGATIVE_LEVEL_RE.fullmatch(
+            str(data.get(field) or "").strip()
+        )
+    ]
+    negative_messages = [
+        str(data.get(field))
+        for field in ("message", "error", "reason", "detail")
+        if type(data.get(field)) is str
+        and validator_contradiction(str(data.get(field))) is not None
+    ]
+    common_negatives = common_json_negative_diagnostics(data)
     details = {
         "returncode": returncode,
         "status_values": status_values,
         "negative_statuses": negative,
         "positive_statuses": positive,
+        "unknown_statuses": unknown,
+        "negative_levels": negative_levels,
+        "negative_messages": negative_messages,
+        "common_negative_diagnostics": common_negatives,
     }
     if negative:
         return False, "explicit negative JSON status", details
+    if unknown:
+        return False, "unrecognized JSON status alongside result", details
+    if negative_levels:
+        return False, "explicit negative JSON level", details
+    if negative_messages:
+        return False, "explicit negative JSON diagnostic", details
+    if common_negatives:
+        return False, "common negative JSON diagnostic", details
     if not returncode_is_integer_zero(returncode):
         return False, "validator JSON returncode is not integer zero", details
     if not positive:
@@ -951,7 +1290,125 @@ def _captured_stream_fields(raw: bytes, name: str) -> Dict[str, Any]:
     }
 
 
+def _cleanup_owned_spawned_process(
+    proc: subprocess.Popen[Any],
+    containment: Mapping[str, Any],
+    readers: Sequence[threading.Thread],
+) -> Dict[str, Any]:
+    """Best-effort cleanup for every exceptional post-``Popen`` exit."""
+    process_group_terminated = False
+    process_reaped = False
+    detached_descendant_survivor = False
+    process_containment_cleanup_complete = False
+    try:
+        if os.name == "posix":
+            os.killpg(proc.pid, signal.SIGKILL)
+            process_group_terminated = True
+        else:
+            proc.kill()
+            process_group_terminated = True
+    except ProcessLookupError:
+        pass
+    except OSError:
+        try:
+            proc.kill()
+            process_group_terminated = True
+        except OSError:
+            pass
+    try:
+        proc.wait(timeout=READER_JOIN_GRACE_SEC)
+        process_reaped = proc.returncode is not None
+    except (OSError, subprocess.TimeoutExpired):
+        try:
+            proc.kill()
+            process_group_terminated = True
+            proc.wait(timeout=READER_JOIN_GRACE_SEC)
+            process_reaped = proc.returncode is not None
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    try:
+        (
+            detached_descendant_survivor,
+            process_containment_cleanup_complete,
+        ) = cleanup_detached_descendants(containment)
+    except Exception:
+        pass
+    for stream in (proc.stdout, proc.stderr):
+        if stream is None:
+            continue
+        try:
+            stream.close()
+        except (OSError, ValueError):
+            pass
+    for reader in readers:
+        if reader.ident is None:
+            continue
+        try:
+            reader.join(timeout=READER_JOIN_GRACE_SEC)
+        except RuntimeError:
+            pass
+    return {
+        "process_group_cleanup_attempted": True,
+        "process_group_terminated": process_group_terminated,
+        "process_reaped": process_reaped,
+        "detached_descendant_survivor": detached_descendant_survivor,
+        "process_containment_cleanup_complete": (
+            process_containment_cleanup_complete
+        ),
+        "reader_join_timed_out": any(
+            reader.ident is not None and reader.is_alive()
+            for reader in readers
+        ),
+        "process_containment": dict(
+            containment.get("scope") or PROCESS_CONTAINMENT_SCOPE
+        ),
+    }
+
+
+def _drain_bounded_stream(
+    stream: Any,
+    stop: threading.Event,
+) -> Dict[str, Any]:
+    """Drain one pipe completely or record a fail-closed reader error."""
+    retained = bytearray()
+    digest = hashlib.sha256()
+    observed = 0
+    exceeded = False
+    read_error: Optional[str] = None
+    try:
+        while True:
+            chunk = stream.read(64 * 1024)
+            if not chunk:
+                break
+            raw_chunk = bytes(chunk)
+            observed += len(raw_chunk)
+            digest.update(raw_chunk)
+            remaining = max(0, MAX_CAPTURE_BYTES - len(retained))
+            if remaining:
+                retained.extend(raw_chunk[:remaining])
+            if observed > MAX_CAPTURE_BYTES:
+                exceeded = True
+                stop.set()
+    except (OSError, ValueError) as exc:
+        read_error = f"{type(exc).__name__}: stream read failed"
+        stop.set()
+    finally:
+        try:
+            stream.close()
+        except Exception:
+            pass
+    return {
+        "raw": bytes(retained),
+        "observed": observed,
+        "sha256": f"sha256:{digest.hexdigest()}",
+        "exceeded": exceeded,
+        "read_error": read_error,
+    }
+
+
 def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None, timeout: int = 900) -> Dict[str, Any]:
+    proc: Optional[subprocess.Popen[Any]] = None
+    readers: List[threading.Thread] = []
     try:
         # SECURITY-REVIEW: The certifier constructs fixed argv for the
         # package-local validator and never invokes a shell. Full raw streams
@@ -965,6 +1422,12 @@ def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None, timeout: int = 900) 
             raise OSError(
                 "detached-session process containment is unavailable"
             )
+        stop = threading.Event()
+        states: Dict[str, Dict[str, Any]] = {}
+
+        def drain(name: str, stream: Any) -> None:
+            states[name] = _drain_bounded_stream(stream, stop)
+
         proc = subprocess.Popen(
             list(cmd),
             cwd=str(cwd) if cwd else None,
@@ -973,47 +1436,11 @@ def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None, timeout: int = 900) 
             stderr=subprocess.PIPE,
             start_new_session=(os.name == "posix"),
         )
-        stop = threading.Event()
-        states: Dict[str, Dict[str, Any]] = {}
-
-        def drain(name: str, stream: Any) -> None:
-            retained = bytearray()
-            digest = hashlib.sha256()
-            observed = 0
-            exceeded = False
-            try:
-                while True:
-                    chunk = stream.read(64 * 1024)
-                    if not chunk:
-                        break
-                    raw_chunk = bytes(chunk)
-                    observed += len(raw_chunk)
-                    digest.update(raw_chunk)
-                    remaining = max(0, MAX_CAPTURE_BYTES - len(retained))
-                    if remaining:
-                        retained.extend(raw_chunk[:remaining])
-                    if observed > MAX_CAPTURE_BYTES:
-                        exceeded = True
-                        stop.set()
-            except (OSError, ValueError):
-                pass
-            finally:
-                try:
-                    stream.close()
-                except Exception:
-                    pass
-                states[name] = {
-                    "raw": bytes(retained),
-                    "observed": observed,
-                    "sha256": f"sha256:{digest.hexdigest()}",
-                    "exceeded": exceeded,
-                }
-
         assert proc.stdout is not None and proc.stderr is not None
-        readers = [
+        readers.extend([
             threading.Thread(target=drain, args=("stdout", proc.stdout), daemon=True),
             threading.Thread(target=drain, args=("stderr", proc.stderr), daemon=True),
-        ]
+        ])
         for reader in readers:
             reader.start()
         deadline = time.monotonic() + timeout
@@ -1085,11 +1512,15 @@ def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None, timeout: int = 900) 
                 reader.join(timeout=max(0.0, join_deadline - time.monotonic()))
         reader_join_timed_out = any(reader.is_alive() for reader in readers)
         empty_sha = f"sha256:{hashlib.sha256(b'').hexdigest()}"
-        stdout_state = states.get("stdout", {"raw": b"", "observed": 0, "sha256": empty_sha, "exceeded": False})
-        stderr_state = states.get("stderr", {"raw": b"", "observed": 0, "sha256": empty_sha, "exceeded": False})
+        stdout_state = states.get("stdout", {"raw": b"", "observed": 0, "sha256": empty_sha, "exceeded": False, "read_error": "reader state missing"})
+        stderr_state = states.get("stderr", {"raw": b"", "observed": 0, "sha256": empty_sha, "exceeded": False, "read_error": "reader state missing"})
         stdout_raw = bytes(stdout_state["raw"])
         stderr_raw = bytes(stderr_state["raw"])
         capture_limit_exceeded = bool(stdout_state["exceeded"] or stderr_state["exceeded"])
+        stream_read_error = bool(
+            stdout_state.get("read_error")
+            or stderr_state.get("read_error")
+        )
         result = {
             "cmd": list(cmd),
             "returncode": (
@@ -1104,6 +1535,7 @@ def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None, timeout: int = 900) 
                     or detached_descendant_survivor
                     or not process_containment_cleanup_complete
                     or reader_join_timed_out
+                    or stream_read_error
                 )
                 else proc.returncode
             ),
@@ -1135,7 +1567,16 @@ def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None, timeout: int = 900) 
             "process_containment": dict(containment["scope"]),
         }
         return result
-    except Exception as exc:
+    except BaseException as exc:
+        cleanup: Mapping[str, Any] = {}
+        if proc is not None:
+            cleanup = _cleanup_owned_spawned_process(
+                proc,
+                containment,
+                readers,
+            )
+        if not isinstance(exc, Exception):
+            raise
         stderr_raw = (
             f"{type(exc).__name__}: command execution failed"
         ).encode("utf-8")
@@ -1147,13 +1588,29 @@ def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None, timeout: int = 900) 
             "capture_limit_exceeded": False,
             "timed_out": False,
             "descendant_pipe_leak": False,
-            "reader_join_timed_out": False,
+            "reader_join_timed_out": bool(
+                cleanup.get("reader_join_timed_out", False)
+            ),
             "normal_exit_group_survivor": False,
-            "detached_descendant_survivor": False,
-            "process_containment_cleanup_complete": False,
-            "process_group_cleanup_attempted": False,
-            "process_group_terminated": False,
-            "process_containment": dict(PROCESS_CONTAINMENT_SCOPE),
+            "detached_descendant_survivor": bool(
+                cleanup.get("detached_descendant_survivor", False)
+            ),
+            "process_containment_cleanup_complete": bool(
+                cleanup.get(
+                    "process_containment_cleanup_complete",
+                    False,
+                )
+            ),
+            "process_group_cleanup_attempted": bool(
+                cleanup.get("process_group_cleanup_attempted", False)
+            ),
+            "process_group_terminated": bool(
+                cleanup.get("process_group_terminated", False)
+            ),
+            "process_containment": dict(
+                cleanup.get("process_containment")
+                or PROCESS_CONTAINMENT_SCOPE
+            ),
         }
 
 
@@ -2318,7 +2775,7 @@ def deterministic_checks(
             stdout = fresh_run.get("stdout")
             if not isinstance(stdout, str):
                 raise ValueError("fresh stdout is not text")
-            fresh_parsed = json.loads(stdout)
+            fresh_parsed = strict_json_loads(stdout)
             fresh_projection = deterministic_semantic_projection(
                 name,
                 fresh_parsed,
@@ -2493,6 +2950,14 @@ def validator_contradiction(text: str) -> Optional[str]:
         return "contains an anchored negative status"
     if any(TEXT_NONZERO_FAILURE_SUMMARY_RE.match(line) for line in lines):
         return "contains an anchored nonzero failure summary"
+    if any(TEXT_CRASH_OR_NONCOMPLETION_RE.search(line) for line in lines):
+        return "contains an explicit crash or noncompletion diagnostic"
+    # Logging prefixes must not hide explicit failures behind a positive marker.
+    # Remove only exact zero/no-failure summaries before the contextual scan.
+    for line in lines:
+        without_zero_summary = TEXT_BENIGN_ZERO_NEGATIVE_RE.sub("", line)
+        if TEXT_INLINE_NEGATIVE_DIAGNOSTIC_RE.search(without_zero_summary):
+            return "contains an explicit negative diagnostic"
     return None
 
 
@@ -2500,6 +2965,11 @@ def json_line_validator_semantics(data: Any) -> Tuple[str, str]:
     """Classify one top-level JSONL event without trusting nested statuses."""
     if not isinstance(data, Mapping):
         return "neutral", "JSON line is not an object"
+    if any(
+        field in data and type(data.get(field)) is not str
+        for field in ("status", "result")
+    ):
+        return "contradiction", "JSON status has an unsupported type"
     status_values = [
         value.strip()
         for field in ("status", "result")
@@ -2508,6 +2978,34 @@ def json_line_validator_semantics(data: Any) -> Tuple[str, str]:
     ]
     if any(JSON_NEGATIVE_STATUS_RE.match(value) for value in status_values):
         return "contradiction", "explicit negative JSON status"
+    positive_statuses = [
+        value
+        for value in status_values
+        if JSON_POSITIVE_STATUS_RE.fullmatch(value)
+    ]
+    if len(positive_statuses) != len(status_values):
+        return (
+            "contradiction",
+            "mixed positive and unrecognized JSON status"
+            if positive_statuses
+            else "unrecognized JSON status",
+        )
+    if any(
+        JSON_NEGATIVE_LEVEL_RE.fullmatch(
+            str(data.get(field) or "").strip()
+        )
+        for field in ("level", "severity")
+        if field in data
+    ):
+        return "contradiction", "explicit negative JSON level"
+    if any(
+        validator_contradiction(str(data.get(field))) is not None
+        for field in ("message", "error", "reason", "detail")
+        if type(data.get(field)) is str
+    ):
+        return "contradiction", "explicit negative JSON diagnostic"
+    if common_json_negative_diagnostics(data):
+        return "contradiction", "common negative JSON diagnostic"
     if "returncode" in data and not returncode_is_integer_zero(
         data.get("returncode")
     ):
@@ -2535,8 +3033,14 @@ def validator_stream_semantics(
     if not text.strip():
         return "neutral", "stream is empty"
     try:
-        parsed = json.loads(text)
-    except json.JSONDecodeError:
+        parsed = strict_json_loads(text)
+        _validate_json_structure_bounds(parsed)
+    except (
+        ValueError,
+        RecursionError,
+        MemoryError,
+        OverflowError,
+    ):
         parsed = None
     else:
         positive, reason, _details = json_validator_status(parsed)
@@ -2547,22 +3051,30 @@ def validator_stream_semantics(
         if not line.strip():
             continue
         try:
-            line_json = json.loads(line)
-        except json.JSONDecodeError:
+            line_json = strict_json_loads(line)
+            _validate_json_structure_bounds(line_json)
+        except (
+            ValueError,
+            RecursionError,
+            MemoryError,
+            OverflowError,
+        ):
+            if line.lstrip().startswith(("{", "[")):
+                return (
+                    "contradiction",
+                    f"line {line_number} is malformed or ambiguous JSON",
+                )
             contradiction = validator_contradiction(line)
             if contradiction is not None:
                 return (
                     "contradiction",
                     f"line {line_number} {contradiction}",
                 )
-            positive, reason = text_validator_status(line)
-            if (
-                not positive
-                and validator_id == "claude_plugin_validate"
-                and CLAUDE_PLUGIN_SUCCESS_RE.fullmatch(line)
-            ):
-                positive = True
+            if validator_id == "claude_plugin_validate":
+                positive = bool(CLAUDE_PLUGIN_SUCCESS_RE.fullmatch(line))
                 reason = "exact Claude plugin validation success line"
+            else:
+                positive, reason = text_validator_status(line)
             if positive:
                 positive_reasons.append(f"line {line_number} {reason}")
             continue
@@ -2572,7 +3084,10 @@ def validator_stream_semantics(
                 "contradiction",
                 f"line {line_number} {line_reason}",
             )
-        if line_kind == "positive":
+        if (
+            line_kind == "positive"
+            and validator_id != "claude_plugin_validate"
+        ):
             positive_reasons.append(f"line {line_number} {line_reason}")
     if positive_reasons:
         return "positive", "; ".join(positive_reasons)
@@ -2585,6 +3100,29 @@ def official_validator_status(
     *,
     validator_id: str,
 ) -> Tuple[bool, str]:
+    claude_stdout_format_valid = True
+    if validator_id == "claude_plugin_validate":
+        normalized_stdout = normalize_validator_stream(stdout)
+        nonblank_lines = [
+            line
+            for line in normalized_stdout.splitlines()
+            if line.strip()
+        ]
+        marker_count = sum(
+            1
+            for line in nonblank_lines
+            if CLAUDE_PLUGIN_SUCCESS_RE.fullmatch(line)
+        )
+        prelude_count = sum(
+            1
+            for line in nonblank_lines
+            if CLAUDE_PLUGIN_PRELUDE_RE.fullmatch(line)
+        )
+        claude_stdout_format_valid = not (
+            marker_count != 1
+            or prelude_count > 1
+            or marker_count + prelude_count != len(nonblank_lines)
+        )
     stdout_kind, stdout_reason = validator_stream_semantics(
         stdout,
         validator_id=validator_id,
@@ -2597,6 +3135,12 @@ def official_validator_status(
         return False, f"stderr contradiction: {stderr_reason}"
     if stdout_kind == "contradiction":
         return False, f"stdout contradiction: {stdout_reason}"
+    if not claude_stdout_format_valid:
+        return (
+            False,
+            "Claude plugin stdout does not match the exact success marker "
+            "and optional manifest-path prelude format",
+        )
     if stdout_kind != "positive":
         return False, f"stdout is not a strict positive result: {stdout_reason}"
     return True, "stdout is positive and stderr has no contradiction"
@@ -2842,7 +3386,7 @@ def live_fixture_checks(package_root: Path, bundle: Path) -> List[Check]:
             "current package tree verifies through shared validator helper",
             package_tree.get("valid") is True
             and package_tree.get("algorithm")
-            == "ntt-stable-release-tree-v1"
+            == "ntt-stable-release-tree-v2"
             and bool(
                 re.fullmatch(
                     r"[0-9a-f]{64}",
@@ -2894,7 +3438,7 @@ def live_fixture_checks(package_root: Path, bundle: Path) -> List[Check]:
     checks.append(
         Check(
             "live package-tree algorithm exactly matches current shared algorithm",
-            recorded_tree_algorithm == "ntt-stable-release-tree-v1"
+            recorded_tree_algorithm == "ntt-stable-release-tree-v2"
             and recorded_tree_algorithm == package_tree.get("algorithm"),
             details={
                 "recorded": recorded_tree_algorithm,
@@ -4061,8 +4605,19 @@ def formal_artifact_checks(
         )
         if identity is not None:
             identities[identity] = role
-        actual_sha = f"sha256:{sha256_path(path)}"
-        actual_bytes = path.stat().st_size
+        role_max_bytes = FORMAL_COMPANION_MAX_BYTES.get(role)
+        try:
+            actual_digest, actual_bytes = _hash_regular_file(
+                path,
+                max_bytes=role_max_bytes,
+            )
+            actual_sha = f"sha256:{actual_digest}"
+        except (OSError, ValueError):
+            actual_sha = None
+            try:
+                actual_bytes = path.lstat().st_size
+            except OSError:
+                actual_bytes = None
         checks.append(
             Check(
                 f"formal companion exact bytes and sha256 match: {role}",
@@ -4073,6 +4628,7 @@ def formal_artifact_checks(
                     "actual_sha256": actual_sha,
                     "claimed_bytes": claimed_bytes,
                     "actual_bytes": actual_bytes,
+                    "maximum_bytes": role_max_bytes,
                 },
             )
         )
@@ -4310,7 +4866,11 @@ def formal_artifact_checks(
     gate = load_module("ntt_gate_for_promotion_v2", gate_path)
     transcript = resolved_by_role.get("transcript")
     if transcript is not None:
-        parsed_auth = runner.authenticate_trace(transcript)
+        parsed_auth = runner.authenticate_trace(
+            transcript,
+            expected_bytes=transcript_bytes,
+            expected_sha256=transcript_sha256,
+        )
         recorded_auth = data.get("trace_authentication")
         recorded_auth_schema_ok = trace_authentication_schema_valid(
             recorded_auth,
@@ -4708,14 +5268,27 @@ def promotion_evidence_checks(
         if file_identity is not None:
             file_identities[file_identity] = role
         try:
-            actual_sha = f"sha256:{sha256_path(path)}"
+            actual_digest, actual_bytes = _hash_regular_file(
+                path,
+                max_bytes=MAX_AUDIT_JSON_BYTES,
+            )
+            actual_sha = f"sha256:{actual_digest}"
         except (OSError, ValueError):
             actual_sha = None
+            try:
+                actual_bytes = path.lstat().st_size
+            except OSError:
+                actual_bytes = None
         checks.append(
             Check(
                 f"promotion evidence role exact bytes match sha256: {role}",
                 actual_sha is not None and claimed_sha == actual_sha,
-                details={"claimed": claimed_sha, "actual": actual_sha},
+                details={
+                    "claimed": claimed_sha,
+                    "actual": actual_sha,
+                    "actual_bytes": actual_bytes,
+                    "maximum_bytes": MAX_AUDIT_JSON_BYTES,
+                },
             )
         )
 

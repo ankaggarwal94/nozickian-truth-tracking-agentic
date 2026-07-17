@@ -58,7 +58,7 @@
           "isolated temporary mutation trees under /tmp",
           "official Claude Code CLI not installed"
         ],
-        "evidence_process": "Current source bytes are SHA-256 bound at claim level; each modal case is proposition-bound, case-digest-bound, and linked to a unique passing record in self_validation/current_observations.json.",
+        "evidence_process": "Fresh deterministic suite outcomes are established separately by the release commands. The package-local observation ledger supplies byte-hashed proposition- and case-bound release declarations and deduplication identities only; it is not execution provenance and no per-record suite reconciliation is claimed.",
         "graders_or_tests": [
           "rejects missing behavior manifest",
           "rejects skill dynamic shell substitution after manifest update",
@@ -245,7 +245,7 @@
           "isolated temporary mutation trees under /tmp",
           "official Claude Code CLI not installed"
         ],
-        "evidence_process": "Exact all-pass suite JSON is validated; each curated modal record binds the current source artifact, proposition, canonical case digest, deterministic suite projection, and case-specific result projection in self_validation/current_observations.json.",
+        "evidence_process": "Fresh deterministic suite outcomes are established separately by the release commands. The package-local observation ledger supplies byte-hashed proposition- and case-bound release declarations and deduplication identities only; it is not execution provenance and no per-record suite reconciliation is claimed.",
         "graders_or_tests": [
           "strict_evidence_without_root_is_invalid_input",
           "coordinated_claim_text_digest_substitution_rejected",
@@ -272,17 +272,17 @@
           "AUDIT_REPORT.md"
         ]
       },
-      "proposition_sha256": "sha256:4bff8ccb92cb75bf893456a5777bc58a7075432de4546f01befa6f9541f5e35c",
+      "proposition_sha256": "sha256:660a57afa0de4790d393de02455a86c4c08fb48d0852e596c4a172094fd22884",
       "residual_risks": [
         "The gate authenticates local bytes and declared bindings but cannot itself establish the external semantic adequacy of every source."
       ],
-      "text": "The deterministic gate fails closed on relaxed thresholds, missing or aliased evidence, proposition or modal-case substitution, malformed or resource-exhausting JSON, invalid local paths, unsafe Markdown output destinations, insufficient independent modal observations, unresolved contradictions, automatic downstream closure, and gate-Markdown parent substitution. Its Markdown parent is acquired before evaluation and held through descriptor-relative installation.",
+      "text": "The deterministic gate fails closed on relaxed thresholds, missing or aliased evidence, proposition or modal-case substitution, malformed or resource-exhausting JSON, invalid local paths, unsafe Markdown output destinations, insufficient distinct case-bound modal declaration identities, unresolved contradictions, automatic downstream closure, and gate-Markdown parent substitution. Its Markdown parent is acquired before evaluation and held through descriptor-relative installation. Ledger declarations are threshold-deduplication identities, not execution provenance.",
       "true_world_tests": [
         {
           "evidence_refs": [
             "self_validation/evidence/C-gate-hardening__TW-gate-shared-ledger.json"
           ],
-          "expected_behavior": "The gate should retain a substantive certificate with independent bound observations.",
+          "expected_behavior": "The gate should retain a substantive certificate with distinct proposition- and case-bound declaration identities while making no execution-provenance claim.",
           "id": "TW-gate-shared-ledger",
           "kind": "true_world",
           "observed_behavior": "The gate contract retained the valid shared ledger and returned PASS-TRACKED.",
@@ -589,7 +589,7 @@
           "isolated temporary mutation trees under /tmp",
           "official Claude Code CLI not installed"
         ],
-        "evidence_process": "Exact all-pass suite JSON is validated; each curated modal record binds the current source artifact, proposition, canonical case digest, deterministic suite projection, and case-specific result projection in self_validation/current_observations.json.",
+        "evidence_process": "Fresh deterministic suite outcomes are established separately by the release commands. The package-local observation ledger supplies byte-hashed proposition- and case-bound release declarations and deduplication identities only; it is not execution provenance and no per-record suite reconciliation is claimed.",
         "graders_or_tests": [
           "rejects extra active external CI action after manifest update",
           "rejects absolute-path eval fixture ID after manifest update",
@@ -1096,7 +1096,7 @@
           "isolated temporary mutation trees under /tmp",
           "official Claude Code CLI not installed"
         ],
-        "evidence_process": "Exact all-pass suite JSON is validated; each curated modal record binds the current source artifact, proposition, canonical case digest, deterministic suite projection, and case-specific result projection in self_validation/current_observations.json.",
+        "evidence_process": "Fresh deterministic suite outcomes are established separately by the release commands. The package-local observation ledger supplies byte-hashed proposition- and case-bound release declarations and deduplication identities only; it is not execution provenance and no per-record suite reconciliation is claimed.",
         "graders_or_tests": [
           "malformed_jsonl_record_rejects_entire_trace",
           "over_100k_node_result_before_call_is_bounded_and_rejected",
@@ -1145,7 +1145,7 @@
       },
       "proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
       "residual_risks": [
-        "The 171-case suite uses synthetic stream-json and process fixtures; live Claude Code formal execution remains UNVERIFIED_RUNTIME.",
+        "The 199-case suite uses synthetic stream-json and process fixtures; live Claude Code formal execution remains UNVERIFIED_RUNTIME.",
         "Endpoint equality does not establish temporal immutability, so an otherwise PASS-TRACKED result remains capped at PASS-SCOPED.",
         "The runtime identity binds the resolved entrypoint bytes, not the transitive interpreter, shared-library, kernel, or host dependency closure."
       ],
@@ -1387,7 +1387,7 @@
           "isolated temporary mutation trees under /tmp",
           "official Claude Code CLI not installed"
         ],
-        "evidence_process": "Exact all-pass suite JSON is validated; each curated modal record binds the current source artifact, proposition, canonical case digest, deterministic suite projection, and case-specific result projection in self_validation/current_observations.json.",
+        "evidence_process": "Fresh deterministic suite outcomes are established separately by the release commands. The package-local observation ledger supplies byte-hashed proposition- and case-bound release declarations and deduplication identities only; it is not execution provenance and no per-record suite reconciliation is claimed.",
         "graders_or_tests": [
           "fake_own_claim_id",
           "formal_transcript_without_authentic_native_events",
@@ -1495,7 +1495,7 @@
           "isolated temporary mutation trees under /tmp",
           "official Claude Code CLI not installed"
         ],
-        "evidence_process": "Current source bytes are SHA-256 bound at claim level; each modal case is proposition-bound, case-digest-bound, and linked to a unique passing record in self_validation/current_observations.json.",
+        "evidence_process": "Fresh deterministic suite outcomes are established separately by the release commands. The package-local observation ledger supplies byte-hashed proposition- and case-bound release declarations and deduplication identities only; it is not execution provenance and no per-record suite reconciliation is claimed.",
         "graders_or_tests": [
           "rejects degraded GitHub README documentation",
           "retains pass after benign GitHub docs note"
@@ -1591,7 +1591,7 @@
           "isolated temporary mutation trees under /tmp",
           "official Claude Code CLI not installed"
         ],
-        "evidence_process": "Current source bytes are SHA-256 bound at claim level; each modal case is proposition-bound, case-digest-bound, and linked to a unique passing record in self_validation/current_observations.json.",
+        "evidence_process": "Fresh deterministic suite outcomes are established separately by the release commands. The package-local observation ledger supplies byte-hashed proposition- and case-bound release declarations and deduplication identities only; it is not execution provenance and no per-record suite reconciliation is claimed.",
         "graders_or_tests": [
           "consistency-sweep activation text deletion",
           "remote escalation companion-field text deletion",
@@ -1706,7 +1706,7 @@
         "old_wording": "Some active material used UNVERIFIED as a claim status."
       }
     ],
-    "correction_evidence_checked": "Searched every current certificate and evidence field for superseded counts and immutable/process-group-only wording; cross-bound exact current source hashes with deterministic suite and case-result projection digests; then strict-gate validated the staged certificate, ledger, and complete wrapper inventory.",
+    "correction_evidence_checked": "Searched every current certificate and evidence field for superseded counts and immutable/process-group-only wording, then strict-gate validated the staged certificate, closed-schema release-declaration ledger, and complete wrapper inventory. Fresh suite outcomes were established separately; the ledger was not treated as execution provenance or reconciled per record to suite output.",
     "echo_findings": [],
     "none_found": true,
     "not_applicable_reason": "",
@@ -1765,11 +1765,11 @@
       "temporary isolated mutation copies under /tmp",
       "official Claude Code validators unavailable"
     ],
-    "evidence_process": "All active claims use current byte-hashed artifacts and exact proposition/case-bound observation records carrying deterministic suite and case-result projection digests.",
+    "evidence_process": "Fresh suite outcomes come from separate release commands. The package-local observation ledger supplies byte-hashed proposition- and case-bound release declarations and deduplication identities only; it is not execution provenance and is not reconciled per record to suite output.",
     "graders_or_tests": [
-      "validate_package.py --self-test (1717 checks; 82 false worlds; 13 true worlds)",
-      "run_gate_contract_tests.py (123 cases)",
-      "run_formal_runner_contract_tests.py (171 cases)",
+      "validate_package.py --self-test (1878 checks; 82 false worlds; 13 true worlds)",
+      "run_gate_contract_tests.py (141 cases)",
+      "run_formal_runner_contract_tests.py (199 cases)",
       "run_regression_evals.py (166 checks)",
       "run_promotion_certifier_contract_tests.py (43 cases; 252 baseline checks)"
     ],
@@ -1877,14 +1877,14 @@
   },
   "release_validation": {
     "formal_runner_contract": {
-      "passed": 171,
+      "passed": 199,
       "status": "PASS",
-      "total": 171
+      "total": 199
     },
     "gate_contract": {
-      "passed": 123,
+      "passed": 141,
       "status": "PASS",
-      "total": 123
+      "total": 141
     },
     "official_validators": {
       "claude_plugin_validate": {
@@ -1897,13 +1897,13 @@
       }
     },
     "package_basic": {
-      "checks_passed": 1577,
-      "checks_total": 1577,
+      "checks_passed": 1733,
+      "checks_total": 1733,
       "status": "PASS"
     },
     "package_self_test": {
-      "checks_passed": 1717,
-      "checks_total": 1717,
+      "checks_passed": 1878,
+      "checks_total": 1878,
       "false_worlds_passed": 82,
       "false_worlds_total": 82,
       "status": "PASS",
@@ -1941,7 +1941,7 @@
     "Official claude plugin validate and skills-ref validate were not executed because the tools were unavailable.",
     "Synthetic formal and promotion contracts do not cryptographically authenticate an official Claude binary.",
     "The charter consistency-sweep and remote-escalation rules remain parent/auditor-enforced rather than gate-enforced.",
-    "STABLE_RELEASE_MANIFEST.json excludes itself to avoid a self-referential hash cycle.",
+    "STABLE_RELEASE_MANIFEST.json is excluded from its file inventory to avoid a self-referential hash cycle; its canonical content self-hash and required non-executable mode are verified separately.",
     "This certificate does not defend against a maintainer who can coherently rewrite validators, manifests, evidence, and certificate together."
   ]
 }

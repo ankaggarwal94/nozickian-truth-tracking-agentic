@@ -105,7 +105,7 @@ python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . \
   --json pass_tracked_audit_bundle/live_fixtures/live_runtime_eval_result.json
 ```
 
-Required result: status is `PASS-SCOPED`; provenance schema is `1.0`; provenance status is `observed-current-run`; `source_release` exactly equals the current plugin version; `carried_forward` is false; `observed_at_utc` is a valid UTC timestamp; top-level `package_tree_algorithm` is exactly `ntt-stable-release-tree-v1`; top-level `package_tree_sha256` is the current shared-validator digest; top-level `fixture_spec_sha256` hashes the exact current `evals.json` bytes; `run_config.max_turns` is a positive integer and the remaining fixed invocation settings are recorded; aggregate preflight is successful; the pre/post executable fingerprints are 64 lowercase hex, equal, and accompanied by `fingerprint_stable=true`; recorded version output matches the fixed version pattern; both version and plugin-validation commands return zero; and the observational authentication limitation remains explicit.
+Required result: status is `PASS-SCOPED`; provenance schema is `1.0`; provenance status is `observed-current-run`; `source_release` exactly equals the current plugin version; `carried_forward` is false; `observed_at_utc` is a valid UTC timestamp; top-level `package_tree_algorithm` is exactly `ntt-stable-release-tree-v2`; top-level `package_tree_sha256` is the current shared-validator digest; top-level `fixture_spec_sha256` hashes the exact current `evals.json` bytes; `run_config.max_turns` is a positive integer and the remaining fixed invocation settings are recorded; aggregate preflight is successful; the pre/post executable fingerprints are 64 lowercase hex, equal, and accompanied by `fingerprint_stable=true`; recorded version output matches the fixed version pattern; both version and plugin-validation commands return zero; and the observational authentication limitation remains explicit.
 
 The two preflight transcript commands must contain exactly these normalized argv arrays, in this order, with no extra or missing argument:
 
@@ -168,29 +168,31 @@ Legacy flat promotion `evidence_refs` fail. Missing/wrong-type top-level schema 
 
 ### Deterministic package-tree hash
 
-The package-local `validate_package.compute_stable_release_tree` helper is the single source for `package_tree_sha256` algorithm identifier `ntt-stable-release-tree-v1`; both the live harness and certifier invoke it:
+The package-local `validate_package.compute_stable_release_tree` helper is the single source for `package_tree_sha256` algorithm identifier `ntt-stable-release-tree-v2`; both the live harness and certifier invoke it:
 
-1. Read `STABLE_RELEASE_MANIFEST.json` only as a regular non-symlink file.
-2. Recompute its self-hash from canonical JSON (`sort_keys=true`, separators `,` and `:`, UTF-8 with `ensure_ascii=false`) after setting `self_hash_sha256` to null, and require exact lowercase-hex equality.
-3. Independently execute the helper's current `iter_release_inventory_files(package_root)` policy and derive `VOLATILE_RELEASE_EXCLUSION_FILES` plus `VOLATILE_RELEASE_EXCLUSION_PREFIXES` from the current validator; require the manifest's `volatile_generated_exclusions.files` and `.prefixes` arrays to equal the sorted current policy exactly.
-4. Require the manifest `file_inventory` path set to equal the independently derived path set exactly. Manifest-authored exclusions never decide which stable files exist, so adding a behavior file to the manifest exclusion arrays and removing its inventory row still fails.
-5. Walk without following links to reject unsafe entries. For every independently derived path, require a regular non-symlink file and exact lowercase SHA-256 and byte-count equality with its manifest row.
-6. Build this canonical payload:
+1. Read `STABLE_RELEASE_MANIFEST.json` only as a regular non-symlink file, reject duplicate object keys and non-finite numbers, and require the installed file's Git-compatible mode to be exactly `100644`.
+2. Recompute its self-hash from canonical JSON (`sort_keys=true`, separators `,` and `:`, UTF-8 with `ensure_ascii=false`) after setting `self_hash_sha256` to null, require exact lowercase-hex equality, and require the manifest's `self_mode` field to be exactly `100644` and to match the installed file.
+3. Require `package` to equal the validator's canonical package name, and require `plugin_version` plus `release_lock_version` to equal the exact string versions parsed from the current regular, strict-JSON plugin manifest and release lock.
+4. Independently execute the helper's current `iter_release_inventory_files(package_root)` policy and derive `VOLATILE_RELEASE_EXCLUSION_FILES` plus `VOLATILE_RELEASE_EXCLUSION_PREFIXES` from the current validator; require the manifest's `volatile_generated_exclusions.files` and `.prefixes` arrays to equal the sorted current policy exactly.
+5. Require the manifest `file_inventory` path set to equal the independently derived path set exactly, and require each row's byte count, content digest, and Git-compatible `100644`/`100755` mode to match. Manifest-authored exclusions never decide which stable files exist, so adding a behavior file to the manifest exclusion arrays and removing its inventory row still fails.
+6. Walk without following links to reject unsafe entries. For every independently derived path, require a regular non-symlink file and exact lowercase SHA-256 and byte-count equality with its manifest row.
+7. Build this canonical payload:
 
 ```json
 {
-  "algorithm": "ntt-stable-release-tree-v1",
+  "algorithm": "ntt-stable-release-tree-v2",
   "manifest_identity": {
     "schema_version": "...",
     "package": "...",
     "plugin_version": "...",
     "release_lock_version": "...",
     "self_file": "STABLE_RELEASE_MANIFEST.json",
+    "self_mode": "100644",
     "self_hash_sha256": "...",
     "file_count_excluding_self": 0
   },
   "actual_inventory": [
-    {"path": "...", "sha256": "...", "bytes": 0}
+    {"path": "...", "sha256": "...", "bytes": 0, "mode": "100644"}
   ]
 }
 ```

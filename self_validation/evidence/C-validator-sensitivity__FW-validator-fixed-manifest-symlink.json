@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-validator-sensitivity",
   "claim_proposition_sha256": "sha256:dc2dfd6a76bb8c4bf7cf9bfaaca1a161188aff38741fec6771cc1afccb021f4f",
-  "command_or_source": "validate_package.py --self-test",
+  "command_or_source": "Declared case context (not authenticated execution): validate_package.py --self-test",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:c00b36d0aa0fd5b3fe9479298279b516eba16605328858da022d32b7b4e2c4c7",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:baa294572b1ae3e825829b6664b6fc567320be50d6b8ffa7a7b8d40dab36ca16",
   "observation_id": "obs:C-validator-sensitivity:FW-validator-fixed-manifest-symlink",
-  "observed_result": "The validator self-test rejected final symlinks for both fixed manifests and preserved their sentinels.",
-  "support_summary": "This wrapper binds FW-validator-fixed-manifest-symlink to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The validator self-test rejected final symlinks for both fixed manifests and preserved their sentinels.",
+  "support_summary": "This wrapper binds FW-validator-fixed-manifest-symlink to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-validator-fixed-manifest-symlink",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

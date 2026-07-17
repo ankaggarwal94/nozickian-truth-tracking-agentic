@@ -4,7 +4,7 @@
   "claim_proposition_sha256": "sha256:e39cd26592f8c552b3f3720ff85adf034ee97f2b2843fa7fe6c833e46c7baa51",
   "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:6708677df73d17c2cec2b6568467c392a87cd9265af0ccda4b7d520b348cbacd",
+  "hash_or_version": "sha256:2535c631e4a37423b698194f51fb092c575d83e648b9e714f84149ee86b35ae6",
   "observed_result": "Current source bytes support the scoped proposition for C-structure.",
   "support_summary": "This wrapper binds C-structure to current package artifact PACKAGE_SURFACE.json by exact SHA-256 and to the canonical claim proposition digest.",
   "timestamp_utc": "2026-07-16T05:15:11Z"

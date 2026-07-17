@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-charter-caps",
   "claim_proposition_sha256": "sha256:59845efcc628f15149c6bea69aff553ed1aa99d835f450b9e7e529740c877536",
-  "command_or_source": "focused charter integrity probe",
+  "command_or_source": "Declared case context (not authenticated execution): focused charter integrity probe",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:cabb837e522b1bc4c479834fa62f13ac3536ee92c903703c48ce01ff2b041d74",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:847ddb247d1955c4a464ac6f01c4ba174ace05fbbbee4af8ee17075bf88516cc",
   "observation_id": "obs:C-charter-caps:FW-charter-remote-fields-removed",
-  "observed_result": "The charter integrity probe rejected the package after remote re-adjudication fields were removed.",
-  "support_summary": "This wrapper binds FW-charter-remote-fields-removed to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The charter integrity probe rejected the package after remote re-adjudication fields were removed.",
+  "support_summary": "This wrapper binds FW-charter-remote-fields-removed to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-charter-remote-fields-removed",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

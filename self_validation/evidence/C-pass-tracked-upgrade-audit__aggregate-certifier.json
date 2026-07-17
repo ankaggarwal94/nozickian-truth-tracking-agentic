@@ -4,7 +4,7 @@
   "claim_proposition_sha256": "sha256:af6dd806f1832342970a4c3a945bfd9964b1b8072def1be83cdef7feac81ef8b",
   "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:c09928e8dffb03111922a705c2c743b8f1455468d3f6c5bc14c2d78bb7f72501",
+  "hash_or_version": "sha256:2c40dcc3874ba0a3b7074242820120de000eacc9a38c8a5d268561120e09620c",
   "observed_result": "Current source bytes support the scoped proposition for C-pass-tracked-upgrade-audit.",
   "support_summary": "This wrapper binds C-pass-tracked-upgrade-audit to current package artifact skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py by exact SHA-256 and to the canonical claim proposition digest.",
   "timestamp_utc": "2026-07-16T05:15:11Z"

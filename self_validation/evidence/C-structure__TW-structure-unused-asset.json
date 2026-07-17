@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-structure",
   "claim_proposition_sha256": "sha256:e39cd26592f8c552b3f3720ff85adf034ee97f2b2843fa7fe6c833e46c7baa51",
-  "command_or_source": "validate_package.py --self-test",
+  "command_or_source": "Declared case context (not authenticated execution): validate_package.py --self-test",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:17bd67c8042a3453a5b5442e082fa46fa4ce0776ff452611dacb927b1a170b36",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:234d43dcedb380e8a6217395d2f2cb60216485c274cd22eb1f725238ad09e4f9",
   "observation_id": "obs:C-structure:TW-structure-unused-asset",
-  "observed_result": "The validator true-world lane retained the package after an unused inert asset was added.",
-  "support_summary": "This wrapper binds TW-structure-unused-asset to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The validator true-world lane retained the package after an unused inert asset was added.",
+  "support_summary": "This wrapper binds TW-structure-unused-asset to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "TW-structure-unused-asset",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

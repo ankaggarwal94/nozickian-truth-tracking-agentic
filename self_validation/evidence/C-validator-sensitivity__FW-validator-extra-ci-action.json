@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-validator-sensitivity",
   "claim_proposition_sha256": "sha256:dc2dfd6a76bb8c4bf7cf9bfaaca1a161188aff38741fec6771cc1afccb021f4f",
-  "command_or_source": "validate_package.py --self-test",
+  "command_or_source": "Declared case context (not authenticated execution): validate_package.py --self-test",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:364014d110926d015967dadd398caa17d58fc7a6b9d01cdc0809d81d34ddde34",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:3ce5f19d08b8fbd4c5d099e9c22e1287f26f16650799a3941a28f05010347a3a",
   "observation_id": "obs:C-validator-sensitivity:FW-validator-extra-ci-action",
-  "observed_result": "The validator mutation lane rejected the extra active external CI action after manifest refresh.",
-  "support_summary": "This wrapper binds FW-validator-extra-ci-action to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The validator mutation lane rejected the extra active external CI action after manifest refresh.",
+  "support_summary": "This wrapper binds FW-validator-extra-ci-action to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-validator-extra-ci-action",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

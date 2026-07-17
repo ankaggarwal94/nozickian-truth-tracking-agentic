@@ -133,7 +133,7 @@ This report records the full evidence-gated release audit for the team/internal 
 | Field | Meaning | Status |
 |---|---|---|
 | self_hash_sha256 | Canonical manifest self-hash with field nulled | Checked by validator |
-| file_inventory | Stable package files except manifest/volatile ledgers | Checked by validator |
+| file_inventory | Stable package files except manifest/volatile ledgers, with path, bytes, content digest, and Git-compatible executable mode | Checked by validator |
 | volatile_exclusions | Generated validation stdout/results excluded from stable inventory | Declared and checked |
 
 ## Release-workflow idempotence
@@ -149,6 +149,9 @@ This report records the full evidence-gated release audit for the team/internal 
 | Risk | Why retained | Mitigation |
 |---|---|---|
 | Live Claude Code runtime unavailable | No authenticated stream-json trace was captured here | Keep PASS-SCOPED |
+| Issue #6 declarative fetch specification remains open | `exact_fetch_spec` still relies on textual non-execution/SSRF guidance rather than a mechanically typed schema | Keep remote fetches parent-reconstructed and untrusted; implement the issue before claiming mechanical enforcement |
+| Issue #7 semantic charter-presence enforcement remains open | Hash sealing does not prove that regenerated manifests retain the required charter semantics | Keep charter review parent/auditor-enforced and add semantic mutation tests before closing the gap |
+| Release ZIP is not produced or verified by CI | The hosted workflow validates an unpacked Git tar archive only | Do not claim ZIP-level validation; separately validate entries and publish a digest if a ZIP is released |
 | Hostile maintainer can rewrite validators | Team/internal threat model only | Independent reviewer should re-run checks |
 | Semantic adequacy of future evidence | Deterministic gate cannot prove every future source judgment | Human evidence review remains required |
 
@@ -222,17 +225,17 @@ This dated addendum is the current-release audit record for **v1.0.3**. Everythi
 | Slice G: one-to-one live binding | Every live fixture records the exact canonical normalized-display prompt SHA-256 and exact written transcript JSON byte SHA-256. Promotion requires distinct canonical transcript paths, regular non-symlink files, exact transcript bytes, and transcript-command prompt text/hash binding to the exact current fixture ID plus expected artifact before independent stdout replay |
 | Slice G: independent inventory policy | `package_tree_sha256` loads the current regular `validate_package.py`, executes `iter_release_inventory_files`, and requires manifest inventory paths plus volatile file/prefix exclusions to equal the current executable policy exactly. Manifest-authored exclusions cannot remove a behavior or stable file |
 | Slice G: unconditional fresh validation | Every promotion attempt reruns the current basic package validator and treats failure as critical. `--run-fresh-package-validator` remains accepted only for compatibility and cannot disable or newly enable the check |
-| Slice H: live bytes bind current package | `validate_package.compute_stable_release_tree` is the single `ntt-stable-release-tree-v1` implementation used by live capture and certification. Live results also hash exact `evals.json` and artifact bytes; certification recomputes each binding, so refreshed manifests cannot rescue stale live evidence after a package, fixture-spec, artifact, or non-artifact behavior-source change |
+| Slice H: live bytes bind current package | `validate_package.compute_stable_release_tree` is the single `ntt-stable-release-tree-v2` implementation used by live capture and certification. Its canonical inventory binds path, byte count, content digest, and Git-compatible executable mode. Live results also hash exact `evals.json` and artifact bytes; certification recomputes each binding, so refreshed manifests cannot rescue stale live evidence after a package, fixture-spec, artifact, or non-artifact behavior-source change |
 | Slice H: exact normalized argv | Live results record `run_config.max_turns`; certification requires exactly two ordered preflight argv arrays and each exact ordered fixture argv array with plugin directory, print mode, JSON output, recorded max turns, and canonical prompt. Prompt-only, missing, extra, reordered, wrong-format, wrong-turn, and wrong-preflight argv fail independently of prompt/report replay |
 | Slice I: exact return-code type | Every certifier success check now requires exact integer zero (`type(value) is int and value == 0`), including official JSON validators, the unconditional fresh validator, live preflight commands and aggregate summary, fixture summaries, and transcript/result agreement. Focused false worlds reject `false`, `true`, `0.0`, `"0"`, and `null`; integer `0` remains valid |
 | Slice I: contradictory text counts | Official text validation rejects anchored nonzero numeric `error`/`errors`/`failure`/`failures`/`failed` summaries before positive markers, case-insensitively and with punctuation. Focused controls reject pass-plus-nonzero contradictions, retain pass-plus-zero summaries, and preserve the `invalid`/`valid` boundary |
 | Slice J: index-derived tracked cruft | Verified worktree validation classifies cruft from every typed Git index entry with `_is_cruft_relpath`, independently of the physical walker that intentionally does not descend into `__pycache__`. The exact historical `skills/nozickian-verify/scripts/__pycache__/ntt_gate.cpython-312.pyc` checkout false world is force-added and must produce one ordinary critical failure at the named cruft check, whose details enumerate every tracked cruft index path; ignored untracked checkout bytecode remains a retained true world |
-| Ultra-review: evidence substitution resistance | Every claim wrapper binds the canonical proposition digest; every modal wrapper additionally binds the complete false-/true-world case digest and one exact observation. Coordinated edits to certificate prose, case fields, wrappers, or copied ledgers therefore fail unless the current observation itself is recomputed and re-established |
+| Ultra-review: evidence substitution resistance | Every claim wrapper binds the canonical proposition digest; every modal wrapper additionally binds the complete false-/true-world case digest and one exact case-bound release-declaration identity. Coordinated edits to certificate prose, case fields, wrappers, or copied ledgers therefore fail unless the declaration bindings are recomputed together. These identities are threshold-deduplication records, not execution provenance |
 | Ultra-review: bounded gate and trace inputs | Strict evidence reads, JSON depth/node/string counts, trace records, node positions, public excerpts, subprocess output, and join time are all bounded. Trace order is total rather than line-local. Before execution, capture requires supported Linux child-subreaper setup plus original-process-group tracking; after normal leader exit, timeout, or overflow it kills and reaps adopted same-group and detached-session descendants to a bounded quiet state. Unavailable containment refuses execution, and any survivor or incomplete cleanup fails closed |
 | Ultra-review: endpoint-checked execution identity | Formal and live runs preserve independent permission-hardened package/target copies and bind pre/post source, copy, and no-follow endpoint identity plus the exact resolved executable entrypoint identity. They explicitly record `temporal_immutability_enforced=false`: same-UID A→B→A mutation between observations is not mechanically excluded. This also does not attest the transitive interpreter, shared-library, kernel, or host closure |
 | Ultra-review: held output capabilities | Gate Markdown, certifier JSON/Markdown, formal output/compatibility JSON, live transcript/optional JSON, validator Markdown, gate/formal/regression/promotion wrapper JSON, and fixed-manifest parents are acquired component-by-component before long-running work and retained through descriptor-relative installation. Formal canonical classification and cross-output alias decisions are frozen against held identities. Ancestor replacement cannot redirect writes; validator Markdown must remain external. Observed drift fails closed, but these checks are not temporal isolation |
 | Ultra-review: literal release replay | Release idempotence now snapshots the complete no-follow package entry graph, including modes, empty directories, hardlinks, and timestamps, around the actual outer self-test and two literal deterministic CLI passes. Validator Markdown uses a held external parent and rechecks identity plus package ancestry around installation |
-| Ultra-review: current evidence inventory | The active certificate contains seven proposition-bound claims and one current observation ledger. Stale v1.0.1/v1.0.2 probe ledgers, redundant text mirrors, and orphaned wrapper inventories were removed; official validators remain explicitly `NOT_EXECUTED` in this environment |
+| Ultra-review: current evidence inventory | The active certificate contains seven proposition-bound claims and one closed-schema current release-declaration ledger. Its records are case-bound deduplication identities, not execution provenance, and no per-record suite reconciliation is claimed. Stale v1.0.1/v1.0.2 probe ledgers, redundant text mirrors, and orphaned wrapper inventories were removed; official validators remain explicitly `NOT_EXECUTED` in this environment |
 
 ### Consistency sweep for this release (dogfood record)
 
@@ -242,11 +245,11 @@ The final sweep covers proposition and modal-case binding, observation identity,
 
 | Command | Result |
 |---|---|
-| checked-in `validate_package.py . --self-test` | PASS - 1717/1717 checks, 0 critical or noncritical failures, 82/82 false-world mutations rejected through ordinary completed failures, 13/13 true-world variants retained, and two literal release passes with zero changed files; raw stdout parses directly as one JSON document |
-| checked-in basic `validate_package.py .` | PASS - 1577/1577 checks, 0 critical or noncritical failures; raw stdout parses directly as one JSON document |
+| checked-in `validate_package.py . --self-test` | PASS - 1878/1878 checks, 0 critical or noncritical failures, 82/82 false-world mutations rejected through ordinary completed failures, 13/13 true-world variants retained, and two literal release passes with zero changed files; raw stdout parses directly as one JSON document |
+| checked-in basic `validate_package.py .` | PASS - 1733/1733 checks, 0 critical or noncritical failures; raw stdout parses directly as one JSON document |
 | checked-in `ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence` | PASS-SCOPED - 0 critical, 0 major, 7 claims, 3 derived/downstream non-closure records, strict local evidence verified |
-| `run_gate_contract_tests.py` | 123/123 contract cases PASS |
-| `run_formal_runner_contract_tests.py` | 171/171 contract cases PASS |
+| `run_gate_contract_tests.py` | 141/141 contract cases PASS |
+| `run_formal_runner_contract_tests.py` | 199/199 contract cases PASS |
 | `run_regression_evals.py .` | 166/166 checks PASS |
 | optional official validators | `claude plugin validate . --strict` and `skills-ref validate skills/nozickian-verify` were not installed and were not executed; no official-validator pass is claimed |
 | mode-aware package-surface checks | PASS - clean Git-free export and ignored untracked bytecode retained; all tracked cruft paths are derived from typed index entries independently of physical traversal; exported/direct force-tracked/exact historical nested bytecode and untracked non-bytecode cruft, Git-evidence failure, tracked/Git-free/untracked symlinks, untracked/Git-free FIFOs, nonzero stages, and index-only gitlink mode 160000 rejected before later reads; the exact nested probe failed only the named critical cruft check and its details contained every tracked cruft index path |
@@ -259,7 +262,7 @@ The final sweep covers proposition and modal-case binding, observation identity,
 | producer display normalization | PASS - validator, gate, regression, and live-harness serialized displays normalize exact roots/rooted children and preserve adjacent prefix lookalikes |
 | exact live executable controls | PASS (offline controls) - relative-PATH candidates under distinct producer/fixture working directories executed only the fingerprinted absolute target for all five version/plugin/fixture calls; pre/post fingerprint remained stable; no resolved executable path was bundled |
 | promotion aggregate contracts | PASS - 43/43 synthetic cases invoked the production certifier CLI for the complete baseline and all negatives; the complete modeled baseline passed 252/252 checks. Both coordinator result/argv identity substitutions returned the exact `INVALID_INPUT` oracle. The suite retained the fixed role DAG, evaluated a real promotion claim, recorded both ordered Issue #5 obligations, and returned the mandatory `PASS-SCOPED` / `CAPPED` non-authorizing result. JSON and stdout were byte-identical; a raw result digest is intentionally not presented as stable-tree evidence because valid runs retain elapsed-time telemetry. This remains synthetic contract evidence, not runtime authentication |
-| shared package-tree implementation | PASS - live capture and certification both invoke `validate_package.compute_stable_release_tree`; no second `ntt-stable-release-tree-v1` algorithm body remains |
+| shared package-tree implementation | PASS - live capture and certification both invoke `validate_package.compute_stable_release_tree`; no second `ntt-stable-release-tree-v2` algorithm body remains |
 | promotion package/formal false worlds | PASS - missing/wrong-type promotion schema, wrong-tree deterministic capture, wrong strict-validator argv, realistic ANSI success plus complete-stream contradictions, decoy/swapped formal companions, an untyped existing DAG node, malformed/empty claim arrays, duplicate/invalid IDs, failed canonical claims, unsafe output targets/ancestors, a transcript with an early disallowed event before a large valid-looking tail, missing formal trace-authentication metadata, noncanonical paths, graph bounds, and target/package identity defects failed their exact named checks without unrelated failures |
 | independent inventory derivation | PASS - 152 stable manifest paths exactly matched the current validator policy; volatile file/prefix arrays exactly matched current constants; every derived path was regular/non-symlink with matching hash and byte count |
 | unconditional fresh package validation | PASS - omission of the compatibility flag still ran the current basic validator; the fixed stale-package false world returned FAIL with one critical failure |
@@ -344,7 +347,7 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - RESOLUTION: Canonicalize claim text, hash the canonical UTF-8 bytes, and require certificate proposition_sha256 plus every wrapper claim_proposition_sha256 to match.
 - RECURRENCE: Recompute all proposition bindings after any claim wording change, including editorial-looking changes.
 - APPLIES TO: Strict gates, promotion claims, self-certificates, and evidence migrations.
-- LAST VERIFIED: 2026-07-15; gate contracts 123/123 and strict gate PASS-SCOPED.
+- LAST VERIFIED: 2026-07-16; gate contracts 141/141 and strict gate PASS-SCOPED.
 - SOURCE: skills/nozickian-verify/references/EVIDENCE_SCHEMA.md; scripts/ntt_gate.py; run_gate_contract_tests.py.
 - COUNTEREXAMPLE: Coordinated certificate-text substitution with unchanged evidence bytes.
 - RETENTION TEST: Proposition-substitution false worlds.
@@ -352,17 +355,17 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - OWNER / FOLLOW-UP: Evidence producer and gate maintainer; version canonicalization deliberately.
 - PROMOTION RATIONALE: Closes a demonstrated general substitution class.
 
-### L-PR3-005 — Bind modal evidence to the exact nearby world and observation
+### L-PR3-005 — Bind modal evidence to the exact nearby world and release declaration
 
 - DATE: 2026-07-15
 - DURABILITY: PERMANENT
-- ISSUE: A wrapper could name one test while supporting another perturbation, outcome, or observation, and multiple wrappers over one aggregate artifact could masquerade as independent trials.
-- RESOLUTION: Bind the canonical proposition, kind, test ID, target claims, variation, expected and observed behavior, outcome, and result in modal_case_sha256. Require an exact observation_id match in the versioned current ledger; otherwise count independence by underlying artifact bytes.
-- RECURRENCE: Regenerate the digest and observation record after any case edit; never count filenames as independent observations.
+- ISSUE: A wrapper could name one test while supporting another perturbation, outcome, or release declaration, and multiple wrappers over one aggregate artifact could masquerade as distinct threshold identities.
+- RESOLUTION: Bind the canonical proposition, kind, test ID, target claims, variation, expected and observed behavior, declared result text, outcome, and result in modal_case_sha256. Require an exact observation_id match in the versioned current ledger; otherwise deduplicate by underlying artifact bytes. The ledger does not authenticate execution or reconcile a suite result per record.
+- RECURRENCE: Regenerate the digest and declaration record after any case edit; never count filenames as independent executions.
 - APPLIES TO: False-world sensitivity, true-world adherence, and modal thresholds.
 - LAST VERIFIED: 2026-07-15; 82/82 false worlds rejected through ordinary completed failures and 13/13 nearby true worlds retained.
 - SOURCE: self_validation/current_observations.json; modal wrappers; gate contracts.
-- COUNTEREXAMPLE: Reuse one passing aggregate record for multiple different modal cases.
+- COUNTEREXAMPLE: Reuse one declaration record for multiple different modal cases.
 - RETENTION TEST: Modal-substitution and shared-ledger true-world cases.
 - RESIDUAL: Passing chosen worlds does not prove neighborhood completeness.
 - OWNER / FOLLOW-UP: Evidence producer and reviewer; justify neighborhood selection.
@@ -408,7 +411,7 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - RESOLUTION: Parse only recognized event positions; treat tool nodes as hard boundaries; require assistant-origin tool use, a matching later user-origin substantive result, exact unique IDs and native selectors, no unexpected lanes, total line/node ordering, bounded per-record structure, and complete-transcript authentication.
 - RECURRENCE: Add a false-world trace for every newly accepted event shape or parser relaxation.
 - APPLIES TO: Formal runner, live trace authentication, and PASS-TRACKED evidence.
-- LAST VERIFIED: 2026-07-15; formal contracts 171/171.
+- LAST VERIFIED: 2026-07-16; formal contracts 199/199.
 - SOURCE: docs/runtime-trace-auth/README.md; run_formal_artifact_verification.py; run_formal_runner_contract_tests.py.
 - COUNTEREXAMPLE: An early disallowed event is hidden before a large valid-looking tail.
 - RETENTION TEST: Malformed JSONL, descendant ordering, masquerade, mismatched-ID, and tail cases.
@@ -472,7 +475,7 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - RESOLUTION: Bind a complete no-follow non-cruft entry snapshot around the actual outer self-test, then execute two literal deterministic CLI passes with external outputs and require zero drift in type, mode, identity, bytes, and relevant metadata.
 - RECURRENCE: Preserve the reviewed literal command list and rerun after every release-affecting edit.
 - APPLIES TO: validate_package.py --self-test, release lock, and release certification.
-- LAST VERIFIED: 2026-07-15; full self-test 1717/1717 and two-pass replay succeeded with zero changed files.
+- LAST VERIFIED: 2026-07-16; full self-test 1878/1878 and two-pass replay succeeded with zero changed files.
 - SOURCE: validate_package.py; RELEASE_LOCK.json; PACKAGE_SURFACE.json.
 - COUNTEREXAMPLE: A simulated command passes while the actual CLI writes inside the package.
 - RETENTION TEST: Actual outer invocation binding plus two literal passes.
@@ -501,14 +504,14 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - DATE: 2026-07-15
 - DURABILITY: PROJECT
 - ISSUE: Prior-version ledgers, redundant text artifacts, and checked-in generated outputs created stale provenance, orphan evidence, and divergent copies.
-- RESOLUTION: Keep seven current claims, 94 current structured wrappers, and one current_observations.json; reference every wrapper exactly once; remove stale v1.0.1/v1.0.2 ledgers, redundant text mirrors, and obsolete output ledgers.
+- RESOLUTION: Keep seven current claims, 94 current structured wrappers, and one closed-schema current_observations.json release-declaration ledger; reference every wrapper exactly once; remove stale v1.0.1/v1.0.2 ledgers, redundant text mirrors, and obsolete output ledgers. Its proposition/case-bound records are deduplication identities, not execution provenance; fresh suite outcomes are established separately and no per-record reconciliation is claimed.
 - RECURRENCE: On regeneration, check wrapper-reference bijection, hashes, version, stale roots, and orphan/missing files.
 - APPLIES TO: This repository’s self-validation evidence.
 - LAST VERIFIED: 2026-07-16; 94/94 wrappers uniquely referenced with zero missing, orphaned, or stale hashes.
 - SOURCE: self_validation/self_certificate.json; current_observations.json; self_validation/evidence/.
 - COUNTEREXAMPLE: Two “current” ledgers disagree while both remain cited.
 - RETENTION TEST: Inventory bijection and stale-provenance scans.
-- RESIDUAL: Current observations are still scoped deterministic evidence, not official runtime evidence.
+- RESIDUAL: Current records are scoped release declarations and deduplication identities, not execution or official-runtime evidence.
 - OWNER / FOLLOW-UP: Release evidence owner; migrate atomically at the next release.
 - PROMOTION RATIONALE: Repeated project-specific provenance failures justify a one-authoritative-ledger rule.
 
@@ -600,7 +603,7 @@ This is the canonical PR-visible mirror of the local orchestration ledger. It re
 - RESOLUTION: Refresh only the integrity artifacts actually affected, rerun basic validation, strict gate, regression, gate/formal contracts, promotion aggregate, formal dry run, and full self-test; reconcile counts and status across all current records; repeat until commands and tree stop drifting; finish with JSON parsing, diff checks, orphan/stale evidence, and cache scans. Count a false-world rejection only when the intended named semantic check fails in an ordinary completed result; HARNESS_ERROR, INTERNAL_ERROR, an unrelated INVALID_INPUT, or a parser crash is not sensitivity evidence. Require true worlds to complete and pass so fail-closed does not become reject-all.
 - RECURRENCE: Required after every release-affecting edit and again after publication.
 - APPLIES TO: High-assurance release closure.
-- LAST VERIFIED: 2026-07-16; local current-tree results recorded basic 1577/1577, full 1717/1717, gate 123/123, formal 171/171, regression 166/166, promotion 43/43 with a 252/252 baseline, 82/82 false and 13/13 true worlds.
+- LAST VERIFIED: 2026-07-16; local current-tree results recorded basic 1733/1733, full 1878/1878, gate 141/141, formal 199/199, regression 166/166, promotion 43/43 with a 252/252 baseline, 82/82 false and 13/13 true worlds.
 - SOURCE: Current local machine results for the exact commands recorded in this addendum; hosted execution is pending for the current revision.
 - COUNTEREXAMPLE: A count or manifest from an earlier green tree is presented as current after a documentation edit, or a crashed mutation harness is counted as a successful false-world rejection.
 - RETENTION TEST: Two literal release passes, exact-tree comparison, causal named-check inspection for false worlds, completed PASS for true worlds, and new CI for every new head/base merge snapshot.

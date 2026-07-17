@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-formal-invocation",
   "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
-  "command_or_source": "run_formal_runner_contract_tests.py",
+  "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:0d31f45d514a18516f00dded2c7d44c03b64db7837c4968abcf67d9502482810",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:df733c1e64040307aa3e0e6cf855a3d13881c175503f8c3b16b8b93da53d5d5d",
   "observation_id": "obs:C-formal-invocation:FW-wrapper-json-unsafe-targets",
-  "observed_result": "The formal contract showed all four wrappers rejected symlink, hardlink, special, and linked-ancestor targets.",
-  "support_summary": "This wrapper binds FW-wrapper-json-unsafe-targets to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The formal contract showed all four wrappers rejected symlink, hardlink, special, and linked-ancestor targets.",
+  "support_summary": "This wrapper binds FW-wrapper-json-unsafe-targets to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-wrapper-json-unsafe-targets",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

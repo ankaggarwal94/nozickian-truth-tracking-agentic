@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-formal-invocation",
   "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
-  "command_or_source": "run_formal_runner_contract_tests.py",
+  "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:73f5d0f020c9a7b1bcab1e6e3c7be762eb9665e6146dbc54094db06d22b57858",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:9bbb852983be777bddfb99291653f859b8b6cc81ec7c8bcf900a6e9775c83345",
   "observation_id": "obs:C-formal-invocation:FW-live-json-transcript-alias",
-  "observed_result": "The formal contract rejected the JSON/transcript alias with zero runtime subprocess calls.",
-  "support_summary": "This wrapper binds FW-live-json-transcript-alias to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The formal contract rejected the JSON/transcript alias with zero runtime subprocess calls.",
+  "support_summary": "This wrapper binds FW-live-json-transcript-alias to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-live-json-transcript-alias",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

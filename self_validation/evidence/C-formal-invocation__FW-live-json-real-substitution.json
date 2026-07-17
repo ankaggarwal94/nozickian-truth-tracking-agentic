@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-formal-invocation",
   "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
-  "command_or_source": "run_formal_runner_contract_tests.py",
+  "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:3c3887b9cdc7c4beefdf93a5b0a8d41831fb30023704407d797b1d7c63196477",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:6145b5b4b54c5d1f0523e51dfff1d48db6b773e8e76819beb20895c9b35b1cc8",
   "observation_id": "obs:C-formal-invocation:FW-live-json-real-substitution",
-  "observed_result": "The formal contract preserved the replacement sentinel and rejected the substituted live JSON parent.",
-  "support_summary": "This wrapper binds FW-live-json-real-substitution to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The formal contract preserved the replacement sentinel and rejected the substituted live JSON parent.",
+  "support_summary": "This wrapper binds FW-live-json-real-substitution to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-live-json-real-substitution",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

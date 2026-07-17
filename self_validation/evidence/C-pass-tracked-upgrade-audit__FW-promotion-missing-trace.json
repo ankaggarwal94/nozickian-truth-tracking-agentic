@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-pass-tracked-upgrade-audit",
   "claim_proposition_sha256": "sha256:af6dd806f1832342970a4c3a945bfd9964b1b8072def1be83cdef7feac81ef8b",
-  "command_or_source": "run_promotion_certifier_contract_tests.py",
+  "command_or_source": "Declared case context (not authenticated execution): run_promotion_certifier_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:2e67dcd546d626c8fb416df2f1eb27f5249104277c5c16494b382fd8ecc52a71",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:d88840365ecbfd617872c867be3b8a68e9d92d12c90c38eac7b5f288abd51756",
   "observation_id": "obs:C-pass-tracked-upgrade-audit:FW-promotion-missing-trace",
-  "observed_result": "The promotion contract rejected the transcript without authentic native events.",
-  "support_summary": "This wrapper binds FW-promotion-missing-trace to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The promotion contract rejected the transcript without authentic native events.",
+  "support_summary": "This wrapper binds FW-promotion-missing-trace to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "FW-promotion-missing-trace",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

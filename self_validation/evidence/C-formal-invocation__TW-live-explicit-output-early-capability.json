@@ -2,13 +2,13 @@
   "artifact_path": "self_validation/current_observations.json",
   "claim_id": "C-formal-invocation",
   "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
-  "command_or_source": "run_formal_runner_contract_tests.py",
+  "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:9ab1409428a9221ee131690c68368d058d2aaef059e4f507da29f1820110fb31",
-  "modal_case_sha256": "sha256:33ae760e131518f09eedf4a3d833c307b537285e35ea76b471900c18369bd3d5",
+  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
+  "modal_case_sha256": "sha256:588e55381dba478165401fb14475019f1e545feb62d0a95099fdf29f66d7aaf9",
   "observation_id": "obs:C-formal-invocation:TW-live-explicit-output-early-capability",
-  "observed_result": "The formal contract retained the explicit-output true control with exact transcript bytes.",
-  "support_summary": "This wrapper binds TW-live-explicit-output-early-capability to one exact passing observation, the current claim proposition, and the canonical modal-case digest.",
+  "observed_result": "Declared release result (not authenticated execution): The formal contract retained the explicit-output true control with exact transcript bytes.",
+  "support_summary": "This wrapper binds TW-live-explicit-output-early-capability to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
   "test_id": "TW-live-explicit-output-early-capability",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

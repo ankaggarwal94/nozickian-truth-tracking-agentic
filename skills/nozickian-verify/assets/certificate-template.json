@@ -18,7 +18,7 @@
       "modal_case_sha256",
       "observation_id"
     ],
-    "observation_ledger": "observation_schema_version 1.0 with exact claim/test/kind, proposition digest, modal digest, pass result, accepted outcome, and wrapper-equal observed_result"
+    "observation_ledger": "observation_schema_version 1.1 closed release-declaration records with exact claim/test/kind, proposition digest, modal digest, pass result, accepted outcome, and wrapper-equal observed_result; deduplication identity only, not execution provenance"
   },
   "claims": [],
   "consistency_sweep": {
@@ -177,7 +177,7 @@
         "<canonical normalized prompt>"
       ],
       "fixture_spec_sha256": "LOWERCASE_SHA256_OVER_EXACT_EVALS_JSON_BYTES",
-      "package_tree_algorithm": "ntt-stable-release-tree-v1",
+      "package_tree_algorithm": "ntt-stable-release-tree-v2",
       "package_tree_sha256": "LOWERCASE_SHA256_FROM_SHARED_VALIDATOR_HELPER",
       "preflight_argv": [
         [
