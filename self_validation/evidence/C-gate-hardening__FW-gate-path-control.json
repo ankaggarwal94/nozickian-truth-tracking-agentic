@@ -1,14 +1,16 @@
 {
   "artifact_path": "self_validation/current_observations.json",
+  "claim_contract_schema_version": "1.0",
+  "claim_contract_sha256": "sha256:0fec90f15228730fe6dfeb706fbd8e807f4a5498f9a99f4ee41d8dfdd5eb1ff1",
   "claim_id": "C-gate-hardening",
-  "claim_proposition_sha256": "sha256:660a57afa0de4790d393de02455a86c4c08fb48d0852e596c4a172094fd22884",
+  "claim_proposition_sha256": "sha256:2f0dfbad2ee2fc1a997e6af1f333fdf571ca9f1e2a4e9e775bd4702360ce8a46",
   "command_or_source": "Declared case context (not authenticated execution): run_gate_contract_tests.py",
-  "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
-  "modal_case_sha256": "sha256:b196d098423fa446593699e16ad184f03aef30e9f2ea89f70ace6183b85ce7b9",
+  "evidence_schema_version": "1.1",
+  "hash_or_version": "sha256:c85ac043e984b99023e65fdba70d5e95f818a6d64886bf2e7ca55434fd8ad62a",
+  "modal_case_sha256": "sha256:6cff0a834a7afcabd838fadba6e9f8d0c87daa9af27977f84a5453c186b94f56",
   "observation_id": "obs:C-gate-hardening:FW-gate-path-control",
   "observed_result": "Declared release result (not authenticated execution): The gate contract rejected the control-character artifact path without raising an external exception.",
-  "support_summary": "This wrapper binds FW-gate-path-control to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
+  "support_summary": "This wrapper binds FW-gate-path-control to one exact case-bound release-declaration identity, the current claim proposition and full method-relative claim contract, and the canonical structured modal-case digest.",
   "test_id": "FW-gate-path-control",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

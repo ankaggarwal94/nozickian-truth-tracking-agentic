@@ -1,14 +1,16 @@
 {
   "artifact_path": "self_validation/current_observations.json",
+  "claim_contract_schema_version": "1.0",
+  "claim_contract_sha256": "sha256:f2932260deebf29cb955c7b7501a92e40006f1a437fde0bd851c36064f09a946",
   "claim_id": "C-charter-caps",
   "claim_proposition_sha256": "sha256:59845efcc628f15149c6bea69aff553ed1aa99d835f450b9e7e529740c877536",
   "command_or_source": "Declared case context (not authenticated execution): source inspection plus validate_package.py",
-  "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
-  "modal_case_sha256": "sha256:d87a8963ceba6e1b7dfae208d6598e67e2897f268c0b44c985878f9b314b97cf",
+  "evidence_schema_version": "1.1",
+  "hash_or_version": "sha256:c85ac043e984b99023e65fdba70d5e95f818a6d64886bf2e7ca55434fd8ad62a",
+  "modal_case_sha256": "sha256:a510dbc1f32c43f4ab46704e0937a6dd170d7cddb68cc846cbcd571ee0285a16",
   "observation_id": "obs:C-charter-caps:TW-charter-intact",
   "observed_result": "Declared release result (not authenticated execution): The intact charter contains both rule sets and the explicit non-mechanical-enforcement boundary.",
-  "support_summary": "This wrapper binds TW-charter-intact to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
+  "support_summary": "This wrapper binds TW-charter-intact to one exact case-bound release-declaration identity, the current claim proposition and full method-relative claim contract, and the canonical structured modal-case digest.",
   "test_id": "TW-charter-intact",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

@@ -7,9 +7,12 @@
   },
   "certificate_version": "2.0",
   "claim_evidence_binding": {
-    "claim_record": "Each claims[] entry carries proposition_sha256 over Unicode-NFC text with whitespace runs collapsed and outer whitespace stripped.",
+    "claim_record": "Each strict claims[] entry carries scope as a nonempty string, proposition_sha256 over canonical text, claim_contract_schema_version 1.0, and claim_contract_sha256 over canonical text, scope, artifact_location, importance, and method_m.",
     "evidence_wrapper_required_fields": [
+      "evidence_schema_version=1.1",
       "claim_proposition_sha256",
+      "claim_contract_schema_version=1.0",
+      "claim_contract_sha256",
       "artifact_path",
       "hash_or_version"
     ],
@@ -18,7 +21,8 @@
       "modal_case_sha256",
       "observation_id"
     ],
-    "observation_ledger": "observation_schema_version 1.1 closed release-declaration records with exact claim/test/kind, proposition digest, modal digest, pass result, accepted outcome, and wrapper-equal observed_result; deduplication identity only, not execution provenance"
+    "modal_world_contract": "Every modal test carries closed world_contract 1.0 fields semantic_equivalence_class, operator, target, precondition, state_delta, oracle, and expected_outcome. Coverage must independently contain enough reviewer-assigned canonical equivalence classes and enough canonical structural fingerprints excluding that class; modal_case_sha256 binds the complete contract.",
+    "observation_ledger": "observation_schema_version 1.2 closed release-declaration records with exact claim/test/kind, proposition digest, claim-contract digest, modal digest, pass result, accepted outcome, and wrapper-equal observed_result; deduplication identity only, not execution provenance"
   },
   "claims": [],
   "consistency_sweep": {
@@ -89,7 +93,7 @@
   "pass_tracked_upgrade_audit": {
     "aggregate_contract": {
       "command": "python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .",
-      "expected_cases": "43/43",
+      "expected_cases": "44/44",
       "evidence_kind": "synthetic-contract-not-runtime-authentication",
       "production_certifier_cli": true
     },

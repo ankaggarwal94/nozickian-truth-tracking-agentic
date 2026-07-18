@@ -1,14 +1,16 @@
 {
   "artifact_path": "self_validation/current_observations.json",
+  "claim_contract_schema_version": "1.0",
+  "claim_contract_sha256": "sha256:ff43a1873c9ab7dc030bf7b75235f2c23c4c2b3ea5ff9569956b3d66c5b5c1a4",
   "claim_id": "C-formal-invocation",
-  "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
+  "claim_proposition_sha256": "sha256:a05396ec05369fcfc399ecbc3cf448c3df95d9ef09abfbde441dc0fc4a19a162",
   "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
-  "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
-  "modal_case_sha256": "sha256:52ab2616d44ea3885d27ef1b3eabcd3108db1c45220101b8ca90a0f0d1a0e921",
+  "evidence_schema_version": "1.1",
+  "hash_or_version": "sha256:c85ac043e984b99023e65fdba70d5e95f818a6d64886bf2e7ca55434fd8ad62a",
+  "modal_case_sha256": "sha256:8636f050f90ae940ab01667644298c96154867f3f67d8fc8c80293499d3b6d09",
   "observation_id": "obs:C-formal-invocation:FW-formal-self-attested-output-check",
   "observed_result": "Declared release result (not authenticated execution): The formal contract rejected the arbitrary self-attested output check after recomputing the exact allowed set.",
-  "support_summary": "This wrapper binds FW-formal-self-attested-output-check to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
+  "support_summary": "This wrapper binds FW-formal-self-attested-output-check to one exact case-bound release-declaration identity, the current claim proposition and full method-relative claim contract, and the canonical structured modal-case digest.",
   "test_id": "FW-formal-self-attested-output-check",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

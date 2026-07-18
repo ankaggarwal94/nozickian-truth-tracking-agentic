@@ -1116,6 +1116,391 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
         ),
     })
 
+    live_artifact = "mini-code-mutation.md"
+    live_report = (
+        "Method M checked the mini-code-mutation.md artifact with "
+        "false-world sensitivity, true-world adherence, and a strict gate. "
+        "Residual scope remains explicit.\n"
+        "Final gate status: PASS-SCOPED."
+    )
+    live_true = live_runner.transcript_checks(
+        json.dumps({
+            "is_error": False,
+            "result": live_report,
+            "duration_ms": 10,
+        }),
+        live_artifact,
+    )
+    live_content_true = live_runner.transcript_checks(
+        json.dumps({"is_error": False, "content": live_report}),
+        live_artifact,
+    )
+    markdown_status_reports = [
+        live_report.replace(
+            "Final gate status: PASS-SCOPED.",
+            "**Final gate status:** PASS-SCOPED",
+        ),
+        live_report.replace(
+            "Final gate status: PASS-SCOPED.",
+            "**Final gate status:** **PASS-SCOPED**",
+        ),
+        live_report.replace(
+            "Final gate status: PASS-SCOPED.",
+            "- **Final gate status:** `PASS-SCOPED`",
+        ),
+        live_report.replace(
+            "Final gate status: PASS-SCOPED.",
+            "**Final gate status: PASS-SCOPED**",
+        ),
+    ]
+    markdown_status_results = [
+        live_runner.transcript_checks(
+            json.dumps({"is_error": False, "result": report}),
+            live_artifact,
+        )
+        for report in markdown_status_reports
+    ]
+    cases.append({
+        "name": "live_json_envelope_exact_error_channel_true_control",
+        "passed": (
+            live_true.get("passed") is True
+            and live_true.get("envelope_error_diagnostics") == []
+            and live_true.get("dominant_status") == "PASS-SCOPED"
+            and live_content_true.get("passed") is True
+            and live_content_true.get("report_field") == "content"
+            and all(
+                result.get("passed") is True
+                and result.get("dominant_status") == "PASS-SCOPED"
+                for result in markdown_status_results
+            )
+        ),
+    })
+
+    ambiguous_live_json = (
+        '{"is_error":true,"is_error":false,"result":'
+        + json.dumps(live_report)
+        + "}"
+    )
+    nonfinite_live_json = (
+        '{"is_error":false,"score":NaN,"result":'
+        + json.dumps(live_report)
+        + "}"
+    )
+    ambiguous_live = live_runner.transcript_checks(
+        ambiguous_live_json,
+        live_artifact,
+    )
+    nonfinite_live = live_runner.transcript_checks(
+        nonfinite_live_json,
+        live_artifact,
+    )
+    cases.append({
+        "name": "live_json_duplicate_keys_and_nonfinite_numbers_reject",
+        "passed": (
+            ambiguous_live.get("passed") is False
+            and "DuplicateJsonKeyError" in str(
+                ambiguous_live.get("envelope_error")
+            )
+            and nonfinite_live.get("passed") is False
+            and "non-finite" in str(nonfinite_live.get("envelope_error"))
+        ),
+    })
+
+    error_signal_variants = [
+        {"is_error": "false"},
+        {"is_error": False, "isError": True},
+        {"is_error": False, "error": "failed"},
+        {"is_error": False, "success": False},
+        {"is_error": False, "completed": "true"},
+        {"is_error": False, "executed": 1},
+        {"is_error": False, "failed": True},
+        {"is_error": False, "timed_out": True},
+        {"is_error": False, "timeout": "false"},
+        {"is_error": False, "aborted": 1},
+        {"is_error": False, "killed": True},
+        {"is_error": False, "cancelled": "false"},
+        {"is_error": False, "skipped": True},
+        {"is_error": False, "not_executed": None},
+    ]
+    error_signal_results = [
+        live_runner.transcript_checks(
+            json.dumps({**signals, "result": live_report}),
+            live_artifact,
+        )
+        for signals in error_signal_variants
+    ]
+    cases.append({
+        "name": "live_json_error_signals_and_aliases_dominate_pass_report",
+        "passed": all(
+            result.get("passed") is False
+            and bool(result.get("envelope_error_diagnostics"))
+            for result in error_signal_results
+        ),
+    })
+
+    live_channel_false_worlds = [
+        {"is_error": False, "status": "failed", "result": live_report},
+        {"is_error": False, "outcome": "failed", "result": live_report},
+        {
+            "is_error": False,
+            "result": live_report,
+            "content": "Final gate status: FAIL.",
+        },
+        {"is_error": False, "status": True, "result": live_report},
+        {"is_error": False, "outcome": 0, "result": live_report},
+        {"is_error": False, "result": live_report, "output": "FAILED"},
+    ]
+    live_channel_results = [
+        live_runner.transcript_checks(json.dumps(value), live_artifact)
+        for value in live_channel_false_worlds
+    ]
+    cases.append({
+        "name": "live_status_outcome_and_payload_conflicts_cannot_hide_failure",
+        "passed": all(
+            result.get("passed") is False
+            and bool(result.get("envelope_error_diagnostics"))
+            for result in live_channel_results
+        ),
+    })
+
+    laundered_report = (
+        "Final gate status: FAIL.\n"
+        "The baseline expected status: PASS-SCOPED. "
+        "Method M checked mini-code-mutation.md with false-world and "
+        "true-world evidence at the gate. "
+        + "Substantive rejected evidence. " * 5
+    )
+    conflicting_pass_report = live_report.replace(
+        "Final gate status: PASS-SCOPED.",
+        "Final gate status: PASS-TRACKED.\nFinal gate status: PASS-SCOPED.",
+    )
+    laundered = live_runner.transcript_checks(
+        json.dumps({"is_error": False, "result": laundered_report}),
+        live_artifact,
+    )
+    conflicting_pass = live_runner.transcript_checks(
+        json.dumps({"is_error": False, "result": conflicting_pass_report}),
+        live_artifact,
+    )
+    cases.append({
+        "name": "live_authoritative_fail_or_conflicting_pass_cannot_be_laundered",
+        "passed": (
+            laundered.get("passed") is False
+            and laundered.get("dominant_status") == "FAIL"
+            and conflicting_pass.get("passed") is False
+            and conflicting_pass.get("dominant_status") is None
+            and conflicting_pass.get("authoritative_status_conflict") is True
+        ),
+    })
+
+    contextual_negative_report = live_report.replace(
+        "Method M checked",
+        "The false-world probe observed FAIL as expected. Method M checked",
+    )
+    contextual_negative = live_runner.transcript_checks(
+        json.dumps({
+            "is_error": False,
+            "success": True,
+            "completed": True,
+            "executed": True,
+            "failed": False,
+            "timed_out": False,
+            "result": contextual_negative_report,
+        }),
+        live_artifact,
+    )
+    incidental_status_labels = live_runner.transcript_checks(
+        json.dumps({
+            "is_error": False,
+            "result": live_report.replace(
+                "Final gate status: PASS-SCOPED.",
+                "Expected final status: FAIL.\n"
+                "Hypothetical gate status: FAIL.\n"
+                "Baseline final status: PASS-TRACKED.\n"
+                "Final gate status: PASS-SCOPED.",
+            ),
+        }),
+        live_artifact,
+    )
+    cases.append({
+        "name": "live_incidental_false_world_failure_prose_preserves_true_control",
+        "passed": (
+            contextual_negative.get("passed") is True
+            and contextual_negative.get("dominant_status") == "PASS-SCOPED"
+            and incidental_status_labels.get("passed") is True
+            and incidental_status_labels.get("authoritative_statuses")
+            == ["PASS-SCOPED"]
+        ),
+    })
+
+    with tempfile.TemporaryDirectory(
+        prefix="ntt_resource_contract_",
+        dir=str(CANONICAL_TEMP_ROOT),
+    ) as resource_temporary:
+        resource_root = Path(resource_temporary)
+        oversized_target = resource_root / "oversized-target.bin"
+        with oversized_target.open("wb") as stream:
+            stream.truncate(runner.MAX_TARGET_SNAPSHOT_BYTES + 1)
+        bounded_copy_output = resource_root / "bounded-copy.bin"
+        try:
+            runner.atomic_copy_regular_new(
+                oversized_target,
+                bounded_copy_output,
+                max_bytes=runner.MAX_TARGET_SNAPSHOT_BYTES,
+            )
+            oversized_target_rejected = False
+        except ValueError:
+            oversized_target_rejected = True
+        cases.append({
+            "name": "formal_target_copy_rejects_sparse_over_limit_before_allocation",
+            "passed": (
+                oversized_target_rejected
+                and not bounded_copy_output.exists()
+                and not any(
+                    entry.name.startswith(f".{bounded_copy_output.name}.")
+                    for entry in resource_root.iterdir()
+                )
+            ),
+        })
+
+        oversized_package = resource_root / "oversized-package"
+        oversized_package.mkdir()
+        oversized_release_file = oversized_package / "oversized.bin"
+        with oversized_release_file.open("wb") as stream:
+            stream.truncate(runner.MAX_RELEASE_SNAPSHOT_FILE_BYTES + 1)
+        (oversized_package / "STABLE_RELEASE_MANIFEST.json").write_text(
+            json.dumps({
+                "file_inventory": [{
+                    "path": "oversized.bin",
+                    "sha256": "0" * 64,
+                    "bytes": runner.MAX_RELEASE_SNAPSHOT_FILE_BYTES + 1,
+                    "mode": "100644",
+                }]
+            }),
+            encoding="utf-8",
+        )
+        original_package_identity = runner.package_tree_identity
+        try:
+            runner.package_tree_identity = lambda _root: {
+                "algorithm": "stable-release-tree-v1",
+                "sha256": "sha256:" + "0" * 64,
+                "valid": True,
+            }
+            try:
+                runner.materialize_execution_package_snapshot(
+                    oversized_package
+                )
+                oversized_package_rejected = False
+            except ValueError:
+                oversized_package_rejected = True
+        finally:
+            runner.package_tree_identity = original_package_identity
+        cases.append({
+            "name": "formal_package_snapshot_rejects_declared_file_over_limit_before_copy",
+            "passed": oversized_package_rejected,
+        })
+
+        mode_package = resource_root / "mode-package"
+        mode_package.mkdir()
+        non_owner_exec = mode_package / "non-owner-exec.sh"
+        owner_exec = mode_package / "owner-exec.sh"
+        non_owner_exec.write_bytes(b"non-owner executable bits only\n")
+        owner_exec.write_bytes(b"owner executable bit\n")
+        non_owner_exec.chmod(0o645)
+        owner_exec.chmod(0o744)
+        mode_inventory = [
+            {
+                "path": non_owner_exec.name,
+                "sha256": hashlib.sha256(
+                    non_owner_exec.read_bytes()
+                ).hexdigest(),
+                "bytes": non_owner_exec.stat().st_size,
+                "mode": "100644",
+            },
+            {
+                "path": owner_exec.name,
+                "sha256": hashlib.sha256(owner_exec.read_bytes()).hexdigest(),
+                "bytes": owner_exec.stat().st_size,
+                "mode": "100755",
+            },
+        ]
+        (mode_package / "STABLE_RELEASE_MANIFEST.json").write_text(
+            json.dumps({"file_inventory": mode_inventory}),
+            encoding="utf-8",
+        )
+        original_package_identity = runner.package_tree_identity
+        mode_snapshot_holder = None
+        manifest_modes_preserved = False
+        try:
+            fixed_tree_identity = {
+                "algorithm": "stable-release-tree-v1",
+                "sha256": "sha256:" + "5" * 64,
+                "valid": True,
+            }
+            runner.package_tree_identity = lambda _root: fixed_tree_identity
+            (
+                mode_snapshot_holder,
+                mode_snapshot,
+                _mode_identity,
+            ) = runner.materialize_execution_package_snapshot(mode_package)
+            manifest_modes_preserved = (
+                stat.S_IMODE(
+                    (mode_snapshot / non_owner_exec.name).lstat().st_mode
+                )
+                == 0o400
+                and stat.S_IMODE(
+                    (mode_snapshot / owner_exec.name).lstat().st_mode
+                )
+                == 0o500
+            )
+        finally:
+            runner.package_tree_identity = original_package_identity
+            if mode_snapshot_holder is not None:
+                mode_snapshot_holder.cleanup()
+        cases.append({
+            "name": "formal_package_snapshot_uses_manifest_git_owner_exec_mode",
+            "passed": manifest_modes_preserved,
+        })
+
+        bounded_scan_root = resource_root / "bounded-scan"
+        bounded_scan_root.mkdir()
+
+        class FakeScanEntry:
+            def __init__(self, index: int) -> None:
+                self.name = f"entry-{index}.txt"
+                self.path = str(bounded_scan_root / self.name)
+
+            def stat(self, *, follow_symlinks: bool = False) -> Any:
+                del follow_symlinks
+                return type("FakeStat", (), {
+                    "st_mode": stat.S_IFREG | 0o600,
+                })()
+
+        class FakeScan:
+            def __enter__(self) -> Any:
+                return iter(FakeScanEntry(index) for index in range(4))
+
+            def __exit__(self, *_args: Any) -> None:
+                return None
+
+        original_scandir = certifier.os.scandir
+        try:
+            certifier.os.scandir = lambda _path: FakeScan()
+            try:
+                list(certifier.walk_tree_no_follow_bounded(
+                    bounded_scan_root,
+                    max_entries=3,
+                ))
+                bounded_scan_rejected = False
+            except certifier.ResourceBoundError:
+                bounded_scan_rejected = True
+        finally:
+            certifier.os.scandir = original_scandir
+        cases.append({
+            "name": "certifier_formal_result_tree_scan_is_streaming_and_bounded",
+            "passed": bounded_scan_rejected,
+        })
+
     def bytecode_inventory(root: Path) -> List[str]:
         found: List[str] = []
         for current, directories, files in os.walk(root, followlinks=False):
@@ -2366,6 +2751,148 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
             "name": case_name,
             "passed": runner._result_is_success(node) is expected,
         })
+    bare_terminal_failures = (
+        "FAIL",
+        "FAILED",
+        "FAILURE",
+        "ERROR",
+        "TIMEOUT",
+        "TIMED OUT",
+        "SKIPPED",
+        "ABORTED",
+        "KILLED",
+        "CANCELLED",
+        "NOT EXECUTED",
+        "NOT RUN",
+        "UNSUCCESSFUL",
+    )
+    cases.append({
+        "name": "bare_terminal_failure_payloads_do_not_authenticate",
+        "passed": all(
+            runner._result_is_success({
+                "type": "tool_result",
+                "tool_use_id": "toolu-test",
+                "status": "success",
+                "is_error": False,
+                "content": content,
+            })
+            is False
+            for content in bare_terminal_failures
+        ),
+    })
+    text_block_failure_payloads = [
+        ["FAILED"],
+        [{"type": "text", "text": "ERROR"}],
+        [
+            {"type": "text", "text": "Substantive findings."},
+            {"type": "text", "text": "NOT EXECUTED"},
+        ],
+    ]
+    cases.append({
+        "name": "terminal_failure_list_and_text_blocks_do_not_authenticate",
+        "passed": all(
+            runner._result_is_success({
+                "type": "tool_result",
+                "tool_use_id": "toolu-test",
+                "status": "success",
+                "is_error": False,
+                "content": content,
+            })
+            is False
+            for content in text_block_failure_payloads
+        ),
+    })
+    unsupported_scalar_payloads = (True, 0, 1, -1, 0.0, 3.14)
+    cases.append({
+        "name": "unsupported_scalar_result_bodies_do_not_authenticate",
+        "passed": all(
+            runner._result_is_success({
+                "type": "tool_result",
+                "tool_use_id": "toolu-test",
+                "status": "success",
+                "is_error": False,
+                "content": content,
+            })
+            is False
+            for content in unsupported_scalar_payloads
+        ),
+    })
+    cases.append({
+        "name": "contextual_target_failure_audit_prose_still_authenticates",
+        "passed": runner._result_is_success({
+            "type": "tool_result",
+            "tool_use_id": "toolu-test",
+            "status": "success",
+            "is_error": False,
+            "content": [
+                {
+                    "type": "text",
+                    "text": (
+                        "The target failed validation, and the audit "
+                        "completed successfully with substantive findings."
+                    ),
+                }
+            ],
+        })
+        is True,
+    })
+    formal_payload_alias_false_worlds = [
+        {
+            "content": "Substantive completed findings.",
+            "result": "FAILED",
+        },
+        {
+            "result": "Substantive completed findings.",
+            "output": "FAILED",
+        },
+        {
+            "content": "Substantive completed findings.",
+            "output": {"is_error": True},
+        },
+    ]
+    cases.append({
+        "name": "formal_result_payload_alias_conflicts_do_not_authenticate",
+        "passed": all(
+            runner._result_is_success({
+                "type": "tool_result",
+                "tool_use_id": "toolu-test",
+                "status": "success",
+                "is_error": False,
+                **payload,
+            })
+            is False
+            for payload in formal_payload_alias_false_worlds
+        ),
+    })
+    cases.append({
+        "name": "formal_result_single_canonical_content_channel_authenticates",
+        "passed": (
+            runner._result_is_success({
+                "type": "tool_result",
+                "tool_use_id": "toolu-test",
+                "status": "success",
+                "is_error": False,
+                "content": "Substantive completed findings.",
+            })
+            is True
+            and runner._result_is_success({
+                "type": "tool_result",
+                "tool_use_id": "toolu-test",
+                "status": "success",
+                "is_error": False,
+                "result": "Substantive completed findings.",
+            })
+            is False
+            and runner._result_is_success({
+                "type": "tool_result",
+                "tool_use_id": "toolu-test",
+                "status": "success",
+                "is_error": False,
+                "output": "Substantive completed findings.",
+            })
+            is False
+        ),
+    })
     for structured_field, structured_value, case_name in (
         ("executed", False, "structured_not_executed_dominates_success"),
         ("completed", False, "structured_not_completed_dominates_success"),
@@ -3340,11 +3867,12 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
                     stdout_text = "2.1.209 (Claude Code)"
                 elif "-p" in cmd:
                     stdout_text = json.dumps({
+                        "is_error": False,
                         "result": (
                             "Scope mini_manual.md. Method evidence was "
                             "checked with false-world sensitivity and "
                             "true-world adherence. Residual risks remain "
-                            "scoped. Final gate status: PASS-SCOPED."
+                            "scoped.\nFinal gate status: PASS-SCOPED."
                         ),
                     })
                 else:

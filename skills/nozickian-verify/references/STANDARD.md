@@ -125,4 +125,4 @@ Malformed or empty claims and other malformed bundle data yield canonical `FAIL`
 
 The v1.0.3 certifier cannot discharge the two still-parent-enforced Issue #5 charter obligations. A complete modeled result is therefore `PASS-SCOPED` / `CAPPED`, has `promotion_authorized: false` and `satisfied_profile: promotion-contract-v2-complete`, records both exact obligations, and exits nonzero. This mandatory promotion cap does not change generic `ntt_gate.py` `PASS-TRACKED` semantics. The formal runner independently applies the containment cap described above.
 
-The aggregate promotion suite is synthetic contract evidence. Its expected `43/43` invokes the production certifier CLI for the complete baseline and every negative case but does not authenticate a real runtime.
+The aggregate promotion suite is synthetic contract evidence. Its expected `44/44` invokes the production certifier CLI for the complete baseline and every negative case but does not authenticate a real runtime.

@@ -1,14 +1,16 @@
 {
   "artifact_path": "self_validation/current_observations.json",
+  "claim_contract_schema_version": "1.0",
+  "claim_contract_sha256": "sha256:d9fa519143e5603b1054e46abbf0e289db7f3f423eed31f957637a64d9674914",
   "claim_id": "C-structure",
   "claim_proposition_sha256": "sha256:e39cd26592f8c552b3f3720ff85adf034ee97f2b2843fa7fe6c833e46c7baa51",
   "command_or_source": "Declared case context (not authenticated execution): validate_package.py --self-test",
-  "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
-  "modal_case_sha256": "sha256:eeaa1e418443433b5b0f5e04a1b5b71f8e4c362556dffb26bb668467e121d6de",
+  "evidence_schema_version": "1.1",
+  "hash_or_version": "sha256:c85ac043e984b99023e65fdba70d5e95f818a6d64886bf2e7ca55434fd8ad62a",
+  "modal_case_sha256": "sha256:db92f821de208bf03a1bcadd7ba53e90a73efaccf8a194a0b3aa027df2fc4d7e",
   "observation_id": "obs:C-structure:FW-structure-dynamic-shell",
   "observed_result": "Declared release result (not authenticated execution): The validator mutation lane rejected dynamic skill shell substitution after manifest refresh.",
-  "support_summary": "This wrapper binds FW-structure-dynamic-shell to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
+  "support_summary": "This wrapper binds FW-structure-dynamic-shell to one exact case-bound release-declaration identity, the current claim proposition and full method-relative claim contract, and the canonical structured modal-case digest.",
   "test_id": "FW-structure-dynamic-shell",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

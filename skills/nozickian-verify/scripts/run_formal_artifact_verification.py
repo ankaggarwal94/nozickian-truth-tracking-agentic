@@ -150,6 +150,12 @@ MAX_FORMAL_TEXT_BYTES = 16 * 1024 * 1024
 MAX_FORMAL_LEDGER_BYTES = 8 * 1024 * 1024
 MAX_JSON_STRUCTURE_NODES = 200_000
 MAX_JSON_STRUCTURE_DEPTH = 64
+MAX_TARGET_SNAPSHOT_BYTES = MAX_CAPTURE_BYTES
+MAX_RELEASE_SNAPSHOT_FILE_BYTES = MAX_CAPTURE_BYTES
+MAX_RELEASE_SNAPSHOT_TOTAL_BYTES = 8 * MAX_CAPTURE_BYTES
+MAX_RELEASE_SNAPSHOT_ENTRIES = 20_000
+MAX_RELEASE_SNAPSHOT_TREE_ENTRIES = 4 * MAX_RELEASE_SNAPSHOT_ENTRIES
+MAX_RELEASE_SNAPSHOT_PATH_DEPTH = 64
 FORMAL_COMPANION_MAX_BYTES = {
     "report": MAX_FORMAL_TEXT_BYTES,
     "gate": MAX_FORMAL_TEXT_BYTES,
@@ -800,6 +806,124 @@ def atomic_write_new_text(
     )
 
 
+def atomic_copy_regular_new(
+    source: Path,
+    destination: Path,
+    *,
+    max_bytes: int,
+    expected_bytes: Optional[int] = None,
+    expected_sha256: Optional[str] = None,
+    mode: int = 0o600,
+    directory_fd: Optional[int] = None,
+    lexical_parent: Optional[Path] = None,
+) -> Tuple[str, int]:
+    """Stream one no-follow regular file into a new bounded output."""
+    if type(max_bytes) is not int or max_bytes < 0:
+        raise ValueError("max_bytes must be a nonnegative integer")
+    if expected_bytes is not None and (
+        type(expected_bytes) is not int
+        or expected_bytes < 0
+        or expected_bytes > max_bytes
+    ):
+        raise ValueError("expected_bytes exceeds the declared copy bound")
+    if expected_sha256 is not None and not re.fullmatch(
+        r"[0-9a-f]{64}", expected_sha256
+    ):
+        raise ValueError("expected_sha256 is not a lowercase SHA-256 digest")
+
+    source_flags = os.O_RDONLY | os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        source_flags |= os.O_NONBLOCK
+    if hasattr(os, "O_CLOEXEC"):
+        source_flags |= os.O_CLOEXEC
+    source_fd = os.open(source, source_flags)
+    try:
+        name, parent_fd, parent = _acquire_output_parent(
+            destination,
+            directory_fd=directory_fd,
+            lexical_parent=lexical_parent,
+        )
+    except BaseException:
+        os.close(source_fd)
+        raise
+    temporary = f".{name}.{uuid.uuid4().hex}.tmp"
+    destination_flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        destination_flags |= os.O_CLOEXEC
+    destination_fd: Optional[int] = None
+    try:
+        source_pre = os.fstat(source_fd)
+        if not stat.S_ISREG(source_pre.st_mode):
+            raise ValueError("copy source is not a regular file")
+        if source_pre.st_size > max_bytes:
+            raise ValueError(f"copy source exceeds {max_bytes} bytes")
+        if expected_bytes is not None and source_pre.st_size != expected_bytes:
+            raise ValueError("copy source size differs from declared bytes")
+        _require_new_output_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before bounded copy")
+        destination_fd = os.open(
+            temporary,
+            destination_flags,
+            mode,
+            dir_fd=parent_fd,
+        )
+        digest = hashlib.sha256()
+        observed = 0
+        while True:
+            chunk = os.read(source_fd, min(1024 * 1024, max_bytes + 1))
+            if not chunk:
+                break
+            observed += len(chunk)
+            if observed > max_bytes:
+                raise ValueError(f"copy source exceeds {max_bytes} bytes")
+            digest.update(chunk)
+            _write_all(destination_fd, chunk)
+        source_post = os.fstat(source_fd)
+        stable_fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+        if any(
+            getattr(source_pre, field) != getattr(source_post, field)
+            for field in stable_fields
+        ):
+            raise ValueError("copy source changed while it was read")
+        observed_sha256 = digest.hexdigest()
+        if expected_bytes is not None and observed != expected_bytes:
+            raise ValueError("copied bytes differ from declared bytes")
+        if expected_sha256 is not None and observed_sha256 != expected_sha256:
+            raise ValueError("copied digest differs from declared SHA-256")
+        os.fsync(destination_fd)
+        os.close(destination_fd)
+        destination_fd = None
+        _require_new_output_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before bounded-copy install")
+        os.link(
+            temporary,
+            name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        os.unlink(temporary, dir_fd=parent_fd)
+        created = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+        if not stat.S_ISREG(created.st_mode) or created.st_nlink != 1:
+            raise OSError("bounded-copy output is not a private regular file")
+        os.fsync(parent_fd)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed during bounded-copy install")
+        return observed_sha256, observed
+    finally:
+        os.close(source_fd)
+        if destination_fd is not None:
+            os.close(destination_fd)
+        try:
+            os.unlink(temporary, dir_fd=parent_fd)
+        except FileNotFoundError:
+            pass
+        finally:
+            os.close(parent_fd)
+
+
 def reserve_regular_output(
     path: Path,
     *,
@@ -857,14 +981,18 @@ def reserve_regular_output(
         os.close(parent_fd)
 
 
-def file_snapshot_identity(path: Path) -> Dict[str, Any]:
+def file_snapshot_identity(
+    path: Path,
+    *,
+    max_bytes: Optional[int] = None,
+) -> Dict[str, Any]:
     """Return exact bytes and no-follow metadata used for stability checks."""
     error = regular_file_error(path)
     if error is not None:
         raise ValueError(error)
     metadata = path.stat(follow_symlinks=False)
     return {
-        "sha256": f"sha256:{sha256_regular_file(path)}",
+        "sha256": f"sha256:{_hash_regular_file(path, max_bytes=max_bytes)[0]}",
         "device": metadata.st_dev,
         "inode": metadata.st_ino,
         "bytes": metadata.st_size,
@@ -1147,7 +1275,11 @@ def _canonical_release_path(value: Any) -> PurePosixPath:
     return posix
 
 
-def _read_release_file_no_follow(root: Path, relative: PurePosixPath) -> bytes:
+def _release_file_path_no_follow(
+    root: Path,
+    relative: PurePosixPath,
+) -> Path:
+    """Resolve a manifest path lexically while rejecting link ancestors."""
     current = root
     for index, part in enumerate(relative.parts):
         current = current / part
@@ -1162,7 +1294,7 @@ def _read_release_file_no_follow(root: Path, relative: PurePosixPath) -> bytes:
             raise ValueError("release inventory entry is not a regular file")
         if not final and not stat.S_ISDIR(mode):
             raise ValueError("release inventory ancestor is not a directory")
-    return current.read_bytes()
+    return current
 
 
 def execution_copy_endpoint_identity(root: Path) -> Dict[str, Any]:
@@ -1180,6 +1312,13 @@ def execution_copy_endpoint_identity(root: Path) -> Dict[str, Any]:
     try:
         while pending:
             relative, path = pending.pop()
+            if len(records) >= MAX_RELEASE_SNAPSHOT_TREE_ENTRIES:
+                return {
+                    "algorithm": "no-follow-endpoint-metadata-v1",
+                    "sha256": None,
+                    "entries": len(records),
+                    "valid": False,
+                }
             metadata = path.stat(follow_symlinks=False)
             mode = metadata.st_mode
             if stat.S_ISDIR(mode):
@@ -1210,10 +1349,20 @@ def execution_copy_endpoint_identity(root: Path) -> Dict[str, Any]:
             )
             if kind == "directory":
                 with os.scandir(path) as iterator:
-                    children = sorted(
-                        (entry.name for entry in iterator),
-                        reverse=True,
-                    )
+                    children: List[str] = []
+                    for entry in iterator:
+                        children.append(entry.name)
+                        if (
+                            len(records) + len(pending) + len(children)
+                            > MAX_RELEASE_SNAPSHOT_TREE_ENTRIES
+                        ):
+                            return {
+                                "algorithm": "no-follow-endpoint-metadata-v1",
+                                "sha256": None,
+                                "entries": len(records),
+                                "valid": False,
+                            }
+                    children.sort(reverse=True)
                 for name in children:
                     child_relative = (
                         PurePosixPath(name)
@@ -1277,47 +1426,87 @@ def materialize_execution_package_snapshot(
     inventory = manifest.get("file_inventory") if isinstance(manifest, dict) else None
     if not isinstance(inventory, list) or not inventory:
         raise ValueError("stable release inventory is unavailable")
-    records: List[Tuple[PurePosixPath, bytes, int]] = []
+    if len(inventory) > MAX_RELEASE_SNAPSHOT_ENTRIES:
+        raise ValueError(
+            "stable release inventory exceeds the declared entry limit"
+        )
+    records: List[Tuple[PurePosixPath, str, int, str]] = []
     seen: Set[str] = set()
+    tree_paths: Set[str] = set()
+    total_bytes = 0
     for record in inventory:
         if not isinstance(record, dict):
             raise ValueError("release inventory record is not an object")
         relative = _canonical_release_path(record.get("path"))
+        if len(relative.parts) > MAX_RELEASE_SNAPSHOT_PATH_DEPTH:
+            raise ValueError("release inventory path exceeds the depth limit")
         if relative.as_posix() in seen:
             raise ValueError("release inventory contains duplicate paths")
+        if relative == PurePosixPath("STABLE_RELEASE_MANIFEST.json"):
+            raise ValueError("release inventory contains the manifest itself")
         seen.add(relative.as_posix())
-        payload = _read_release_file_no_follow(root, relative)
         expected_sha = record.get("sha256")
         expected_bytes = record.get("bytes")
+        release_mode = record.get("mode")
         if (
-            not isinstance(expected_sha, str)
-            or hashlib.sha256(payload).hexdigest() != expected_sha
+            type(expected_sha) is not str
+            or not re.fullmatch(r"[0-9a-f]{64}", expected_sha)
             or type(expected_bytes) is not int
-            or len(payload) != expected_bytes
+            or expected_bytes < 0
+            or expected_bytes > MAX_RELEASE_SNAPSHOT_FILE_BYTES
+            or release_mode not in {"100644", "100755"}
         ):
-            raise ValueError("release inventory bytes do not match the manifest")
-        source_mode = (root.joinpath(*relative.parts)).lstat().st_mode
-        records.append((relative, payload, source_mode))
-    manifest_payload = _read_release_file_no_follow(
+            raise ValueError("release inventory record exceeds declared bounds")
+        total_bytes += expected_bytes
+        if total_bytes > MAX_RELEASE_SNAPSHOT_TOTAL_BYTES:
+            raise ValueError("release inventory exceeds the aggregate byte limit")
+        source_path = _release_file_path_no_follow(root, relative)
+        source_metadata = source_path.lstat()
+        if source_metadata.st_size != expected_bytes:
+            raise ValueError("release inventory size differs from source metadata")
+        for parent in relative.parents:
+            if parent == PurePosixPath("."):
+                break
+            tree_paths.add(parent.as_posix())
+        tree_paths.add(relative.as_posix())
+        if len(tree_paths) + 1 > MAX_RELEASE_SNAPSHOT_TREE_ENTRIES:
+            raise ValueError("release snapshot tree exceeds the entry limit")
+        records.append(
+            (relative, expected_sha, expected_bytes, release_mode)
+        )
+    manifest_source = _release_file_path_no_follow(
         root,
         PurePosixPath("STABLE_RELEASE_MANIFEST.json"),
     )
+    manifest_bytes = manifest_source.lstat().st_size
+    if manifest_bytes > MAX_FORMAL_JSON_BYTES:
+        raise ValueError("stable release manifest exceeds the JSON byte limit")
+    if total_bytes + manifest_bytes > MAX_RELEASE_SNAPSHOT_TOTAL_BYTES:
+        raise ValueError("release snapshot exceeds the aggregate byte limit")
     holder: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory(
         prefix="ntt_execution_package_"
     )
     snapshot = Path(holder.name) / "package"
     snapshot.mkdir(mode=0o700)
     try:
-        for relative, payload, source_mode in records + [
-            (PurePosixPath("STABLE_RELEASE_MANIFEST.json"), manifest_payload, 0o600)
-        ]:
+        for relative, expected_sha, expected_bytes, release_mode in records:
             destination = snapshot.joinpath(*relative.parts)
             destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-            atomic_write_new(
+            atomic_copy_regular_new(
+                _release_file_path_no_follow(root, relative),
                 destination,
-                payload,
-                mode=0o500 if source_mode & 0o111 else 0o400,
+                max_bytes=MAX_RELEASE_SNAPSHOT_FILE_BYTES,
+                expected_bytes=expected_bytes,
+                expected_sha256=expected_sha,
+                mode=0o500 if release_mode == "100755" else 0o400,
             )
+        atomic_copy_regular_new(
+            manifest_source,
+            snapshot / "STABLE_RELEASE_MANIFEST.json",
+            max_bytes=MAX_FORMAL_JSON_BYTES,
+            expected_bytes=manifest_bytes,
+            mode=0o400,
+        )
         snapshot_pre = package_tree_identity(snapshot)
         if snapshot_pre != source_pre:
             raise ValueError("execution snapshot identity differs from source")
@@ -2583,13 +2772,12 @@ def _is_tool_result_node(node: Dict[str, Any]) -> bool:
 
 
 def _result_content(node: Dict[str, Any]) -> Any:
-    if "content" in node:
-        return node.get("content")
-    if "result" in node:
-        return node.get("result")
-    if "output" in node:
-        return node.get("output")
-    return None
+    payload_fields = [
+        field for field in ("content", "result", "output") if field in node
+    ]
+    if len(payload_fields) != 1:
+        return None
+    return node.get(payload_fields[0])
 
 
 def _has_meaningful_content(value: Any) -> bool:
@@ -2600,7 +2788,7 @@ def _has_meaningful_content(value: Any) -> bool:
     block types, inspect the payload-bearing fields; for generic dicts, ignore
     metadata-only keys before deciding whether the result is meaningful.
     """
-    if value is None or value is False:
+    if value is None or type(value) is bool:
         return False
     if isinstance(value, str):
         stripped = value.strip()
@@ -2617,7 +2805,25 @@ def _has_meaningful_content(value: Any) -> bool:
             return _has_meaningful_content(_result_content(value))
         payload = {k: v for k, v in value.items() if k not in CONTENT_METADATA_KEYS}
         return any(_has_meaningful_content(v) for v in payload.values())
-    return True
+    # JSON scalars are not evidence that a native lane produced findings.
+    # In particular, bool is a subclass of int in Python and must not inherit
+    # a truthy success interpretation from generic scalar handling.
+    return False
+
+
+DIRECT_TERMINAL_FAILURE_RE = re.compile(
+    r"\s*(?:fail|failed|failure|error|errored|aborted|killed|terminated|"
+    r"cancelled|canceled|timed[-_ ]?out|timeout|skipped|not[-_ ]?executed|"
+    r"not[-_ ]?run|unsuccessful)\s*[.!]?\s*",
+    re.I,
+)
+
+
+def _direct_terminal_failure_text(value: Any) -> bool:
+    return (
+        type(value) is str
+        and DIRECT_TERMINAL_FAILURE_RE.fullmatch(value) is not None
+    )
 
 
 def _direct_result_content_has_failure(value: Any) -> bool:
@@ -2630,8 +2836,15 @@ def _direct_result_content_has_failure(value: Any) -> bool:
     """
     candidates = value if isinstance(value, (list, tuple)) else [value]
     for candidate in candidates:
+        if _direct_terminal_failure_text(candidate):
+            return True
         if not isinstance(candidate, Mapping):
             continue
+        if (
+            str(candidate.get("type") or "").strip().lower() == "text"
+            and _direct_terminal_failure_text(candidate.get("text"))
+        ):
+            return True
         if any(
             alias in candidate
             for alias in (
@@ -2683,13 +2896,7 @@ def _direct_result_content_has_failure(value: Any) -> bool:
             if field in candidate and candidate.get(field) is not False:
                 return True
         direct_result = candidate.get("result")
-        if type(direct_result) is str and re.fullmatch(
-            r"\s*(?:fail|failed|failure|error|errored|aborted|killed|"
-            r"terminated|cancelled|canceled|timed[-_ ]?out|timeout|"
-            r"skipped|not[-_ ]?executed|unsuccessful)\s*",
-            direct_result,
-            flags=re.I,
-        ):
+        if _direct_terminal_failure_text(direct_result):
             return True
     return False
 
@@ -2702,6 +2909,13 @@ def _result_is_success(node: Dict[str, Any]) -> bool:
     merely says an agent succeeded is not sufficient for PASS-TRACKED trace
     authentication.
     """
+    # Claude stream tool results have one canonical `content` channel.  Do not
+    # let first-field selection hide a contradictory `result`/`output` alias.
+    payload_fields = [
+        field for field in ("content", "result", "output") if field in node
+    ]
+    if payload_fields != ["content"]:
+        return False
     if "is_error" in node and type(node.get("is_error")) is not bool:
         return False
     if node.get("is_error") is True:
@@ -3944,20 +4158,33 @@ def main(argv: Optional[List[str]] = None) -> int:
     package_snapshot_error: Optional[str] = None
     if target_error is None:
         try:
-            source_pre_identity = file_snapshot_identity(target)
+            source_pre_identity = file_snapshot_identity(
+                target,
+                max_bytes=MAX_TARGET_SNAPSHOT_BYTES,
+            )
             # SECURITY-REVIEW: The caller-selected target is read only after a
             # no-follow regular-file check. The fixed snapshot destination is
-            # created atomically with O_EXCL/O_NOFOLLOW.
-            atomic_write_new(
+            # streamed into an O_EXCL/O_NOFOLLOW destination under a hard
+            # byte ceiling; it is never materialized wholesale in memory.
+            atomic_copy_regular_new(
+                target,
                 out["target_snapshot"],
-                target.read_bytes(),
+                max_bytes=MAX_TARGET_SNAPSHOT_BYTES,
+                expected_bytes=source_pre_identity["bytes"],
+                expected_sha256=str(source_pre_identity["sha256"])[
+                    len("sha256:") :
+                ],
                 directory_fd=output_directory_fd,
                 lexical_parent=output_dir,
             )
             snapshot_pre_identity = file_snapshot_identity(
-                out["target_snapshot"]
+                out["target_snapshot"],
+                max_bytes=MAX_TARGET_SNAPSHOT_BYTES,
             )
-            source_after_copy = file_snapshot_identity(target)
+            source_after_copy = file_snapshot_identity(
+                target,
+                max_bytes=MAX_TARGET_SNAPSHOT_BYTES,
+            )
             copied_stability = target_snapshot_stability(
                 source_pre_identity,
                 source_after_copy,
@@ -3966,8 +4193,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             )
             if not copied_stability["stable"]:
                 raise ValueError("target changed while snapshot was created")
-        except (OSError, ValueError):
-            target_error = "target artifact could not be snapshotted"
+        except (OSError, ValueError) as exc:
+            target_error = (
+                "target artifact could not be snapshotted within the "
+                f"declared {MAX_TARGET_SNAPSHOT_BYTES}-byte limit "
+                f"({type(exc).__name__})"
+            )
     if not args.dry_run:
         try:
             (
@@ -4272,12 +4503,16 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
     result["execution_package_snapshot_identity"] = execution_package_identity
     try:
-        source_post_identity = file_snapshot_identity(target)
+        source_post_identity = file_snapshot_identity(
+            target,
+            max_bytes=MAX_TARGET_SNAPSHOT_BYTES,
+        )
     except (OSError, ValueError):
         source_post_identity = None
     try:
         snapshot_post_identity = file_snapshot_identity(
-            out["target_snapshot"]
+            out["target_snapshot"],
+            max_bytes=MAX_TARGET_SNAPSHOT_BYTES,
         )
     except (OSError, ValueError):
         snapshot_post_identity = None

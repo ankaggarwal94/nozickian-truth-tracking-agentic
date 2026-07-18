@@ -7,7 +7,7 @@ Claude Code CLI is installed. If the runtime cannot be exercised, it records
 UNVERIFIED_RUNTIME rather than treating a version check as a pass.
 """
 from __future__ import annotations
-import argparse, contextlib, ctypes, hashlib, importlib.util, io, json, os, re, shutil, signal, stat, subprocess, sys, tempfile, threading, time, unicodedata, uuid
+import argparse, contextlib, ctypes, hashlib, importlib.util, io, json, math, os, re, shutil, signal, stat, subprocess, sys, tempfile, threading, time, unicodedata, uuid
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Dict, List, Mapping, Sequence, Tuple, cast
@@ -15,6 +15,14 @@ from typing import Any, Callable, Dict, List, Mapping, Sequence, Tuple, cast
 STATUS_TOKENS = ("PASS-TRACKED", "PASS-SCOPED", "LIMITED", "FAIL", "UNVERIFIED")
 ACCEPTABLE_PASS_STATUSES = {"PASS-TRACKED", "PASS-SCOPED"}
 REJECT_STATUSES = {"LIMITED", "FAIL", "UNVERIFIED"}
+POSITIVE_ENVELOPE_STATUSES = {
+    "ok",
+    "success",
+    "succeeded",
+    "complete",
+    "completed",
+    "done",
+}
 REQUIRED_OUTPUT_TERMS = ("method", "false-world", "true-world", "gate")
 PROVENANCE_SCHEMA_VERSION = "1.0"
 CLAUDE_VERSION_PATTERN = r"\b\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?(?:\s+\(Claude Code\))?\b"
@@ -31,6 +39,38 @@ DETACHED_CHILD_CLEANUP_TIMEOUT_SEC = 0.5
 DETACHED_CHILD_QUIET_SEC = 0.05
 MAX_PROC_SCAN_ENTRIES = 100_000
 _SUBREAPER_ENABLED: bool | None = None
+
+
+class DuplicateJsonKeyError(ValueError):
+    """A JSON object repeats a key and is therefore ambiguous."""
+
+
+def _strict_json_object(pairs: List[Tuple[str, Any]]) -> Dict[str, Any]:
+    value: Dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise DuplicateJsonKeyError(f"duplicate JSON object key: {key}")
+        value[key] = item
+    return value
+
+
+def strict_json_loads(text: str) -> Any:
+    """Parse standards-compliant JSON without duplicate-key last-wins."""
+    def reject_nonfinite(value: str) -> Any:
+        raise ValueError(f"non-finite JSON number is not allowed: {value}")
+
+    def parse_finite_float(value: str) -> float:
+        parsed = float(value)
+        if not math.isfinite(parsed):
+            reject_nonfinite(value)
+        return parsed
+
+    return json.loads(
+        text,
+        object_pairs_hook=_strict_json_object,
+        parse_constant=reject_nonfinite,
+        parse_float=parse_finite_float,
+    )
 
 
 def _linux_process_graph() -> Tuple[int, Dict[int, Tuple[int, int]]]:
@@ -1381,55 +1421,199 @@ def refresh_runtime_fingerprint(
         )
 
 
-def dominant_status(text: str) -> str | None:
-    """Return the most authoritative final status found in a transcript.
+_AUTHORITATIVE_STATUS_LABEL = (
+    r"(?:(?:final[ \t]+)?gate[ \t]+status|final[ \t]+status)"
+)
+_AUTHORITATIVE_STATUS_TOKEN = (
+    r"(PASS-TRACKED|PASS-SCOPED|LIMITED|FAIL|UNVERIFIED)"
+)
+AUTHORITATIVE_STATUS_RE = re.compile(
+    r"^[ \t]*(?:#{1,6}[ \t]+|[-*][ \t]+)?"
+    r"(?:"
+    r"\*\*"
+    + _AUTHORITATIVE_STATUS_LABEL
+    + r"[ \t]*[:=\-][ \t]*"
+    + _AUTHORITATIVE_STATUS_TOKEN
+    + r"[.!]?\*\*"
+    r"|__"
+    + _AUTHORITATIVE_STATUS_LABEL
+    + r"[ \t]*[:=\-][ \t]*"
+    + _AUTHORITATIVE_STATUS_TOKEN
+    + r"[.!]?__"
+    r"|(?:"
+    + _AUTHORITATIVE_STATUS_LABEL
+    + r"[ \t]*[:=\-]"
+    r"|\*\*"
+    + _AUTHORITATIVE_STATUS_LABEL
+    + r"(?:\*\*[ \t]*[:=\-]|[ \t]*[:=\-]\*\*)"
+    r"|__"
+    + _AUTHORITATIVE_STATUS_LABEL
+    + r"(?:__[ \t]*[:=\-]|[ \t]*[:=\-]__)"
+    r")[ \t]*"
+    r"(?:"
+    + _AUTHORITATIVE_STATUS_TOKEN
+    + r"|\*\*"
+    + _AUTHORITATIVE_STATUS_TOKEN
+    + r"\*\*|__"
+    + _AUTHORITATIVE_STATUS_TOKEN
+    + r"__|`"
+    + _AUTHORITATIVE_STATUS_TOKEN
+    + r"`)"
+    r")"
+    r"[.!]?[ \t]*$",
+    re.I | re.M,
+)
 
-    Prefer explicit final/gate status phrases. Fall back to status tokens only
-    when no rejecting status appears. This prevents a transcript saying
-    ``gate status FAIL`` from passing merely because it contains verification
-    keywords or an incidental PASS token.
+
+def authoritative_statuses(text: str) -> List[str]:
+    """Return explicit final/gate statuses, excluding expected-status prose."""
+    return [
+        next(value for value in match if value).upper()
+        for match in AUTHORITATIVE_STATUS_RE.findall(text)
+    ]
+
+
+def dominant_status(text: str) -> str | None:
+    """Return a conservative status from explicit final/gate declarations.
+
+    A rejecting authoritative declaration cannot be laundered by a later
+    expected/baseline PASS token. Distinct authoritative declarations are
+    ambiguous and return ``None``; incidental status tokens are not conclusions.
     """
-    status_re = r"(?:final\s+)?(?:gate\s+)?status\s*[:=\-]\s*(PASS-TRACKED|PASS-SCOPED|LIMITED|FAIL|UNVERIFIED)"
-    matches = re.findall(status_re, text, flags=re.I)
-    if matches:
-        return matches[-1].upper()
-    found = [tok for tok in STATUS_TOKENS if re.search(r"\b"+re.escape(tok)+r"\b", text, flags=re.I)]
-    if any(tok in found for tok in REJECT_STATUSES):
-        # Rejecting statuses dominate incidental pass labels when no explicit final status exists.
-        for tok in ("FAIL", "LIMITED", "UNVERIFIED"):
-            if tok in found:
-                return tok
-    for tok in ("PASS-TRACKED", "PASS-SCOPED"):
-        if tok in found:
-            return tok
+    found = authoritative_statuses(text)
+    if not found:
+        return None
+    if len(set(found)) != 1:
+        return None
+    for status in ("FAIL", "LIMITED", "UNVERIFIED"):
+        if status in found:
+            return status
+    if "PASS-SCOPED" in found:
+        return "PASS-SCOPED"
+    if "PASS-TRACKED" in found:
+        return "PASS-TRACKED"
     return None
+
+
+def _envelope_error_diagnostics(envelope: Mapping[str, Any]) -> List[str]:
+    """Validate the exact Claude JSON error channel and reject aliases."""
+    diagnostics: List[str] = []
+    if "is_error" not in envelope:
+        diagnostics.append("is_error is missing")
+    elif type(envelope.get("is_error")) is not bool:
+        diagnostics.append("is_error is not boolean")
+    elif envelope.get("is_error") is True:
+        diagnostics.append("is_error is true")
+    for alias in (
+        "isError",
+        "returnCode",
+        "exitCode",
+        "completionStatus",
+        "errorCode",
+    ):
+        if alias in envelope:
+            diagnostics.append(f"unsupported error/status alias: {alias}")
+    for field in ("success", "completed", "executed"):
+        if field in envelope and envelope.get(field) is not True:
+            diagnostics.append(f"{field} is not true")
+    for field in (
+        "failed",
+        "failure",
+        "timed_out",
+        "timeout",
+        "aborted",
+        "killed",
+        "terminated",
+        "cancelled",
+        "canceled",
+        "skipped",
+        "not_executed",
+    ):
+        if field in envelope and envelope.get(field) is not False:
+            diagnostics.append(f"{field} is not false")
+    for field in ("error", "errors"):
+        if field not in envelope:
+            continue
+        value = envelope.get(field)
+        if value not in (None, False, 0, "") and not (
+            isinstance(value, (list, tuple, dict)) and not value
+        ):
+            diagnostics.append(f"{field} is nonempty")
+    for field in ("exit_code", "returncode", "return_code", "error_code"):
+        if field in envelope and (
+            type(envelope.get(field)) is not int
+            or envelope.get(field) != 0
+        ):
+            diagnostics.append(f"{field} is not integer zero")
+    for field in ("status", "outcome"):
+        if field not in envelope:
+            continue
+        value = envelope.get(field)
+        if type(value) is not str:
+            diagnostics.append(f"{field} is not a string")
+            continue
+        normalized = re.sub(r"[-_\s]+", "-", value.strip().lower())
+        if normalized not in POSITIVE_ENVELOPE_STATUSES:
+            diagnostics.append(f"{field} is not an explicit success status")
+    return diagnostics
+
+
+def _payload_channel_diagnostics(envelope: Mapping[str, Any]) -> List[str]:
+    """Require one exact textual live-report channel with no alias conflict."""
+    diagnostics: List[str] = []
+    present = [field for field in ("result", "content") if field in envelope]
+    if "output" in envelope:
+        diagnostics.append("unsupported report payload alias: output")
+    if len(present) != 1:
+        diagnostics.append(
+            "exactly one report payload channel is required; "
+            f"observed {present!r}"
+        )
+        return diagnostics
+    value = envelope.get(present[0])
+    if type(value) is not str or not value.strip():
+        diagnostics.append(
+            f"{present[0]} report payload is not a nonempty string"
+        )
+    return diagnostics
 
 
 def transcript_checks(stdout: str, artifact: str) -> Dict[str, Any]:
     envelope: Mapping[str, Any] | None = None
     envelope_error = ""
     try:
-        parsed = json.loads(stdout)
+        parsed = strict_json_loads(stdout)
         if isinstance(parsed, Mapping):
             envelope = parsed
         else:
             envelope_error = f"top-level JSON is {type(parsed).__name__}, not an object"
-    except (json.JSONDecodeError, TypeError) as exc:
+    except (ValueError, TypeError) as exc:
         envelope_error = f"{type(exc).__name__}: {exc}"
+    report_fields: List[str] = []
     report_field = None
     report = ""
     if envelope is not None:
-        for candidate_field in ("result", "content"):
-            candidate = envelope.get(candidate_field)
-            if isinstance(candidate, str) and candidate.strip():
-                report_field = candidate_field
+        report_fields = [
+            field for field in ("result", "content") if field in envelope
+        ]
+        if len(report_fields) == 1:
+            candidate = envelope.get(report_fields[0])
+            if type(candidate) is str and candidate.strip():
+                report_field = report_fields[0]
                 report = candidate
-                break
     structured_json_envelope = envelope is not None
-    envelope_is_error = bool(envelope.get("is_error") is True) if envelope is not None else False
+    envelope_diagnostics = []
+    payload_diagnostics: List[str] = []
+    if envelope is not None:
+        envelope_diagnostics = _envelope_error_diagnostics(envelope)
+        payload_diagnostics = _payload_channel_diagnostics(envelope)
+        envelope_diagnostics.extend(payload_diagnostics)
+    envelope_is_error = bool(envelope_diagnostics)
     report_substantive = len(report.strip()) >= 80
     low = report.lower()
     status = dominant_status(report)
+    declared_statuses = authoritative_statuses(report)
+    status_conflict = len(set(declared_statuses)) > 1
     status_found = [tok for tok in STATUS_TOKENS if tok.lower() in low]
     required_terms = {term: (term in low) for term in REQUIRED_OUTPUT_TERMS}
     artifact_seen = Path(artifact).name.lower() in low or artifact.lower() in low
@@ -1445,10 +1629,15 @@ def transcript_checks(stdout: str, artifact: str) -> Dict[str, Any]:
     return {
         "structured_json_envelope": structured_json_envelope,
         "envelope_is_error": envelope_is_error,
+        "envelope_error_diagnostics": envelope_diagnostics,
         "envelope_error": envelope_error,
+        "report_fields": report_fields,
         "report_field": report_field,
+        "payload_channel_diagnostics": payload_diagnostics,
         "report_substantive": report_substantive,
         "dominant_status": status,
+        "authoritative_statuses": declared_statuses,
+        "authoritative_status_conflict": status_conflict,
         "status_tokens": status_found,
         "acceptable_pass_statuses": sorted(ACCEPTABLE_PASS_STATUSES),
         "required_terms": required_terms,

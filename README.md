@@ -7,7 +7,7 @@ A closed-surface Claude Code plugin for method-relative, Nozickian truth-trackin
 **Intended audience:** trusted team/internal reviewers  
 **Runtime posture:** closed by default; no hooks, MCP servers, commands, monitors, bins, or broad skill tool grants
 
-Final checked-in release evidence records 1733/1733 basic package checks, 1878/1878 package self-test checks, 141/141 gate contracts, 199/199 formal-runner contracts, and 166/166 regression checks. The authoritative required-before-re-review promotion aggregate passes 43/43 cases with a complete 252/252 certifier baseline. The self-test rejects 82/82 false worlds and retains 13/13 nearby true worlds. Every machine-readable release CLI is also checked to emit exactly one directly parseable JSON document.
+Final checked-in release evidence records 1748/1748 basic package checks, 1911/1911 package self-test checks, 166/166 gate contracts, 215/215 formal-runner contracts, and 166/166 regression checks. The authoritative required-before-re-review promotion aggregate passes 44/44 cases with a complete 252/252 certifier baseline. The self-test rejects 82/82 false worlds and retains 13/13 nearby true worlds. Every machine-readable release CLI is also checked to emit exactly one directly parseable JSON document.
 
 ## Documentation map
 
@@ -112,7 +112,7 @@ Caller-supplied output paths are traversed without following symlinked ancestors
 
 For v1.0.3, the promotion certifier never authorizes `PASS-TRACKED`. A complete modeled bundle returns `status: "PASS-SCOPED"`, `outcome: "CAPPED"`, `promotion_authorized: false`, `satisfied_profile: "promotion-contract-v2-complete"`, the two explicit unresolved Issue #5 charter obligations, and a nonzero exit. Generic `ntt_gate.py` `PASS-TRACKED` semantics remain unchanged. The formal runner separately caps an otherwise `PASS-TRACKED` result at `PASS-SCOPED` because temporal immutability is not mechanically enforced; unavailable process containment fails before execution rather than producing a scoped run.
 
-The synthetic aggregate suite exercises the production certifier CLI for its complete baseline and every negative case. Its expected `43/43` result is contract evidence, not real runtime authentication.
+The synthetic aggregate suite exercises the production certifier CLI for its complete baseline and every negative case. Its expected `44/44` result is contract evidence, not real runtime authentication.
 
 ## GitHub README policy
 

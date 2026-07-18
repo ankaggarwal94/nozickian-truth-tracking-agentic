@@ -76,6 +76,7 @@ PASSISH = {PASS_TRACKED, PASS_SCOPED, "PASS"}
 PROMOTION_PROFILE = "promotion-contract-v2-complete"
 PROMOTION_CERTIFICATE_SCHEMA = "2.0"
 PROMOTION_EVIDENCE_SCHEMA = "promotion-evidence-v2"
+PROMOTION_METHOD_SCHEMA = "promotion-method-m-v1"
 DETERMINISTIC_CAPTURE_SCHEMA = "deterministic-capture-v2"
 OFFICIAL_POLICY_SCHEMA = "official-validator-policy-v1"
 FORMAL_RESULT_SCHEMA = "2.0"
@@ -99,6 +100,7 @@ FORMAL_COMPANION_MAX_BYTES = {
 MAX_STALE_SCAN_ENTRIES = 20_000
 MAX_STALE_SCAN_FILE_BYTES = 8 * 1024 * 1024
 MAX_STALE_SCAN_TOTAL_BYTES = 128 * 1024 * 1024
+MAX_FORMAL_RESULT_SCAN_ENTRIES = MAX_STALE_SCAN_ENTRIES
 PIPE_CLOSE_GRACE_SEC = 0.5
 READER_JOIN_GRACE_SEC = 1.0
 PROCESS_CONTAINMENT_SCOPE = {
@@ -119,6 +121,7 @@ ISSUE_5_UNRESOLVED_OBLIGATIONS = [
     "Issue #5 REMOTE_GROUND_TRUTH_REQUIRED escalation mechanics remain parent-enforced.",
 ]
 PROMOTION_CERTIFICATE_REQUIRED_FIELD_TYPES = {
+    "origin": str,
     "upgrade_from_status": str,
     "requested_status": str,
     "package_version": str,
@@ -131,12 +134,14 @@ PROMOTION_CERTIFICATE_REQUIRED_FIELD_TYPES = {
     "downstream_review": dict,
 }
 PROMOTION_CERTIFICATE_OPTIONAL_FIELD_TYPES = {
-    "origin": str,
     "scope_limitations": list,
 }
 PROMOTION_CLAIM_REQUIRED_FIELD_TYPES = {
     "id": str,
     "text": str,
+    "scope": str,
+    "claim_contract_schema_version": str,
+    "claim_contract_sha256": str,
     "importance": str,
     "artifact_location": str,
     "truth_status": str,
@@ -808,6 +813,18 @@ def common_json_negative_diagnostics(
     contradictions: List[str] = []
     if _depth > MAX_JSON_STRUCTURE_DEPTH:
         return ["diagnostics exceed the maximum JSON depth"]
+    # These aliases are not part of the validator result schema. Accepting
+    # them alongside canonical fields creates two contradictory truth channels
+    # (for example returncode=0 plus returnCode=1), so fail closed on presence.
+    for alias in (
+        "returnCode",
+        "exitCode",
+        "isError",
+        "completionStatus",
+        "errorCode",
+    ):
+        if alias in data:
+            contradictions.append(f"unsupported diagnostic alias: {alias}")
     for field in (
         "success",
         "valid",
@@ -4755,30 +4772,39 @@ def formal_artifact_checks(
     )
 
     reserved_undeclared: List[str] = []
-    for entry, kind, entry_error in walk_tree_no_follow(
-        result_dir,
-        skip_dir_names=("__pycache__",),
-    ):
-        if kind == "directory":
-            continue
-        entry_relative = relpath(result_dir, entry)
-        reserved_role = _reserved_formal_role(
-            entry.name,
-            companion_specs,
-        )
-        if reserved_role is None or entry == result_path:
-            continue
-        if (
-            kind != "regular"
-            or entry_error is not None
-            or declared_paths.get(entry_relative) != reserved_role
+    formal_tree_scan_error: Optional[str] = None
+    try:
+        for entry, kind, entry_error in walk_tree_no_follow_bounded(
+            result_dir,
+            skip_dir_names=("__pycache__",),
+            max_entries=MAX_FORMAL_RESULT_SCAN_ENTRIES,
         ):
-            reserved_undeclared.append(entry_relative)
+            if kind == "directory":
+                continue
+            entry_relative = relpath(result_dir, entry)
+            reserved_role = _reserved_formal_role(
+                entry.name,
+                companion_specs,
+            )
+            if reserved_role is None or entry == result_path:
+                continue
+            if (
+                kind != "regular"
+                or entry_error is not None
+                or declared_paths.get(entry_relative) != reserved_role
+            ):
+                reserved_undeclared.append(entry_relative)
+    except ResourceBoundError as exc:
+        formal_tree_scan_error = str(exc)
     checks.append(
         Check(
             "formal result directory has no undeclared reserved companions",
-            not reserved_undeclared,
-            details=sorted(reserved_undeclared),
+            not reserved_undeclared and formal_tree_scan_error is None,
+            details={
+                "reserved_undeclared": sorted(reserved_undeclared),
+                "scan_error": formal_tree_scan_error,
+                "maximum_entries": MAX_FORMAL_RESULT_SCAN_ENTRIES,
+            },
             failure_kind="INVALID_INPUT",
         )
     )
@@ -5507,6 +5533,241 @@ def promotion_claim_validation_errors(data: Mapping[str, Any]) -> List[str]:
     return errors
 
 
+def _json_sha256_reference(value: Any) -> str:
+    return f"sha256:{canonical_json_sha256(value)}"
+
+
+def _argv_option(argv: Sequence[str], option: str) -> Optional[str]:
+    positions = [index for index, value in enumerate(argv) if value == option]
+    if not positions:
+        return None
+    if len(positions) != 1 or positions[0] + 1 >= len(argv):
+        raise ValueError(f"{option} is repeated or lacks a value")
+    value = argv[positions[0] + 1]
+    if type(value) is not str or not value or value.startswith("--"):
+        raise ValueError(f"{option} value is not a nonempty string")
+    return value
+
+
+def expected_promotion_method_m(
+    package_root: Path,
+    bundle: Path,
+    data: Mapping[str, Any],
+) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """Reconstruct the one closed method-M record allowed by promotion v2."""
+    try:
+        origin = data.get("origin")
+        if origin == "synthetic-contract":
+            evidence_class = "synthetic-contract-non-runtime"
+            runtime_evidence = False
+        elif origin == "runtime-observed":
+            evidence_class = "observed-runtime-bundle"
+            runtime_evidence = True
+        else:
+            raise ValueError(
+                "promotion origin must explicitly identify synthetic-contract "
+                "or runtime-observed evidence"
+            )
+
+        nodes = promotion_evidence_nodes(data)
+        expected_roles = set(PROMOTION_EVIDENCE_SPECS)
+        if type(nodes) is not dict or set(nodes) != expected_roles:
+            raise ValueError("promotion evidence roles are incomplete")
+        node_sha256: Dict[str, str] = {}
+        lane_data: Dict[str, Mapping[str, Any]] = {}
+        for role in sorted(expected_roles):
+            node = nodes.get(role)
+            if type(node) is not dict or set(node) != {
+                "path",
+                "sha256",
+                "depends_on",
+            }:
+                raise ValueError(f"promotion evidence node is malformed: {role}")
+            resolved, path_error, _identity = bundle_regular_file(
+                bundle,
+                node.get("path"),
+            )
+            if resolved is None or path_error is not None:
+                raise ValueError(f"promotion evidence path is invalid: {role}")
+            digest, _bytes = _hash_regular_file(
+                resolved,
+                max_bytes=MAX_AUDIT_JSON_BYTES,
+            )
+            actual_sha256 = f"sha256:{digest}"
+            if node.get("sha256") != actual_sha256:
+                raise ValueError(f"promotion evidence digest mismatches: {role}")
+            node_sha256[role] = actual_sha256
+            if role in {"live.runtime", "formal.result"}:
+                parsed, parse_error = try_load_json(resolved)
+                if parse_error is not None or not isinstance(parsed, Mapping):
+                    raise ValueError(f"promotion lane JSON is invalid: {role}")
+                lane_data[role] = parsed
+
+        live = lane_data["live.runtime"]
+        formal = lane_data["formal.result"]
+        live_run_config = live.get("run_config")
+        live_runtime_identity = live.get("runtime_identity")
+        live_commands = live.get("commands")
+        if (
+            not isinstance(live_run_config, Mapping)
+            or not isinstance(live_runtime_identity, Mapping)
+            or type(live_commands) is not list
+            or not all(
+                isinstance(command, Mapping) for command in live_commands
+            )
+        ):
+            raise ValueError("live method inputs have invalid JSON shapes")
+
+        formal_runtime_identity = formal.get("runtime_identity")
+        formal_trace_authentication = formal.get("trace_authentication")
+        formal_commands = formal.get("commands")
+        formal_companions = formal.get("companions")
+        if (
+            not isinstance(formal_runtime_identity, Mapping)
+            or not isinstance(formal_trace_authentication, Mapping)
+            or type(formal_commands) is not list
+            or len(formal_commands) != 3
+            or not all(isinstance(command, Mapping) for command in formal_commands)
+            or not isinstance(formal_companions, Mapping)
+        ):
+            raise ValueError("formal method inputs have invalid JSON shapes")
+        coordinator_argv = formal_commands[1].get("argv")
+        strict_gate_argv = formal_commands[2].get("argv")
+        if not _string_list(coordinator_argv) or not _string_list(strict_gate_argv):
+            raise ValueError("formal method argv is not a string array")
+        assert isinstance(coordinator_argv, list)
+        assert isinstance(strict_gate_argv, list)
+        max_turns_text = _argv_option(coordinator_argv, "--max-turns")
+        if max_turns_text is None or not re.fullmatch(
+            r"[1-9][0-9]*", max_turns_text
+        ):
+            raise ValueError("formal max-turns is not a positive integer")
+
+        runner_path = (
+            package_root
+            / "skills/nozickian-verify/scripts/run_formal_artifact_verification.py"
+        )
+        live_runner_path = (
+            package_root
+            / "skills/nozickian-verify/scripts/run_live_skill_evals.py"
+        )
+        if regular_file_error(runner_path) or regular_file_error(live_runner_path):
+            raise ValueError("current runtime parser is unavailable")
+        runner = load_module(
+            "ntt_formal_runner_for_promotion_method_m",
+            runner_path,
+        )
+        required_agents = getattr(runner, "REQUIRED_NATIVE_AGENTS", None)
+        trace_fields = getattr(runner, "TRACE_AUTHENTICATION_FIELDS", None)
+        trace_items_limit = getattr(runner, "MAX_TRACE_ITEMS_PER_RECORD", None)
+        trace_depth_limit = getattr(runner, "MAX_TRACE_DEPTH", None)
+        if (
+            not _string_list(required_agents)
+            or type(trace_fields) not in {list, tuple}
+            or not all(type(field) is str and field for field in trace_fields)
+            or type(trace_items_limit) is not int
+            or trace_items_limit <= 0
+            or type(trace_depth_limit) is not int
+            or trace_depth_limit <= 0
+        ):
+            raise ValueError("current trace parser configuration is malformed")
+
+        certificate_companion = formal_companions.get("certificate")
+        gate_companion = formal_companions.get("gate")
+        if not isinstance(certificate_companion, Mapping) or not isinstance(
+            gate_companion, Mapping
+        ):
+            raise ValueError("formal gate companions are unavailable")
+        companion_sha256 = {
+            "certificate": certificate_companion.get("sha256"),
+            "gate": gate_companion.get("sha256"),
+        }
+        if not all(
+            type(value) is str
+            and re.fullmatch(r"sha256:[0-9a-f]{64}", value)
+            for value in companion_sha256.values()
+        ):
+            raise ValueError("formal gate companion digest is malformed")
+
+        official_policy_sha256 = {
+            str(spec["validator_id"]): node_sha256[role]
+            for role, spec in sorted(PROMOTION_EVIDENCE_SPECS.items())
+            if spec.get("kind") == "official-policy"
+        }
+        method: Dict[str, Any] = {
+            "schema_version": PROMOTION_METHOD_SCHEMA,
+            "evidence_class": evidence_class,
+            "runtime_evidence": runtime_evidence,
+            "promotion_authorized": False,
+            "package": {
+                "version": data.get("package_version"),
+                "tree_sha256": data.get("package_tree_sha256"),
+            },
+            "lanes": {
+                "evidence_node_sha256": node_sha256,
+            },
+            "live": {
+                "status": live.get("status"),
+                "result_sha256": node_sha256["live.runtime"],
+                "run_config_sha256": _json_sha256_reference(live_run_config),
+                "runtime_identity_sha256": _json_sha256_reference(
+                    live_runtime_identity
+                ),
+                "commands_sha256": _json_sha256_reference(live_commands),
+            },
+            "formal": {
+                "status": formal.get("status"),
+                "gate_status": formal.get("gate_status"),
+                "result_sha256": node_sha256["formal.result"],
+                "formal_coordinator": formal.get("formal_coordinator"),
+                "model": _argv_option(coordinator_argv, "--model"),
+                "effort": _argv_option(coordinator_argv, "--effort"),
+                "max_turns": int(max_turns_text),
+                "coordinator_argv_sha256": _json_sha256_reference(
+                    coordinator_argv
+                ),
+                "strict_gate_argv_sha256": _json_sha256_reference(
+                    strict_gate_argv
+                ),
+                "runtime_identity_sha256": _json_sha256_reference(
+                    formal_runtime_identity
+                ),
+                "trace_authentication_sha256": _json_sha256_reference(
+                    formal_trace_authentication
+                ),
+            },
+            "gate": {
+                "deterministic_result_sha256": node_sha256[
+                    "deterministic.gate_result"
+                ],
+                "formal_certificate_sha256": companion_sha256["certificate"],
+                "formal_gate_markdown_sha256": companion_sha256["gate"],
+                "strict_gate_argv_sha256": _json_sha256_reference(
+                    strict_gate_argv
+                ),
+            },
+            "official_validator_policy": {
+                "required_validator_ids": sorted(official_policy_sha256),
+                "policy_sha256": official_policy_sha256,
+            },
+            "trace_parser": {
+                "formal_runner_sha256": (
+                    f"sha256:{sha256_path(runner_path)}"
+                ),
+                "live_runner_sha256": (
+                    f"sha256:{sha256_path(live_runner_path)}"
+                ),
+                "required_native_agents": list(required_agents),
+                "trace_authentication_fields": list(trace_fields),
+                "max_trace_items_per_record": trace_items_limit,
+                "max_trace_depth": trace_depth_limit,
+            },
+        }
+        return method, None
+    except (AttributeError, KeyError, OSError, RuntimeError, TypeError, ValueError) as exc:
+        return None, f"{type(exc).__name__}: {exc}"
+
+
 def promotion_certificate_checks(
     package_root: Path,
     bundle: Path,
@@ -5565,16 +5826,39 @@ def promotion_certificate_checks(
         in PROMOTION_CERTIFICATE_OPTIONAL_FIELD_TYPES.items()
         if field in data and type(data.get(field)) is not expected_type
     }
+    expected_method_m, method_m_error = expected_promotion_method_m(
+        package_root,
+        bundle,
+        data,
+    )
+    method_m_matches = (
+        expected_method_m is not None
+        and method_m_error is None
+        and exact_json_equal(data.get("method_m_upgrade"), expected_method_m)
+    )
+    live_result_bindings_match = (
+        expected_method_m is not None
+        and exact_json_equal(
+            data.get("live_result_bindings"),
+            expected_method_m.get("live"),
+        )
+    )
     checks.append(
         Check(
             "promotion certificate required top-level fields have exact JSON types",
             not missing_required_fields
             and not wrong_required_field_types
-            and not wrong_optional_field_types,
+            and not wrong_optional_field_types
+            and method_m_matches
+            and live_result_bindings_match,
             details={
                 "missing": missing_required_fields,
                 "wrong_required_types": wrong_required_field_types,
                 "wrong_optional_types": wrong_optional_field_types,
+                "method_m_error": method_m_error,
+                "method_m_matches": method_m_matches,
+                "live_result_bindings_match": live_result_bindings_match,
+                "expected_method_m": expected_method_m,
             },
             failure_kind="INVALID_INPUT",
         )

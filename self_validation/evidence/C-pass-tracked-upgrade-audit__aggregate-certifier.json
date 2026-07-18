@@ -1,11 +1,13 @@
 {
   "artifact_path": "skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py",
+  "claim_contract_schema_version": "1.0",
+  "claim_contract_sha256": "sha256:b02f5ce45c892178e97ceb9438a6d5ac975a2b079ef720c57ff0e9010af28dab",
   "claim_id": "C-pass-tracked-upgrade-audit",
-  "claim_proposition_sha256": "sha256:af6dd806f1832342970a4c3a945bfd9964b1b8072def1be83cdef7feac81ef8b",
+  "claim_proposition_sha256": "sha256:20662ae4a2639cb88c3db1e41be7bbd44fbc784e538a6be1672195150f259c31",
   "command_or_source": "current v1.0.3 reviewed package source",
-  "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:2c40dcc3874ba0a3b7074242820120de000eacc9a38c8a5d268561120e09620c",
+  "evidence_schema_version": "1.1",
+  "hash_or_version": "sha256:cd79586346baf0b18bb35547873e89aceaded2309fc56a4a739821809212eb0e",
   "observed_result": "Current source bytes support the scoped proposition for C-pass-tracked-upgrade-audit.",
-  "support_summary": "This wrapper binds C-pass-tracked-upgrade-audit to current package artifact skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py by exact SHA-256 and to the canonical claim proposition digest.",
+  "support_summary": "This wrapper binds C-pass-tracked-upgrade-audit to current package artifact skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py by exact SHA-256 and to the canonical claim proposition digest. It also binds the wrapper to the canonical full method-relative claim contract.",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

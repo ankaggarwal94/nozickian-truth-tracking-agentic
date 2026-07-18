@@ -4,7 +4,7 @@ This package uses a release lock, behavior manifest, stable release manifest, se
 
 ## Required local checks
 
-Run the commands in `RELEASE_LOCK.json`. At minimum, run package validation, strict gate validation, regression evals, gate contract tests, formal-runner contract tests, the 43-case promotion aggregate through the production certifier CLI, and a formal dry run that writes output outside the package tree. In CI, run the full validator `--self-test` against both the checkout and the unpacked Git archive, with each Markdown output outside the measured tree; run the promotion aggregate after each corresponding full self-test.
+Run the commands in `RELEASE_LOCK.json`. At minimum, run package validation, strict gate validation, regression evals, gate contract tests, formal-runner contract tests, the 44-case promotion aggregate through the production certifier CLI, and a formal dry run that writes output outside the package tree. In CI, run the full validator `--self-test` against both the checkout and the unpacked Git archive, with each Markdown output outside the measured tree; run the promotion aggregate after each corresponding full self-test.
 
 The checked-in workflow uses exact commit identities for `actions/checkout` and `actions/setup-python`; the validator rejects mutable action tags and any unreviewed action substitution. A dependency upgrade therefore requires an intentional SHA review plus workflow, validator-policy, evidence, and manifest regeneration.
 
@@ -20,7 +20,7 @@ Gate Markdown, certifier JSON/Markdown, formal output plus compatibility JSON, l
 
 Formal coordinator and gate subprocesses receive only the runner-owned `/proc/<runner-pid>/fd/N` alias through `pass_fds`; the procfs-visible runner `Pid:` must equal the gate child's procfs-visible direct-parent `PPid:`. Child-FD close/rebind, self/unrelated PIDs, noncanonical or nonpositive PID/FD tokens, extra components, closed descriptors, and file descriptors are rejected. Live formal output requires POSIX `O_DIRECTORY`/`O_NOFOLLOW` plus procfd inheritance; unsupported environments return `INVALID_INPUT` before creating the requested output directory or JSON file.
 
-The v1.0.3 certifier always caps a complete modeled bundle at `PASS-SCOPED` / `CAPPED`, with `promotion_authorized: false`, `satisfied_profile: promotion-contract-v2-complete`, two unresolved Issue #5 obligations, and a nonzero exit. Generic `ntt_gate.py` `PASS-TRACKED` semantics remain unchanged; the formal runner separately caps an otherwise `PASS-TRACKED` result at `PASS-SCOPED` because temporal immutability is not mechanically enforced. The aggregate's expected `43/43` is synthetic contract evidence, not runtime authentication.
+The v1.0.3 certifier always caps a complete modeled bundle at `PASS-SCOPED` / `CAPPED`, with `promotion_authorized: false`, `satisfied_profile: promotion-contract-v2-complete`, two unresolved Issue #5 obligations, and a nonzero exit. Generic `ntt_gate.py` `PASS-TRACKED` semantics remain unchanged; the formal runner separately caps an otherwise `PASS-TRACKED` result at `PASS-SCOPED` because temporal immutability is not mechanically enforced. The aggregate's expected `44/44` is synthetic contract evidence, not runtime authentication.
 
 ## Zip packaging
 

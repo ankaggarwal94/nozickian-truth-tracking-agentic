@@ -7,7 +7,7 @@ optionally missing or semantically unbound evidence artifacts when --evidence-ro
 is supplied.
 
 This gate is intentionally conservative: it checks declared certificate structure,
-local evidence-ref containment, hardlink-aware evidence identity, case-bound modal release declarations, proposition-bound downstream passes, structured evidence binding for every cited local ref, exact SHA-256 equality between artifact_path and hash_or_version, and URI-scheme rejection for both evidence refs and artifact_path. In strict local evidence mode, every cited evidence ref must be a valid in-root JSON evidence artifact; one good ref cannot mask a bad cited ref, duplicate or physically aliased refs count once for minimum evidence thresholds, and duplicate declaration identities count once for sensitivity/adherence thresholds. These declarations are not execution provenance. It is not a substitute
+local evidence-ref containment, hardlink-aware evidence identity, typed method-relative claim contracts, reviewer-classified structured nearby-world contracts, case-bound modal release declarations, proposition-bound downstream passes, structured evidence binding for every cited local ref, exact SHA-256 equality between artifact_path and hash_or_version, and URI-scheme rejection for both evidence refs and artifact_path. In strict local evidence mode, every cited evidence ref must be a valid in-root JSON evidence artifact; one good ref cannot mask a bad cited ref, duplicate or physically aliased refs count once for minimum evidence thresholds, and duplicate declaration identities count once for sensitivity/adherence thresholds. These declarations are not execution provenance. It is not a substitute
 for expert judgment about whether every source semantically proves every claim, but
 it prevents a bare README, LICENSE, or unrelated nonempty file from counting as
 claim evidence for PASS-TRACKED.
@@ -23,6 +23,8 @@ PASS_TRUTH = {"confirmed", "executed_confirmed", "formal_confirmed", "independen
 MINOR_TRUTH = PASS_TRUTH | {"supported"}
 IMPORTANCE = {"critical", "major", "minor"}
 REQ_METHOD = ("producer", "checker", "artifacts", "environment", "tools", "evidence_process", "graders_or_tests", "trace_or_logs")
+METHOD_NARRATIVE_FIELDS = frozenset({"producer", "checker", "evidence_process"})
+METHOD_COLLECTION_FIELDS = frozenset(set(REQ_METHOD) - METHOD_NARRATIVE_FIELDS)
 DEFAULT_THRESHOLDS: Dict[str, Dict[str, float]] = {
     "critical": {"method_completeness": 0.875, "sensitivity": 0.95, "adherence": 0.90},
     "major": {"method_completeness": 0.750, "sensitivity": 0.80, "adherence": 0.75},
@@ -31,16 +33,44 @@ DEFAULT_THRESHOLDS: Dict[str, Dict[str, float]] = {
 MIN_REQ = {
     "critical": {"evidence": 2, "false_tests": 2, "true_tests": 1, "structured_evidence": 1},
     "major": {"evidence": 1, "false_tests": 1, "true_tests": 1, "structured_evidence": 1},
-    "minor": {"evidence": 0, "false_tests": 0, "true_tests": 0, "structured_evidence": 0},
+    # Even a minor strict claim needs one externalized contract binding. Without
+    # it, a certificate could downgrade critical -> minor, rewrite its own
+    # digest, and delete every evidence/modal reference.
+    "minor": {"evidence": 1, "false_tests": 0, "true_tests": 0, "structured_evidence": 1},
 }
 FALSE_OUTCOMES = {"rejected_false_claim", "withheld", "flagged", "failed_as_expected", "downgraded", "corrected", "blocked", "not_certified"}
 TRUE_OUTCOMES = {"retained_true_claim", "accepted_equivalent", "passed_benign_variant", "correctly_updated", "preserved", "recovered", "not_overfit"}
 NEG_FALSE = ("accepted false", "certified false", "passed false", "ignored contradiction", "hallucinated", "misrepresented", "failed to flag", "did not reject")
 NEG_TRUE = ("rejected equivalent", "overfit", "failed benign", "did not retain", "lost true", "penalized alternate")
 UNKNOWN = {"", "unknown", "inferred_unknown", "n/a", "none"}
-STRUCTURED_EVIDENCE_FIELDS = ("evidence_schema_version", "claim_id", "claim_proposition_sha256", "artifact_path", "command_or_source", "observed_result", "support_summary", "timestamp_utc", "hash_or_version")
+STRUCTURED_EVIDENCE_FIELDS = (
+    "evidence_schema_version",
+    "claim_id",
+    "claim_proposition_sha256",
+    "claim_contract_schema_version",
+    "claim_contract_sha256",
+    "artifact_path",
+    "command_or_source",
+    "observed_result",
+    "support_summary",
+    "timestamp_utc",
+    "hash_or_version",
+)
 STRUCTURED_TEST_FIELDS = ("test_id",)
-OBSERVATION_SCHEMA_VERSION = "1.1"
+EVIDENCE_SCHEMA_VERSION = "1.1"
+OBSERVATION_SCHEMA_VERSION = "1.2"
+CLAIM_CONTRACT_SCHEMA_VERSION = "1.0"
+WORLD_CONTRACT_SCHEMA_VERSION = "1.0"
+WORLD_CONTRACT_FIELDS = frozenset({
+    "schema_version",
+    "semantic_equivalence_class",
+    "operator",
+    "target",
+    "precondition",
+    "state_delta",
+    "oracle",
+    "expected_outcome",
+})
 OBSERVATION_LEDGER_FIELDS = frozenset({
     "observation_schema_version",
     "observations",
@@ -50,6 +80,7 @@ OBSERVATION_RECORD_FIELDS = frozenset({
     "test_id",
     "kind",
     "claim_proposition_sha256",
+    "claim_contract_sha256",
     "modal_case_sha256",
     "result",
     "outcome",
@@ -777,6 +808,7 @@ def _verify_observation_binding(
     test_id: Optional[str],
     test_kind: Optional[str],
     claim_proposition_sha256: Optional[str],
+    claim_contract_sha256: Optional[str],
     modal_case_sha256: Optional[str],
     json_cache: Optional[
         Dict[JsonCacheKey, BoundedJsonResult]
@@ -894,6 +926,7 @@ def _verify_observation_binding(
             ], ""
         for digest_field in (
             "claim_proposition_sha256",
+            "claim_contract_sha256",
             "modal_case_sha256",
         ):
             if _canonical_claimed_sha256(
@@ -940,6 +973,7 @@ def _verify_observation_binding(
             )
     for field, expected in (
         ("claim_proposition_sha256", claim_proposition_sha256),
+        ("claim_contract_sha256", claim_contract_sha256),
         ("modal_case_sha256", modal_case_sha256),
     ):
         if expected is not None and _canonical_claimed_sha256(
@@ -1166,6 +1200,7 @@ def _load_structured_evidence(
     evidence_root: Optional[Path],
     claim_id: Optional[str] = None,
     claim_proposition: Any = None,
+    claim_contract_sha256: Optional[str] = None,
     test_id: Optional[str] = None,
     test_kind: Optional[str] = None,
     modal_test: Optional[Mapping[str, Any]] = None,
@@ -1204,6 +1239,16 @@ def _load_structured_evidence(
     for field in STRUCTURED_EVIDENCE_FIELDS:
         if not _nonempty(data.get(field)):
             reasons.append(f"structured evidence missing {field}")
+    if data.get("evidence_schema_version") != EVIDENCE_SCHEMA_VERSION:
+        reasons.append(
+            "structured evidence schema is not "
+            f"{EVIDENCE_SCHEMA_VERSION}"
+        )
+    if data.get("claim_contract_schema_version") != CLAIM_CONTRACT_SCHEMA_VERSION:
+        reasons.append(
+            "structured evidence claim_contract_schema_version is not "
+            f"{CLAIM_CONTRACT_SCHEMA_VERSION}"
+        )
     if test_id is not None:
         for field in STRUCTURED_TEST_FIELDS:
             if not _nonempty(data.get(field)) and not _nonempty(data.get("applies_to_tests")):
@@ -1229,6 +1274,15 @@ def _load_structured_evidence(
         reasons.append(
             "claim_proposition_sha256 does not match certificate claim text"
         )
+    wrapper_contract_digest = _canonical_claimed_sha256(
+        data.get("claim_contract_sha256")
+    )
+    if claim_contract_sha256 is None:
+        reasons.append("certificate claim contract cannot be canonicalized")
+    elif wrapper_contract_digest != claim_contract_sha256:
+        reasons.append(
+            "claim_contract_sha256 does not match certificate claim contract"
+        )
     expected_modal_digest: Optional[str] = None
     if test_id is not None:
         if modal_test is None:
@@ -1239,6 +1293,7 @@ def _load_structured_evidence(
                 claim_proposition,
                 test_kind or "",
                 data.get("observed_result"),
+                claim_contract_sha256=claim_contract_sha256,
             )
             wrapper_modal_digest = _canonical_claimed_sha256(
                 data.get("modal_case_sha256")
@@ -1259,6 +1314,7 @@ def _load_structured_evidence(
         test_id,
         test_kind,
         expected_claim_digest,
+        claim_contract_sha256,
         expected_modal_digest,
         json_cache,
     )
@@ -1335,9 +1391,90 @@ def merge_thresholds(supplied: Mapping[str, Any] | None) -> Tuple[Dict[str, Dict
     return merged, notes
 
 
+def _method_string_is_substantive(value: Any) -> bool:
+    return (
+        type(value) is str
+        and bool(value.strip())
+        and value.strip().lower() not in UNKNOWN
+    )
+
+
+def _structured_method_value_is_substantive(
+    value: Any,
+    *,
+    depth: int = 0,
+) -> bool:
+    """Accept JSON method structure only when it contains real text.
+
+    Booleans and numbers may describe a structured method below a named field,
+    but cannot by themselves constitute method M. Requiring at least one
+    substantive string prevents objects such as ``{"synthetic": true}`` from
+    being counted as an actual producer, checker, artifact set, or trace.
+    """
+    if depth > 16:
+        return False
+    if _method_string_is_substantive(value):
+        return True
+    if type(value) is list:
+        return bool(value) and all(
+            _structured_method_value_is_substantive(item, depth=depth + 1)
+            for item in value
+        )
+    if isinstance(value, Mapping):
+        if not value:
+            return False
+        if any(
+            type(key) is not str or not key.strip()
+            for key in value
+        ):
+            return False
+        supported = True
+        contains_text = False
+        for item in value.values():
+            if type(item) in {bool, int, float} or item is None:
+                if type(item) is float and not math.isfinite(item):
+                    supported = False
+                continue
+            if not _structured_method_value_is_substantive(
+                item,
+                depth=depth + 1,
+            ):
+                supported = False
+                continue
+            contains_text = True
+        return supported and contains_text
+    return False
+
+
+def _method_component_is_substantive(field: str, value: Any) -> bool:
+    if field in METHOD_NARRATIVE_FIELDS:
+        return _method_string_is_substantive(value) or (
+            isinstance(value, Mapping)
+            and _structured_method_value_is_substantive(value)
+        )
+    if field in METHOD_COLLECTION_FIELDS:
+        return (
+            _method_string_is_substantive(value)
+            or (
+                type(value) is list
+                and _structured_method_value_is_substantive(value)
+            )
+            or (
+                isinstance(value, Mapping)
+                and _structured_method_value_is_substantive(value)
+            )
+        )
+    return False
+
+
 def method_completeness(method: Mapping[str, Any] | None) -> Tuple[float, List[str]]:
-    if not isinstance(method, Mapping): return 0.0, list(REQ_METHOD)
-    missing = [k for k in REQ_METHOD if not _nonempty(method.get(k))]
+    if not isinstance(method, Mapping):
+        return 0.0, list(REQ_METHOD)
+    missing = [
+        field
+        for field in REQ_METHOD
+        if not _method_component_is_substantive(field, method.get(field))
+    ]
     return (len(REQ_METHOD) - len(missing)) / len(REQ_METHOD), missing
 
 
@@ -1348,6 +1485,7 @@ def _test_evidence_checks(
     test_id: str,
     test_kind: str,
     claim_proposition: Any,
+    claim_contract_sha256: Optional[str],
     json_cache: Optional[
         Dict[JsonCacheKey, BoundedJsonResult]
     ] = None,
@@ -1360,6 +1498,7 @@ def _test_evidence_checks(
             evidence_root,
             claim_id=claim_id,
             claim_proposition=claim_proposition,
+            claim_contract_sha256=claim_contract_sha256,
             test_id=test_id,
             test_kind=test_kind,
             modal_test=t,
@@ -1380,12 +1519,65 @@ def _test_evidence_checks(
     return not reasons, reasons, checks
 
 
+def _canonical_world_contract(
+    value: Any,
+) -> Tuple[Optional[Dict[str, str]], List[str]]:
+    """Validate and canonicalize a closed nearby-world identity."""
+    if not isinstance(value, Mapping):
+        return None, ["world_contract is not an object"]
+    fields = set(value)
+    if fields != WORLD_CONTRACT_FIELDS:
+        return None, [
+            "world_contract fields are not exact for schema "
+            f"{WORLD_CONTRACT_SCHEMA_VERSION}: "
+            f"missing={sorted(WORLD_CONTRACT_FIELDS - fields)}; "
+            f"extra={sorted(fields - WORLD_CONTRACT_FIELDS)}"
+        ]
+    if value.get("schema_version") != WORLD_CONTRACT_SCHEMA_VERSION:
+        return None, [
+            "world_contract schema_version is not "
+            f"{WORLD_CONTRACT_SCHEMA_VERSION}"
+        ]
+    canonical: Dict[str, str] = {
+        "schema_version": WORLD_CONTRACT_SCHEMA_VERSION,
+    }
+    reasons: List[str] = []
+    equivalence_class = value.get("semantic_equivalence_class")
+    if (
+        type(equivalence_class) is not str
+        or not re.fullmatch(
+            r"[a-z0-9]+(?:[._:-][a-z0-9]+){0,31}",
+            equivalence_class,
+        )
+        or len(equivalence_class) > 128
+    ):
+        reasons.append(
+            "world_contract semantic_equivalence_class must be a canonical "
+            "lowercase ASCII slug"
+        )
+    else:
+        canonical["semantic_equivalence_class"] = equivalence_class
+    for field in sorted(
+        WORLD_CONTRACT_FIELDS
+        - {"schema_version", "semantic_equivalence_class"}
+    ):
+        normalized = _canonical_proposition_text(value.get(field))
+        if normalized is None:
+            reasons.append(
+                f"world_contract {field} must be a nonempty string"
+            )
+        else:
+            canonical[field] = normalized
+    return (canonical if not reasons else None), reasons
+
+
 def evaluate_test(
     t: Mapping[str, Any],
     expected_kind: str,
     evidence_root: Optional[Path] = None,
     claim_id: Optional[str] = None,
     claim_proposition: Any = None,
+    claim_contract_sha256: Optional[str] = None,
     json_cache: Optional[
         Dict[JsonCacheKey, BoundedJsonResult]
     ] = None,
@@ -1416,6 +1608,8 @@ def evaluate_test(
         reasons.append(
             f"{variation_fields[0]} must be a nonempty string"
         )
+    _, world_reasons = _canonical_world_contract(t.get("world_contract"))
+    reasons.extend(world_reasons)
     _, ev_reasons, evidence_checks = _test_evidence_checks(
         t,
         evidence_root,
@@ -1423,6 +1617,7 @@ def evaluate_test(
         test_id=tid,
         test_kind=expected_kind,
         claim_proposition=claim_proposition,
+        claim_contract_sha256=claim_contract_sha256,
         json_cache=json_cache,
     )
     reasons.extend(ev_reasons)
@@ -1445,6 +1640,7 @@ def evaluate_tests(
     evidence_root: Optional[Path] = None,
     claim_id: Optional[str] = None,
     claim_proposition: Any = None,
+    claim_contract_sha256: Optional[str] = None,
     json_cache: Optional[
         Dict[JsonCacheKey, BoundedJsonResult]
     ] = None,
@@ -1457,6 +1653,7 @@ def evaluate_tests(
             evidence_root=evidence_root,
             claim_id=claim_id,
             claim_proposition=claim_proposition,
+            claim_contract_sha256=claim_contract_sha256,
             json_cache=json_cache,
         )
         for test in tests
@@ -1493,27 +1690,52 @@ def _modal_test_key(
     expected_kind: str,
     evidence_root: Optional[Path],
     evaluated_claim_id: str,
-) -> Tuple[str, str, str]:
-    """Return the semantic nearby-world identity for coverage thresholds.
+) -> Tuple[str, str, str, str]:
+    """Return independent reviewer and structural nearby-world identities.
 
     Test IDs, result prose, and evidence filenames are labels or observations;
-    changing them does not construct a second nearby world. World identity is
-    therefore limited to the kind, the enclosing evaluated claim, and the
-    canonicalized perturbation/variant itself. Extra target labels cannot
-    manufacture a second world.
+    changing them does not construct a second nearby world. The versioned,
+    closed ``world_contract`` binds the mutation/operator, target, precondition,
+    state delta, oracle, and expected outcome. Coverage deduplicates on its
+    reviewer-assigned ``semantic_equivalence_class`` and independently on a
+    fingerprint of every other structured world field. Changing only the class
+    label or only the display/structural prose cannot manufacture extra
+    coverage.
     """
     del evidence_root  # Kept in the signature for compatibility with callers.
     kind = _lower(t.get("kind") or expected_kind)
-    variation = (
-        t.get("perturbation")
-        if _nonempty(t.get("perturbation"))
-        else t.get("variant")
+    world_contract, _ = _canonical_world_contract(t.get("world_contract"))
+    equivalence_class = (
+        world_contract.get("semantic_equivalence_class", "")
+        if world_contract is not None
+        else ""
     )
-    canonical_variation = _canonical_proposition_text(variation) or ""
+    structural_payload = (
+        {
+            field: value
+            for field, value in world_contract.items()
+            if field != "semantic_equivalence_class"
+        }
+        if world_contract is not None
+        else None
+    )
+    structural_fingerprint = (
+        hashlib.sha256(
+            json.dumps(
+                structural_payload,
+                ensure_ascii=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("utf-8")
+        ).hexdigest()
+        if structural_payload is not None
+        else ""
+    )
     return (
         kind,
         evaluated_claim_id,
-        canonical_variation,
+        equivalence_class,
+        structural_fingerprint,
     )
 
 
@@ -1602,10 +1824,23 @@ def _modal_test_uniqueness_reasons(
         )
         for test in tests
     ]
-    unique_keys = set(keys)
-    if len(unique_keys) < required:
+    reviewer_keys = {
+        (kind, claim_id, equivalence_class)
+        for kind, claim_id, equivalence_class, _ in keys
+    }
+    structural_keys = {
+        (kind, claim_id, structural_fingerprint)
+        for kind, claim_id, _, structural_fingerprint in keys
+    }
+    if len(reviewer_keys) < required:
         reasons.append(
-            f"semantically distinct {label} cases {len(unique_keys)} "
+            f"reviewer-classified distinct {label} cases "
+            f"{len(reviewer_keys)} "
+            f"< required {required}"
+        )
+    if len(structural_keys) < required:
+        reasons.append(
+            f"structurally distinct {label} cases {len(structural_keys)} "
             f"< required {required}"
         )
     if evidence_root is not None:
@@ -1647,12 +1882,18 @@ def evaluate_claim(
     ] = None,
 ) -> ClaimResult:
     cid = str(claim.get("id") or "<missing-id>")
-    imp = _lower(claim.get("importance") or "critical")
+    raw_importance = claim.get("importance")
+    imp = _lower(raw_importance or "critical")
     if imp not in IMPORTANCE: imp = "critical"
     reasons: List[str] = []
     if not _nonempty(claim.get("id")): reasons.append("missing claim id")
     claim_text = claim.get("text")
-    if not _nonempty(claim_text): reasons.append("missing claim text")
+    if _canonical_proposition_text(claim_text) is None:
+        reasons.append("claim text must be a nonempty string")
+    if type(raw_importance) is not str or raw_importance not in IMPORTANCE:
+        reasons.append(
+            "importance must be exactly critical, major, or minor"
+        )
     expected_claim_digest = _proposition_sha256(claim_text)
     declared_claim_digest = _canonical_claimed_sha256(
         claim.get("proposition_sha256")
@@ -1664,11 +1905,33 @@ def evaluate_claim(
         reasons.append(
             "proposition_sha256 does not match canonical claim text"
         )
-    if not _nonempty(claim.get("artifact_location")): reasons.append("missing artifact_location")
+    expected_contract_digest = _claim_contract_sha256(claim)
+    if evidence_root is not None:
+        if claim.get("claim_contract_schema_version") != CLAIM_CONTRACT_SCHEMA_VERSION:
+            reasons.append(
+                "claim_contract_schema_version is not "
+                f"{CLAIM_CONTRACT_SCHEMA_VERSION}"
+            )
+        _, contract_reasons = _claim_contract_payload(claim)
+        reasons.extend(contract_reasons)
+        declared_contract_digest = _canonical_claimed_sha256(
+            claim.get("claim_contract_sha256")
+        )
+        if declared_contract_digest != expected_contract_digest:
+            reasons.append(
+                "claim_contract_sha256 does not match canonical "
+                "method-relative claim contract"
+            )
+    if _canonical_proposition_text(claim.get("artifact_location")) is None:
+        reasons.append("artifact_location must be a nonempty string")
     truth = _lower(claim.get("truth_status"))
     if imp in {"critical", "major"} and truth not in PASS_TRUTH: reasons.append(f"{imp} truth_status is {truth!r}; required confirmed")
     if imp == "minor" and truth not in MINOR_TRUTH: reasons.append(f"minor truth_status is {truth!r}; required supported or confirmed")
-    method = claim.get("method_m") or claim.get("method")
+    method = (
+        claim.get("method_m")
+        if "method_m" in claim
+        else claim.get("method")
+    )
     computed_method, missing_method = method_completeness(method if isinstance(method, Mapping) else None)
     method_score = computed_method
     if claim.get("method_completeness") is not None:
@@ -1686,6 +1949,7 @@ def evaluate_claim(
             evidence_root,
             claim_id=cid,
             claim_proposition=claim_text,
+            claim_contract_sha256=expected_contract_digest,
             json_cache=json_cache,
         )
         for evidence in ev_refs
@@ -1733,6 +1997,7 @@ def evaluate_claim(
         evidence_root=evidence_root,
         claim_id=cid,
         claim_proposition=claim_text,
+        claim_contract_sha256=expected_contract_digest,
         json_cache=json_cache,
     )
     adh, tr = evaluate_tests(
@@ -1741,6 +2006,7 @@ def evaluate_claim(
         evidence_root=evidence_root,
         claim_id=cid,
         claim_proposition=claim_text,
+        claim_contract_sha256=expected_contract_digest,
         json_cache=json_cache,
     )
     reasons.extend(
@@ -1801,14 +2067,120 @@ def _proposition_sha256(value: Any) -> Optional[str]:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def _canonical_identity_json(value: Any, *, depth: int = 0) -> Any:
+    """Return a deterministic JSON value for integrity identities.
+
+    Strings use the same NFC/whitespace canonicalization as propositions.
+    Arrays retain order because argv, grader, and trace order may be part of
+    method M. Object keys are sorted by the serializer.
+    """
+    if depth > 64:
+        raise ValueError("identity JSON exceeds maximum depth 64")
+    if type(value) is str:
+        normalized = unicodedata.normalize("NFC", value)
+        return re.sub(r"\s+", " ", normalized).strip()
+    if value is None or type(value) in {bool, int}:
+        return value
+    if type(value) is float:
+        if not math.isfinite(value):
+            raise ValueError("identity JSON contains a non-finite number")
+        return value
+    if type(value) is list:
+        return [
+            _canonical_identity_json(item, depth=depth + 1)
+            for item in value
+        ]
+    if isinstance(value, Mapping):
+        if any(type(key) is not str for key in value):
+            raise ValueError("identity JSON object keys must be strings")
+        return {
+            key: _canonical_identity_json(item, depth=depth + 1)
+            for key, item in value.items()
+        }
+    raise ValueError(
+        f"identity value has unsupported type {type(value).__name__}"
+    )
+
+
+def _claim_contract_payload(
+    claim: Mapping[str, Any],
+) -> Tuple[Optional[Dict[str, Any]], List[str]]:
+    """Build the versioned method-relative identity for a claim."""
+    reasons: List[str] = []
+    text = _canonical_proposition_text(claim.get("text"))
+    if text is None:
+        reasons.append("claim contract text must be a nonempty string")
+    scope = _canonical_proposition_text(claim.get("scope"))
+    if scope is None:
+        reasons.append("claim contract scope must be a nonempty string")
+    artifact_location = _canonical_proposition_text(
+        claim.get("artifact_location")
+    )
+    if artifact_location is None:
+        reasons.append(
+            "claim contract artifact_location must be a nonempty string"
+        )
+    importance = claim.get("importance")
+    if type(importance) is not str or importance not in IMPORTANCE:
+        reasons.append(
+            "claim contract importance must be exactly critical, major, or minor"
+        )
+    method = claim.get("method_m")
+    if not isinstance(method, Mapping):
+        reasons.append("claim contract method_m must be an object")
+        canonical_method = None
+    else:
+        try:
+            canonical_method = _canonical_identity_json(method)
+        except ValueError as exc:
+            reasons.append(f"claim contract method_m is invalid: {exc}")
+            canonical_method = None
+    if reasons:
+        return None, reasons
+    assert text is not None
+    assert scope is not None
+    assert artifact_location is not None
+    assert type(importance) is str
+    assert canonical_method is not None
+    return {
+        "schema_version": CLAIM_CONTRACT_SCHEMA_VERSION,
+        "text": text,
+        "scope": scope,
+        "artifact_location": artifact_location,
+        "importance": importance,
+        "method_m": canonical_method,
+    }, []
+
+
+def _claim_contract_sha256(claim: Mapping[str, Any]) -> Optional[str]:
+    payload, _ = _claim_contract_payload(claim)
+    if payload is None:
+        return None
+    encoded = json.dumps(
+        payload,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def _modal_case_sha256(
     test: Mapping[str, Any],
     claim_proposition: Any,
     expected_kind: str,
     evidence_observed_result: Any = None,
+    *,
+    claim_contract_sha256: Any = None,
 ) -> Optional[str]:
     claim_text = _canonical_proposition_text(claim_proposition)
     if claim_text is None:
+        return None
+    contract_digest = _canonical_claimed_sha256(claim_contract_sha256)
+    if contract_digest is None:
+        return None
+    world_contract, _ = _canonical_world_contract(test.get("world_contract"))
+    if world_contract is None:
         return None
     if _nonempty(test.get("perturbation")):
         variation_field = "perturbation"
@@ -1818,11 +2190,13 @@ def _modal_case_sha256(
         variation = test.get("variant")
     payload = {
         "claim_proposition": claim_text,
+        "claim_contract_sha256": contract_digest,
         "kind": _lower(test.get("kind") or expected_kind),
         "test_id": _test_id(test),
         "target_claim_ids": sorted(set(_target_claim_values(test))),
         "variation_field": variation_field,
         "variation": _canonical_proposition_text(variation) or "",
+        "world_contract": world_contract,
         "expected_behavior": (
             _canonical_proposition_text(test.get("expected_behavior")) or ""
         ),
@@ -2308,7 +2682,7 @@ def to_markdown(result: Mapping[str, Any], cert_path: Path) -> str:
     for r in result.get("claim_results", []):
         reasons = "; ".join(r.get("reasons") or []) or "—"
         lines.append(f"| {r['claim_id']} | {r['importance']} | {r['status']} | {r['sensitivity_rate']:.2f} | {r['adherence_rate']:.2f} | {r['method_completeness']:.2f} | {r['evidence_count']} | {r.get('structured_evidence_count', 0)} | {r['false_world_tests']} | {r['true_world_tests']} | {reasons} |")
-    lines.append("\nThis deterministic result checks declared fields, thresholds, tests, outcomes, local evidence-ref containment, hardlink-aware evidence and artifact identity, case-bound modal release-declaration identity deduplication, proposition-bound downstream passes, structured evidence binding for every cited local ref, exact SHA-256 equality between artifact_path and hash_or_version, and URI-scheme rejection for both evidence refs and artifact_path. It does not independently prove expert-level semantic adequacy of every evidence artifact or perturbation.")
+    lines.append("\nThis deterministic result checks declared fields, thresholds, tests, outcomes, field-typed method completeness, versioned method-relative claim contracts, independent reviewer-assigned nearby-world equivalence-class and structural-fingerprint thresholds, local evidence-ref containment, hardlink-aware evidence and artifact identity, case-bound modal release-declaration identity deduplication, proposition-bound downstream passes, structured evidence binding for every cited local ref, exact SHA-256 equality between artifact_path and hash_or_version, and URI-scheme rejection for both evidence refs and artifact_path. It does not independently prove expert-level semantic adequacy of every evidence artifact, method, or nearby-world classification.")
     return "\n".join(lines) + "\n"
 
 

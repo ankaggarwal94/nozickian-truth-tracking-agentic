@@ -1,14 +1,16 @@
 {
   "artifact_path": "self_validation/current_observations.json",
+  "claim_contract_schema_version": "1.0",
+  "claim_contract_sha256": "sha256:b02f5ce45c892178e97ceb9438a6d5ac975a2b079ef720c57ff0e9010af28dab",
   "claim_id": "C-pass-tracked-upgrade-audit",
-  "claim_proposition_sha256": "sha256:af6dd806f1832342970a4c3a945bfd9964b1b8072def1be83cdef7feac81ef8b",
+  "claim_proposition_sha256": "sha256:20662ae4a2639cb88c3db1e41be7bbd44fbc784e538a6be1672195150f259c31",
   "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
-  "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
-  "modal_case_sha256": "sha256:86b2eed12a5a655b4ccda92e5778f16af6745c74f1caebda20d3fad21fc5be9d",
+  "evidence_schema_version": "1.1",
+  "hash_or_version": "sha256:c85ac043e984b99023e65fdba70d5e95f818a6d64886bf2e7ca55434fd8ad62a",
+  "modal_case_sha256": "sha256:54664779698686fc16f0f496d08207363fb958e1e78d5871c590413dd0c7ce45",
   "observation_id": "obs:C-pass-tracked-upgrade-audit:FW-certifier-json-markdown-alias",
   "observed_result": "Declared release result (not authenticated execution): The formal contract rejected identical and hardlinked JSON/Markdown destinations and preserved their sentinel bytes.",
-  "support_summary": "This wrapper binds FW-certifier-json-markdown-alias to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
+  "support_summary": "This wrapper binds FW-certifier-json-markdown-alias to one exact case-bound release-declaration identity, the current claim proposition and full method-relative claim contract, and the canonical structured modal-case digest.",
   "test_id": "FW-certifier-json-markdown-alias",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

@@ -102,7 +102,7 @@ Caller-controlled output destinations enforce their declared fresh-versus-replac
 
 For v1.0.3, a complete modeled result is deliberately capped at `status: PASS-SCOPED`, `outcome: CAPPED`, `promotion_authorized: false`, and `satisfied_profile: promotion-contract-v2-complete`, with a nonzero exit and both unresolved Issue #5 obligations: consistency-sweep activation/resolution mechanics and `REMOTE_GROUND_TRUTH_REQUIRED` escalation mechanics remain parent-enforced. Generic `ntt_gate.py` `PASS-TRACKED` semantics remain unchanged. Independently, the formal runner caps an otherwise `PASS-TRACKED` result at `PASS-SCOPED` because temporal immutability remains unenforced; unavailable process containment refuses execution.
 
-The 43-case aggregate suite invokes the production certifier CLI for the baseline and all negative cases. Treat `43/43` as synthetic contract evidence, never as live runtime authentication.
+The 44-case aggregate suite invokes the production certifier CLI for the baseline and all negative cases. Treat `44/44` as synthetic contract evidence, never as live runtime authentication.
 
 
 ## GitHub README documentation review

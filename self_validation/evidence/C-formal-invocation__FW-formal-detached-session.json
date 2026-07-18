@@ -1,14 +1,16 @@
 {
   "artifact_path": "self_validation/current_observations.json",
+  "claim_contract_schema_version": "1.0",
+  "claim_contract_sha256": "sha256:ff43a1873c9ab7dc030bf7b75235f2c23c4c2b3ea5ff9569956b3d66c5b5c1a4",
   "claim_id": "C-formal-invocation",
-  "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
+  "claim_proposition_sha256": "sha256:a05396ec05369fcfc399ecbc3cf448c3df95d9ef09abfbde441dc0fc4a19a162",
   "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
-  "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
-  "modal_case_sha256": "sha256:e354186fbe297a65b60b84df28a90ce02145e384a796055279a7f3eb3b5192d0",
+  "evidence_schema_version": "1.1",
+  "hash_or_version": "sha256:c85ac043e984b99023e65fdba70d5e95f818a6d64886bf2e7ca55434fd8ad62a",
+  "modal_case_sha256": "sha256:f2bd2cc6e7d98c5eace1f697719e90896b98f1406a93c5901be482b76cadf308",
   "observation_id": "obs:C-formal-invocation:FW-formal-detached-session",
   "observed_result": "Declared release result (not authenticated execution): The formal contract contained the detached-session child on supported Linux or refused execution where containment was unavailable, with no sentinel left behind.",
-  "support_summary": "This wrapper binds FW-formal-detached-session to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
+  "support_summary": "This wrapper binds FW-formal-detached-session to one exact case-bound release-declaration identity, the current claim proposition and full method-relative claim contract, and the canonical structured modal-case digest.",
   "test_id": "FW-formal-detached-session",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

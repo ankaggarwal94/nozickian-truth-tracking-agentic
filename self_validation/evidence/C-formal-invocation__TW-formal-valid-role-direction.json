@@ -1,14 +1,16 @@
 {
   "artifact_path": "self_validation/current_observations.json",
+  "claim_contract_schema_version": "1.0",
+  "claim_contract_sha256": "sha256:ff43a1873c9ab7dc030bf7b75235f2c23c4c2b3ea5ff9569956b3d66c5b5c1a4",
   "claim_id": "C-formal-invocation",
-  "claim_proposition_sha256": "sha256:f64ce94776c3383e72dcd5dec081f2cc14b6fb0203adca4e358080b839a77538",
+  "claim_proposition_sha256": "sha256:a05396ec05369fcfc399ecbc3cf448c3df95d9ef09abfbde441dc0fc4a19a162",
   "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
-  "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:5bbfea89831ee40e57ec5fa6e2442effb746ab0591e60b16e746c059fb09ba85",
-  "modal_case_sha256": "sha256:5dbcd7e85231f12119d95573b24ff7e9dfb81f82a1d7fcfbf96e5cdd597a4c94",
+  "evidence_schema_version": "1.1",
+  "hash_or_version": "sha256:c85ac043e984b99023e65fdba70d5e95f818a6d64886bf2e7ca55434fd8ad62a",
+  "modal_case_sha256": "sha256:5400a1ce56d61948e522b9495c2e48f4f163261f327aed1e20d279d98cdb2373",
   "observation_id": "obs:C-formal-invocation:TW-formal-valid-role-direction",
   "observed_result": "Declared release result (not authenticated execution): The formal contract authenticated every required lane in the valid role-directed trace.",
-  "support_summary": "This wrapper binds TW-formal-valid-role-direction to one exact case-bound release-declaration identity, the current claim proposition, and the canonical modal-case digest.",
+  "support_summary": "This wrapper binds TW-formal-valid-role-direction to one exact case-bound release-declaration identity, the current claim proposition and full method-relative claim contract, and the canonical structured modal-case digest.",
   "test_id": "TW-formal-valid-role-direction",
   "timestamp_utc": "2026-07-16T05:15:11Z"
 }

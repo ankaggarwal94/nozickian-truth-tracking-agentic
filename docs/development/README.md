@@ -35,4 +35,4 @@ If a file cited by structured evidence changes, update the evidence JSON hash an
 
 Validator changes require mutation thinking: identify the nearby false world that the new check should reject, add a mutation or contract test where practical, and make sure a benign true-world variant still passes.
 
-The promotion aggregate must remain independent synthetic evidence: its 43 cases invoke the production certifier CLI for the complete baseline and all negatives. Do not treat `43/43` as real runtime authentication. Keep its generated result/stdout ledgers volatile and regenerate release manifests and final generated outputs only after source/schema/policy review reaches a fixed point.
+The promotion aggregate must remain independent synthetic evidence: its 44 cases invoke the production certifier CLI for the complete baseline and all negatives. Do not treat `44/44` as real runtime authentication. Keep its generated result/stdout ledgers volatile and regenerate release manifests and final generated outputs only after source/schema/policy review reaches a fixed point.

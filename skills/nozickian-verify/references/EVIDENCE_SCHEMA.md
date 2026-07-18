@@ -6,9 +6,11 @@ Required fields:
 
 ```json
 {
-  "evidence_schema_version": "1.0",
+  "evidence_schema_version": "1.1",
   "claim_id": "C-001",
   "claim_proposition_sha256": "sha256:<digest of the canonical certificate claim text>",
+  "claim_contract_schema_version": "1.0",
+  "claim_contract_sha256": "sha256:<digest of the canonical method-relative claim contract>",
   "artifact_path": "relative/path/under/evidence_root/to/the/evidence/source",
   "command_or_source": "command, file, trace, source URL, or manual-audit context declared by the wrapper",
   "observed_result": "result text declared by the wrapper",
@@ -18,15 +20,17 @@ Required fields:
 }
 ```
 
-The package writes wrapper schema `1.0`. The gate requires a nonempty
-`evidence_schema_version`; the separately versioned observation-ledger field
-described below is checked for the exact value `"1.1"`. `claim_id` must match the
+The package writes and the gate requires exact wrapper schema `1.1`. Legacy
+wrapper `1.0` lacks the method-relative claim binding and fails closed. The
+separately versioned observation-ledger field described below is checked for
+the exact value `"1.2"`. `claim_id` must match the
 claim being evaluated, or optional `applies_to_claims` must contain that claim ID
 or `*`.
 
 In strict local-evidence mode, the certificate claim itself must declare
-`proposition_sha256`, and every claim-level and test-level wrapper must declare
-the same proposition identity as `claim_proposition_sha256`. The digest input is
+`proposition_sha256`, `claim_contract_schema_version: "1.0"`, and
+`claim_contract_sha256`. Every claim-level and test-level wrapper must declare
+the same identities. The proposition digest input is
 the claim's `text` after Unicode NFC normalization, replacing each run of
 whitespace with one ASCII space, and stripping leading and trailing whitespace.
 The gate hashes the UTF-8 bytes of that canonical text with SHA-256. A declared
@@ -35,13 +39,40 @@ prefix; hexadecimal case is normalized, but writers should emit lowercase
 `sha256:<64-hex>` values. An empty or non-string proposition cannot be
 canonicalized.
 
+The method-relative claim contract is the following object serialized as UTF-8
+JSON with sorted keys, `ensure_ascii=false`, and compact separators (`,` and
+`:`):
+
+```json
+{
+  "schema_version": "1.0",
+  "text": "<canonical claim text>",
+  "scope": "<canonical nonempty claim scope>",
+  "artifact_location": "<canonical nonempty artifact or referent locator>",
+  "importance": "critical|major|minor",
+  "method_m": {"<complete method M>": "<canonical JSON>"}
+}
+```
+
+`scope` and `artifact_location` must be JSON strings; `importance` must have the
+exact lowercase value shown; and `method_m` must be an object. Every string at
+any depth uses the proposition NFC/whitespace canonicalization. Arrays retain
+their order because command, grader, and trace ordering can be part of method
+M. JSON object order is immaterial. The gate hashes the canonical compact JSON
+bytes with SHA-256. This binds evidence to the claim's scope, referent,
+criticality, and actual checking method rather than to text alone. Even minor
+strict claims require one structured evidence wrapper so a certificate cannot
+downgrade a claim and delete every externalized binding.
+
 Test-level wrappers add the modal bindings shown here:
 
 ```json
 {
-  "evidence_schema_version": "1.0",
+  "evidence_schema_version": "1.1",
   "claim_id": "C-001",
   "claim_proposition_sha256": "sha256:<canonical claim digest>",
+  "claim_contract_schema_version": "1.0",
+  "claim_contract_sha256": "sha256:<canonical method-relative claim digest>",
   "test_id": "FW-001",
   "modal_case_sha256": "sha256:<canonical modal-case digest>",
   "observation_id": "obs.C-001.FW-001",
@@ -62,11 +93,22 @@ SHA-256 of the following object serialized as UTF-8 JSON with sorted keys,
 ```json
 {
   "claim_proposition": "<canonical claim text>",
+  "claim_contract_sha256": "<64 lowercase hex characters>",
   "kind": "<lowercase stripped test kind, falling back to the expected kind>",
   "test_id": "<stripped id, falling back to test_id>",
   "target_claim_ids": ["<sorted unique stripped target IDs>"],
   "variation_field": "perturbation",
   "variation": "<canonical perturbation or variant text>",
+  "world_contract": {
+    "schema_version": "1.0",
+    "semantic_equivalence_class": "<reviewer-assigned-lowercase-ascii-slug>",
+    "operator": "<canonical operation>",
+    "target": "<canonical mutated or preserved target>",
+    "precondition": "<canonical pre-state>",
+    "state_delta": "<canonical state change>",
+    "oracle": "<canonical decision procedure>",
+    "expected_outcome": "<canonical expected result>"
+  },
   "expected_behavior": "<canonical expected_behavior>",
   "observed_behavior": "<canonical observed_behavior>",
   "observed_result": "<canonical evidence-wrapper observed_result>",
@@ -85,6 +127,18 @@ either the case declaration or its declared release-result text changes the
 modal-case digest. For ledger-backed modal wrappers, neither this text nor
 `command_or_source` authenticates execution.
 
+The closed `world_contract` is required for every modal test. All fields except
+`schema_version` and `semantic_equivalence_class` are nonempty strings using
+the same NFC/whitespace canonicalization. The equivalence class is an exact,
+reviewer-assigned lowercase ASCII slug. Coverage must independently meet its
+threshold for (a) distinct claim/kind/equivalence-class identities and (b)
+distinct SHA-256 fingerprints of the canonical structured contract excluding
+`semantic_equivalence_class`. The complete contract, including the class,
+remains bound in `modal_case_sha256`. Thus neither paraphrasing structured prose
+under one class nor relabeling one unchanged structure with a new class creates
+a second world. Genuinely distinct reviewed worlds can still use identical
+display prose.
+
 ## Observation ledger binding
 
 `observation_id` is optional, but when present it must be an already stripped,
@@ -94,13 +148,14 @@ JSON ledger with this shape:
 
 ```json
 {
-  "observation_schema_version": "1.1",
+  "observation_schema_version": "1.2",
   "observations": {
     "obs.C-001.FW-001": {
       "claim_id": "C-001",
       "test_id": "FW-001",
       "kind": "false_world",
       "claim_proposition_sha256": "sha256:<canonical claim digest>",
+      "claim_contract_sha256": "sha256:<canonical method-relative claim digest>",
       "modal_case_sha256": "sha256:<canonical modal-case digest>",
       "result": "pass",
       "outcome": "rejected_false_claim",
@@ -110,11 +165,12 @@ JSON ledger with this shape:
 }
 ```
 
-The ledger must have exact `observation_schema_version: "1.1"` and exactly two
+The ledger must have exact `observation_schema_version: "1.2"` and exactly two
 top-level fields: `observation_schema_version` and `observations`. Each named
 record must have exactly these fields and no others: `claim_id`, `test_id`,
-`kind`, `claim_proposition_sha256`, `modal_case_sha256`, `result`, `outcome`,
-and `observed_result`. Every record value must be a JSON string. The record's `claim_id`,
+`kind`, `claim_proposition_sha256`, `claim_contract_sha256`,
+`modal_case_sha256`, `result`, `outcome`, and `observed_result`. Every record
+value must be a JSON string. The record's `claim_id`,
 `test_id`, and `kind` must exactly equal the evaluated claim ID, modal test ID,
 and expected kind (`false_world` or `true_world`). Its two digests must match the
 gate-derived claim and modal-case digests. `result`, after stripping and
@@ -183,7 +239,10 @@ a nonempty reason and do not claim automatic closure.
 
 ## Promotion certificate v2 evidence graph
 
-The claim-level schema above remains unchanged for ordinary `ntt_gate.py` certificates. Promotion certificate v2 uses a different evidence boundary and rejects legacy flat promotion `evidence_refs`.
+The strict claim-level contract above applies both to ordinary `ntt_gate.py`
+certificates and to claims embedded in promotion certificate v2. Promotion v2
+uses a different top-level evidence graph and rejects legacy flat promotion
+`evidence_refs`.
 
 ```json
 {
@@ -252,6 +311,9 @@ The claim-level schema above remains unchanged for ordinary `ntt_gate.py` certif
       "id": "C-UPGRADE-001",
       "text": "The exact package snapshot satisfies the independently evaluated promotion contract.",
       "proposition_sha256": "sha256:<digest of the canonical claim text>",
+      "claim_contract_schema_version": "1.0",
+      "claim_contract_sha256": "sha256:<digest of canonical text, scope, artifact_location, importance, and method_m>",
+      "scope": "The exact identified package snapshot and independently evaluated promotion contract only.",
       "importance": "critical",
       "artifact_location": "promotion_claims/C-UPGRADE-001",
       "truth_status": "executed_confirmed",
@@ -275,6 +337,16 @@ The claim-level schema above remains unchanged for ordinary `ntt_gate.py` certif
           "kind": "false_world",
           "target_claim": "C-UPGRADE-001",
           "perturbation": "Use stale package bytes.",
+          "world_contract": {
+            "schema_version": "1.0",
+            "semantic_equivalence_class": "stale-package-bytes",
+            "operator": "replace",
+            "target": "identified package snapshot",
+            "precondition": "The claim is bound to the current package bytes.",
+            "state_delta": "Substitute bytes from a stale package snapshot.",
+            "oracle": "Recompute and compare the bound package identity.",
+            "expected_outcome": "rejected_false_claim"
+          },
           "expected_behavior": "The strict gate rejects the claim.",
           "observed_behavior": "The strict gate rejected the claim.",
           "outcome": "rejected_false_claim",
@@ -286,6 +358,16 @@ The claim-level schema above remains unchanged for ordinary `ntt_gate.py` certif
           "kind": "false_world",
           "target_claim": "C-UPGRADE-001",
           "perturbation": "Remove independent formal evidence.",
+          "world_contract": {
+            "schema_version": "1.0",
+            "semantic_equivalence_class": "formal-evidence-absent",
+            "operator": "remove",
+            "target": "independent formal evidence binding",
+            "precondition": "The promotion claim cites independently bound formal evidence.",
+            "state_delta": "Delete the formal evidence binding.",
+            "oracle": "Evaluate the strict promotion evidence graph.",
+            "expected_outcome": "blocked"
+          },
           "expected_behavior": "The strict gate blocks the claim.",
           "observed_behavior": "The strict gate blocked the claim.",
           "outcome": "blocked",
@@ -299,6 +381,16 @@ The claim-level schema above remains unchanged for ordinary `ntt_gate.py` certif
           "kind": "true_world",
           "target_claim": "C-UPGRADE-001",
           "variant": "Use equivalent independently bound evidence.",
+          "world_contract": {
+            "schema_version": "1.0",
+            "semantic_equivalence_class": "equivalent-independent-evidence",
+            "operator": "substitute",
+            "target": "independent evidence representation",
+            "precondition": "The original evidence is independently bound and valid.",
+            "state_delta": "Replace it with semantically equivalent independently bound evidence.",
+            "oracle": "Re-evaluate exact bindings and the strict claim contract.",
+            "expected_outcome": "retained_true_claim"
+          },
           "expected_behavior": "The strict gate retains the claim.",
           "observed_behavior": "The strict gate retained the claim.",
           "outcome": "retained_true_claim",

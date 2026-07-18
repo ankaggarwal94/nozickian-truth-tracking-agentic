@@ -13,7 +13,14 @@ of Nozickian verification. v0.7.2 hardens strict local evidence semantics:
 * a good evidence ref cannot mask one bad cited evidence ref; and
 * URI-like artifact_path values are rejected even if a matching local path exists,
   modal-test thresholds count unique false/true-world tests rather than duplicated
-  test objects, and Markdown report output never follows final or ancestor links.
+  test objects, and Markdown report output never follows final or ancestor links;
+* method components reject scalar and flag-only placeholders while retaining
+  substantive string and structured descriptions;
+* wrapper 1.1 and ledger 1.2 evidence binds a versioned method-relative claim
+  contract covering text, scope, artifact/referent, importance, and method M; and
+* modal case hashes bind closed world contracts while coverage independently
+  requires reviewer-assigned semantic-equivalence classes and structural
+  fingerprints rather than trusting either a relabelable slug or display prose.
 """
 from __future__ import annotations
 import argparse
@@ -112,9 +119,74 @@ def proposition_sha256(value: Any) -> str:
     ).hexdigest()
 
 
+def canonical_identity_json(value: Any) -> Any:
+    if type(value) is str:
+        return canonical_proposition(value)
+    if value is None or type(value) in {bool, int, float}:
+        return value
+    if type(value) is list:
+        return [canonical_identity_json(item) for item in value]
+    if isinstance(value, Mapping):
+        return {
+            str(key): canonical_identity_json(item)
+            for key, item in value.items()
+        }
+    raise TypeError(f"unsupported identity value {type(value).__name__}")
+
+
+def claim_contract_sha256(claim: Mapping[str, Any]) -> str:
+    payload = {
+        "schema_version": "1.0",
+        "text": canonical_proposition(claim.get("text")),
+        "scope": canonical_proposition(claim.get("scope")),
+        "artifact_location": canonical_proposition(
+            claim.get("artifact_location")
+        ),
+        "importance": claim.get("importance"),
+        "method_m": canonical_identity_json(claim.get("method_m")),
+    }
+    return hashlib.sha256(
+        json.dumps(
+            payload,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def finalize_claim_contract(claim: Dict[str, Any]) -> None:
+    claim["claim_contract_schema_version"] = "1.0"
+    claim["claim_contract_sha256"] = (
+        f"sha256:{claim_contract_sha256(claim)}"
+    )
+
+
+def world_contract(
+    *,
+    semantic_equivalence_class: str,
+    operator: str,
+    target: str,
+    precondition: str,
+    state_delta: str,
+    oracle: str,
+    expected_outcome: str,
+) -> Dict[str, str]:
+    return {
+        "schema_version": "1.0",
+        "semantic_equivalence_class": semantic_equivalence_class,
+        "operator": operator,
+        "target": target,
+        "precondition": precondition,
+        "state_delta": state_delta,
+        "oracle": oracle,
+        "expected_outcome": expected_outcome,
+    }
+
+
 def modal_case_sha256(
     test: Mapping[str, Any],
-    claim_text: str,
+    claim: Mapping[str, Any],
     expected_kind: str,
     evidence_observed_result: Any = None,
 ) -> str:
@@ -127,7 +199,8 @@ def modal_case_sha256(
         variation_field = "variant"
         variation = test.get("variant")
     payload = {
-        "claim_proposition": canonical_proposition(claim_text),
+        "claim_proposition": canonical_proposition(claim.get("text")),
+        "claim_contract_sha256": claim_contract_sha256(claim),
         "kind": str(test.get("kind") or expected_kind).strip().lower(),
         "test_id": str(test.get("id") or test.get("test_id") or "").strip(),
         "target_claim_ids": sorted({
@@ -135,6 +208,7 @@ def modal_case_sha256(
         }),
         "variation_field": variation_field,
         "variation": canonical_proposition(variation),
+        "world_contract": canonical_identity_json(test.get("world_contract")),
         "expected_behavior": canonical_proposition(
             test.get("expected_behavior")
         ),
@@ -162,7 +236,7 @@ def modal_case_sha256(
 
 
 def false_test(i: str) -> Dict[str, Any]:
-    return {
+    test = {
         "id": i,
         "kind": "false_world",
         "target_claim": "C-001",
@@ -173,6 +247,39 @@ def false_test(i: str) -> Dict[str, Any]:
         "result": "pass",
         "evidence_refs": [ev(i)]
     }
+    if i == "FW-001":
+        test["world_contract"] = world_contract(
+            semantic_equivalence_class="claim-evidence-absent",
+            operator="remove",
+            target="claims[C-001].evidence_refs",
+            precondition="The critical claim cites two distinct evidence wrappers.",
+            state_delta="Replace the evidence_refs array with an empty array.",
+            oracle="The strict gate must return FAIL for missing critical evidence.",
+            expected_outcome="rejected_false_claim",
+        )
+    elif i == "FW-002":
+        test["world_contract"] = world_contract(
+            semantic_equivalence_class="artifact-digest-mismatch",
+            operator="replace",
+            target="evidence wrapper hash_or_version",
+            precondition="The wrapper names the exact SHA-256 of its artifact.",
+            state_delta="Replace the digest with sixty-four zero hexadecimal characters.",
+            oracle="The strict gate must return FAIL for the wrong artifact digest.",
+            expected_outcome="rejected_false_claim",
+        )
+    else:
+        test["world_contract"] = world_contract(
+            semantic_equivalence_class=(
+                "fixture-" + re.sub(r"[^a-z0-9]+", "-", i.lower()).strip("-")
+            ),
+            operator="mutate",
+            target=f"contract fixture {i}",
+            precondition="The baseline nearby-world contract is valid.",
+            state_delta=f"Apply the independently identified false mutation {i}.",
+            oracle="The strict gate must reject the declared false world.",
+            expected_outcome="rejected_false_claim",
+        )
+    return test
 
 
 def true_test(i: str) -> Dict[str, Any]:
@@ -185,32 +292,47 @@ def true_test(i: str) -> Dict[str, Any]:
         "observed_behavior": "The verifier retained the true claim and accepted the equivalent variant as true.",
         "outcome": "retained_true_claim",
         "result": "pass",
-        "evidence_refs": [ev(i)]
+        "evidence_refs": [ev(i)],
+        "world_contract": world_contract(
+            semantic_equivalence_class="benign-presentation-equivalence",
+            operator="preserve",
+            target="canonical claim and evidence semantics",
+            precondition="The baseline strict certificate is valid.",
+            state_delta=f"Apply benign presentation-equivalent variation {i}.",
+            oracle="The strict gate must retain the supported claim.",
+            expected_outcome="retained_true_claim",
+        ),
     }
 
 
 def valid_cert() -> Dict[str, Any]:
     m = method()
     claim_text = BASE_CLAIM_TEXT
+    claim: Dict[str, Any] = {
+        "id": "C-001",
+        "text": claim_text,
+        "proposition_sha256": f"sha256:{proposition_sha256(claim_text)}",
+        "scope": (
+            "This claim covers deterministic behavior of the package-local "
+            "ntt_gate.py and run_gate_contract_tests.py fixtures."
+        ),
+        "importance": "critical",
+        "artifact_location": "scripts/ntt_gate.py + scripts/run_gate_contract_tests.py",
+        "truth_status": "executed_confirmed",
+        "method_m": copy.deepcopy(m),
+        "evidence_refs": [ev("run-gate-contract-tests"), ev("ntt-gate-source")],
+        "false_world_tests": [false_test("FW-001"), false_test("FW-002")],
+        "true_world_tests": [true_test("TW-001")],
+        "unresolved_contradictions": [],
+        "residual_risks": ["This contract test does not execute Claude Code runtime."],
+    }
+    finalize_claim_contract(claim)
     return {
         "schema_version": "2.0",
         "artifact": {"name": "contract-test-artifact", "version": "2.0.0"},
         "method_manifest": copy.deepcopy(m),
         "scope_limitations": [],
-        "claims": [{
-            "id": "C-001",
-            "text": claim_text,
-            "proposition_sha256": f"sha256:{proposition_sha256(claim_text)}",
-            "importance": "critical",
-            "artifact_location": "scripts/ntt_gate.py + scripts/run_gate_contract_tests.py",
-            "truth_status": "executed_confirmed",
-            "method_m": copy.deepcopy(m),
-            "evidence_refs": [ev("run-gate-contract-tests"), ev("ntt-gate-source")],
-            "false_world_tests": [false_test("FW-001"), false_test("FW-002")],
-            "true_world_tests": [true_test("TW-001")],
-            "unresolved_contradictions": [],
-            "residual_risks": ["This contract test does not execute Claude Code runtime."]
-        }]
+        "claims": [claim],
     }
 
 
@@ -221,23 +343,22 @@ def all_evidence_refs(
         str,
         Optional[str],
         Optional[str],
-        str,
+        Mapping[str, Any],
         Optional[Mapping[str, Any]],
         Optional[str],
     ]
 ]:
     for claim in cert.get("claims", []):
         cid = str(claim.get("id"))
-        claim_text = str(claim.get("text") or "")
         for ref in claim.get("evidence_refs", []):
-            yield str(ref), cid, None, claim_text, None, None
+            yield str(ref), cid, None, claim, None, None
         for key in ("false_world_tests", "true_world_tests"):
             kind = "false_world" if key == "false_world_tests" else "true_world"
             for test in claim.get(key, []):
                 tid_raw = test.get("id", test.get("test_id"))
                 tid = str(tid_raw).strip() if tid_raw is not None else ""
                 for ref in test.get("evidence_refs", []):
-                    yield str(ref), cid, tid, claim_text, test, kind
+                    yield str(ref), cid, tid, claim, test, kind
 
 
 def _safe_evidence_ref(ref: str) -> bool:
@@ -255,7 +376,7 @@ def _write_one_evidence(
     ref: str,
     cid: Optional[str],
     tid: Optional[str],
-    claim_text: str,
+    claim: Mapping[str, Any],
     modal_test: Optional[Mapping[str, Any]],
     test_kind: Optional[str],
     *,
@@ -296,11 +417,13 @@ def _write_one_evidence(
     if wrong_hash:
         digest = "0" * 64
     data: Dict[str, Any] = {
-        "evidence_schema_version": "1.0",
+        "evidence_schema_version": "1.1",
         "claim_id": cid,
         "claim_proposition_sha256": (
-            f"sha256:{proposition_sha256(claim_text)}"
+            f"sha256:{proposition_sha256(claim.get('text'))}"
         ),
+        "claim_contract_schema_version": "1.0",
+        "claim_contract_sha256": f"sha256:{claim_contract_sha256(claim)}",
         "artifact_path": artifact_rel,
         "command_or_source": "run_gate_contract_tests.py structured evidence fixture",
         "observed_result": f"Structured evidence fixture for {ref} observed a deterministic gate contract case.",
@@ -315,7 +438,7 @@ def _write_one_evidence(
             "sha256:"
             + modal_case_sha256(
                 modal_test,
-                claim_text,
+                claim,
                 test_kind,
                 data["observed_result"],
             )
@@ -329,11 +452,16 @@ def write_external_evidence(evidence_root: Path, ref_path: Path, *, artifact_rel
     artifact = evidence_root / artifact_rel
     artifact.parent.mkdir(parents=True, exist_ok=True)
     artifact.write_text("In-root artifact intentionally cited by an out-of-root evidence JSON.\n", encoding="utf-8")
+    base_claim = valid_cert()["claims"][0]
     data = {
-        "evidence_schema_version": "1.0",
+        "evidence_schema_version": "1.1",
         "claim_id": "C-001",
         "claim_proposition_sha256": (
             f"sha256:{proposition_sha256(BASE_CLAIM_TEXT)}"
+        ),
+        "claim_contract_schema_version": "1.0",
+        "claim_contract_sha256": (
+            f"sha256:{claim_contract_sha256(base_claim)}"
         ),
         "applies_to_tests": ["*"],
         "artifact_path": artifact_rel,
@@ -362,7 +490,7 @@ def write_structured_evidence_tree(
     artifact_escape_refs = artifact_escape_refs or set()
     artifact_absolute_refs = artifact_absolute_refs or set()
     artifact_uri_refs = artifact_uri_refs or {}
-    for ref, cid, tid, claim_text, modal_test, test_kind in all_evidence_refs(cert):
+    for ref, cid, tid, claim, modal_test, test_kind in all_evidence_refs(cert):
         if not _safe_evidence_ref(ref):
             continue
         _write_one_evidence(
@@ -370,7 +498,7 @@ def write_structured_evidence_tree(
             ref,
             cid,
             tid,
-            claim_text,
+            claim,
             modal_test,
             test_kind,
             wrong_hash=ref in wrong_refs,
@@ -571,6 +699,38 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
             "reasons": summarize(result),
         })
 
+    def add_claim_contract_substitution(
+        name: str,
+        mutate: Any,
+        allowed: Optional[Set[str]] = None,
+    ) -> None:
+        effective_allowed = allowed or {"FAIL"}
+        cert = copy.deepcopy(base)
+        evidence_root, _outside_root = write_structured_evidence_tree(cert)
+        mutate(cert["claims"][0])
+        finalize_claim_contract(cert["claims"][0])
+        result = gate_mod.evaluate_certificate(
+            cert,
+            evidence_root=evidence_root,
+            strict_evidence=True,
+        )
+        reasons = summarize(result)
+        cases.append({
+            "name": name,
+            "status": result.get("status"),
+            "expected_any": sorted(effective_allowed),
+            "passed": (
+                result.get("status") in effective_allowed
+                and any(
+                    "claim_contract_sha256 does not match" in reason
+                    for reason in reasons
+                )
+            ),
+            "evidence_root": "<temporary strict-evidence root>",
+            "outside_root": "<temporary outside-root probe>",
+            "reasons": reasons,
+        })
+
     def add_strict_same_artifact(name: str, cert: Dict[str, Any], allowed: Set[str]) -> None:
         evidence_root, _outside_root = write_structured_evidence_tree(cert)
         refs = list(cert["claims"][0].get("evidence_refs", []))
@@ -739,6 +899,9 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
                 "claim_proposition_sha256": data[
                     "claim_proposition_sha256"
                 ],
+                "claim_contract_sha256": data[
+                    "claim_contract_sha256"
+                ],
                 "modal_case_sha256": data["modal_case_sha256"],
                 "result": "pass",
                 "outcome": "rejected_false_claim",
@@ -754,6 +917,8 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
             )
         elif observation_mode == "missing-record-field":
             observations["OBS-FW-001"].pop("observed_result")
+        elif observation_mode == "missing-contract-field":
+            observations["OBS-FW-001"].pop("claim_contract_sha256")
         elif observation_mode == "unreferenced-extra-record-field":
             observations["OBS-UNREFERENCED"] = {
                 **copy.deepcopy(observations["OBS-FW-001"]),
@@ -766,13 +931,14 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
                 "test_id": "FW-UNREFERENCED",
                 "kind": "garbage",
                 "claim_proposition_sha256": "not-a-digest",
+                "claim_contract_sha256": "not-a-digest",
                 "modal_case_sha256": "not-a-digest",
                 "result": "FAIL",
                 "outcome": "invented_outcome",
                 "observed_result": "x",
             }
         ledger = {
-            "observation_schema_version": "1.1",
+            "observation_schema_version": "1.2",
             "observations": observations,
         }
         if observation_mode == "extra-ledger-field":
@@ -780,7 +946,7 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
                 "fabricated": {"status": "PASS"}
             }
         elif observation_mode == "old-schema":
-            ledger["observation_schema_version"] = "1.0"
+            ledger["observation_schema_version"] = "1.1"
         ledger_path.write_text(
             json.dumps(ledger, indent=2, sort_keys=True),
             encoding="utf-8",
@@ -806,6 +972,7 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
                 "valid",
                 "extra-record-field",
                 "missing-record-field",
+                "missing-contract-field",
                 "unreferenced-extra-record-field",
                 "unreferenced-invalid-record-semantics",
                 "duplicate-record-key",
@@ -835,22 +1002,26 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         status = result.get("status")
         schema_reason_tokens = {
             "old-schema": (
-                "observation ledger schema is not 1.1",
+                "observation ledger schema is not 1.2",
             ),
             "extra-ledger-field": (
-                "observation ledger fields are not exact for schema 1.1",
+                "observation ledger fields are not exact for schema 1.2",
                 "suite_summaries",
             ),
             "extra-record-field": (
-                "fields are not exact for schema 1.1",
+                "fields are not exact for schema 1.2",
                 "source_suite",
             ),
             "missing-record-field": (
-                "fields are not exact for schema 1.1",
+                "fields are not exact for schema 1.2",
                 "observed_result",
             ),
+            "missing-contract-field": (
+                "fields are not exact for schema 1.2",
+                "claim_contract_sha256",
+            ),
             "unreferenced-extra-record-field": (
-                "observation OBS-UNREFERENCED fields are not exact for schema 1.1",
+                "observation OBS-UNREFERENCED fields are not exact for schema 1.2",
                 "source_suite",
             ),
             "unreferenced-invalid-record-semantics": (
@@ -1102,6 +1273,135 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         "reasons": substitution_reasons,
     })
 
+    add_claim_contract_substitution(
+        "coordinated_scope_widening_cannot_inherit_original_evidence",
+        lambda claim: claim.__setitem__(
+            "scope",
+            "All production deployments, environments, users, and future versions.",
+        ),
+    )
+    add_claim_contract_substitution(
+        "coordinated_artifact_referent_substitution_cannot_inherit_evidence",
+        lambda claim: claim.__setitem__(
+            "artifact_location",
+            "every production artifact and deployment",
+        ),
+    )
+
+    def downgrade_importance(claim: Dict[str, Any]) -> None:
+        claim["importance"] = "minor"
+        claim["false_world_tests"] = []
+        claim["true_world_tests"] = []
+
+    add_claim_contract_substitution(
+        "critical_to_minor_downgrade_cannot_delete_modal_obligations",
+        downgrade_importance,
+        {"LIMITED"},
+    )
+
+    def replace_method_with_unrelated_method(claim: Dict[str, Any]) -> None:
+        claim["method_m"] = {
+            "producer": "coin flip unrelated to the claimed package behavior",
+            "checker": "rubber-stamp acceptance unrelated to the claim",
+            "artifacts": ["unrelated.txt"],
+            "environment": ["unrelated environment"],
+            "tools": ["coin"],
+            "evidence_process": "accept whatever the coin flip says",
+            "graders_or_tests": ["none relevant to the claim"],
+            "trace_or_logs": ["unrelated.log"],
+        }
+
+    add_claim_contract_substitution(
+        "substantive_but_unrelated_method_cannot_inherit_original_evidence",
+        replace_method_with_unrelated_method,
+    )
+
+    missing_scope = copy.deepcopy(base)
+    missing_scope["claims"][0].pop("scope")
+    add_strict(
+        "strict_claim_requires_explicit_scope",
+        missing_scope,
+        {"FAIL"},
+    )
+    for scope_type, scope_value in (
+        ("boolean", False),
+        ("array", ["apparently", "scoped"]),
+        ("object", {"statement": "apparently scoped"}),
+    ):
+        malformed_scope = copy.deepcopy(base)
+        malformed_scope["claims"][0]["scope"] = scope_value
+        add_strict(
+            f"strict_claim_rejects_{scope_type}_scope",
+            malformed_scope,
+            {"FAIL"},
+        )
+
+    canonical_contract_whitespace = copy.deepcopy(base)
+    canonical_contract_root, _ = write_structured_evidence_tree(
+        canonical_contract_whitespace
+    )
+    canonical_contract_whitespace["claims"][0]["scope"] = (
+        "  This claim covers deterministic behavior of the package-local\n"
+        "ntt_gate.py   and run_gate_contract_tests.py fixtures.  "
+    )
+    canonical_contract_whitespace["claims"][0]["method_m"]["checker"] = (
+        "  Hardened deterministic validator plus gate contract tests\n"
+        "and manual inspection.  "
+    )
+    canonical_contract_whitespace_result = gate_mod.evaluate_certificate(
+        canonical_contract_whitespace,
+        evidence_root=canonical_contract_root,
+        strict_evidence=True,
+    )
+    cases.append({
+        "name": "claim_contract_canonicalizes_benign_whitespace",
+        "status": canonical_contract_whitespace_result.get("status"),
+        "expected_any": ["PASS-TRACKED"],
+        "passed": (
+            canonical_contract_whitespace_result.get("status")
+            == "PASS-TRACKED"
+        ),
+        "reasons": summarize(canonical_contract_whitespace_result),
+    })
+
+    for wrapper_case, mutate_wrapper in (
+        (
+            "legacy_evidence_wrapper_schema_1_0_is_rejected",
+            lambda data: data.__setitem__("evidence_schema_version", "1.0"),
+        ),
+        (
+            "legacy_wrapper_missing_claim_contract_digest_is_rejected",
+            lambda data: data.pop("claim_contract_sha256"),
+        ),
+        (
+            "legacy_wrapper_missing_claim_contract_version_is_rejected",
+            lambda data: data.pop("claim_contract_schema_version"),
+        ),
+    ):
+        wrapper_cert = copy.deepcopy(base)
+        wrapper_root, _ = write_structured_evidence_tree(wrapper_cert)
+        wrapper_path = wrapper_root / wrapper_cert["claims"][0][
+            "evidence_refs"
+        ][0]
+        wrapper_data = json.loads(wrapper_path.read_text(encoding="utf-8"))
+        mutate_wrapper(wrapper_data)
+        wrapper_path.write_text(
+            json.dumps(wrapper_data, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        wrapper_result = gate_mod.evaluate_certificate(
+            wrapper_cert,
+            evidence_root=wrapper_root,
+            strict_evidence=True,
+        )
+        cases.append({
+            "name": wrapper_case,
+            "status": wrapper_result.get("status"),
+            "expected_any": ["FAIL"],
+            "passed": wrapper_result.get("status") == "FAIL",
+            "reasons": summarize(wrapper_result),
+        })
+
     modal_substitution = copy.deepcopy(base)
     modal_substitution_root, _ = write_structured_evidence_tree(
         modal_substitution
@@ -1264,7 +1564,7 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     )
     oversized_ledger_path.write_text(
         json.dumps({
-            "observation_schema_version": "1.1",
+            "observation_schema_version": "1.2",
             "observations": {},
             "padding": {
                 f"field-{index}": index
@@ -1449,7 +1749,7 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         allowed={"PASS-TRACKED"},
     )
     add_shared_modal_ledger(
-        "observation_schema_1_0_is_rejected",
+        "observation_schema_1_1_is_rejected",
         copy.deepcopy(base),
         observation_mode="old-schema",
         allowed={"FAIL"},
@@ -1470,6 +1770,12 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         "observation_record_missing_required_field_is_rejected",
         copy.deepcopy(base),
         observation_mode="missing-record-field",
+        allowed={"FAIL"},
+    )
+    add_shared_modal_ledger(
+        "legacy_observation_record_missing_claim_contract_is_rejected",
+        copy.deepcopy(base),
+        observation_mode="missing-contract-field",
         allowed={"FAIL"},
     )
     add_shared_modal_ledger(
@@ -1539,6 +1845,91 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     add_strict(
         "relabeling_one_false_world_does_not_create_modal_coverage",
         relabeled_false_world,
+        {"FAIL"},
+    )
+
+    paraphrased_same_world = copy.deepcopy(base)
+    first_paraphrase = copy.deepcopy(
+        paraphrased_same_world["claims"][0]["false_world_tests"][0]
+    )
+    second_paraphrase = copy.deepcopy(first_paraphrase)
+    second_paraphrase["id"] = "FW-PARAPHRASE"
+    second_paraphrase["evidence_refs"] = [ev("FW-PARAPHRASE")]
+    second_paraphrase["perturbation"] = (
+        "Erase all supporting references from the same critical claim."
+    )
+    second_paraphrase["world_contract"].update({
+        "operator": "delete",
+        "target": "the critical claim's supporting-reference array",
+        "precondition": "Two independent wrappers support the claim.",
+        "state_delta": "The supporting-reference collection becomes empty.",
+        "oracle": "Strict evaluation rejects the unsupported critical claim.",
+    })
+    paraphrased_same_world["claims"][0]["false_world_tests"] = [
+        first_paraphrase,
+        second_paraphrase,
+    ]
+    add_strict(
+        "paraphrased_same_equivalence_class_does_not_inflate_coverage",
+        paraphrased_same_world,
+        {"FAIL"},
+    )
+
+    equivalence_class_relabel = copy.deepcopy(base)
+    relabel_original = copy.deepcopy(
+        equivalence_class_relabel["claims"][0]["false_world_tests"][0]
+    )
+    relabel_clone = copy.deepcopy(relabel_original)
+    relabel_clone["id"] = "FW-CLASS-RELABEL"
+    relabel_clone["evidence_refs"] = [ev("FW-CLASS-RELABEL")]
+    relabel_clone["world_contract"]["semantic_equivalence_class"] = (
+        "claim-evidence-absent-relabel"
+    )
+    equivalence_class_relabel["claims"][0]["false_world_tests"] = [
+        relabel_original,
+        relabel_clone,
+    ]
+    add_strict(
+        "changing_only_equivalence_class_slug_does_not_inflate_coverage",
+        equivalence_class_relabel,
+        {"FAIL"},
+    )
+
+    add_strict(
+        "distinct_equivalence_classes_and_structural_worlds_still_pass",
+        copy.deepcopy(base),
+        {"PASS-TRACKED"},
+    )
+
+    same_display_distinct_worlds = copy.deepcopy(base)
+    same_display_distinct_worlds["claims"][0]["false_world_tests"][1][
+        "perturbation"
+    ] = same_display_distinct_worlds["claims"][0]["false_world_tests"][0][
+        "perturbation"
+    ]
+    add_strict(
+        "same_display_prose_with_distinct_structured_worlds_still_passes",
+        same_display_distinct_worlds,
+        {"PASS-TRACKED"},
+    )
+
+    invalid_equivalence_class = copy.deepcopy(base)
+    invalid_equivalence_class["claims"][0]["false_world_tests"][0][
+        "world_contract"
+    ]["semantic_equivalence_class"] = "Claim Evidence Absent"
+    add_strict(
+        "noncanonical_world_equivalence_class_is_rejected",
+        invalid_equivalence_class,
+        {"FAIL"},
+    )
+
+    missing_world_field = copy.deepcopy(base)
+    missing_world_field["claims"][0]["false_world_tests"][0][
+        "world_contract"
+    ].pop("oracle")
+    add_strict(
+        "world_contract_is_closed_and_requires_oracle",
+        missing_world_field,
         {"FAIL"},
     )
 
@@ -2024,6 +2415,66 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     missing_method["claims"][0]["method_completeness"] = 1.0
     add("method_component_overclaim", missing_method, {"FAIL"})
 
+    for scalar_name, scalar in (
+        ("false", False),
+        ("true", True),
+        ("integer_zero", 0),
+        ("float_zero", 0.0),
+    ):
+        scalar_method = copy.deepcopy(base)
+        scalar_method["method_manifest"] = {
+            field: scalar for field in gate_mod.REQ_METHOD
+        }
+        scalar_method["claims"][0]["method_m"] = {
+            field: scalar for field in gate_mod.REQ_METHOD
+        }
+        finalize_claim_contract(scalar_method["claims"][0])
+        add_strict(
+            f"scalar_{scalar_name}_method_fields_do_not_count_as_method_m",
+            scalar_method,
+            {"FAIL"},
+        )
+
+    flag_only_method = copy.deepcopy(base)
+    flag_only_method["method_manifest"] = {
+        field: {"synthetic_contract": True}
+        for field in gate_mod.REQ_METHOD
+    }
+    flag_only_method["claims"][0]["method_m"] = copy.deepcopy(
+        flag_only_method["method_manifest"]
+    )
+    finalize_claim_contract(flag_only_method["claims"][0])
+    add_strict(
+        "boolean_flag_only_objects_do_not_count_as_method_m",
+        flag_only_method,
+        {"FAIL"},
+    )
+
+    structured_method = copy.deepcopy(base)
+    structured_value = {
+        "producer": {"implementation": "package source", "fresh": True},
+        "checker": "strict deterministic gate",
+        "artifacts": {"primary": "ntt_gate.py", "count": 1},
+        "environment": "local Python execution environment",
+        "tools": ["Python", {"shell": "Bash", "version": 5}],
+        "evidence_process": {
+            "workflow": "fresh strict evidence evaluation",
+            "replayed": True,
+        },
+        "graders_or_tests": "run_gate_contract_tests.py",
+        "trace_or_logs": {"report": "gate-contract-result.json"},
+    }
+    structured_method["method_manifest"] = copy.deepcopy(structured_value)
+    structured_method["claims"][0]["method_m"] = copy.deepcopy(
+        structured_value
+    )
+    finalize_claim_contract(structured_method["claims"][0])
+    add_strict(
+        "substantive_structured_and_string_method_fields_still_pass",
+        structured_method,
+        {"PASS-TRACKED"},
+    )
+
     bad_status = copy.deepcopy(base)
     bad_status["claims"][0]["false_world_tests"][0]["result"] = "claimed-pass-without-run"
     add("bad_test_status", bad_status, {"FAIL"})
@@ -2040,6 +2491,7 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     minor["claims"][0]["importance"] = "minor"
     minor["claims"][0]["false_world_tests"] = []
     minor["claims"][0]["true_world_tests"] = []
+    finalize_claim_contract(minor["claims"][0])
     add_strict("minor_claim_without_modal_tests", minor, {"PASS-TRACKED"})
 
     manifest_unknowns = copy.deepcopy(base)
@@ -2226,6 +2678,7 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     minor_claim_unknowns = copy.deepcopy(base)
     minor_claim_unknowns["claims"][0]["importance"] = "minor"
     minor_claim_unknowns["claims"][0]["method_m"]["method_unknowns"] = ["x"]
+    finalize_claim_contract(minor_claim_unknowns["claims"][0])
     add_strict(
         "minor_claim_method_unknowns_scope_the_certificate",
         minor_claim_unknowns,
@@ -2697,4 +3150,5 @@ if __name__ == "__main__":
 # v1.0.3 hardening: distinct_wrappers_over_one_artifact_are_one_observation shared_ledger_with_verified_case_observations_passes shared_ledger_duplicate_observation_id_rejected shared_ledger_missing_observation_id_rejected observation_id_is_global_across_copied_ledgers
 # v1.0.3 hardening: downstream_independent_pass_is_proposition_bound downstream_pass_without_proposition_binding_rejected unrelated_passing_claim_cannot_authorize_downstream_pass promotion_downstream_pass_is_proposition_bound promotion_unrelated_claim_cannot_authorize_downstream_pass downstream_proposition_digest_mismatch_rejected downstream_binding_canonicalizes_whitespace
 # v1.0.3 hardening: deep_method_unknowns_are_collected_exhaustively nested_critical_claim_method_unknowns_block minor_claim_method_unknowns_scope_the_certificate unknown_depth_cannot_be_relaxed_by_caller overdeep_certificate_is_invalid_input large_shared_observation_input_is_bounded_and_counts_once
+# post-review hardening: scalar_false_method_fields_do_not_count_as_method_m substantive_structured_and_string_method_fields_still_pass strict_claim_requires_explicit_scope coordinated_scope_widening_cannot_inherit_original_evidence critical_to_minor_downgrade_cannot_delete_modal_obligations claim_contract_canonicalizes_benign_whitespace legacy_evidence_wrapper_schema_1_0_is_rejected observation_schema_1_1_is_rejected legacy_observation_record_missing_claim_contract_is_rejected paraphrased_same_equivalence_class_does_not_inflate_coverage changing_only_equivalence_class_slug_does_not_inflate_coverage distinct_equivalence_classes_and_structural_worlds_still_pass same_display_prose_with_distinct_structured_worlds_still_passes world_contract_is_closed_and_requires_oracle
 # v1.0.3 vocabulary: downstream_claim_auto_pass_rejected downstream_unknown_record_retains_pass derived_or_downstream_claims no automatic epistemic closure downstream non-closure

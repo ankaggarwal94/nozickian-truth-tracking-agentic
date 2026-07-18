@@ -79,11 +79,11 @@ EXPECTED_SCRIPTS = {"ntt_gate.py", "validate_package.py", "run_gate_contract_tes
 EXPECTED_FIXTURES = {"mini_manual.md", "mini_code.py", "fake_trace.json"}
 EXPECTED_ASSETS = {"certificate-template.json", "subagent-task-card.md"}
 EXPECTED_GITHUB_READMES: Dict[str, List[str]] = {
-    "docs/README.md": ["Documentation hub", "PASS-SCOPED", "PASS-TRACKED", "closed-surface", "synthetic aggregate contract", "43 baseline/negative cases"],
-    "docs/quickstart/README.md": ["Quickstart", "validate_package.py", "run_live_skill_evals.py", "UNVERIFIED_RUNTIME", "run_promotion_certifier_contract_tests.py", "43/43"],
+    "docs/README.md": ["Documentation hub", "PASS-SCOPED", "PASS-TRACKED", "closed-surface", "synthetic aggregate contract", "44 baseline/negative cases"],
+    "docs/quickstart/README.md": ["Quickstart", "validate_package.py", "run_live_skill_evals.py", "UNVERIFIED_RUNTIME", "run_promotion_certifier_contract_tests.py", "44/44"],
     "docs/audit-model/README.md": ["Nozickian", "CoVe", "no automatic epistemic closure", "derived_or_downstream_claims"],
     "docs/evidence/README.md": ["self_certificate.json", "strict", "SHA-256", "structured evidence", "promotion-evidence-v2", "failure_kind", "formal output-check projection", "pass_fds"],
-    "docs/pass-tracked-upgrade/README.md": ["PASS-SCOPED", "PASS-TRACKED", "certify_pass_tracked_upgrade.py", "promotion certificate", "promotion-evidence-v2", "CAPPED", "43/43", "/proc/<runner-pid>/fd/N", "direct-parent `PPid:`"],
+    "docs/pass-tracked-upgrade/README.md": ["PASS-SCOPED", "PASS-TRACKED", "certify_pass_tracked_upgrade.py", "promotion certificate", "promotion-evidence-v2", "CAPPED", "44/44", "/proc/<runner-pid>/fd/N", "direct-parent `PPid:`"],
     "docs/runtime-trace-auth/README.md": ["stream", "tool-use", "tool-result", "trace authentication", "formal result `2.0`", "CAPPED", "held no-follow capability", "pass_fds", "before creating the requested output directory or JSON file"],
     "docs/security/README.md": ["closed surface", "threat model", "runtime", "README"],
     "docs/development/README.md": ["Development", "update-manifest", "validator", "evidence", "run_promotion_certifier_contract_tests.py"],
@@ -359,7 +359,7 @@ REQUIRED_PROMOTION_SURFACE_INVARIANTS = (
         "excluded."
     ),
     (
-        "v1.0.3 aggregate promotion contracts are synthetic 43/43 evidence "
+        "v1.0.3 aggregate promotion contracts are synthetic 44/44 evidence "
         "and invoke the production certifier CLI for the baseline and every "
         "negative; they do not authenticate a real runtime."
     ),
@@ -500,6 +500,29 @@ IGNORED_CRUFT_DIR_NAMES = {".git", "__pycache__"}
 IGNORED_CRUFT_FILE_NAMES = {".DS_Store"}
 CRUFT_IGNORE_GLOBS = (".git", "__pycache__", "*.pyc", ".DS_Store")
 SHIPPABLE_CRUFT_CHECK = "no shippable build cruft (__pycache__/.pyc/.DS_Store)"
+
+# These limits apply to every package-tree walk initiated by this validator,
+# including helper entry points imported by the release certifier.  A bounded
+# list is still used where deterministic lexical ordering is part of the
+# release identity, but no directory or complete tree can be materialized
+# without first passing these counters.
+MAX_PACKAGE_DIRECTORY_ENTRIES = 4096
+MAX_PACKAGE_TOTAL_ENTRIES = 20000
+MAX_PACKAGE_DIRECTORY_DEPTH = 256
+MAX_PACKAGE_FILE_BYTES = 16 * 1024 * 1024
+MAX_PACKAGE_TOTAL_BYTES = 256 * 1024 * 1024
+MAX_CORRECTION_LOCATOR_LENGTH = 1024
+MAX_CORRECTION_LOCATOR_LINE = 100_000
+MAX_CORRECTION_LOCATOR_EXCERPT_LINES = 2048
+MAX_CORRECTION_LOCATOR_EXCERPT_BYTES = 1024 * 1024
+
+
+class PackageTreeResourceLimitError(ValueError):
+    """A package tree exceeded a deterministic validator resource bound."""
+
+
+class ConsistencyLocatorError(ValueError):
+    """A consistency-sweep locator or its content binding is invalid."""
 
 
 def _is_cruft_name(name: str) -> bool:
@@ -688,23 +711,66 @@ HISTORICAL_PROVENANCE_MARKER_RE = re.compile(
 )
 
 
-def iter_package_entries(root: Path) -> Iterable[Tuple[Path, bool, bool, bool]]:
-    """Yield package entries with type information gathered without link following."""
+def iter_package_entries(
+    root: Path,
+    *,
+    max_directory_entries: int | None = None,
+    max_total_entries: int | None = None,
+) -> Iterable[Tuple[Path, bool, bool, bool]]:
+    """Yield a deterministically ordered, resource-bounded package tree.
+
+    Directory entries are counted while ``scandir`` is streaming them and
+    before the per-directory ordering buffer is sorted.  The total counter is
+    checked before an entry is yielded or another directory is scheduled.
+    Optional limits exist only to make the same production path cheaply
+    falsifiable in embedded contract probes; ordinary callers use the fixed
+    release bounds above.
+    """
+    directory_limit = (
+        MAX_PACKAGE_DIRECTORY_ENTRIES
+        if max_directory_entries is None
+        else max_directory_entries
+    )
+    total_limit = (
+        MAX_PACKAGE_TOTAL_ENTRIES
+        if max_total_entries is None
+        else max_total_entries
+    )
+    if type(directory_limit) is not int or directory_limit < 1:
+        raise ValueError("max_directory_entries must be a positive integer")
+    if type(total_limit) is not int or total_limit < 1:
+        raise ValueError("max_total_entries must be a positive integer")
+
     stack = [root]
+    total_entries = 0
     while stack:
         current = stack.pop()
+        records: List[Tuple[Path, bool, bool, bool]] = []
         with os.scandir(current) as scan:
-            records = sorted(
-                (
-                    Path(entry.path),
-                    entry.is_symlink(),
-                    entry.is_dir(follow_symlinks=False),
-                    entry.is_file(follow_symlinks=False),
+            for entry in scan:
+                records.append(
+                    (
+                        Path(entry.path),
+                        entry.is_symlink(),
+                        entry.is_dir(follow_symlinks=False),
+                        entry.is_file(follow_symlinks=False),
+                    )
                 )
-                for entry in scan
-            )
+                if len(records) > directory_limit:
+                    raise PackageTreeResourceLimitError(
+                        "package directory entry limit exceeded: "
+                        f"limit={directory_limit} directory="
+                        f"{relpath(root, current) if current != root else '.'}"
+                    )
+        records.sort(key=lambda record: record[0])
         child_dirs: List[Path] = []
         for path, is_symlink, is_dir, is_file in records:
+            total_entries += 1
+            if total_entries > total_limit:
+                raise PackageTreeResourceLimitError(
+                    "package total entry limit exceeded: "
+                    f"limit={total_limit}"
+                )
             yield path, is_symlink, is_dir, is_file
             if is_dir and not is_symlink and path.name not in IGNORED_CRUFT_DIR_NAMES:
                 child_dirs.append(path)
@@ -821,6 +887,81 @@ def regular_file_error(path: Path) -> Optional[str]:
     return None
 
 
+def _directory_open_flags_no_follow() -> int:
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory = getattr(os, "O_DIRECTORY", 0)
+    if not nofollow or not directory:
+        raise OSError("platform lacks no-follow directory traversal")
+    flags = os.O_RDONLY | directory | nofollow
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    return flags
+
+
+def _regular_file_open_flags_no_follow() -> int:
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    if not nofollow:
+        raise OSError("platform lacks no-follow regular-file open")
+    flags = os.O_RDONLY | nofollow
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    return flags
+
+
+def _open_absolute_directory_no_follow(path: Path) -> int:
+    """Open an absolute directory component-wise without following links."""
+    absolute = Path(os.path.abspath(path))
+    flags = _directory_open_flags_no_follow()
+    descriptor = os.open(os.path.sep, flags)
+    try:
+        for component in absolute.parts[1:]:
+            if component in {"", ".", ".."}:
+                raise ValueError("unsafe absolute directory component")
+            child = os.open(component, flags, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        return descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _open_relative_directory_no_follow(
+    root_descriptor: int,
+    components: Sequence[str],
+) -> int:
+    """Open a relative directory chain beneath one held root capability."""
+    flags = _directory_open_flags_no_follow()
+    descriptor = os.dup(root_descriptor)
+    try:
+        for component in components:
+            if component in {"", ".", ".."} or "/" in component or "\\" in component:
+                raise ValueError("unsafe relative directory component")
+            child = os.open(component, flags, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        return descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _stat_identity(
+    st: os.stat_result,
+) -> Tuple[int, int, int, int, int, int, int]:
+    return (
+        st.st_dev,
+        st.st_ino,
+        st.st_mode,
+        st.st_size,
+        st.st_nlink,
+        st.st_mtime_ns,
+        st.st_ctime_ns,
+    )
+
+
 def safe_relative_posix_path(
     value: Any,
 ) -> Tuple[Optional[PurePosixPath], Optional[str]]:
@@ -841,6 +982,371 @@ def safe_relative_posix_path(
     return posix, None
 
 
+@dataclass(frozen=True)
+class CorrectionLocator:
+    raw: str
+    path: PurePosixPath
+    start_line: int | None = None
+    end_line: int | None = None
+    git_commit: str | None = None
+
+    @property
+    def is_current(self) -> bool:
+        return self.git_commit is None
+
+
+def parse_correction_locator(value: Any) -> CorrectionLocator:
+    """Parse one exact consistency-sweep locator without aliases.
+
+    Current text is addressed by ``path:line`` or ``path:start-end``.  A
+    deleted or binary historical entry is addressed by
+    ``git:<40-lower-hex>:path``.  Historical locators deliberately have no
+    fabricated line component.
+    """
+    if not isinstance(value, str) or not value:
+        raise ConsistencyLocatorError("locator is not a nonempty string")
+    if len(value) > MAX_CORRECTION_LOCATOR_LENGTH:
+        raise ConsistencyLocatorError("locator exceeds the length bound")
+
+    historical = re.fullmatch(r"git:([0-9a-f]{40}):([^:\n]+)", value)
+    if historical is not None:
+        commit, path_text = historical.groups()
+        posix, path_error = safe_relative_posix_path(path_text)
+        if path_error is not None or posix is None:
+            raise ConsistencyLocatorError(
+                f"historical locator path is invalid: {path_error}"
+            )
+        if re.search(r"[*?\[\]{}();]", path_text):
+            raise ConsistencyLocatorError(
+                "historical locator path contains a wildcard, selector, or "
+                "joined-path delimiter"
+            )
+        return CorrectionLocator(
+            raw=value,
+            path=posix,
+            git_commit=commit,
+        )
+
+    current = re.fullmatch(r"([^:\n]+):([1-9][0-9]*)(?:-([1-9][0-9]*))?", value)
+    if current is None:
+        raise ConsistencyLocatorError(
+            "locator must be path:line, path:start-end, or "
+            "git:<40-lower-hex>:path"
+        )
+    path_text, start_text, end_text = current.groups()
+    posix, path_error = safe_relative_posix_path(path_text)
+    if path_error is not None or posix is None:
+        raise ConsistencyLocatorError(
+            f"current locator path is invalid: {path_error}"
+        )
+    if re.search(r"[*?\[\]{}();]", path_text):
+        raise ConsistencyLocatorError(
+            "current locator path contains a wildcard, selector, or "
+            "joined-path delimiter"
+        )
+    start = int(start_text)
+    end = int(end_text) if end_text is not None else start
+    if start > MAX_CORRECTION_LOCATOR_LINE or end > MAX_CORRECTION_LOCATOR_LINE:
+        raise ConsistencyLocatorError("locator line exceeds the numeric bound")
+    if end_text is not None and end <= start:
+        raise ConsistencyLocatorError(
+            "a canonical line range must end after it starts"
+        )
+    return CorrectionLocator(
+        raw=value,
+        path=posix,
+        start_line=start,
+        end_line=end,
+    )
+
+
+def correction_locator_excerpt_sha256(
+    root: Path,
+    locator: Any,
+    *,
+    _after_parent_open: Any = None,
+) -> str:
+    """Hash the canonical UTF-8 line excerpt selected by a current locator.
+
+    The bound payload is the selected logical lines joined with LF and one
+    final LF.  This is stable across an LF/CRLF checkout while still changing
+    when the selected source text changes.  Parent/auditor review remains
+    responsible for deciding whether that exact excerpt is the claimed
+    semantic correction; this helper prevents a reviewed target from silently
+    shifting to an unrelated but still in-bounds line.
+    """
+    parsed = (
+        locator
+        if isinstance(locator, CorrectionLocator)
+        else parse_correction_locator(locator)
+    )
+    if not parsed.is_current:
+        raise ConsistencyLocatorError(
+            "historical Git locators do not select a current line excerpt"
+        )
+    assert parsed.start_line is not None and parsed.end_line is not None
+    excerpt_lines = parsed.end_line - parsed.start_line + 1
+    if excerpt_lines > MAX_CORRECTION_LOCATOR_EXCERPT_LINES:
+        raise ConsistencyLocatorError(
+            "current locator range exceeds the excerpt-line bound"
+        )
+
+    lexical_root = root.resolve()
+    components = parsed.path.parts
+    if not components:
+        raise ConsistencyLocatorError("current locator has no file component")
+    root_fd: int | None = None
+    parent_fd: int | None = None
+    file_fd: int | None = None
+    reopened_parent_fd: int | None = None
+    try:
+        root_fd = _open_absolute_directory_no_follow(lexical_root)
+        parent_fd = _open_relative_directory_no_follow(
+            root_fd,
+            components[:-1],
+        )
+        parent_before = os.fstat(parent_fd)
+        if _after_parent_open is not None:
+            if not callable(_after_parent_open):
+                raise ConsistencyLocatorError(
+                    "locator parent-open probe is not callable"
+                )
+            _after_parent_open()
+
+        file_fd = os.open(
+            components[-1],
+            _regular_file_open_flags_no_follow(),
+            dir_fd=parent_fd,
+        )
+        opened = os.fstat(file_fd)
+        if not stat.S_ISREG(opened.st_mode):
+            raise ConsistencyLocatorError(
+                "current locator target is not a regular file"
+            )
+        if opened.st_size > MAX_PACKAGE_FILE_BYTES:
+            raise ConsistencyLocatorError(
+                "current locator target exceeds the per-file byte bound"
+            )
+
+        digest = hashlib.sha256()
+        selected_count = 0
+        selected_bytes = 0
+        payload = bytearray()
+        while True:
+            remaining = MAX_PACKAGE_FILE_BYTES + 1 - len(payload)
+            if remaining <= 0:
+                raise ConsistencyLocatorError(
+                    "current locator target exceeds the per-file byte bound"
+                )
+            chunk = os.read(file_fd, min(1024 * 1024, remaining))
+            if not chunk:
+                break
+            payload.extend(chunk)
+            if len(payload) > MAX_PACKAGE_FILE_BYTES:
+                raise ConsistencyLocatorError(
+                    "current locator target exceeds the per-file byte bound"
+                )
+        try:
+            text_payload = bytes(payload).decode("utf-8")
+            with io.StringIO(text_payload, newline=None) as handle:
+                for line_number, line_text in enumerate(handle, start=1):
+                    if parsed.start_line <= line_number <= parsed.end_line:
+                        canonical_line = (
+                            line_text.rstrip("\r\n").encode("utf-8") + b"\n"
+                        )
+                        selected_bytes += len(canonical_line)
+                        if (
+                            selected_bytes
+                            > MAX_CORRECTION_LOCATOR_EXCERPT_BYTES
+                        ):
+                            raise ConsistencyLocatorError(
+                                "current locator excerpt exceeds the byte bound"
+                            )
+                        digest.update(canonical_line)
+                        selected_count += 1
+                    if line_number >= parsed.end_line:
+                        break
+        except UnicodeDecodeError as exc:
+            raise ConsistencyLocatorError(
+                "current locator target is not valid UTF-8 text"
+            ) from exc
+        if selected_count != excerpt_lines:
+            raise ConsistencyLocatorError(
+                "current locator line or range is outside the target file"
+            )
+
+        after_read = os.fstat(file_fd)
+        if _stat_identity(opened) != _stat_identity(after_read):
+            raise ConsistencyLocatorError(
+                "current locator target changed during excerpt hashing"
+            )
+        if not _markdown_directory_path_matches_fd(lexical_root, root_fd):
+            raise ConsistencyLocatorError(
+                "package root changed during excerpt hashing"
+            )
+        reopened_parent_fd = _open_relative_directory_no_follow(
+            root_fd,
+            components[:-1],
+        )
+        if (
+            _stat_identity(parent_before)
+            != _stat_identity(os.fstat(reopened_parent_fd))
+        ):
+            raise ConsistencyLocatorError(
+                "current locator parent changed during excerpt hashing"
+            )
+        final_path_stat = os.stat(
+            components[-1],
+            dir_fd=reopened_parent_fd,
+            follow_symlinks=False,
+        )
+        if _stat_identity(after_read) != _stat_identity(final_path_stat):
+            raise ConsistencyLocatorError(
+                "current locator path changed during excerpt hashing"
+            )
+        return digest.hexdigest()
+    except ConsistencyLocatorError:
+        raise
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise ConsistencyLocatorError(
+            "current locator does not resolve through stable no-follow "
+            "package capabilities"
+        ) from exc
+    finally:
+        for descriptor in (
+            reopened_parent_fd,
+            file_fd,
+            parent_fd,
+            root_fd,
+        ):
+            if descriptor is not None:
+                os.close(descriptor)
+
+
+def validate_consistency_sweep_locator_bindings(
+    root: Path,
+    certificate: Mapping[str, Any],
+) -> List[str]:
+    """Mechanically validate active corrected-claim locator evidence.
+
+    This intentionally does not decide whether a sweep was required, whether
+    its prose is semantically adequate, or whether all stale echoes were
+    found.  Those Issue #5 obligations remain parent-enforced.  It does enforce
+    that every recorded correction target is canonical, unique, resolvable
+    when current, and byte-bound to the excerpt reviewed by the parent.
+    """
+    sweep = certificate.get("consistency_sweep")
+    if not isinstance(sweep, Mapping):
+        return ["consistency_sweep is not an object"]
+    corrected_claims = sweep.get("corrected_claims")
+    if not isinstance(corrected_claims, list):
+        return ["consistency_sweep.corrected_claims is not an array"]
+    if sweep.get("applies") is True and not corrected_claims:
+        return [
+            "an applicable consistency sweep has no corrected_claims records"
+        ]
+
+    errors: List[str] = []
+    for claim_index, record in enumerate(corrected_claims):
+        prefix = f"corrected_claims[{claim_index}]"
+        if not isinstance(record, Mapping):
+            errors.append(f"{prefix} is not an object")
+            continue
+        locations = record.get("correction_locations")
+        bindings = record.get("correction_location_bindings")
+        if not isinstance(locations, list) or not locations:
+            errors.append(f"{prefix}.correction_locations is not nonempty")
+            continue
+        if not isinstance(bindings, list) or len(bindings) != len(locations):
+            errors.append(
+                f"{prefix}.correction_location_bindings must correspond "
+                "one-for-one with correction_locations"
+            )
+            bindings = []
+
+        locally_seen: set[str] = set()
+        parsed_by_locator: Dict[str, CorrectionLocator] = {}
+        for locator_index, raw_locator in enumerate(locations):
+            location_prefix = f"{prefix}.correction_locations[{locator_index}]"
+            if isinstance(raw_locator, str) and raw_locator in locally_seen:
+                errors.append(f"{location_prefix} duplicates a locator")
+                continue
+            try:
+                parsed = parse_correction_locator(raw_locator)
+            except ConsistencyLocatorError as exc:
+                errors.append(f"{location_prefix}: {exc}")
+                continue
+            locally_seen.add(parsed.raw)
+            parsed_by_locator[parsed.raw] = parsed
+
+        bound_locators: set[str] = set()
+        for binding_index, binding in enumerate(bindings):
+            binding_prefix = (
+                f"{prefix}.correction_location_bindings[{binding_index}]"
+            )
+            if not isinstance(binding, Mapping):
+                errors.append(f"{binding_prefix} is not an object")
+                continue
+            if set(binding) != {"locator", "expected_excerpt_sha256"}:
+                errors.append(
+                    f"{binding_prefix} must contain exactly locator and "
+                    "expected_excerpt_sha256"
+                )
+                continue
+            raw_locator = binding.get("locator")
+            expected = binding.get("expected_excerpt_sha256")
+            if not isinstance(raw_locator, str) or raw_locator in bound_locators:
+                errors.append(
+                    f"{binding_prefix}.locator is missing or duplicated"
+                )
+                continue
+            if (
+                binding_index >= len(locations)
+                or raw_locator != locations[binding_index]
+            ):
+                errors.append(
+                    f"{binding_prefix}.locator does not match the locator "
+                    "at the same array index"
+                )
+            bound_locators.add(raw_locator)
+            parsed = parsed_by_locator.get(raw_locator)
+            if parsed is None:
+                errors.append(
+                    f"{binding_prefix}.locator is not a valid locator in "
+                    "correction_locations"
+                )
+                continue
+            if not isinstance(expected, str) or re.fullmatch(
+                r"[0-9a-f]{64}", expected
+            ) is None:
+                errors.append(
+                    f"{binding_prefix}.expected_excerpt_sha256 is not "
+                    "lowercase SHA-256"
+                )
+                continue
+            if parsed.is_current:
+                try:
+                    actual = correction_locator_excerpt_sha256(root, parsed)
+                except ConsistencyLocatorError as exc:
+                    errors.append(f"{binding_prefix}: {exc}")
+                else:
+                    if actual != expected:
+                        errors.append(
+                            f"{binding_prefix} excerpt SHA-256 mismatch"
+                        )
+            # A Git locator's commit/path grammar and declared digest are
+            # mechanically checked in Git-free archives.  Reconstructing the
+            # historical blob is intentionally parent/auditor evidence, not a
+            # requirement imposed on a release archive without .git objects.
+
+        if set(parsed_by_locator) != bound_locators:
+            errors.append(
+                f"{prefix}.correction_location_bindings do not bind exactly "
+                "the valid correction_locations set"
+            )
+    return errors
+
+
 def canonical_fixture_id_error(value: Any) -> Optional[str]:
     """Return why a fixture ID is unsafe as one transcript filename stem."""
     if not isinstance(value, str):
@@ -856,20 +1362,58 @@ def relpath(root: Path, p: Path) -> str:
     return p.relative_to(root).as_posix()
 
 
-def snapshot_package_entries(root: Path) -> Dict[str, Dict[str, Any]]:
-    """Describe the complete non-cruft package tree without following links.
+def snapshot_package_entries(
+    root: Path,
+    *,
+    max_directory_entries: int | None = None,
+    max_total_entries: int | None = None,
+    max_directory_depth: int | None = None,
+    max_file_bytes: int | None = None,
+    max_total_bytes: int | None = None,
+) -> Dict[str, Dict[str, Any]]:
+    """Describe a complete resource-bounded tree through held capabilities.
 
-    A release-stability assertion must notice more than regular-file bytes:
-    executable-bit drift, an added symlink or special file, hardlink-topology
-    changes, same-byte replacement, timestamp mutation, and even an empty
-    directory are package-tree changes.
+    ``os.fwalk`` is intentionally not used: it materializes a complete
+    directory's ``dirnames`` and ``filenames`` before callers can enforce a
+    limit.  This walker counts each ``scandir`` entry as it is produced, keeps
+    only one bounded directory-name buffer, opens every descendant relative to
+    a held no-follow directory descriptor, and enforces both per-file and
+    aggregate byte ceilings while hashing regular files.
     """
-
-    root = root.resolve()
-    if not hasattr(os, "fwalk"):
-        raise RuntimeError(
-            "complete no-follow package snapshots require os.fwalk support"
-        )
+    directory_limit = (
+        MAX_PACKAGE_DIRECTORY_ENTRIES
+        if max_directory_entries is None
+        else max_directory_entries
+    )
+    total_entry_limit = (
+        MAX_PACKAGE_TOTAL_ENTRIES
+        if max_total_entries is None
+        else max_total_entries
+    )
+    depth_limit = (
+        MAX_PACKAGE_DIRECTORY_DEPTH
+        if max_directory_depth is None
+        else max_directory_depth
+    )
+    file_byte_limit = (
+        MAX_PACKAGE_FILE_BYTES
+        if max_file_bytes is None
+        else max_file_bytes
+    )
+    total_byte_limit = (
+        MAX_PACKAGE_TOTAL_BYTES
+        if max_total_bytes is None
+        else max_total_bytes
+    )
+    for name, value in (
+        ("max_directory_entries", directory_limit),
+        ("max_total_entries", total_entry_limit),
+        ("max_directory_depth", depth_limit),
+        ("max_file_bytes", file_byte_limit),
+        ("max_total_bytes", total_byte_limit),
+    ):
+        if type(value) is not int or value < 1:
+            raise ValueError(f"{name} must be a positive integer")
 
     def identity(st: os.stat_result) -> Dict[str, int]:
         return {
@@ -881,113 +1425,167 @@ def snapshot_package_entries(root: Path) -> Dict[str, Dict[str, Any]]:
             "ctime_ns": st.st_ctime_ns,
         }
 
-    def same_entry(left: os.stat_result, right: os.stat_result) -> bool:
-        return (
-            left.st_dev,
-            left.st_ino,
-            left.st_mode,
-            left.st_size,
-            left.st_mtime_ns,
-            left.st_ctime_ns,
-        ) == (
-            right.st_dev,
-            right.st_ino,
-            right.st_mode,
-            right.st_size,
-            right.st_mtime_ns,
-            right.st_ctime_ns,
-        )
-
+    root = root.resolve()
     snapshot: Dict[str, Dict[str, Any]] = {}
-    nofollow = getattr(os, "O_NOFOLLOW", 0)
-    cloexec = getattr(os, "O_CLOEXEC", 0)
-    for dirpath_s, dirnames, filenames, dirfd in os.fwalk(
-        root,
-        topdown=True,
-        follow_symlinks=False,
-    ):
-        dirpath = Path(dirpath_s)
-        relative_dir = (
-            "." if dirpath == root else dirpath.relative_to(root).as_posix()
-        )
-        if relative_dir != "." and _is_cruft_relpath(relative_dir):
-            dirnames[:] = []
-            continue
+    counters = {"entries": 0, "bytes": 0}
+    root_fd: int | None = None
 
-        current_dir_stat = os.fstat(dirfd)
-        if relative_dir == ".":
-            snapshot["."] = {
-                "type": "directory",
-                **identity(current_dir_stat),
-            }
-        else:
-            recorded = snapshot.get(relative_dir)
-            if (
-                not isinstance(recorded, dict)
-                or recorded.get("type") != "directory"
-                or recorded.get("device") != current_dir_stat.st_dev
-                or recorded.get("inode") != current_dir_stat.st_ino
-                or recorded.get("mode")
-                != stat.S_IMODE(current_dir_stat.st_mode)
-            ):
-                raise RuntimeError(
-                    f"package directory changed during snapshot: {relative_dir}"
-                )
-
-        retained_dirs: List[str] = []
-        for name in dirnames:
-            child_rel = (
-                name if relative_dir == "." else f"{relative_dir}/{name}"
+    def walk_directory(
+        directory_fd: int,
+        relative_dir: str,
+        depth: int,
+    ) -> None:
+        if depth > depth_limit:
+            raise PackageTreeResourceLimitError(
+                "package snapshot directory depth limit exceeded: "
+                f"limit={depth_limit} directory={relative_dir}"
             )
-            if not _is_cruft_relpath(child_rel):
-                retained_dirs.append(name)
-        dirnames[:] = retained_dirs
+        names: List[str] = []
+        with os.scandir(directory_fd) as scan:
+            for directory_entry in scan:
+                name = directory_entry.name
+                if (
+                    not isinstance(name, str)
+                    or name in {"", ".", ".."}
+                    or "/" in name
+                    or "\\" in name
+                ):
+                    raise RuntimeError(
+                        "package snapshot encountered an unsafe entry name"
+                    )
+                names.append(name)
+                counters["entries"] += 1
+                if len(names) > directory_limit:
+                    raise PackageTreeResourceLimitError(
+                        "package snapshot directory entry limit exceeded: "
+                        f"limit={directory_limit} directory={relative_dir}"
+                    )
+                if counters["entries"] > total_entry_limit:
+                    raise PackageTreeResourceLimitError(
+                        "package snapshot total entry limit exceeded: "
+                        f"limit={total_entry_limit}"
+                    )
 
-        for name in sorted(set(dirnames) | set(filenames)):
+        for name in sorted(names):
             relative = (
                 name if relative_dir == "." else f"{relative_dir}/{name}"
             )
             if _is_cruft_relpath(relative):
                 continue
-            before = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
+            before = os.stat(
+                name,
+                dir_fd=directory_fd,
+                follow_symlinks=False,
+            )
             entry: Dict[str, Any] = identity(before)
             if stat.S_ISLNK(before.st_mode):
-                target = os.readlink(name, dir_fd=dirfd)
-                after = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
-                if not same_entry(before, after) or target != os.readlink(
+                target = os.readlink(name, dir_fd=directory_fd)
+                after = os.stat(
                     name,
-                    dir_fd=dirfd,
+                    dir_fd=directory_fd,
+                    follow_symlinks=False,
+                )
+                if (
+                    _stat_identity(before) != _stat_identity(after)
+                    or target != os.readlink(name, dir_fd=directory_fd)
                 ):
                     raise RuntimeError(
                         f"package symlink changed during snapshot: {relative}"
                     )
                 entry.update({"type": "symlink", "target": target})
-            elif stat.S_ISDIR(before.st_mode):
-                entry["type"] = "directory"
-            elif stat.S_ISREG(before.st_mode):
-                fd = os.open(
+                snapshot[relative] = entry
+                continue
+            if stat.S_ISDIR(before.st_mode):
+                child_fd = os.open(
                     name,
-                    os.O_RDONLY | nofollow | cloexec,
-                    dir_fd=dirfd,
+                    _directory_open_flags_no_follow(),
+                    dir_fd=directory_fd,
                 )
                 try:
-                    opened = os.fstat(fd)
-                    if not same_entry(before, opened):
+                    opened = os.fstat(child_fd)
+                    if _stat_identity(before) != _stat_identity(opened):
                         raise RuntimeError(
-                            f"package regular file changed before read: {relative}"
+                            "package directory changed before traversal: "
+                            f"{relative}"
+                        )
+                    entry["type"] = "directory"
+                    snapshot[relative] = entry
+                    walk_directory(child_fd, relative, depth + 1)
+                    after_open = os.fstat(child_fd)
+                    after_path = os.stat(
+                        name,
+                        dir_fd=directory_fd,
+                        follow_symlinks=False,
+                    )
+                    if (
+                        _stat_identity(opened)
+                        != _stat_identity(after_open)
+                        or _stat_identity(after_open)
+                        != _stat_identity(after_path)
+                    ):
+                        raise RuntimeError(
+                            "package directory changed during traversal: "
+                            f"{relative}"
+                        )
+                finally:
+                    os.close(child_fd)
+                continue
+            if stat.S_ISREG(before.st_mode):
+                if before.st_size > file_byte_limit:
+                    raise PackageTreeResourceLimitError(
+                        "package snapshot per-file byte limit exceeded: "
+                        f"limit={file_byte_limit} path={relative}"
+                    )
+                if counters["bytes"] + before.st_size > total_byte_limit:
+                    raise PackageTreeResourceLimitError(
+                        "package snapshot aggregate byte limit exceeded: "
+                        f"limit={total_byte_limit}"
+                    )
+                file_fd = os.open(
+                    name,
+                    _regular_file_open_flags_no_follow(),
+                    dir_fd=directory_fd,
+                )
+                try:
+                    opened = os.fstat(file_fd)
+                    if _stat_identity(before) != _stat_identity(opened):
+                        raise RuntimeError(
+                            "package regular file changed before read: "
+                            f"{relative}"
                         )
                     digest = hashlib.sha256()
                     byte_count = 0
                     while True:
-                        chunk = os.read(fd, 1024 * 1024)
+                        chunk = os.read(file_fd, 1024 * 1024)
                         if not chunk:
                             break
-                        digest.update(chunk)
                         byte_count += len(chunk)
+                        counters["bytes"] += len(chunk)
+                        if byte_count > file_byte_limit:
+                            raise PackageTreeResourceLimitError(
+                                "package snapshot per-file byte limit "
+                                f"exceeded: limit={file_byte_limit} "
+                                f"path={relative}"
+                            )
+                        if counters["bytes"] > total_byte_limit:
+                            raise PackageTreeResourceLimitError(
+                                "package snapshot aggregate byte limit "
+                                f"exceeded: limit={total_byte_limit}"
+                            )
+                        digest.update(chunk)
+                    after_open = os.fstat(file_fd)
                 finally:
-                    os.close(fd)
-                after = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
-                if not same_entry(opened, after) or byte_count != opened.st_size:
+                    os.close(file_fd)
+                after_path = os.stat(
+                    name,
+                    dir_fd=directory_fd,
+                    follow_symlinks=False,
+                )
+                if (
+                    _stat_identity(opened) != _stat_identity(after_open)
+                    or _stat_identity(after_open) != _stat_identity(after_path)
+                    or byte_count != opened.st_size
+                ):
                     raise RuntimeError(
                         f"package regular file changed during read: {relative}"
                     )
@@ -1003,13 +1601,31 @@ def snapshot_package_entries(root: Path) -> Dict[str, Dict[str, Any]]:
             elif stat.S_ISSOCK(before.st_mode):
                 entry["type"] = "socket"
             elif stat.S_ISCHR(before.st_mode):
-                entry.update({"type": "character-device", "rdev": before.st_rdev})
+                entry.update(
+                    {"type": "character-device", "rdev": before.st_rdev}
+                )
             elif stat.S_ISBLK(before.st_mode):
-                entry.update({"type": "block-device", "rdev": before.st_rdev})
+                entry.update(
+                    {"type": "block-device", "rdev": before.st_rdev}
+                )
             else:
                 entry["type"] = "unsupported"
             snapshot[relative] = entry
-    return snapshot
+
+    try:
+        root_fd = _open_absolute_directory_no_follow(root)
+        root_before = os.fstat(root_fd)
+        snapshot["."] = {"type": "directory", **identity(root_before)}
+        walk_directory(root_fd, ".", 0)
+        root_after = os.fstat(root_fd)
+        if _stat_identity(root_before) != _stat_identity(root_after):
+            raise RuntimeError("package root changed during snapshot")
+        if not _markdown_directory_path_matches_fd(root, root_fd):
+            raise RuntimeError("package root path changed during snapshot")
+        return snapshot
+    finally:
+        if root_fd is not None:
+            os.close(root_fd)
 
 
 def path_resolves_within(root: Path, candidate: Path) -> bool:
@@ -2157,7 +2773,9 @@ def stable_release_file_mode(path: Path) -> str:
     metadata = path.lstat()
     if not stat.S_ISREG(metadata.st_mode):
         raise ValueError(f"{path.name} is not a regular file")
-    return "100755" if stat.S_IMODE(metadata.st_mode) & 0o111 else "100644"
+    # Git's executable bit is derived from the owner's execute bit.  Group- or
+    # other-execute alone is normalized to a non-executable blob mode.
+    return "100755" if metadata.st_mode & stat.S_IXUSR else "100644"
 
 
 def stable_release_tree_digest(
@@ -2678,6 +3296,14 @@ class Validator:
             self.run_json_root_shape_probes()
             gc.collect()
             self.progress("malformed JSON root-shape probes complete")
+            self.progress("consistency locator contract probes starting")
+            self.run_consistency_locator_contract_probes()
+            gc.collect()
+            self.progress("consistency locator contract probes complete")
+            self.progress("package tree resource contract probes starting")
+            self.run_package_tree_resource_contract_probes()
+            gc.collect()
+            self.progress("package tree resource contract probes complete")
             self.progress("live harness contract probes starting")
             self.run_live_harness_contract_probes()
             gc.collect()
@@ -2839,7 +3465,7 @@ class Validator:
             else ""
         )
         for token in [
-            "43/43",
+            "44/44",
             "production certifier CLI",
             "promotion-contract-v2-complete",
             "Issue #8",
@@ -3050,6 +3676,25 @@ class Validator:
         )
         if not self_certificate_is_object:
             return
+        locator_problems = validate_consistency_sweep_locator_bindings(
+            self.root,
+            data,
+        )
+        self.add(
+            "self certificate consistency-sweep correction locators are canonical and unique with resolvable excerpt-bound current targets",
+            not locator_problems,
+            details="; ".join(locator_problems[:20]),
+        )
+        self.add(
+            "consistency-sweep semantic activation and completeness remain parent/auditor enforced under Issue #5",
+            True,
+            severity="noncritical",
+            details=(
+                "The validator checks recorded locator syntax, current-file "
+                "resolution, range bounds, uniqueness, and excerpt SHA-256; "
+                "it does not infer whether every semantic echo was found."
+            ),
+        )
         upgrade_audit = data.get("pass_tracked_upgrade_audit")
         expected_cap = {
             "status": "PASS-SCOPED",
@@ -3080,7 +3725,7 @@ class Validator:
             == "promotion-evidence-v2"
             and upgrade_audit.get("formal_result_schema_version") == "2.0"
             and type(aggregate_contract) is dict
-            and aggregate_contract.get("expected_result") == "43/43"
+            and aggregate_contract.get("expected_result") == "44/44"
             and aggregate_contract.get(
                 "production_certifier_cli_baseline_and_negatives"
             )
@@ -3294,7 +3939,7 @@ class Validator:
             "promotion-evidence-v2",
             "formal result 2.0",
             "canonical FAIL plus failure_kind",
-            "synthetic 43/43",
+            "synthetic 44/44",
             "promotion-contract-v2-complete",
             "aggregate-certifier.json",
             "promotion-v2-reference.json",
@@ -3349,7 +3994,7 @@ class Validator:
                 self.add("self_validation GitHub README substantive", len(sv_text) >= 700, details=f"chars={len(sv_text)}")
                 for token in [
                     "current_observations.json",
-                    "43/43",
+                    "44/44",
                     "synthetic contract evidence",
                     "CAPPED",
                 ]:
@@ -3366,7 +4011,65 @@ class Validator:
         self.add("GitHub README docs avoid plugin-loadable runtime component paths", not forbidden_present, details=", ".join(forbidden_present))
 
     def check_closed_surface(self) -> None:
-        entries = list(iter_package_entries(self.root)) if self.root.exists() else []
+        entries: List[Tuple[Path, bool, bool, bool]] = []
+        if self.root.exists():
+            try:
+                for entry in iter_package_entries(self.root):
+                    entries.append(entry)
+            except PackageTreeResourceLimitError as exc:
+                self.add(
+                    "package tree remains within per-directory and total entry limits",
+                    False,
+                    details=str(exc),
+                )
+                return
+        self.add(
+            "package tree remains within per-directory and total entry limits",
+            True,
+            details=(
+                f"entries={len(entries)} "
+                f"directory_limit={MAX_PACKAGE_DIRECTORY_ENTRIES} "
+                f"total_limit={MAX_PACKAGE_TOTAL_ENTRIES}"
+            ),
+        )
+        oversized_files: List[str] = []
+        package_bytes = 0
+        try:
+            for path, is_symlink, _is_dir, is_file in entries:
+                if is_symlink or not is_file or _is_cruft_path(self.root, path):
+                    continue
+                metadata = path.lstat()
+                if not stat.S_ISREG(metadata.st_mode):
+                    oversized_files.append(
+                        f"{relpath(self.root, path)}=<type-changed>"
+                    )
+                    continue
+                package_bytes += metadata.st_size
+                if metadata.st_size > MAX_PACKAGE_FILE_BYTES:
+                    oversized_files.append(
+                        f"{relpath(self.root, path)}={metadata.st_size}"
+                    )
+        except OSError as exc:
+            self.add(
+                "package regular-file bytes remain within per-file and aggregate limits",
+                False,
+                details=f"{type(exc).__name__}: package changed during byte preflight",
+            )
+            return
+        package_bytes_valid = (
+            not oversized_files and package_bytes <= MAX_PACKAGE_TOTAL_BYTES
+        )
+        self.add(
+            "package regular-file bytes remain within per-file and aggregate limits",
+            package_bytes_valid,
+            details=(
+                f"bytes={package_bytes} file_limit={MAX_PACKAGE_FILE_BYTES} "
+                f"total_limit={MAX_PACKAGE_TOTAL_BYTES} oversized="
+                + ", ".join(oversized_files[:20])
+            ),
+        )
+        if not package_bytes_valid:
+            return
         git_surface = git_tracked_files(self.root)
         self.add(
             "package Git evidence is verified or genuinely absent",
@@ -3731,7 +4434,7 @@ class Validator:
             == "promotion-evidence-v2"
             and isinstance(upgrade.get("aggregate_contract"), Mapping)
             and upgrade["aggregate_contract"].get("expected_cases")
-            == "43/43"
+            == "44/44"
             and isinstance(upgrade.get("formal_result_contract"), Mapping)
             and upgrade["formal_result_contract"].get("output_check_policy")
             == EXPECTED_FORMAL_OUTPUT_CHECK_POLICY
@@ -3766,7 +4469,7 @@ class Validator:
                 rtext = p.read_text(encoding="utf-8")
                 self.add(f"reference substantive: {rel}", len(rtext) >= 600, details=rel)
                 if rel == "PASS_TRACKED_UPGRADE_AUDIT.md":
-                    upgrade_terms = ["PASS-SCOPED to PASS-TRACKED", "Required audit bundle layout", "Required command sequence", "--output-format stream-json", "--include-hook-events", "--plugin-dir", "run_live_skill_evals.py", "run_formal_artifact_verification.py", "--require-trace-auth", "certify_pass_tracked_upgrade.py", "promotion_certificate.json", "UNVERIFIED_RUNTIME", "downstream", "no automatic", "promotion_schema_version", "promotion-evidence-v2", "formal result `2.0`", "fresh allowlisted official validators", "CAPPED", "43/43", "O_DIRECTORY", "O_NOFOLLOW", "pass_fds", "INVALID_INPUT", "before requested output mutation", "self_mode", "\"mode\": \"100644\""]
+                    upgrade_terms = ["PASS-SCOPED to PASS-TRACKED", "Required audit bundle layout", "Required command sequence", "--output-format stream-json", "--include-hook-events", "--plugin-dir", "run_live_skill_evals.py", "run_formal_artifact_verification.py", "--require-trace-auth", "certify_pass_tracked_upgrade.py", "promotion_certificate.json", "UNVERIFIED_RUNTIME", "downstream", "no automatic", "promotion_schema_version", "promotion-evidence-v2", "formal result `2.0`", "fresh allowlisted official validators", "CAPPED", "44/44", "O_DIRECTORY", "O_NOFOLLOW", "pass_fds", "INVALID_INPUT", "before requested output mutation", "self_mode", "\"mode\": \"100644\""]
                     for term in upgrade_terms:
                         self.add(f"PASS-TRACKED upgrade audit contains term: {term}", term.lower() in rtext.lower(), details=term)
                 if rel in {"EVIDENCE_SCHEMA.md", "OUTPUT_TEMPLATES.md"}:
@@ -3931,7 +4634,41 @@ class Validator:
         sdir = self.path(f"{SKILL_DIR}/scripts")
         scripts = {
             "ntt_gate.py": ["DEFAULT_THRESHOLDS", "DOWNSTREAM_STATUSES", "unknown downstream policy", "derived_or_downstream_claims", "evaluate_downstream_nonclosure", "automatic closure", "threshold relaxation attempt ignored", "false_world_tests", "true_world_tests", "method_completeness", "evidence_refs", "unresolved_contradictions", "--evidence-root", "structured evidence", "structured_evidence_count", "evidence_schema_version", "_verify_artifact_sha256", "hash_or_version does not match artifact_path SHA-256", "_ref_to_path_checked", "_canonical_relative_path", "_atomic_write_new_text", "invalid evidence refs", "traverses a symlink", "canonical relative POSIX path", "urlparse", "URI schemes are case-insensitive", "non-empty URI scheme", "unique evidence refs", "unique structured evidence artifacts", "duplicate or aliased evidence refs", "missing modal test id", "test target_claim does not match evaluated claim", "target_claim_ids"],
-            "validate_package.py": ["check_closed_surface", "GitEntry", "ls-files\", \"--stage", "regular blob modes 100644/100755", "atomic_write_fixed_text", "HARNESS_ERROR", "GIT_OPTIONAL_LOCKS", "check_self_certificate_nonclosure", "self certificate artifact version matches plugin", "downstream non-closure", "plugin manifest has no component-path/runtime fields", "dynamic skill shell disabled", "semantic prompt poisoning", "placeholder eval", "run_live_skill_evals.py", "update_manifest", "agents.rglob", "recursive plugin agent", "check_release_audit_artifacts", "check_release_provenance_hygiene", "check_github_readmes", "EXPECTED_GITHUB_READMES", "GitHub README", "stale generated artifact", "absolute build path", "provenance hygiene", "stable release manifest self-hash", "compute_stable_release_tree", "run_release_lock_idempotence_test", "run_promotion_certifier_contract_probes", "promotion deterministic projection ignores presentation fields", "official validator stderr contradiction dominates stdout success", "promotion evidence paths require raw canonical POSIX syntax", "promotion evidence graph analysis is iterative for deep input", "promotion evidence graph rejects oversized input early", "promotion failure API keeps canonical FAIL status", "TemporaryDirectory"],
+            "validate_package.py": [
+                "check_closed_surface", "GitEntry", "ls-files\", \"--stage",
+                "regular blob modes 100644/100755", "atomic_write_fixed_text",
+                "HARNESS_ERROR", "GIT_OPTIONAL_LOCKS",
+                "check_self_certificate_nonclosure",
+                "validate_consistency_sweep_locator_bindings",
+                "correction_locator_excerpt_sha256",
+                "MAX_PACKAGE_DIRECTORY_ENTRIES", "MAX_PACKAGE_TOTAL_ENTRIES",
+                "MAX_PACKAGE_FILE_BYTES", "MAX_PACKAGE_TOTAL_BYTES",
+                "O_NONBLOCK", "stat.S_IXUSR",
+                "package tree remains within per-directory and total entry limits",
+                "package regular-file bytes remain within per-file and aggregate limits",
+                "consistency locator rejects deterministic symlink-ancestor substitution after parent acquisition",
+                "self certificate artifact version matches plugin",
+                "downstream non-closure",
+                "plugin manifest has no component-path/runtime fields",
+                "dynamic skill shell disabled", "semantic prompt poisoning",
+                "placeholder eval", "run_live_skill_evals.py", "update_manifest",
+                "agents.rglob", "recursive plugin agent",
+                "check_release_audit_artifacts",
+                "check_release_provenance_hygiene", "check_github_readmes",
+                "EXPECTED_GITHUB_READMES", "GitHub README",
+                "stale generated artifact", "absolute build path",
+                "provenance hygiene", "stable release manifest self-hash",
+                "compute_stable_release_tree",
+                "run_release_lock_idempotence_test",
+                "run_promotion_certifier_contract_probes",
+                "promotion deterministic projection ignores presentation fields",
+                "official validator stderr contradiction dominates stdout success",
+                "promotion evidence paths require raw canonical POSIX syntax",
+                "promotion evidence graph analysis is iterative for deep input",
+                "promotion evidence graph rejects oversized input early",
+                "promotion failure API keeps canonical FAIL status",
+                "TemporaryDirectory",
+            ],
             "run_gate_contract_tests.py": ["downstream_claim_auto_pass_rejected", "downstream_unknown_status_", "unknown_downstream_policy_fails_closed", "downstream_unknown_record_retains_pass", "zero_threshold_no_tests_bypass", "observed_accepts_false", "observed_rejects_true", "method_component_overclaim", "valid_structured_evidence_hashes", "wrong_structured_evidence_hash_rejected", "artifact_path_escape_rejected", "noncanonical_evidence_ref_", "noncanonical_artifact_path_", "one_of_two_claim_evidence_hashes_wrong_rejected", "one_of_two_test_evidence_hashes_wrong_rejected", "evidence_ref_path_escape_rejected", "evidence_ref_absolute_path_rejected", "external_ref_with_valid_artifact_hash_rejected", "remote_ref_rejected_in_strict_local_mode", "uppercase_https_evidence_ref_rejected", "mixed_case_https_evidence_ref_rejected", "uppercase_doi_urn_refs_rejected", "scheme_like_evidence_ref_rejected_in_strict_mode", "duplicate_claim_evidence_ref_does_not_satisfy_minimum", "aliased_same_claim_evidence_ref_does_not_satisfy_minimum", "duplicate_structured_evidence_file_counted_once", "same_artifact_path_for_all_claim_refs_fails_for_critical_claims", "unique_evidence_refs_with_valid_hashes_still_pass", "wrong_false_world_target_claim_rejected", "wrong_true_world_target_claim_rejected", "missing_false_world_test_id_rejected", "missing_true_world_test_id_rejected", "wildcard_applies_to_tests_does_not_replace_test_id", "valid_target_claim_ids_list_still_passes"],
             "run_live_skill_evals.py": ["--plugin-dir", "-p", "--output-format", "--max-turns", "build_fixture_prompt", "package_tree_algorithm", "package_tree_sha256", "fixture_spec_sha256", "artifact_sha256", "run_config", "compute_stable_release_tree", "prompt_sha256", "transcript_sha256", "sha256_text", "transcript_checks", "structured_json_envelope", "report_field", "runtime_identity", "provenance_schema_version", "observed-not-cryptographically-authenticated", "runtime_preflight_succeeded", "resolve_claude_executable", "load_regular_json", "executable_sha256_pre", "executable_sha256_post", "fingerprint_stable", "regular non-symlink", "UNVERIFIED_RUNTIME", "--run-fixtures", "ACCEPTABLE_PASS_STATUSES", "dominant_status"],
             "run_regression_evals.py": ["REQUIRED_FIXTURE_FIELDS", "false_worlds", "true_worlds", "expected_gate", "evidence_required"],
@@ -5061,6 +5798,544 @@ class Validator:
             shutil.rmtree(temporary, ignore_errors=True)
             gc.collect()
 
+    def run_consistency_locator_contract_probes(self) -> None:
+        """Exercise exact correction-locator rejection and adherence worlds."""
+        temporary = Path(
+            tempfile.mkdtemp(prefix="nozickian_consistency_locators_")
+        )
+        try:
+            target = temporary / "evidence" / "contract.txt"
+            target.parent.mkdir(parents=True)
+            target.write_text(
+                "semantic correction target\n"
+                "unrelated existing line\n"
+                "range continuation\n",
+                encoding="utf-8",
+            )
+
+            def certificate(
+                locations: List[Any],
+                bindings: List[Any],
+            ) -> Dict[str, Any]:
+                return {
+                    "consistency_sweep": {
+                        "applies": True,
+                        "corrected_claims": [
+                            {
+                                "correction_locations": locations,
+                                "correction_location_bindings": bindings,
+                            }
+                        ],
+                    }
+                }
+
+            target_locator = "evidence/contract.txt:1"
+            target_digest = correction_locator_excerpt_sha256(
+                temporary,
+                target_locator,
+            )
+            valid = certificate(
+                [target_locator, "evidence/contract.txt:2-3"],
+                [
+                    {
+                        "locator": target_locator,
+                        "expected_excerpt_sha256": target_digest,
+                    },
+                    {
+                        "locator": "evidence/contract.txt:2-3",
+                        "expected_excerpt_sha256": (
+                            correction_locator_excerpt_sha256(
+                                temporary,
+                                "evidence/contract.txt:2-3",
+                            )
+                        ),
+                    },
+                ],
+            )
+            self.add(
+                "consistency locator true control accepts exact current line/range excerpt bindings",
+                not validate_consistency_sweep_locator_bindings(
+                    temporary,
+                    valid,
+                ),
+            )
+            shared_target = {
+                "consistency_sweep": {
+                    "applies": True,
+                    "corrected_claims": [
+                        {
+                            "correction_locations": [target_locator],
+                            "correction_location_bindings": [
+                                {
+                                    "locator": target_locator,
+                                    "expected_excerpt_sha256": target_digest,
+                                }
+                            ],
+                        },
+                        {
+                            "correction_locations": [target_locator],
+                            "correction_location_bindings": [
+                                {
+                                    "locator": target_locator,
+                                    "expected_excerpt_sha256": target_digest,
+                                }
+                            ],
+                        },
+                    ],
+                }
+            }
+            self.add(
+                "consistency locator adherence permits one exact source span to support distinct correction records",
+                not validate_consistency_sweep_locator_bindings(
+                    temporary,
+                    shared_target,
+                ),
+            )
+            historical_locator = (
+                "git:" + ("a" * 40) + ":evidence/deleted-binary.bin"
+            )
+            historical = certificate(
+                [historical_locator],
+                [
+                    {
+                        "locator": historical_locator,
+                        "expected_excerpt_sha256": "b" * 64,
+                    }
+                ],
+            )
+            self.add(
+                "consistency locator adherence retains canonical historical Git blob bindings",
+                not validate_consistency_sweep_locator_bindings(
+                    temporary,
+                    historical,
+                ),
+            )
+
+            swap_root = temporary / "swap-root"
+            swap_parent = swap_root / "evidence"
+            swap_parent.mkdir(parents=True)
+            (swap_parent / "contract.txt").write_text(
+                "held in-package target\n",
+                encoding="utf-8",
+            )
+            outside_parent = temporary / "outside"
+            outside_parent.mkdir()
+            outside_target = outside_parent / "contract.txt"
+            outside_target.write_text(
+                "attacker-controlled outside target\n",
+                encoding="utf-8",
+            )
+            parked_parent = swap_root / "evidence-held"
+
+            def swap_locator_ancestor() -> None:
+                os.rename(swap_parent, parked_parent)
+                swap_parent.symlink_to(outside_parent, target_is_directory=True)
+
+            ancestor_swap_rejected = False
+            try:
+                correction_locator_excerpt_sha256(
+                    swap_root,
+                    "evidence/contract.txt:1",
+                    _after_parent_open=swap_locator_ancestor,
+                )
+            except ConsistencyLocatorError:
+                ancestor_swap_rejected = True
+            self.add(
+                "consistency locator rejects deterministic symlink-ancestor substitution after parent acquisition",
+                ancestor_swap_rejected
+                and outside_target.read_text(encoding="utf-8")
+                == "attacker-controlled outside target\n",
+            )
+
+            fifo_root = temporary / "fifo-root"
+            fifo_parent = fifo_root / "evidence"
+            fifo_parent.mkdir(parents=True)
+            fifo_target = fifo_parent / "contract.txt"
+            fifo_target.write_text("regular before swap\n", encoding="utf-8")
+
+            def swap_locator_file_to_fifo() -> None:
+                fifo_target.unlink()
+                os.mkfifo(fifo_target)
+
+            fifo_swap_rejected = False
+            try:
+                correction_locator_excerpt_sha256(
+                    fifo_root,
+                    "evidence/contract.txt:1",
+                    _after_parent_open=swap_locator_file_to_fifo,
+                )
+            except ConsistencyLocatorError:
+                fifo_swap_rejected = True
+            self.add(
+                "consistency locator rejects regular-to-FIFO substitution without blocking",
+                fifo_swap_rejected and stat.S_ISFIFO(fifo_target.lstat().st_mode),
+            )
+
+            long_lines = temporary / "evidence" / "too-many-lines.txt"
+            long_lines.write_text(
+                "x\n" * (MAX_CORRECTION_LOCATOR_EXCERPT_LINES + 1),
+                encoding="utf-8",
+            )
+            oversized_excerpt = temporary / "evidence" / "huge-line.txt"
+            oversized_excerpt.write_text(
+                "x" * (MAX_CORRECTION_LOCATOR_EXCERPT_BYTES + 1) + "\n",
+                encoding="utf-8",
+            )
+
+            false_worlds = {
+                "irrelevant existing line with stale reviewed digest": certificate(
+                    ["evidence/contract.txt:2"],
+                    [
+                        {
+                            "locator": "evidence/contract.txt:2",
+                            "expected_excerpt_sha256": target_digest,
+                        }
+                    ],
+                ),
+                "shifted out-of-range line": certificate(
+                    ["evidence/contract.txt:4"],
+                    [
+                        {
+                            "locator": "evidence/contract.txt:4",
+                            "expected_excerpt_sha256": target_digest,
+                        }
+                    ],
+                ),
+                "bare path": certificate(
+                    ["evidence/contract.txt"],
+                    [
+                        {
+                            "locator": "evidence/contract.txt",
+                            "expected_excerpt_sha256": target_digest,
+                        }
+                    ],
+                ),
+                "wildcard path": certificate(
+                    ["evidence/*.txt:1"],
+                    [
+                        {
+                            "locator": "evidence/*.txt:1",
+                            "expected_excerpt_sha256": target_digest,
+                        }
+                    ],
+                ),
+                "deleted current target": certificate(
+                    ["evidence/deleted.txt:1"],
+                    [
+                        {
+                            "locator": "evidence/deleted.txt:1",
+                            "expected_excerpt_sha256": target_digest,
+                        }
+                    ],
+                ),
+                "overlong locator range": certificate(
+                    [
+                        "evidence/too-many-lines.txt:1-"
+                        + str(MAX_CORRECTION_LOCATOR_EXCERPT_LINES + 1)
+                    ],
+                    [
+                        {
+                            "locator": (
+                                "evidence/too-many-lines.txt:1-"
+                                + str(
+                                    MAX_CORRECTION_LOCATOR_EXCERPT_LINES + 1
+                                )
+                            ),
+                            "expected_excerpt_sha256": target_digest,
+                        }
+                    ],
+                ),
+                "oversized excerpt bytes": certificate(
+                    ["evidence/huge-line.txt:1"],
+                    [
+                        {
+                            "locator": "evidence/huge-line.txt:1",
+                            "expected_excerpt_sha256": target_digest,
+                        }
+                    ],
+                ),
+                "duplicate locator": certificate(
+                    [target_locator, target_locator],
+                    [
+                        {
+                            "locator": target_locator,
+                            "expected_excerpt_sha256": target_digest,
+                        },
+                        {
+                            "locator": target_locator,
+                            "expected_excerpt_sha256": target_digest,
+                        },
+                    ],
+                ),
+                "reordered one-to-one bindings": certificate(
+                    [target_locator, "evidence/contract.txt:2-3"],
+                    [
+                        {
+                            "locator": "evidence/contract.txt:2-3",
+                            "expected_excerpt_sha256": (
+                                correction_locator_excerpt_sha256(
+                                    temporary,
+                                    "evidence/contract.txt:2-3",
+                                )
+                            ),
+                        },
+                        {
+                            "locator": target_locator,
+                            "expected_excerpt_sha256": target_digest,
+                        },
+                    ],
+                ),
+            }
+            outcomes: Dict[str, List[str]] = {}
+            for name, false_certificate in false_worlds.items():
+                outcomes[name] = validate_consistency_sweep_locator_bindings(
+                    temporary,
+                    false_certificate,
+                )
+            self.add(
+                "consistency locator false worlds reject irrelevant, shifted, bare, wildcard, deleted, oversized, duplicate, and reordered targets",
+                all(outcomes[name] for name in false_worlds),
+                details=json.dumps(outcomes, sort_keys=True),
+            )
+        except Exception as exc:
+            self.add(
+                "consistency locator contract probes complete",
+                False,
+                details=f"{type(exc).__name__}: {exc}",
+            )
+        finally:
+            shutil.rmtree(temporary, ignore_errors=True)
+            gc.collect()
+
+    def run_package_tree_resource_contract_probes(self) -> None:
+        """Exercise production tree walkers with deliberately tiny bounds."""
+        temporary = Path(
+            tempfile.mkdtemp(prefix="nozickian_package_tree_bounds_")
+        )
+        original_directory_limit = MAX_PACKAGE_DIRECTORY_ENTRIES
+        original_total_limit = MAX_PACKAGE_TOTAL_ENTRIES
+        original_file_byte_limit = MAX_PACKAGE_FILE_BYTES
+        original_total_byte_limit = MAX_PACKAGE_TOTAL_BYTES
+        try:
+            flat = temporary / "flat"
+            flat.mkdir()
+            for name in ("a", "b", "c"):
+                (flat / name).write_text(name + "\n", encoding="utf-8")
+            normal = [
+                relpath(flat, entry[0])
+                for entry in iter_package_entries(
+                    flat,
+                    max_directory_entries=3,
+                    max_total_entries=3,
+                )
+            ]
+            self.add(
+                "bounded package walker true control retains normal deterministic tree",
+                normal == ["a", "b", "c"],
+                details=repr(normal),
+            )
+            normal_snapshot = snapshot_package_entries(flat)
+            self.add(
+                "bounded package snapshot true control retains a normal complete tree",
+                set(normal_snapshot) == {".", "a", "b", "c"},
+                details=repr(sorted(normal_snapshot)),
+            )
+
+            directory_rejected = False
+            try:
+                list(
+                    iter_package_entries(
+                        flat,
+                        max_directory_entries=2,
+                        max_total_entries=20,
+                    )
+                )
+            except PackageTreeResourceLimitError:
+                directory_rejected = True
+            self.add(
+                "bounded package walker rejects a per-directory overlimit tree",
+                directory_rejected,
+            )
+
+            nested = temporary / "nested"
+            (nested / "left").mkdir(parents=True)
+            (nested / "right").mkdir()
+            for parent, name in (
+                (nested / "left", "a"),
+                (nested / "left", "b"),
+                (nested / "right", "c"),
+                (nested / "right", "d"),
+            ):
+                (parent / name).write_text(name + "\n", encoding="utf-8")
+            total_rejected = False
+            try:
+                list(
+                    iter_package_entries(
+                        nested,
+                        max_directory_entries=4,
+                        max_total_entries=5,
+                    )
+                )
+            except PackageTreeResourceLimitError:
+                total_rejected = True
+            self.add(
+                "bounded package walker rejects a total-entry overlimit tree",
+                total_rejected,
+            )
+
+            snapshot_directory_rejected = False
+            try:
+                snapshot_package_entries(
+                    flat,
+                    max_directory_entries=2,
+                    max_total_entries=20,
+                )
+            except PackageTreeResourceLimitError:
+                snapshot_directory_rejected = True
+            self.add(
+                "bounded package snapshot rejects a per-directory overlimit tree",
+                snapshot_directory_rejected,
+            )
+
+            snapshot_total_rejected = False
+            try:
+                snapshot_package_entries(
+                    flat,
+                    max_directory_entries=3,
+                    max_total_entries=2,
+                )
+            except PackageTreeResourceLimitError:
+                snapshot_total_rejected = True
+            self.add(
+                "bounded package snapshot rejects a total-entry overlimit tree",
+                snapshot_total_rejected,
+            )
+
+            snapshot_file_bytes_rejected = False
+            try:
+                snapshot_package_entries(
+                    flat,
+                    max_file_bytes=1,
+                    max_total_bytes=100,
+                )
+            except PackageTreeResourceLimitError:
+                snapshot_file_bytes_rejected = True
+            self.add(
+                "bounded package snapshot rejects a per-file byte overlimit tree",
+                snapshot_file_bytes_rejected,
+            )
+
+            snapshot_total_bytes_rejected = False
+            try:
+                snapshot_package_entries(
+                    flat,
+                    max_file_bytes=2,
+                    max_total_bytes=5,
+                )
+            except PackageTreeResourceLimitError:
+                snapshot_total_bytes_rejected = True
+            self.add(
+                "bounded package snapshot rejects an aggregate byte overlimit tree",
+                snapshot_total_bytes_rejected,
+            )
+
+            deep = temporary / "deep"
+            (deep / "one" / "two").mkdir(parents=True)
+            snapshot_depth_rejected = False
+            try:
+                snapshot_package_entries(
+                    deep,
+                    max_directory_depth=1,
+                )
+            except PackageTreeResourceLimitError:
+                snapshot_depth_rejected = True
+            self.add(
+                "bounded package snapshot rejects a directory-depth overlimit tree",
+                snapshot_depth_rejected,
+            )
+
+            mode_probe = temporary / "mode-probe"
+            mode_probe.write_text("mode\n", encoding="utf-8")
+            mode_results: Dict[str, str] = {}
+            for file_mode in (0o645, 0o654, 0o744):
+                mode_probe.chmod(file_mode)
+                mode_results[oct(file_mode)] = stable_release_file_mode(
+                    mode_probe
+                )
+            self.add(
+                "stable release mode follows Git owner-execute semantics",
+                mode_results
+                == {
+                    "0o645": "100644",
+                    "0o654": "100644",
+                    "0o744": "100755",
+                },
+                details=json.dumps(mode_results, sort_keys=True),
+            )
+
+            globals()["MAX_PACKAGE_DIRECTORY_ENTRIES"] = 2
+            globals()["MAX_PACKAGE_TOTAL_ENTRIES"] = original_total_limit
+            structured = Validator(
+                flat,
+                run_self_test=False,
+                skip_release_idempotence=True,
+            )
+            structured.check_closed_surface()
+            structured_result = structured.result()
+            named_limit_failure = any(
+                check.get("name")
+                == "package tree remains within per-directory and total entry limits"
+                and check.get("passed") is False
+                for check in structured_result.get("checks", [])
+            )
+            self.add(
+                "package-tree overlimit returns a named structured FAIL result",
+                structured_result.get("status") == "FAIL"
+                and structured_result.get("critical_failed", 0) == 1
+                and named_limit_failure,
+                details=json.dumps(structured_result, sort_keys=True),
+            )
+
+            globals()["MAX_PACKAGE_DIRECTORY_ENTRIES"] = (
+                original_directory_limit
+            )
+            globals()["MAX_PACKAGE_FILE_BYTES"] = 1
+            byte_structured = Validator(
+                flat,
+                run_self_test=False,
+                skip_release_idempotence=True,
+            )
+            byte_structured.check_closed_surface()
+            byte_result = byte_structured.result()
+            named_byte_failure = any(
+                check.get("name")
+                == "package regular-file bytes remain within per-file and aggregate limits"
+                and check.get("passed") is False
+                for check in byte_result.get("checks", [])
+            )
+            self.add(
+                "package byte overlimit returns a named structured FAIL result",
+                byte_result.get("status") == "FAIL"
+                and byte_result.get("critical_failed", 0) == 1
+                and named_byte_failure,
+                details=json.dumps(byte_result, sort_keys=True),
+            )
+        except Exception as exc:
+            self.add(
+                "package tree resource contract probes complete",
+                False,
+                details=f"{type(exc).__name__}: {exc}",
+            )
+        finally:
+            globals()["MAX_PACKAGE_DIRECTORY_ENTRIES"] = (
+                original_directory_limit
+            )
+            globals()["MAX_PACKAGE_TOTAL_ENTRIES"] = original_total_limit
+            globals()["MAX_PACKAGE_FILE_BYTES"] = original_file_byte_limit
+            globals()["MAX_PACKAGE_TOTAL_BYTES"] = original_total_byte_limit
+            shutil.rmtree(temporary, ignore_errors=True)
+            gc.collect()
+
     def run_live_harness_contract_probes(self) -> None:
         """Exercise structured-output and preflight failure contracts offline."""
         try:
@@ -5158,8 +6433,8 @@ class Validator:
             artifact = "fixtures/mini_manual.md"
             valid_report = (
                 "Verification report for mini_manual.md: method M was inspected; "
-                "false-world sensitivity and true-world adherence were tested; "
-                "final gate status: PASS-SCOPED."
+                "false-world sensitivity and true-world adherence were tested.\n"
+                "Final gate status: PASS-SCOPED."
             )
             valid_checks = live.transcript_checks(
                 json.dumps({"is_error": False, "result": valid_report}),
@@ -5276,7 +6551,7 @@ class Validator:
                     "  printf '%s\\n' 'PASS'\n"
                     "  exit 0\n"
                     "fi\n"
-                    "printf '%s\\n' '{\"is_error\":false,\"result\":\"Verification report for mini_manual.md, mini_code.py, and fake_trace.json: method M inspected; false-world sensitivity and true-world adherence tested; final gate status: PASS-SCOPED.\"}'\n"
+                    "printf '%s\\n' '{\"is_error\":false,\"result\":\"Verification report for mini_manual.md, mini_code.py, and fake_trace.json: method M inspected; false-world sensitivity and true-world adherence tested.\\nFinal gate status: PASS-SCOPED.\"}'\n"
                     "exit 0\n",
                     encoding="utf-8",
                 )
@@ -7806,7 +9081,8 @@ class Validator:
                             [
                                 f"{SKILL_DIR}/scripts/run_promotion_certifier_contract_tests.py",
                                 ".",
-                            ]
+                            ],
+                            timeout_seconds=1800,
                         )
                     )
                     record(
@@ -7814,8 +9090,8 @@ class Validator:
                         promotion_proc is not None
                         and promotion_proc.returncode == 0
                         and promotion_result.get("status") == "PASS"
-                        and promotion_result.get("passed") == 43
-                        and promotion_result.get("total") == 43
+                        and promotion_result.get("passed") == 44
+                        and promotion_result.get("total") == 44
                         and promotion_result.get(
                             "production_certifier_cli_baseline"
                         )
