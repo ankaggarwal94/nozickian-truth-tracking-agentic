@@ -9,8 +9,8 @@ Required fields:
   "evidence_schema_version": "1.1",
   "claim_id": "C-001",
   "claim_proposition_sha256": "sha256:<digest of the canonical certificate claim text>",
-  "claim_contract_schema_version": "1.0",
-  "claim_contract_sha256": "sha256:<digest of the canonical method-relative claim contract>",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:<digest of the canonical assurance-bound claim contract>",
   "artifact_path": "relative/path/under/evidence_root/to/the/evidence/source",
   "command_or_source": "command, file, trace, source URL, or manual-audit context declared by the wrapper",
   "observed_result": "result text declared by the wrapper",
@@ -21,14 +21,27 @@ Required fields:
 ```
 
 The package writes and the gate requires exact wrapper schema `1.1`. Legacy
-wrapper `1.0` lacks the method-relative claim binding and fails closed. The
+wrapper `1.0` lacks the assurance-bound claim binding and fails closed. The
 separately versioned observation-ledger field described below is checked for
 the exact value `"1.2"`. `claim_id` must match the
 claim being evaluated, or optional `applies_to_claims` must contain that claim ID
 or `*`.
 
+Every required wrapper field above is an already-canonical nonempty JSON
+string; booleans, numbers, containers, Unicode/whitespace aliases, and empty
+strings fail closed. The only optional wrapper keys are `applies_to_claims`,
+`applies_to_tests`, `test_id`, `modal_case_sha256`, and `observation_id`; no
+unknown keys are admitted. Each present `applies_to_*` value is a nonempty,
+duplicate-free JSON array of canonical strings. Modal evaluation additionally
+requires a canonical `test_id` or a canonical `applies_to_tests` binding. Every
+present `test_id` is independently required to be a canonical nonempty string,
+and every present `modal_case_sha256` must be a string-typed SHA-256 identity;
+a malformed optional field fails closed even when another canonical binder
+authorizes the evaluated test. A canonical primary `test_id` and a canonical
+`applies_to_tests` list retain their documented OR semantics for shared wrappers.
+
 In strict local-evidence mode, the certificate claim itself must declare
-`proposition_sha256`, `claim_contract_schema_version: "1.0"`, and
+`proposition_sha256`, `claim_contract_schema_version: "1.1"`, and
 `claim_contract_sha256`. Every claim-level and test-level wrapper must declare
 the same identities. The proposition digest input is
 the claim's `text` after Unicode NFC normalization, replacing each run of
@@ -39,30 +52,81 @@ prefix; hexadecimal case is normalized, but writers should emit lowercase
 `sha256:<64-hex>` values. An empty or non-string proposition cannot be
 canonicalized.
 
-The method-relative claim contract is the following object serialized as UTF-8
+The assurance-bound claim contract is the following object serialized as UTF-8
 JSON with sorted keys, `ensure_ascii=false`, and compact separators (`,` and
 `:`):
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
+  "id": "<canonical claim id>",
   "text": "<canonical claim text>",
   "scope": "<canonical nonempty claim scope>",
   "artifact_location": "<canonical nonempty artifact or referent locator>",
   "importance": "critical|major|minor",
-  "method_m": {"<complete method M>": "<canonical JSON>"}
+  "method_m": {"<complete method M>": "<canonical JSON>"},
+  "truth_status": "<lowercase stripped truth status>",
+  "method_completeness": null,
+  "unresolved_contradictions": [],
+  "residual_risks": [],
+  "evidence_refs": [],
+  "false_world_tests": [],
+  "true_world_tests": [],
+  "certificate_assurance": {
+    "schema_version": "1.0",
+    "downstream_policy": {
+      "name": "generic",
+      "require_records": false,
+      "require_review": false,
+      "require_own_claim_field": false
+    },
+    "method_manifest": {},
+    "scope_limitations": [],
+    "unknowns": [],
+    "method_unknowns": [],
+    "gate_thresholds": null,
+    "derived_or_downstream_claims": [],
+    "downstream_review": null,
+    "claim_inventory": [
+      {
+        "id": "<canonical claim id>",
+        "local_claim_contract_sha256": "<64 lowercase hex>"
+      }
+    ]
+  }
 }
 ```
 
-`scope` and `artifact_location` must be JSON strings; `importance` must have the
-exact lowercase value shown; and `method_m` must be an object. Every string at
-any depth uses the proposition NFC/whitespace canonicalization. Arrays retain
+The downstream-policy value is the complete selected policy object, not its
+name alone. The canonical settings are `generic` = `(false, false, false)`,
+`package-self` = `(true, false, false)`, and `promotion-v2` =
+`(false, true, true)` in `require_records`, `require_review`,
+`require_own_claim_field` order. Changing either the name or any policy control
+therefore changes every assurance-bound claim digest.
+
+The claim `id`, `scope`, and `artifact_location` must be exact canonical
+nonempty JSON strings; `importance` must have the exact lowercase value shown;
+and `method_m` must be an object. A claim ID is never coerced from a scalar or
+accepted through a Unicode/whitespace alias. Claim `evidence_refs` is a
+duplicate-free JSON array of canonical nonempty strings, never a scalar alias.
+`residual_risks`, `false_world_tests`, and `true_world_tests` are required JSON
+arrays, including for minor claims whose valid modal arrays may be empty. At
+least one of `unresolved_contradictions` or the legacy `contradictions` alias is
+required, and every present spelling must be a JSON array; `null`, scalar, and
+missing required collection shapes fail closed.
+Every string at any depth uses the
+proposition NFC/whitespace canonicalization. Arrays retain
 their order because command, grader, and trace ordering can be part of method
-M. JSON object order is immaterial. The gate hashes the canonical compact JSON
-bytes with SHA-256. This binds evidence to the claim's scope, referent,
-criticality, and actual checking method rather than to text alone. Even minor
-strict claims require one structured evidence wrapper so a certificate cannot
-downgrade a claim and delete every externalized binding.
+M. JSON object order is immaterial. `unresolved_contradictions` combines the
+canonical field and the legacy `contradictions` alias additively, so one spelling
+cannot hide the other. The local digest in `claim_inventory` uses this same
+claim payload with `certificate_assurance` set to `null`; this breaks recursion
+while binding every surviving wrapper to the complete claim inventory. The gate
+hashes the full canonical compact JSON bytes with SHA-256. As a result, deleting
+a limitation or failed claim, changing truth/method state, editing evidence or
+modal obligations, or changing downstream policy/state invalidates the existing
+strict wrappers. Even minor strict claims require one structured wrapper so a
+certificate cannot downgrade a claim and delete every externalized binding.
 
 Test-level wrappers add the modal bindings shown here:
 
@@ -71,8 +135,8 @@ Test-level wrappers add the modal bindings shown here:
   "evidence_schema_version": "1.1",
   "claim_id": "C-001",
   "claim_proposition_sha256": "sha256:<canonical claim digest>",
-  "claim_contract_schema_version": "1.0",
-  "claim_contract_sha256": "sha256:<canonical method-relative claim digest>",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:<canonical assurance-bound claim digest>",
   "test_id": "FW-001",
   "modal_case_sha256": "sha256:<canonical modal-case digest>",
   "observation_id": "obs.C-001.FW-001",
@@ -100,10 +164,10 @@ SHA-256 of the following object serialized as UTF-8 JSON with sorted keys,
   "variation_field": "perturbation",
   "variation": "<canonical perturbation or variant text>",
   "world_contract": {
-    "schema_version": "1.0",
+    "schema_version": "1.1",
     "semantic_equivalence_class": "<reviewer-assigned-lowercase-ascii-slug>",
-    "operator": "<canonical operation>",
-    "target": "<canonical mutated or preserved target>",
+    "operator": "mutate|preserve|remove|replace",
+    "target": "<member of the closed canonical target vocabulary>",
     "precondition": "<canonical pre-state>",
     "state_delta": "<canonical state change>",
     "oracle": "<canonical decision procedure>",
@@ -112,14 +176,18 @@ SHA-256 of the following object serialized as UTF-8 JSON with sorted keys,
   "expected_behavior": "<canonical expected_behavior>",
   "observed_behavior": "<canonical observed_behavior>",
   "observed_result": "<canonical evidence-wrapper observed_result>",
-  "outcome": "<lowercase stripped outcome or observed_outcome>",
+  "outcome": "<lowercase stripped declared outcome>",
+  "observed_outcome": "<separately lowercased observed outcome, or empty when absent>",
   "result": "<lowercase stripped result>"
 }
 ```
 
-`target_claim_ids` comes from `target_claim_ids` when that field is present,
-otherwise from `target_claim`; a scalar is treated as a one-element list before
-the values are stripped, deduplicated, and sorted. `variation_field` is
+Exactly one target field is present. `target_claim` is one exact canonical
+nonempty string; `target_claim_ids` is a nonempty duplicate-free array of exact
+canonical strings. Members are never coerced or silently stripped. Likewise,
+the modal `id`/legacy `test_id` identity is an exact canonical nonempty string;
+simultaneous aliases may not conflict, and modal `evidence_refs` is a
+duplicate-free canonical string array. `variation_field` is
 `perturbation` when that value is nonempty and otherwise is `variant`. The four
 prose values use the same NFC/whitespace canonicalization as claim text. In
 particular, `observed_result` comes from the evidence wrapper, so changing
@@ -127,17 +195,71 @@ either the case declaration or its declared release-result text changes the
 modal-case digest. For ledger-backed modal wrappers, neither this text nor
 `command_or_source` authenticates execution.
 
-The closed `world_contract` is required for every modal test. All fields except
-`schema_version` and `semantic_equivalence_class` are nonempty strings using
-the same NFC/whitespace canonicalization. The equivalence class is an exact,
-reviewer-assigned lowercase ASCII slug. Coverage must independently meet its
-threshold for (a) distinct claim/kind/equivalence-class identities and (b)
-distinct SHA-256 fingerprints of the canonical structured contract excluding
-`semantic_equivalence_class`. The complete contract, including the class,
-remains bound in `modal_case_sha256`. Thus neither paraphrasing structured prose
-under one class nor relabeling one unchanged structure with a new class creates
-a second world. Genuinely distinct reviewed worlds can still use identical
-display prose.
+`outcome` and `observed_outcome` occupy separate positions in this payload, so
+adding, removing, or changing the observed field changes `modal_case_sha256`.
+When both typed fields are present they must agree; every present typed outcome
+must also agree with `world_contract.expected_outcome`.
+
+The closed `world_contract` is required for every modal test. Schema `1.1`
+restricts `operator` to `mutate`, `preserve`, `remove`, or `replace`; `target`
+must be a member of the gate's closed `WORLD_MUTATION_TARGETS` vocabulary; and
+`expected_outcome` must be a canonical false- or true-world outcome. The three
+explanatory prose fields remain nonempty canonical strings, while the
+equivalence class remains an exact reviewer-assigned lowercase ASCII slug.
+The closed target vocabulary is:
+
+```text
+artifact.digest
+artifact.identity
+artifact.path
+certificate.assurance
+certificate.claim_contract
+certificate.evidence_refs
+certificate.modal_tests
+certificate.thresholds
+claim.presentation
+documentation.claim
+evidence_wrapper.artifact_digest
+evidence_wrapper.identity
+evidence_wrapper.path
+filesystem.entry
+filesystem.parent
+fixture.contract
+manifest.entry
+markdown.output
+process.containment
+process.output
+release.archive
+runtime.envelope
+runtime.trace
+workflow.command
+workflow.step
+```
+
+Coverage must independently meet its threshold for (a) distinct
+claim/kind/equivalence-class identities and (b) distinct typed
+`(operator, target, expected_outcome)` identities. Free-form precondition,
+state-delta, oracle, expected-behavior, and observed-behavior prose never
+contributes to the diversity fingerprint and is never interpreted as a
+polarity oracle. Those strings must be substantive and remain digest-bound
+explanations for human review; deterministic authorization comes only from the
+closed typed fields. The complete contract, including prose and class, remains
+bound in `modal_case_sha256`. Thus punctuation, paraphrase, quoted negation, or
+class relabeling cannot manufacture another nearby world. A reviewer must still
+adjudicate whether a declaration chose the semantically correct operator,
+target, and outcome.
+
+Under the `package-self` downstream policy, minimum counts are not the
+authorization boundary. The certificate-wide modal-test ID multiset must equal
+the immutable reviewed 80-transition registry exactly: every reviewed ID
+appears once, no ID is deleted or duplicated, no extra or unreviewed ID is
+added, and the registry-pinned claim/kind assignment cannot move between
+claims. Each pin hashes the complete canonical transition payload: registry
+version, claim, test ID, kind, targets, variation field/value, full
+schema-`1.1` world contract including explanatory prose, expected and observed
+behavior, declared and observed outcomes, result, and optional fixture digest.
+A known registry ID under a generic policy is not a fallback authorization
+path.
 
 ## Observation ledger binding
 
@@ -155,7 +277,7 @@ JSON ledger with this shape:
       "test_id": "FW-001",
       "kind": "false_world",
       "claim_proposition_sha256": "sha256:<canonical claim digest>",
-      "claim_contract_sha256": "sha256:<canonical method-relative claim digest>",
+      "claim_contract_sha256": "sha256:<canonical assurance-bound claim digest>",
       "modal_case_sha256": "sha256:<canonical modal-case digest>",
       "result": "pass",
       "outcome": "rejected_false_claim",
@@ -247,6 +369,7 @@ uses a different top-level evidence graph and rejects legacy flat promotion
 ```json
 {
   "promotion_schema_version": "2.0",
+  "origin": "runtime-observed",
   "upgrade_from_status": "PASS-SCOPED",
   "requested_status": "PASS-TRACKED",
   "package_version": "1.0.3",
@@ -311,8 +434,8 @@ uses a different top-level evidence graph and rejects legacy flat promotion
       "id": "C-UPGRADE-001",
       "text": "The exact package snapshot satisfies the independently evaluated promotion contract.",
       "proposition_sha256": "sha256:<digest of the canonical claim text>",
-      "claim_contract_schema_version": "1.0",
-      "claim_contract_sha256": "sha256:<digest of canonical text, scope, artifact_location, importance, and method_m>",
+      "claim_contract_schema_version": "1.1",
+      "claim_contract_sha256": "sha256:<digest of the full assurance-bound claim contract>",
       "scope": "The exact identified package snapshot and independently evaluated promotion contract only.",
       "importance": "critical",
       "artifact_location": "promotion_claims/C-UPGRADE-001",
@@ -335,13 +458,13 @@ uses a different top-level evidence graph and rejects legacy flat promotion
         {
           "id": "FW-C-UPGRADE-001-STALE",
           "kind": "false_world",
-          "target_claim": "C-UPGRADE-001",
+          "target_claim_ids": ["C-UPGRADE-001"],
           "perturbation": "Use stale package bytes.",
           "world_contract": {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "stale-package-bytes",
             "operator": "replace",
-            "target": "identified package snapshot",
+            "target": "artifact.identity",
             "precondition": "The claim is bound to the current package bytes.",
             "state_delta": "Substitute bytes from a stale package snapshot.",
             "oracle": "Recompute and compare the bound package identity.",
@@ -350,19 +473,20 @@ uses a different top-level evidence graph and rejects legacy flat promotion
           "expected_behavior": "The strict gate rejects the claim.",
           "observed_behavior": "The strict gate rejected the claim.",
           "outcome": "rejected_false_claim",
+          "observed_outcome": "rejected_false_claim",
           "result": "pass",
           "evidence_refs": ["promotion_claims/C-UPGRADE-001/FW-stale.json"]
         },
         {
           "id": "FW-C-UPGRADE-001-UNBOUND",
           "kind": "false_world",
-          "target_claim": "C-UPGRADE-001",
+          "target_claim_ids": ["C-UPGRADE-001"],
           "perturbation": "Remove independent formal evidence.",
           "world_contract": {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "formal-evidence-absent",
             "operator": "remove",
-            "target": "independent formal evidence binding",
+            "target": "certificate.evidence_refs",
             "precondition": "The promotion claim cites independently bound formal evidence.",
             "state_delta": "Delete the formal evidence binding.",
             "oracle": "Evaluate the strict promotion evidence graph.",
@@ -371,6 +495,7 @@ uses a different top-level evidence graph and rejects legacy flat promotion
           "expected_behavior": "The strict gate blocks the claim.",
           "observed_behavior": "The strict gate blocked the claim.",
           "outcome": "blocked",
+          "observed_outcome": "blocked",
           "result": "pass",
           "evidence_refs": ["promotion_claims/C-UPGRADE-001/FW-unbound.json"]
         }
@@ -379,13 +504,13 @@ uses a different top-level evidence graph and rejects legacy flat promotion
         {
           "id": "TW-C-UPGRADE-001-EQUIVALENT",
           "kind": "true_world",
-          "target_claim": "C-UPGRADE-001",
+          "target_claim_ids": ["C-UPGRADE-001"],
           "variant": "Use equivalent independently bound evidence.",
           "world_contract": {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "equivalent-independent-evidence",
-            "operator": "substitute",
-            "target": "independent evidence representation",
+            "operator": "preserve",
+            "target": "evidence_wrapper.identity",
             "precondition": "The original evidence is independently bound and valid.",
             "state_delta": "Replace it with semantically equivalent independently bound evidence.",
             "oracle": "Re-evaluate exact bindings and the strict claim contract.",
@@ -394,6 +519,7 @@ uses a different top-level evidence graph and rejects legacy flat promotion
           "expected_behavior": "The strict gate retains the claim.",
           "observed_behavior": "The strict gate retained the claim.",
           "outcome": "retained_true_claim",
+          "observed_outcome": "retained_true_claim",
           "result": "pass",
           "evidence_refs": ["promotion_claims/C-UPGRADE-001/TW-equivalent.json"]
         }
@@ -411,11 +537,22 @@ uses a different top-level evidence graph and rejects legacy flat promotion
 }
 ```
 
-`promotion_schema_version` has exact string type and value `"2.0"`. The other required top-level fields have exact JSON types: `upgrade_from_status`, `requested_status`, `package_version`, and `package_tree_sha256` are strings; `method_m_upgrade`, `live_result_bindings`, `evidence`, and `downstream_review` are objects; and `claims` plus `derived_or_downstream_claims` are arrays. `claims` must contain at least one well-formed unique claim; each is evaluated through the canonical strict gate, and modeled completion requires a nonempty all-passing result set.
+The promotion certificate top-level key set is closed. In particular,
+certificate-authored aliases such as `promotion_authorized`, `runtime_evidence`,
+`status`, `outcome`, or `error` are invalid even when the canonical fields are
+also present. `origin` is not trusted in isolation: the certifier derives the
+same value from `live.runtime.provenance.evidence_origin` and
+`formal.result.evidence_origin`, requires both hashed lane artifacts to agree,
+and requires the declaration to match. The reconstructed
+`promotion-method-m-v2` record includes that origin and the corresponding
+runtime-evidence classification. This provenance classification does not remove
+the release's independent `promotion_authorized: false` cap.
+
+`promotion_schema_version` has exact string type and value `"2.0"`. The other required top-level fields have exact JSON types: `origin`, `upgrade_from_status`, `requested_status`, `package_version`, and `package_tree_sha256` are strings; `method_m_upgrade`, `live_result_bindings`, `evidence`, and `downstream_review` are objects; and `claims` plus `derived_or_downstream_claims` are arrays. `claims` must contain at least one well-formed unique claim; each includes nonempty `scope`, exact claim-contract `1.1` fields, complete modal world contracts, and is evaluated through the canonical strict gate. Modeled completion requires a nonempty all-passing result set.
 
 The nine roles shown above are the complete fixed role set. Each node contains exactly `path`, `sha256`, and `depends_on`. Paths are canonical relative POSIX paths to bundle-local regular non-symlink files. The digest binds exact bytes. Dependencies must equal this environment-independent bounded acyclic graph. Different roles may have equal content bytes, but they may not alias one path or file identity.
 
-Each role has lane-specific validation. Deterministic captures use `deterministic-capture-v2` and are compared with fresh fixed-argv suite execution through typed semantic projections. Official-policy nodes identify allowlisted validators that the certifier executes fresh; Claude uses exact strict argv and real ANSI-normalized success parsing. Complete stdout/stderr bytes determine semantics, hashes, and byte counts; bounded excerpts and truncation flags do not authorize. Text captures do not authorize. If an executable is absent and the explicit scope flag is supplied, the fresh execution record may say unavailable/scoped, but both official policy nodes and every dependency above remain mandatory. The formal role points directly to formal result `2.0`, which binds the standalone endpoint-checked target copy and the exact report, gate, certificate, ledger, complete transcript, prompt, and target-copy companion manifest. Its output-check projection is recomputed from the exact bound report, certificate, ledger, and gate and must be nonempty and all passing; arbitrary self-attested checks and coherently rehashed empty report or gate companions fail closed. Its execution identity must truthfully record `temporal_immutability_enforced: false`, `process_containment.mechanism: linux-child-subreaper-plus-process-group`, `detached_session_descendants_contained: true`, `detached_descendant_survivor: false`, and `process_containment_cleanup_complete: true`. Temporal immutability caps an otherwise `PASS-TRACKED` result at `PASS-SCOPED`; unavailable containment fails before execution.
+Each role has lane-specific validation. Deterministic captures use `deterministic-capture-v2` and are compared with fresh fixed-argv suite execution through typed semantic projections. Official-policy nodes identify allowlisted validators that the certifier executes fresh; Claude uses exact strict argv and real ANSI-normalized success parsing. Complete stdout/stderr bytes determine semantics, hashes, and byte counts; bounded excerpts and truncation flags do not authorize. Text captures do not authorize. If an executable is absent and the explicit scope flag is supplied, the fresh execution record may say unavailable/scoped, but both official policy nodes and every dependency above remain mandatory. The formal role points directly to formal result `2.0`, which binds the standalone endpoint-checked target copy and the exact report, gate, certificate, ledger, complete transcript, prompt, and target-copy companion manifest. Trace authentication requires exactly one canonical successful SDK ResultMessage after all lane results and as the final record, with nonempty `result`, empty permission denials, null-or-absent `api_error_status`, `deferred_tool_use`, and non-structured `structured_output`, plus exact `completed`/`end_turn` for any present non-null `terminal_reason`/`stop_reason`. Its output-check projection is recomputed from the exact bound report, certificate, ledger, and gate and must be nonempty and all passing; arbitrary self-attested checks and coherently rehashed empty report or gate companions fail closed. Its execution identity must truthfully record schema-`2.0` `evidence_origin`, `temporal_immutability_enforced: false`, `process_containment.mechanism: linux-child-subreaper-plus-process-group`, `detached_session_descendants_contained: true`, `detached_descendant_survivor: false`, and `process_containment_cleanup_complete: true`. Temporal immutability caps an otherwise `PASS-TRACKED` result at `PASS-SCOPED`; unavailable containment fails before execution.
 
 Gate Markdown, certifier JSON/Markdown, formal output plus compatibility JSON, live transcripts plus optional JSON, validator Markdown, deterministic contract/regression JSON wrappers, and the fixed behavior/stable-release manifests acquire component-wise `O_DIRECTORY`/`O_NOFOLLOW` parent capabilities before their long-running work. Writes retain those capabilities through descriptor-relative exclusive creation, link/rename installation as applicable, and directory fsync. Role/alias decisions are frozen against held identities; formal canonical-result classification is not recomputed after writes, certifier JSON/Markdown aliases fail, and live JSON cannot alias a selected transcript. Direct/ancestor links, special or hardlink sentinels, and lexical-parent replacement cannot redirect writes; validator Markdown also rechecks that its held parent remains outside the package tree. Endpoint and capability observations are not temporal isolation, so a same-UID mutation between checks remains outside the claim.
 

@@ -7,11 +7,11 @@ nearby false worlds involving extra plugin-loadable surfaces, broad permission
 grants, semantic prompt poisoning, placeholder evals, and live-harness stubs.
 """
 from __future__ import annotations
-import argparse, ast, contextlib, gc, hashlib, importlib.util, io, json, math, os, re, shutil, stat, subprocess, sys, tempfile
+import argparse, ast, contextlib, contextvars, ctypes, gc, hashlib, importlib.util, io, json, math, os, re, selectors, shutil, signal, stat, subprocess, sys, tempfile, time
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path, PurePosixPath
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 try:
     import yaml  # type: ignore
 except Exception:  # pragma: no cover
@@ -79,11 +79,11 @@ EXPECTED_SCRIPTS = {"ntt_gate.py", "validate_package.py", "run_gate_contract_tes
 EXPECTED_FIXTURES = {"mini_manual.md", "mini_code.py", "fake_trace.json"}
 EXPECTED_ASSETS = {"certificate-template.json", "subagent-task-card.md"}
 EXPECTED_GITHUB_READMES: Dict[str, List[str]] = {
-    "docs/README.md": ["Documentation hub", "PASS-SCOPED", "PASS-TRACKED", "closed-surface", "synthetic aggregate contract", "44 baseline/negative cases"],
-    "docs/quickstart/README.md": ["Quickstart", "validate_package.py", "run_live_skill_evals.py", "UNVERIFIED_RUNTIME", "run_promotion_certifier_contract_tests.py", "44/44"],
+    "docs/README.md": ["Documentation hub", "PASS-SCOPED", "PASS-TRACKED", "closed-surface", "synthetic aggregate contract", "46 baseline/negative cases"],
+    "docs/quickstart/README.md": ["Quickstart", "validate_package.py", "run_live_skill_evals.py", "UNVERIFIED_RUNTIME", "run_promotion_certifier_contract_tests.py", "46/46"],
     "docs/audit-model/README.md": ["Nozickian", "CoVe", "no automatic epistemic closure", "derived_or_downstream_claims"],
     "docs/evidence/README.md": ["self_certificate.json", "strict", "SHA-256", "structured evidence", "promotion-evidence-v2", "failure_kind", "formal output-check projection", "pass_fds"],
-    "docs/pass-tracked-upgrade/README.md": ["PASS-SCOPED", "PASS-TRACKED", "certify_pass_tracked_upgrade.py", "promotion certificate", "promotion-evidence-v2", "CAPPED", "44/44", "/proc/<runner-pid>/fd/N", "direct-parent `PPid:`"],
+    "docs/pass-tracked-upgrade/README.md": ["PASS-SCOPED", "PASS-TRACKED", "certify_pass_tracked_upgrade.py", "promotion certificate", "promotion-evidence-v2", "CAPPED", "46/46", "/proc/<runner-pid>/fd/N", "direct-parent `PPid:`"],
     "docs/runtime-trace-auth/README.md": ["stream", "tool-use", "tool-result", "trace authentication", "formal result `2.0`", "CAPPED", "held no-follow capability", "pass_fds", "before creating the requested output directory or JSON file"],
     "docs/security/README.md": ["closed surface", "threat model", "runtime", "README"],
     "docs/development/README.md": ["Development", "update-manifest", "validator", "evidence", "run_promotion_certifier_contract_tests.py"],
@@ -178,7 +178,8 @@ EXPECTED_CI_WORKFLOW: Dict[str, Any] = {
                     "run": (
                         "python3 skills/nozickian-verify/scripts/ntt_gate.py "
                         "self_validation/self_certificate.json "
-                        "--evidence-root . --strict-evidence --markdown "
+                        "--evidence-root . --strict-evidence "
+                        "--downstream-policy package-self --markdown "
                         "/tmp/ntt_ci_outputs/GATE_RESULT.md\n"
                     ),
                 },
@@ -223,7 +224,7 @@ EXPECTED_CI_WORKFLOW: Dict[str, Any] = {
     },
 }
 EXPECTED_RELEASE_COMMANDS_SHA256 = (
-    "a0924d174dc7b44bcf4baa67354ab6133213e611f12b428030c3d2a9e1f4f264"
+    "a781d2024836401bf0c67c5f1ecff1aa159a391fa502f4bc051959aead8c83f4"
 )
 EXPECTED_RELEASE_VERSION = "1.0.3"
 EXPECTED_ISSUE_5_UNRESOLVED_OBLIGATIONS = [
@@ -287,8 +288,8 @@ REQUIRED_PROMOTION_SURFACE_INVARIANTS = (
     (
         "v1.0.3 formal result 2.0 binds the standalone endpoint-checked target "
         "copy, exact report/gate/certificate/ledger/transcript/prompt/"
-        "target-snapshot companion manifest, package-tree identity, run "
-        "identity, and target pre/post endpoint identity; "
+        "target-snapshot companion manifest, evidence_origin, package-tree "
+        "identity, run identity, and target pre/post endpoint identity; "
         "temporal_immutability_enforced is false, so an otherwise "
         "PASS-TRACKED formal result is capped at PASS-SCOPED; promotion uses "
         "only the typed formal.result locator and allows unrelated "
@@ -315,7 +316,7 @@ REQUIRED_PROMOTION_SURFACE_INVARIANTS = (
     (
         "v1.0.3 promotion claims form a nonempty exact-typed unique-ID set; "
         "canonical strict-gate evaluation must return a nonempty all-PASS "
-        "result set before promotion-strict downstream non-closure "
+        "result set before promotion-v2 downstream non-closure "
         "evaluation, while a performed review may explicitly identify no "
         "downstream conclusion with a substantive reason."
     ),
@@ -330,6 +331,37 @@ REQUIRED_PROMOTION_SURFACE_INVARIANTS = (
         "bounded excerpts and truncation flags are presentation metadata, "
         "capture-limit excess fails closed, and tail-only authentication is "
         "forbidden."
+    ),
+    (
+        "v1.0.3 strict evidence wrappers bind claim-contract 1.1 over the "
+        "full claim and certificate assurance. Modal authorization comes "
+        "from closed typed operator/target/outcome fields; explanatory prose "
+        "is never a polarity oracle, and package-self requires every reviewed "
+        "transition exactly once certificate-wide."
+    ),
+    (
+        "v1.0.3 live and formal result envelopes accept only one canonical "
+        "successful SDK ResultMessage with nonempty result and reject "
+        "content/output aliases, permission denials, non-null API/deferred/"
+        "non-structured controls, non-completed terminal reasons, "
+        "non-end-turn stop reasons, and nested contradictory status or "
+        "outcome signals."
+    ),
+    (
+        "v1.0.3 promotion cross-binds declared origin to live provenance "
+        "schema 2.0 and formal evidence_origin, then reconstructs one exact "
+        "closed promotion-method-m-v2 record from origin, package/evidence/"
+        "live/formal/gate/policy/parser identities; missing, malformed, "
+        "scalar, or cross-bound method inputs cannot authorize modeled "
+        "success."
+    ),
+    (
+        "v1.0.3 correction locators and package snapshots use no-follow "
+        "descriptor anchoring plus explicit line, file, per-directory, "
+        "total-entry, depth, aggregate-file, and independent path/metadata "
+        "ceilings. Git discovery/index output is independently time-, byte-, "
+        "and entry-bounded; Git-compatible mode identity follows "
+        "owner-execute semantics."
     ),
     (
         "v1.0.3 gate Markdown, certifier JSON/Markdown, formal output and "
@@ -359,7 +391,7 @@ REQUIRED_PROMOTION_SURFACE_INVARIANTS = (
         "excluded."
     ),
     (
-        "v1.0.3 aggregate promotion contracts are synthetic 44/44 evidence "
+        "v1.0.3 aggregate promotion contracts are synthetic 46/46 evidence "
         "and invoke the production certifier CLI for the baseline and every "
         "negative; they do not authenticate a real runtime."
     ),
@@ -375,6 +407,25 @@ REQUIRED_PROMOTION_SURFACE_INVARIANTS = (
     ),
 )
 REQUIRED_VALIDATOR_SURFACE_INVARIANTS = (
+    (
+        "v1.0.3 bounded Git execution requires supported Linux child-"
+        "subreaper containment before spawn, then kills and reaps the "
+        "original process group plus adopted detached-session descendants "
+        "to a bounded quiet state on every exit including ordinary success "
+        "and post-Popen setup failure; output, timeout, and index-entry "
+        "bounds remain fail-closed."
+    ),
+    (
+        "v1.0.3 physical cruft is absent from the immutable initial snapshot "
+        "before module activation in both Git and Git-free packages, with "
+        "only .git metadata exempt; sanitized Git index/HEAD stage, mode, and "
+        "cruft evidence is observational and additive rejection evidence "
+        "only. Absence of reported Git cruft does not prove HEAD/archive "
+        "equivalence; only the required unpacked git archive HEAD full self-"
+        "test establishes committed-archive behavior. Trusted PATH/Git binary "
+        "selection and same-UID mutable Git metadata remain explicit "
+        "environment assumptions and residual risks."
+    ),
     (
         "v1.0.3 CI policy uses a dependency-free restricted YAML subset and "
         "requires the exact triggers, top-level contents: read permission, "
@@ -392,9 +443,10 @@ REQUIRED_VALIDATOR_SURFACE_INVARIANTS = (
         "artifact paths cannot escape their roots."
     ),
     (
-        "v1.0.3 release-lock stable-tree validation binds the actual outer "
-        "--self-test with complete no-follow non-cruft entry/type/mode/"
-        "hardlink/byte snapshots, "
+        "v1.0.3 release-lock validation authorizes from one immutable initial "
+        "captured-byte snapshot; package reads and every self-test fixture "
+        "are materialized only from captured bytes, and finalization "
+        "independently revalidates the held source plus private mirror. It "
         "then invokes two literal deterministic CLI passes with unique "
         "external outputs; "
         "optional tools, live runtime evaluation, and caller evidence are "
@@ -406,6 +458,9 @@ REQUIRED_VALIDATOR_SURFACE_INVARIANTS = (
         "manual executable commands fail closed even after manifest refresh."
     ),
 )
+# NONAUTHORIZATION-PIN: Absence of reported Git cruft does not prove HEAD/archive equivalence
+# NONAUTHORIZATION-PIN: only the required unpacked git archive HEAD full self-test establishes committed-archive behavior
+# NONAUTHORIZATION-PIN: Trusted PATH/Git binary selection and same-UID mutable Git metadata remain explicit
 SKILL_BROAD_TOOL_PATTERNS = [
     r"allowed-tools\s*:\s*.*\bBash\b", r"allowed-tools\s*:\s*.*\bWrite\b", r"allowed-tools\s*:\s*.*\bEdit\b", r"allowed-tools\s*:\s*.*\bAgent\b", r"allowed-tools\s*:\s*.*\bWebFetch\b",
     r"permissionMode\s*:\s*bypassPermissions", r"permissionMode\s*:\s*dontAsk", r"dangerously-skip-permissions", r"allow-dangerously-skip-permissions",
@@ -499,7 +554,13 @@ def is_volatile_release_file(rel: str) -> bool:
 IGNORED_CRUFT_DIR_NAMES = {".git", "__pycache__"}
 IGNORED_CRUFT_FILE_NAMES = {".DS_Store"}
 CRUFT_IGNORE_GLOBS = (".git", "__pycache__", "*.pyc", ".DS_Store")
-SHIPPABLE_CRUFT_CHECK = "no shippable build cruft (__pycache__/.pyc/.DS_Store)"
+PHYSICAL_CRUFT_CHECK = (
+    "physical cruft is absent; any sanitized Git index/HEAD cruft evidence "
+    "is observational and additive only"
+)
+PACKAGE_PATH_METADATA_CHECK = (
+    "package snapshot path and metadata bytes remain within aggregate limit"
+)
 
 # These limits apply to every package-tree walk initiated by this validator,
 # including helper entry points imported by the release certifier.  A bounded
@@ -511,6 +572,17 @@ MAX_PACKAGE_TOTAL_ENTRIES = 20000
 MAX_PACKAGE_DIRECTORY_DEPTH = 256
 MAX_PACKAGE_FILE_BYTES = 16 * 1024 * 1024
 MAX_PACKAGE_TOTAL_BYTES = 256 * 1024 * 1024
+MAX_PACKAGE_PATH_METADATA_BYTES = 8 * 1024 * 1024
+MAX_GIT_CAPTURE_BYTES = 4 * 1024 * 1024
+MAX_GIT_INDEX_ENTRIES = MAX_PACKAGE_TOTAL_ENTRIES
+GIT_SUBPROCESS_TIMEOUT_SECONDS = 30
+GIT_DESCENDANT_CLEANUP_TIMEOUT_SECONDS = 1.0
+GIT_DESCENDANT_CLEANUP_QUIET_SECONDS = 0.05
+MAX_GIT_PROC_SCAN_ENTRIES = 100_000
+PR_SET_CHILD_SUBREAPER = 36
+_STABLE_MANIFEST_BUILD_CONTEXT: contextvars.ContextVar[Any] = (
+    contextvars.ContextVar("stable_manifest_build_context", default=None)
+)
 MAX_CORRECTION_LOCATOR_LENGTH = 1024
 MAX_CORRECTION_LOCATOR_LINE = 100_000
 MAX_CORRECTION_LOCATOR_EXCERPT_LINES = 2048
@@ -519,6 +591,10 @@ MAX_CORRECTION_LOCATOR_EXCERPT_BYTES = 1024 * 1024
 
 class PackageTreeResourceLimitError(ValueError):
     """A package tree exceeded a deterministic validator resource bound."""
+
+
+class PackageTreeSafetyError(ValueError):
+    """A package entry violated the no-follow/private-file safety contract."""
 
 
 class ConsistencyLocatorError(ValueError):
@@ -542,8 +618,9 @@ def _is_cruft_relpath(rel: str) -> bool:
 
     Mirrors _is_cruft_path for git-tracked path strings: a path is cruft if any
     segment is a known cruft directory (e.g. __pycache__), or its basename is a
-    known cruft file (.DS_Store), or it has a .pyc suffix. Used to fail CRITICAL
-    on git-TRACKED cruft while inventory scanning still SKIPS untracked cruft.
+    known cruft file (.DS_Store), or it has a .pyc suffix. Physical snapshot
+    preflight rejects all cruft before activation; sanitized Git index/HEAD
+    paths use this predicate only as additive observational rejection evidence.
     """
     posix = rel.replace(os.sep, "/")
     segments = posix.split("/")
@@ -556,8 +633,9 @@ def _is_cruft_relpath(rel: str) -> bool:
 
 
 def _is_untracked_bytecode_relpath(rel: str) -> bool:
-    segments = rel.replace(os.sep, "/").split("/")
-    return "__pycache__" in segments or (segments and segments[-1].endswith(".pyc"))
+    """Compatibility predicate: untracked bytecode is never authorized."""
+    del rel
+    return False
 
 
 class GitSurfaceState(Enum):
@@ -579,6 +657,7 @@ class GitTrackedFilesResult:
     state: GitSurfaceState
     entries: Tuple[GitEntry, ...] | None = None
     details: str = ""
+    head_files: Tuple[str, ...] = ()
 
     @property
     def tracked_files(self) -> Tuple[str, ...]:
@@ -590,7 +669,497 @@ def _bounded_git_failure(stage: str, proc: subprocess.CompletedProcess[str]) -> 
     return f"{stage} exited {proc.returncode}: {diagnostic[:500]}"
 
 
-def git_tracked_files(root: Path) -> GitTrackedFilesResult:
+def _git_linux_status_process_identity(
+    path: Path,
+    namespace_index: int,
+    expected_host_pid: int | None = None,
+) -> Tuple[int, int] | None:
+    """Return (host PPid, signalable namespace PID) from /proc status."""
+    try:
+        payload = path.read_text(encoding="utf-8", errors="replace")[:65536]
+    except OSError:
+        return None
+    parent_host_pid: int | None = None
+    namespace_pid: int | None = None
+    host_pid_matches = expected_host_pid is None
+    for line in payload.splitlines():
+        if line.startswith("PPid:"):
+            fields = line.split()
+            if len(fields) == 2 and fields[1].isdigit():
+                parent_host_pid = int(fields[1])
+        elif line.startswith("NSpid:"):
+            fields = line.split()[1:]
+            if (
+                len(fields) > namespace_index
+                and all(field.isdigit() for field in fields)
+            ):
+                namespace_pid = int(fields[namespace_index])
+                host_pid_matches = (
+                    expected_host_pid is None
+                    or int(fields[0]) == expected_host_pid
+                )
+    if (
+        parent_host_pid is None
+        or namespace_pid is None
+        or not host_pid_matches
+    ):
+        return None
+    return parent_host_pid, namespace_pid
+
+
+def _git_linux_self_host_pid() -> int | None:
+    try:
+        payload = Path("/proc/self/status").read_text(
+            encoding="utf-8", errors="replace"
+        )[:65536]
+    except OSError:
+        return None
+    fallback: int | None = None
+    for line in payload.splitlines():
+        if line.startswith("NSpid:"):
+            fields = line.split()[1:]
+            if fields and all(field.isdigit() for field in fields):
+                return int(fields[0])
+        elif line.startswith("Pid:"):
+            fields = line.split()
+            if len(fields) == 2 and fields[1].isdigit():
+                fallback = int(fields[1])
+    return fallback
+
+
+def _git_linux_self_namespace_index() -> int | None:
+    try:
+        payload = Path("/proc/self/status").read_text(
+            encoding="utf-8", errors="replace"
+        )[:65536]
+    except OSError:
+        return None
+    for line in payload.splitlines():
+        if line.startswith("NSpid:"):
+            fields = line.split()[1:]
+            if fields and all(field.isdigit() for field in fields):
+                return len(fields) - 1
+    return None
+
+
+def _git_linux_process_graph(
+    namespace_index: int,
+) -> Dict[int, Tuple[int, int]] | None:
+    graph: Dict[int, Tuple[int, int]] = {}
+    scanned = 0
+    try:
+        with os.scandir("/proc") as entries:
+            for entry in entries:
+                if not entry.name.isdigit():
+                    continue
+                scanned += 1
+                if scanned > MAX_GIT_PROC_SCAN_ENTRIES:
+                    return None
+                identity = _git_linux_status_process_identity(
+                    Path(entry.path) / "status",
+                    namespace_index,
+                    int(entry.name),
+                )
+                if identity is not None:
+                    graph[int(entry.name)] = identity
+    except OSError:
+        return None
+    return graph
+
+
+def _git_host_descendant_closure(
+    graph: Mapping[int, Tuple[int, int]],
+    roots: Set[int],
+) -> Set[int]:
+    children: Dict[int, List[int]] = {}
+    for host_pid, (parent_host_pid, _namespace_pid) in graph.items():
+        children.setdefault(parent_host_pid, []).append(host_pid)
+    closure: Set[int] = set()
+    pending = list(roots)
+    while pending:
+        host_pid = pending.pop()
+        if host_pid in closure:
+            continue
+        closure.add(host_pid)
+        pending.extend(children.get(host_pid, ()))
+    return closure
+
+
+def _prepare_bounded_git_process_containment() -> Dict[str, Any]:
+    """Enable subreaping and freeze unrelated pre-existing descendants."""
+    unavailable: Dict[str, Any] = {"enabled": False}
+    if not sys.platform.startswith("linux") or not Path("/proc").is_dir():
+        return unavailable
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+        prctl = libc.prctl
+        prctl.argtypes = [
+            ctypes.c_int,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+        ]
+        prctl.restype = ctypes.c_int
+        if prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
+            return unavailable
+    except (AttributeError, OSError):
+        return unavailable
+    parent_host_pid = _git_linux_self_host_pid()
+    namespace_index = _git_linux_self_namespace_index()
+    if parent_host_pid is None or namespace_index is None:
+        return unavailable
+    graph = _git_linux_process_graph(namespace_index)
+    if graph is None:
+        return unavailable
+    baseline_direct = {
+        host_pid
+        for host_pid, (parent_pid, _namespace_pid) in graph.items()
+        if parent_pid == parent_host_pid
+    }
+    return {
+        "enabled": True,
+        "parent_host_pid": parent_host_pid,
+        "namespace_index": namespace_index,
+        "baseline_host_pids": baseline_direct,
+        "mechanism": "linux-child-subreaper-plus-process-group",
+    }
+
+
+def _cleanup_bounded_git_descendants(
+    containment: Mapping[str, Any],
+) -> Tuple[bool, bool]:
+    """Kill/reap every new adopted descendant to a bounded quiet state."""
+    if containment.get("enabled") is not True:
+        return False, False
+    parent_host_pid = containment.get("parent_host_pid")
+    namespace_index = containment.get("namespace_index")
+    baseline = containment.get("baseline_host_pids")
+    if (
+        type(parent_host_pid) is not int
+        or type(namespace_index) is not int
+        or not isinstance(baseline, set)
+    ):
+        return False, False
+    deadline = time.monotonic() + GIT_DESCENDANT_CLEANUP_TIMEOUT_SECONDS
+    quiet_since: float | None = None
+    survivor_seen = False
+    while time.monotonic() < deadline:
+        graph = _git_linux_process_graph(namespace_index)
+        if graph is None:
+            return survivor_seen, False
+        closure = _git_host_descendant_closure(
+            graph, {parent_host_pid}
+        ) - {parent_host_pid}
+        excluded = _git_host_descendant_closure(graph, set(baseline))
+        candidates = {
+            host_pid: graph[host_pid][1]
+            for host_pid in closure - excluded
+            if host_pid in graph
+        }
+        if candidates:
+            survivor_seen = True
+            quiet_since = None
+            for namespace_pid in candidates.values():
+                try:
+                    os.kill(namespace_pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                except OSError:
+                    return survivor_seen, False
+            for namespace_pid in candidates.values():
+                try:
+                    os.waitpid(namespace_pid, os.WNOHANG)
+                except (ChildProcessError, ProcessLookupError):
+                    pass
+                except OSError:
+                    return survivor_seen, False
+        else:
+            now = time.monotonic()
+            if quiet_since is None:
+                quiet_since = now
+            elif (
+                now - quiet_since
+                >= GIT_DESCENDANT_CLEANUP_QUIET_SECONDS
+            ):
+                return survivor_seen, True
+        time.sleep(0.01)
+    graph = _git_linux_process_graph(namespace_index)
+    if graph is None:
+        return survivor_seen, False
+    closure = _git_host_descendant_closure(
+        graph, {parent_host_pid}
+    ) - {parent_host_pid}
+    excluded = _git_host_descendant_closure(graph, set(baseline))
+    final_candidates = closure - excluded
+    survivor_seen = survivor_seen or bool(final_candidates)
+    for host_pid in final_candidates:
+        try:
+            os.kill(graph[host_pid][1], signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        except OSError:
+            return survivor_seen, False
+    for host_pid in final_candidates:
+        try:
+            os.waitpid(graph[host_pid][1], os.WNOHANG)
+        except (ChildProcessError, ProcessLookupError):
+            pass
+        except OSError:
+            return survivor_seen, False
+    time.sleep(0.01)
+    fresh = _git_linux_process_graph(namespace_index)
+    if fresh is None:
+        return survivor_seen, False
+    fresh_closure = _git_host_descendant_closure(
+        fresh, {parent_host_pid}
+    ) - {parent_host_pid}
+    fresh_excluded = _git_host_descendant_closure(fresh, set(baseline))
+    return survivor_seen, not (fresh_closure - fresh_excluded)
+
+
+def _kill_and_reap_bounded_process_group(
+    proc: subprocess.Popen[bytes],
+) -> bool:
+    """Kill the initial process group and reap its leader."""
+    group_signaled = False
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+        group_signaled = True
+    except ProcessLookupError:
+        pass
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        try:
+            proc.kill()
+            group_signaled = True
+        finally:
+            proc.wait(timeout=5)
+    return group_signaled
+
+
+def _run_bounded_git(
+    argv: Sequence[str],
+    *,
+    max_capture_bytes: int = MAX_GIT_CAPTURE_BYTES,
+    timeout_seconds: int = GIT_SUBPROCESS_TIMEOUT_SECONDS,
+    pass_fds: Sequence[int] = (),
+    env: Mapping[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run fixed Git argv with bounded time and combined captured output.
+
+    ``subprocess.run(capture_output=True)`` only bounds diagnostics after Git
+    has already made Python materialize them.  The validator treats the index
+    as untrusted evidence, so read both pipes incrementally and terminate Git
+    as soon as the shared byte ceiling or deadline is exceeded.
+    """
+    if type(max_capture_bytes) is not int or max_capture_bytes < 1:
+        raise ValueError("max_capture_bytes must be a positive integer")
+    if type(timeout_seconds) is not int or timeout_seconds < 1:
+        raise ValueError("timeout_seconds must be a positive integer")
+    caller_environment = os.environ if env is None else env
+    clean_environment = {
+        key: value
+        for key, value in caller_environment.items()
+        if not key.startswith("GIT_")
+    }
+    clean_environment.update(
+        {
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_OPTIONAL_LOCKS": "0",
+            "GIT_TERMINAL_PROMPT": "0",
+            "GIT_CONFIG_COUNT": "2",
+            "GIT_CONFIG_KEY_0": "core.fsmonitor",
+            "GIT_CONFIG_VALUE_0": "false",
+            "GIT_CONFIG_KEY_1": "core.untrackedCache",
+            "GIT_CONFIG_VALUE_1": "false",
+        }
+    )
+    containment = _prepare_bounded_git_process_containment()
+    if containment.get("enabled") is not True:
+        # Detached descendants cannot be enumerated portably.  The bounded
+        # runner must refuse before Popen rather than pretend a process-group
+        # kill contains setsid/double-fork escapes.
+        raise OSError(
+            "bounded Git detached-session process containment is unavailable"
+        )
+    selector: selectors.BaseSelector | None = None
+    streams: Dict[int, Tuple[str, Any]] = {}
+    buffers: Dict[str, bytearray] = {
+        "stdout": bytearray(),
+        "stderr": bytearray(),
+    }
+    proc = subprocess.Popen(
+        list(argv),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=False,
+        pass_fds=tuple(pass_fds),
+        env=clean_environment,
+        start_new_session=True,
+    )
+    try:
+        # Popen transfers ownership before any pipe/selector setup. Every
+        # operation from this point is protected by full group + adopted-child
+        # cleanup, including constructor/register/set_blocking failures.
+        assert proc.stdout is not None and proc.stderr is not None
+        selector = selectors.DefaultSelector()
+        streams = {
+            proc.stdout.fileno(): ("stdout", proc.stdout),
+            proc.stderr.fileno(): ("stderr", proc.stderr),
+        }
+        for fd, (label, _stream) in streams.items():
+            os.set_blocking(fd, False)
+            selector.register(fd, selectors.EVENT_READ, data=label)
+    except BaseException:
+        try:
+            _kill_and_reap_bounded_process_group(proc)
+        except BaseException:
+            pass
+        try:
+            _cleanup_bounded_git_descendants(containment)
+        except BaseException:
+            pass
+        if selector is not None:
+            selector.close()
+        for stream in (proc.stdout, proc.stderr):
+            if stream is not None:
+                stream.close()
+        raise
+    assert selector is not None
+    deadline = time.monotonic() + timeout_seconds
+    failure: str | None = None
+    leader_returncode: int | None = None
+    group_signaled = False
+    descendant_seen = False
+    cleanup_complete = False
+
+    def read_ready(key: selectors.SelectorKey) -> None:
+        nonlocal failure
+        try:
+            chunk = os.read(key.fd, 64 * 1024)
+        except BlockingIOError:
+            return
+        if not chunk:
+            selector.unregister(key.fd)
+            return
+        captured = sum(len(value) for value in buffers.values())
+        if captured + len(chunk) > max_capture_bytes:
+            keep = max_capture_bytes - captured
+            if keep > 0:
+                buffers[str(key.data)].extend(chunk[:keep])
+            failure = (
+                "Git subprocess combined output exceeded "
+                f"{max_capture_bytes} bytes"
+            )
+            return
+        buffers[str(key.data)].extend(chunk)
+
+    try:
+        while True:
+            leader_returncode = proc.poll()
+            if leader_returncode is not None:
+                break
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                failure = (
+                    f"Git subprocess exceeded {timeout_seconds}s timeout"
+                )
+                break
+            if selector.get_map():
+                events = selector.select(min(remaining, 0.05))
+                for key, _mask in events:
+                    read_ready(key)
+                    if failure is not None:
+                        break
+            else:
+                time.sleep(min(remaining, 0.01))
+            if failure is not None:
+                break
+
+        # This is unconditional, including an ordinary zero exit. Pipe EOF is
+        # not a containment oracle: descendants may inherit and close stdio or
+        # detach with setsid before the leader exits.
+        group_signaled = _kill_and_reap_bounded_process_group(proc)
+        if leader_returncode is None:
+            leader_returncode = proc.returncode
+        descendant_seen, cleanup_complete = (
+            _cleanup_bounded_git_descendants(containment)
+        )
+
+        # With every owned process killed/reaped, drain kernel-buffered tail
+        # bytes to EOF without trusting inherited pipe openness.
+        drain_deadline = time.monotonic() + 0.5
+        while selector.get_map() and time.monotonic() < drain_deadline:
+            events = selector.select(0.01)
+            if not events:
+                continue
+            for key, _mask in events:
+                read_ready(key)
+        if selector.get_map():
+            cleanup_complete = False
+
+        containment_failure: str | None = None
+        if not cleanup_complete:
+            containment_failure = (
+                "Git subprocess descendant containment cleanup did not "
+                "reach a bounded quiet state"
+            )
+        elif failure is None and (group_signaled or descendant_seen):
+            containment_failure = (
+                "Git subprocess left same-group or detached descendants "
+                "after leader exit; all were killed and reaped"
+            )
+        diagnostic = failure or containment_failure
+        returncode = (
+            124
+            if failure is not None
+            else 125
+            if containment_failure is not None
+            else int(leader_returncode or 0)
+        )
+        return subprocess.CompletedProcess(
+            list(argv),
+            returncode,
+            buffers["stdout"].decode(
+                "utf-8", errors="replace" if diagnostic else "strict"
+            ),
+            (
+                buffers["stderr"].decode(
+                    "utf-8", errors="replace" if diagnostic else "strict"
+                )
+                + (
+                    ("\n" if buffers["stderr"] else "") + diagnostic
+                    if diagnostic
+                    else ""
+                )
+            ),
+        )
+    except BaseException:
+        try:
+            _kill_and_reap_bounded_process_group(proc)
+        except BaseException:
+            pass
+        try:
+            _cleanup_bounded_git_descendants(containment)
+        except BaseException:
+            pass
+        raise
+    finally:
+        selector.close()
+        if proc.stdout is not None:
+            proc.stdout.close()
+        if proc.stderr is not None:
+            proc.stderr.close()
+
+
+def git_tracked_files(
+    root: Path,
+    *,
+    root_directory_fd: int | None = None,
+) -> GitTrackedFilesResult:
     """Classify package Git evidence and return tracked paths when verified.
 
     A package root without its own .git marker is a genuine Git-free package,
@@ -598,23 +1167,35 @@ def git_tracked_files(root: Path) -> GitTrackedFilesResult:
     is present, every Git discovery/listing failure is evidence failure rather
     than absence of evidence.
     """
-    git_marker = root / ".git"
-    if not os.path.lexists(git_marker):
-        return GitTrackedFilesResult(
-            GitSurfaceState.GIT_FREE_PACKAGE,
-            details="no .git marker at package root",
-        )
-    if git_marker.is_symlink():
-        return GitTrackedFilesResult(
-            GitSurfaceState.GIT_EVIDENCE_FAILURE,
-            details=".git marker is a symlink",
-        )
+    held_fd: int | None = None
     try:
+        held_fd = (
+            _open_absolute_directory_no_follow(Path(os.path.abspath(root)))
+            if root_directory_fd is None
+            else os.dup(root_directory_fd)
+        )
+        try:
+            git_marker = os.stat(
+                ".git",
+                dir_fd=held_fd,
+                follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            return GitTrackedFilesResult(
+                GitSurfaceState.GIT_FREE_PACKAGE,
+                details="no .git marker at package root",
+            )
+        if stat.S_ISLNK(git_marker.st_mode):
+            return GitTrackedFilesResult(
+                GitSurfaceState.GIT_EVIDENCE_FAILURE,
+                details=".git marker is a symlink",
+            )
+        capability_root = f"/proc/self/fd/{held_fd}"
         # SECURITY-REVIEW: Fixed git argv; the package path is passed as one
         # argument and is never interpolated into a shell command.
-        proc = subprocess.run(
-            ["git", "-C", str(root), "rev-parse", "--is-inside-work-tree"],
-            capture_output=True, text=True,
+        proc = _run_bounded_git(
+            ["git", "-C", capability_root, "rev-parse", "--is-inside-work-tree"],
+            pass_fds=(held_fd,),
         )
         if proc.returncode != 0:
             return GitTrackedFilesResult(
@@ -626,24 +1207,34 @@ def git_tracked_files(root: Path) -> GitTrackedFilesResult:
                 GitSurfaceState.GIT_EVIDENCE_FAILURE,
                 details=f"git rev-parse --is-inside-work-tree returned {proc.stdout.strip()!r}",
             )
-        top = subprocess.run(
-            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
-            capture_output=True, text=True,
+        top = _run_bounded_git(
+            ["git", "-C", capability_root, "rev-parse", "--show-toplevel"],
+            pass_fds=(held_fd,),
         )
         if top.returncode != 0:
             return GitTrackedFilesResult(
                 GitSurfaceState.GIT_EVIDENCE_FAILURE,
                 details=_bounded_git_failure("git rev-parse --show-toplevel", top),
             )
-        reported_top = Path(top.stdout.strip()).resolve()
-        if reported_top != root.resolve():
+        reported_top = Path(top.stdout.strip())
+        reported_fd = _open_absolute_directory_no_follow(reported_top)
+        try:
+            reported_identity = (
+                os.fstat(reported_fd).st_dev,
+                os.fstat(reported_fd).st_ino,
+            )
+            held_metadata = os.fstat(held_fd)
+            held_identity = (held_metadata.st_dev, held_metadata.st_ino)
+        finally:
+            os.close(reported_fd)
+        if reported_identity != held_identity:
             return GitTrackedFilesResult(
                 GitSurfaceState.GIT_EVIDENCE_FAILURE,
-                details=f"Git top level {reported_top} does not match package root {root.resolve()}",
+                details=f"Git top level {reported_top} does not match held package root",
             )
-        listed = subprocess.run(
-            ["git", "-C", str(root), "ls-files", "--stage", "-z"],
-            capture_output=True, text=True,
+        listed = _run_bounded_git(
+            ["git", "-C", capability_root, "ls-files", "--stage", "-z"],
+            pass_fds=(held_fd,),
         )
         if listed.returncode != 0:
             return GitTrackedFilesResult(
@@ -652,6 +1243,14 @@ def git_tracked_files(root: Path) -> GitTrackedFilesResult:
             )
         entries: List[GitEntry] = []
         for record in (item for item in listed.stdout.split("\0") if item):
+            if len(entries) >= MAX_GIT_INDEX_ENTRIES:
+                return GitTrackedFilesResult(
+                    GitSurfaceState.GIT_EVIDENCE_FAILURE,
+                    details=(
+                        "git ls-files --stage -z exceeded index-entry "
+                        f"limit {MAX_GIT_INDEX_ENTRIES}"
+                    ),
+                )
             try:
                 metadata, path = record.split("\t", 1)
                 mode, object_id, stage_text = metadata.split(" ", 2)
@@ -669,16 +1268,75 @@ def git_tracked_files(root: Path) -> GitTrackedFilesResult:
                     stage=stage,
                 )
             )
+        head_files: List[str] = []
+        head_probe = _run_bounded_git(
+            [
+                "git", "-C", capability_root, "rev-parse", "--verify",
+                "--quiet", "HEAD",
+            ],
+            pass_fds=(held_fd,),
+        )
+        if head_probe.returncode == 0:
+            head_tree = _run_bounded_git(
+                [
+                    "git", "-C", capability_root, "ls-tree", "-r",
+                    "--full-tree", "-z", "HEAD",
+                ],
+                pass_fds=(held_fd,),
+            )
+            if head_tree.returncode != 0:
+                return GitTrackedFilesResult(
+                    GitSurfaceState.GIT_EVIDENCE_FAILURE,
+                    details=_bounded_git_failure(
+                        "git ls-tree -r --full-tree HEAD", head_tree
+                    ),
+                )
+            for record in (
+                item for item in head_tree.stdout.split("\0") if item
+            ):
+                if len(head_files) >= MAX_GIT_INDEX_ENTRIES:
+                    return GitTrackedFilesResult(
+                        GitSurfaceState.GIT_EVIDENCE_FAILURE,
+                        details=(
+                            "git ls-tree HEAD exceeded entry limit "
+                            f"{MAX_GIT_INDEX_ENTRIES}"
+                        ),
+                    )
+                try:
+                    metadata, path = record.split("\t", 1)
+                    _mode, object_type, _object_id = metadata.split(" ", 2)
+                except ValueError as exc:
+                    return GitTrackedFilesResult(
+                        GitSurfaceState.GIT_EVIDENCE_FAILURE,
+                        details=f"git ls-tree returned malformed entry {record!r}: {exc}",
+                    )
+                if object_type == "blob":
+                    head_files.append(path)
+        elif head_probe.returncode != 1:
+            return GitTrackedFilesResult(
+                GitSurfaceState.GIT_EVIDENCE_FAILURE,
+                details=_bounded_git_failure(
+                    "git rev-parse --verify HEAD", head_probe
+                ),
+            )
         return GitTrackedFilesResult(
             GitSurfaceState.VERIFIED_WORKTREE,
             entries=tuple(entries),
-            details=f"verified root worktree with {len(entries)} staged index entries",
+            details=(
+                "sanitized observational Git query returned "
+                f"{len(entries)} staged index entries and "
+                f"{len(head_files)} HEAD tree files"
+            ),
+            head_files=tuple(head_files),
         )
     except (OSError, subprocess.SubprocessError, UnicodeError) as exc:
         return GitTrackedFilesResult(
             GitSurfaceState.GIT_EVIDENCE_FAILURE,
             details=f"Git subprocess failed: {type(exc).__name__}: {str(exc)[:500]}",
         )
+    finally:
+        if held_fd is not None:
+            os.close(held_fd)
 
 
 PROVENANCE_HYGIENE_FILES = {
@@ -716,92 +1374,123 @@ def iter_package_entries(
     *,
     max_directory_entries: int | None = None,
     max_total_entries: int | None = None,
+    max_directory_depth: int | None = None,
+    max_file_bytes: int | None = None,
+    max_total_bytes: int | None = None,
 ) -> Iterable[Tuple[Path, bool, bool, bool]]:
-    """Yield a deterministically ordered, resource-bounded package tree.
+    """Yield a deterministic tree captured beneath one no-follow root FD.
 
-    Directory entries are counted while ``scandir`` is streaming them and
-    before the per-directory ordering buffer is sorted.  The total counter is
-    checked before an entry is yielded or another directory is scheduled.
-    Optional limits exist only to make the same production path cheaply
-    falsifiable in embedded contract probes; ordinary callers use the fixed
-    release bounds above.
+    The complete bounded snapshot is acquired before the first yield.  Each
+    yielded entry is then revalidated through that snapshot's directory
+    identities, so replacing an already-yielded directory cannot redirect the
+    remainder of the walk.  Content-reading consumers must use
+    ``read_snapshot_regular_file`` with the same snapshot rather than reopen a
+    yielded lexical path.
     """
-    directory_limit = (
-        MAX_PACKAGE_DIRECTORY_ENTRIES
-        if max_directory_entries is None
-        else max_directory_entries
+    snapshot = snapshot_package_entries(
+        root,
+        max_directory_entries=max_directory_entries,
+        max_total_entries=max_total_entries,
+        max_directory_depth=max_directory_depth,
+        max_file_bytes=max_file_bytes,
+        max_total_bytes=max_total_bytes,
+        include_ignored_entries=True,
     )
-    total_limit = (
-        MAX_PACKAGE_TOTAL_ENTRIES
-        if max_total_entries is None
-        else max_total_entries
-    )
-    if type(directory_limit) is not int or directory_limit < 1:
-        raise ValueError("max_directory_entries must be a positive integer")
-    if type(total_limit) is not int or total_limit < 1:
-        raise ValueError("max_total_entries must be a positive integer")
-
-    stack = [root]
-    total_entries = 0
-    while stack:
-        current = stack.pop()
-        records: List[Tuple[Path, bool, bool, bool]] = []
-        with os.scandir(current) as scan:
-            for entry in scan:
-                records.append(
-                    (
-                        Path(entry.path),
-                        entry.is_symlink(),
-                        entry.is_dir(follow_symlinks=False),
-                        entry.is_file(follow_symlinks=False),
-                    )
-                )
-                if len(records) > directory_limit:
-                    raise PackageTreeResourceLimitError(
-                        "package directory entry limit exceeded: "
-                        f"limit={directory_limit} directory="
-                        f"{relpath(root, current) if current != root else '.'}"
-                    )
-        records.sort(key=lambda record: record[0])
-        child_dirs: List[Path] = []
-        for path, is_symlink, is_dir, is_file in records:
-            total_entries += 1
-            if total_entries > total_limit:
-                raise PackageTreeResourceLimitError(
-                    "package total entry limit exceeded: "
-                    f"limit={total_limit}"
-                )
-            yield path, is_symlink, is_dir, is_file
-            if is_dir and not is_symlink and path.name not in IGNORED_CRUFT_DIR_NAMES:
-                child_dirs.append(path)
-        stack.extend(reversed(child_dirs))
-
-
-def iter_release_provenance_hygiene_files(root: Path) -> List[str]:
-    rels: List[str] = []
-    for p, is_symlink, _is_dir, is_file in iter_package_entries(root):
-        if is_symlink or not is_file or _is_cruft_path(root, p):
+    lexical_root = Path(os.path.abspath(root))
+    children: Dict[str, List[str]] = {}
+    for relative in snapshot:
+        if relative == ".":
             continue
-        rel = relpath(root, p)
+        parent = PurePosixPath(relative).parent.as_posix()
+        children.setdefault(parent, []).append(relative)
+
+    def emit_directory(relative_dir: str) -> Iterable[
+        Tuple[Path, bool, bool, bool]
+    ]:
+        immediate = sorted(children.get(relative_dir, []))
+        child_directories: List[str] = []
+        for relative in immediate:
+            entry = snapshot[relative]
+            _verify_snapshot_entry_path(lexical_root, relative, snapshot)
+            entry_type = entry.get("type")
+            yield (
+                lexical_root / relative,
+                entry_type == "symlink",
+                entry_type == "directory",
+                entry_type == "regular",
+            )
+            if (
+                entry_type == "directory"
+                and not _is_cruft_relpath(relative)
+            ):
+                child_directories.append(relative)
+        for child_directory in child_directories:
+            yield from emit_directory(child_directory)
+
+    yield from emit_directory(".")
+
+
+def iter_release_provenance_hygiene_files(
+    root: Path,
+    *,
+    tree_snapshot: Mapping[str, Mapping[str, Any]] | None = None,
+    root_directory_fd: int | None = None,
+) -> List[str]:
+    snapshot = (
+        snapshot_package_entries(
+            root,
+            capture_file_bytes=True,
+            root_directory_fd=root_directory_fd,
+        )
+        if tree_snapshot is None
+        else tree_snapshot
+    )
+    rels: List[str] = []
+    for rel, entry in snapshot.items():
+        if (
+            rel == "."
+            or entry.get("type") != "regular"
+            or _is_cruft_relpath(rel)
+        ):
+            continue
         if rel in PROVENANCE_HYGIENE_FILES or any(rel.startswith(prefix) for prefix in PROVENANCE_HYGIENE_PREFIXES):
             rels.append(rel)
     return sorted(rels)
 
 
-def scan_release_provenance_hygiene(root: Path) -> List[Dict[str, Any]]:
+def scan_release_provenance_hygiene(
+    root: Path,
+    *,
+    tree_snapshot: Mapping[str, Mapping[str, Any]] | None = None,
+    root_directory_fd: int | None = None,
+) -> List[Dict[str, Any]]:
     hits: List[Dict[str, Any]] = []
-    current_root = str(root.resolve())
+    snapshot = (
+        snapshot_package_entries(
+            root,
+            capture_file_bytes=True,
+            root_directory_fd=root_directory_fd,
+        )
+        if tree_snapshot is None
+        else tree_snapshot
+    )
+    current_root = str(Path(os.path.abspath(root)))
     current_root_pattern = (
-        re.escape(current_root) + r"(?=$|[\\/'\"])"
+        re.escape(current_root) + r"(?=$|[\\/]|[^A-Za-z0-9._-])"
         if current_root
         else ""
     )
-    for rel in iter_release_provenance_hygiene_files(root):
-        p = root / rel
-        if p.is_symlink():
-            continue
+    for rel in iter_release_provenance_hygiene_files(
+        root,
+        tree_snapshot=snapshot,
+        root_directory_fd=root_directory_fd,
+    ):
         try:
-            text = p.read_text(encoding="utf-8")
+            text = read_snapshot_regular_file(
+                root,
+                rel,
+                snapshot,
+            ).decode("utf-8")
         except UnicodeDecodeError as exc:
             hits.append(
                 {
@@ -872,6 +1561,67 @@ def sha256_path(path: Path) -> str:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def sha256_regular_file_capability(
+    path: Path,
+    *,
+    root_directory_fd: int | None = None,
+) -> str:
+    """Hash one bounded regular file through a held no-follow parent."""
+    parent_fd: int | None = None
+    file_fd: int | None = None
+    try:
+        if path.is_absolute():
+            parent_fd = _open_absolute_directory_no_follow(path.parent)
+            name = path.name
+        else:
+            if root_directory_fd is None:
+                raise ValueError("relative capability path requires a root FD")
+            posix, path_error = safe_relative_posix_path(path.as_posix())
+            if path_error is not None or posix is None:
+                raise ValueError(f"unsafe relative capability path: {path_error}")
+            parent_fd = _open_relative_directory_no_follow(
+                root_directory_fd,
+                posix.parts[:-1],
+            )
+            name = posix.parts[-1]
+        file_fd = os.open(
+            name,
+            _regular_file_open_flags_no_follow(),
+            dir_fd=parent_fd,
+        )
+        before = os.fstat(file_fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
+            raise PackageTreeSafetyError(
+                "Git index is not a private regular file"
+            )
+        digest = hashlib.sha256()
+        byte_count = 0
+        while True:
+            chunk = os.read(file_fd, 1024 * 1024)
+            if not chunk:
+                break
+            byte_count += len(chunk)
+            if byte_count > MAX_PACKAGE_FILE_BYTES:
+                raise PackageTreeResourceLimitError(
+                    "Git index exceeds the file-byte limit"
+                )
+            digest.update(chunk)
+        after = os.fstat(file_fd)
+        installed = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+        if (
+            _stat_identity(before) != _stat_identity(after)
+            or _stat_identity(after) != _stat_identity(installed)
+            or byte_count != after.st_size
+        ):
+            raise PackageTreeSafetyError("Git index changed during hashing")
+        return digest.hexdigest()
+    finally:
+        if file_fd is not None:
+            os.close(file_fd)
+        if parent_fd is not None:
+            os.close(parent_fd)
 
 
 def regular_file_error(path: Path) -> Optional[str]:
@@ -1223,9 +1973,68 @@ def correction_locator_excerpt_sha256(
                 os.close(descriptor)
 
 
+def correction_locator_excerpt_sha256_from_snapshot(
+    locator: Any,
+    snapshot: Mapping[str, Mapping[str, Any]],
+) -> str:
+    """Hash a current locator exclusively from initially captured bytes."""
+    parsed = (
+        locator
+        if isinstance(locator, CorrectionLocator)
+        else parse_correction_locator(locator)
+    )
+    if not parsed.is_current:
+        raise ConsistencyLocatorError(
+            "historical Git locators do not select a current line excerpt"
+        )
+    assert parsed.start_line is not None and parsed.end_line is not None
+    excerpt_lines = parsed.end_line - parsed.start_line + 1
+    if excerpt_lines > MAX_CORRECTION_LOCATOR_EXCERPT_LINES:
+        raise ConsistencyLocatorError(
+            "current locator range exceeds the excerpt-line bound"
+        )
+    relative = parsed.path.as_posix()
+    try:
+        payload = captured_snapshot_regular_file(relative, snapshot)
+        text_payload = payload.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ConsistencyLocatorError(
+            "current locator target is not valid UTF-8 text"
+        ) from exc
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise ConsistencyLocatorError(
+            "current locator is not a captured private regular file"
+        ) from exc
+    digest = hashlib.sha256()
+    selected_count = 0
+    selected_bytes = 0
+    with io.StringIO(text_payload, newline=None) as handle:
+        for line_number, line_text in enumerate(handle, start=1):
+            if parsed.start_line <= line_number <= parsed.end_line:
+                canonical_line = (
+                    line_text.rstrip("\r\n").encode("utf-8") + b"\n"
+                )
+                selected_bytes += len(canonical_line)
+                if selected_bytes > MAX_CORRECTION_LOCATOR_EXCERPT_BYTES:
+                    raise ConsistencyLocatorError(
+                        "current locator excerpt exceeds the byte bound"
+                    )
+                digest.update(canonical_line)
+                selected_count += 1
+            if line_number >= parsed.end_line:
+                break
+    if selected_count != excerpt_lines:
+        raise ConsistencyLocatorError(
+            "current locator line or range is outside the target file"
+        )
+    return digest.hexdigest()
+
+
 def validate_consistency_sweep_locator_bindings(
     root: Path,
     certificate: Mapping[str, Any],
+    *,
+    tree_snapshot: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> List[str]:
     """Mechanically validate active corrected-claim locator evidence.
 
@@ -1326,7 +2135,14 @@ def validate_consistency_sweep_locator_bindings(
                 continue
             if parsed.is_current:
                 try:
-                    actual = correction_locator_excerpt_sha256(root, parsed)
+                    actual = (
+                        correction_locator_excerpt_sha256_from_snapshot(
+                            parsed,
+                            tree_snapshot,
+                        )
+                        if tree_snapshot is not None
+                        else correction_locator_excerpt_sha256(root, parsed)
+                    )
                 except ConsistencyLocatorError as exc:
                     errors.append(f"{binding_prefix}: {exc}")
                 else:
@@ -1370,6 +2186,10 @@ def snapshot_package_entries(
     max_directory_depth: int | None = None,
     max_file_bytes: int | None = None,
     max_total_bytes: int | None = None,
+    max_path_metadata_bytes: int | None = None,
+    include_ignored_entries: bool = False,
+    capture_file_bytes: bool = False,
+    root_directory_fd: int | None = None,
 ) -> Dict[str, Dict[str, Any]]:
     """Describe a complete resource-bounded tree through held capabilities.
 
@@ -1405,12 +2225,18 @@ def snapshot_package_entries(
         if max_total_bytes is None
         else max_total_bytes
     )
+    path_metadata_limit = (
+        MAX_PACKAGE_PATH_METADATA_BYTES
+        if max_path_metadata_bytes is None
+        else max_path_metadata_bytes
+    )
     for name, value in (
         ("max_directory_entries", directory_limit),
         ("max_total_entries", total_entry_limit),
         ("max_directory_depth", depth_limit),
         ("max_file_bytes", file_byte_limit),
         ("max_total_bytes", total_byte_limit),
+        ("max_path_metadata_bytes", path_metadata_limit),
     ):
         if type(value) is not int or value < 1:
             raise ValueError(f"{name} must be a positive integer")
@@ -1425,10 +2251,40 @@ def snapshot_package_entries(
             "ctime_ns": st.st_ctime_ns,
         }
 
-    root = root.resolve()
+    if type(include_ignored_entries) is not bool:
+        raise ValueError("include_ignored_entries must be a boolean")
+    if type(capture_file_bytes) is not bool:
+        raise ValueError("capture_file_bytes must be a boolean")
+    if root_directory_fd is not None and type(root_directory_fd) is not int:
+        raise ValueError("root_directory_fd must be an integer descriptor")
+
+    root = Path(os.path.abspath(root))
     snapshot: Dict[str, Dict[str, Any]] = {}
-    counters = {"entries": 0, "bytes": 0}
+    counters = {"entries": 0, "bytes": 0, "path_metadata_bytes": 0}
     root_fd: int | None = None
+
+    def store_entry(relative: str, entry: Dict[str, Any]) -> None:
+        metadata = {
+            key: value
+            for key, value in entry.items()
+            if key != "content"
+        }
+        encoded_bytes = len(relative.encode("utf-8")) + len(
+            json.dumps(
+                metadata,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            ).encode("utf-8")
+        )
+        next_total = counters["path_metadata_bytes"] + encoded_bytes
+        if next_total > path_metadata_limit:
+            raise PackageTreeResourceLimitError(
+                "package snapshot aggregate path/metadata byte limit exceeded: "
+                f"limit={path_metadata_limit} path={relative}"
+            )
+        counters["path_metadata_bytes"] = next_total
+        snapshot[relative] = entry
 
     def walk_directory(
         directory_fd: int,
@@ -1470,14 +2326,15 @@ def snapshot_package_entries(
             relative = (
                 name if relative_dir == "." else f"{relative_dir}/{name}"
             )
-            if _is_cruft_relpath(relative):
-                continue
+            ignored = _is_cruft_relpath(relative)
             before = os.stat(
                 name,
                 dir_fd=directory_fd,
                 follow_symlinks=False,
             )
             entry: Dict[str, Any] = identity(before)
+            if ignored and not include_ignored_entries:
+                continue
             if stat.S_ISLNK(before.st_mode):
                 target = os.readlink(name, dir_fd=directory_fd)
                 after = os.stat(
@@ -1493,7 +2350,7 @@ def snapshot_package_entries(
                         f"package symlink changed during snapshot: {relative}"
                     )
                 entry.update({"type": "symlink", "target": target})
-                snapshot[relative] = entry
+                store_entry(relative, entry)
                 continue
             if stat.S_ISDIR(before.st_mode):
                 child_fd = os.open(
@@ -1509,8 +2366,9 @@ def snapshot_package_entries(
                             f"{relative}"
                         )
                     entry["type"] = "directory"
-                    snapshot[relative] = entry
-                    walk_directory(child_fd, relative, depth + 1)
+                    store_entry(relative, entry)
+                    if not ignored:
+                        walk_directory(child_fd, relative, depth + 1)
                     after_open = os.fstat(child_fd)
                     after_path = os.stat(
                         name,
@@ -1531,6 +2389,11 @@ def snapshot_package_entries(
                     os.close(child_fd)
                 continue
             if stat.S_ISREG(before.st_mode):
+                if before.st_nlink != 1:
+                    raise PackageTreeSafetyError(
+                        "package regular file is not private: "
+                        f"path={relative} links={before.st_nlink}"
+                    )
                 if before.st_size > file_byte_limit:
                     raise PackageTreeResourceLimitError(
                         "package snapshot per-file byte limit exceeded: "
@@ -1555,6 +2418,7 @@ def snapshot_package_entries(
                         )
                     digest = hashlib.sha256()
                     byte_count = 0
+                    payload = bytearray() if capture_file_bytes else None
                     while True:
                         chunk = os.read(file_fd, 1024 * 1024)
                         if not chunk:
@@ -1573,6 +2437,8 @@ def snapshot_package_entries(
                                 f"exceeded: limit={total_byte_limit}"
                             )
                         digest.update(chunk)
+                        if payload is not None:
+                            payload.extend(chunk)
                     after_open = os.fstat(file_fd)
                 finally:
                     os.close(file_fd)
@@ -1596,6 +2462,9 @@ def snapshot_package_entries(
                         "size": byte_count,
                     }
                 )
+                if capture_file_bytes:
+                    assert payload is not None
+                    entry["content"] = bytes(payload)
             elif stat.S_ISFIFO(before.st_mode):
                 entry["type"] = "fifo"
             elif stat.S_ISSOCK(before.st_mode):
@@ -1610,22 +2479,514 @@ def snapshot_package_entries(
                 )
             else:
                 entry["type"] = "unsupported"
-            snapshot[relative] = entry
+            store_entry(relative, entry)
 
     try:
-        root_fd = _open_absolute_directory_no_follow(root)
+        root_fd = (
+            os.dup(root_directory_fd)
+            if root_directory_fd is not None
+            else _open_absolute_directory_no_follow(root)
+        )
         root_before = os.fstat(root_fd)
-        snapshot["."] = {"type": "directory", **identity(root_before)}
+        store_entry(".", {"type": "directory", **identity(root_before)})
         walk_directory(root_fd, ".", 0)
         root_after = os.fstat(root_fd)
         if _stat_identity(root_before) != _stat_identity(root_after):
             raise RuntimeError("package root changed during snapshot")
-        if not _markdown_directory_path_matches_fd(root, root_fd):
+        if (
+            root_directory_fd is None
+            and not _markdown_directory_path_matches_fd(root, root_fd)
+        ):
             raise RuntimeError("package root path changed during snapshot")
         return snapshot
     finally:
         if root_fd is not None:
             os.close(root_fd)
+
+
+def _snapshot_entry_matches_stat(
+    entry: Mapping[str, Any],
+    metadata: os.stat_result,
+) -> bool:
+    expected_type = entry.get("type")
+    predicates = {
+        "directory": stat.S_ISDIR,
+        "regular": stat.S_ISREG,
+        "symlink": stat.S_ISLNK,
+        "fifo": stat.S_ISFIFO,
+        "socket": stat.S_ISSOCK,
+        "character-device": stat.S_ISCHR,
+        "block-device": stat.S_ISBLK,
+    }
+    if expected_type == "unsupported":
+        type_matches = not any(
+            predicate(metadata.st_mode) for predicate in predicates.values()
+        )
+    else:
+        type_matches = predicates.get(
+            expected_type,
+            lambda mode: False,
+        )(metadata.st_mode)
+    if not type_matches:
+        return False
+    if (
+        entry.get("mode") != stat.S_IMODE(metadata.st_mode)
+        or entry.get("device") != metadata.st_dev
+        or entry.get("inode") != metadata.st_ino
+        or entry.get("links") != metadata.st_nlink
+        or entry.get("mtime_ns") != metadata.st_mtime_ns
+        or entry.get("ctime_ns") != metadata.st_ctime_ns
+    ):
+        return False
+    if expected_type == "regular" and entry.get("size") != metadata.st_size:
+        return False
+    return True
+
+
+def snapshot_root_matches_fd(
+    snapshot: Mapping[str, Mapping[str, Any]],
+    directory_fd: int,
+) -> bool:
+    root_entry = snapshot.get(".")
+    return (
+        isinstance(root_entry, Mapping)
+        and root_entry.get("type") == "directory"
+        and _snapshot_entry_matches_stat(root_entry, os.fstat(directory_fd))
+    )
+
+
+def snapshot_root_identity_matches_fd(
+    snapshot: Mapping[str, Mapping[str, Any]],
+    directory_fd: int,
+) -> bool:
+    """Bind a snapshot to the same directory inode despite harmless renames."""
+    root_entry = snapshot.get(".")
+    observed = os.fstat(directory_fd)
+    return (
+        isinstance(root_entry, Mapping)
+        and root_entry.get("type") == "directory"
+        and stat.S_ISDIR(observed.st_mode)
+        and root_entry.get("device") == observed.st_dev
+        and root_entry.get("inode") == observed.st_ino
+        and root_entry.get("mode") == stat.S_IMODE(observed.st_mode)
+        and root_entry.get("links") == observed.st_nlink
+    )
+
+
+def snapshot_metadata_view(
+    snapshot: Mapping[str, Mapping[str, Any]],
+    *,
+    ignore_root_timestamps: bool = False,
+) -> Dict[str, Dict[str, Any]]:
+    """Return comparable bounded metadata without duplicating captured bytes."""
+    result: Dict[str, Dict[str, Any]] = {}
+    for relative, entry in snapshot.items():
+        metadata = {
+            key: value
+            for key, value in entry.items()
+            if key != "content"
+        }
+        if ignore_root_timestamps and relative == ".":
+            # Moving the same directory away and back can change only these
+            # timestamps.  Its held device/inode and every child entry remain
+            # the operation's security identity.
+            metadata.pop("mtime_ns", None)
+            metadata.pop("ctime_ns", None)
+        result[relative] = metadata
+    return result
+
+
+def materialized_snapshot_logical_view(
+    snapshot: Mapping[str, Mapping[str, Any]],
+) -> Dict[str, Dict[str, Any]]:
+    """Project captured/observed metadata to materialized-tree semantics."""
+    result: Dict[str, Dict[str, Any]] = {}
+    for relative, entry in snapshot.items():
+        if relative != "." and _is_cruft_relpath(relative):
+            continue
+        entry_type = entry.get("type")
+        logical: Dict[str, Any] = {"type": entry_type}
+        if relative != "." and entry_type == "directory":
+            logical["mode"] = entry.get("mode")
+        elif entry_type == "regular":
+            logical.update(
+                {
+                    "mode": entry.get("mode"),
+                    "size": entry.get("size"),
+                    "sha256": entry.get("sha256"),
+                }
+            )
+        elif entry_type == "symlink":
+            logical["target"] = entry.get("target")
+        result[relative] = logical
+    return result
+
+
+def snapshot_path_metadata_bytes(
+    snapshot: Mapping[str, Mapping[str, Any]],
+) -> int:
+    """Compute the same aggregate encoded path/metadata budget as capture."""
+    total = 0
+    for relative, entry in snapshot.items():
+        metadata = {
+            key: value
+            for key, value in entry.items()
+            if key != "content"
+        }
+        total += len(relative.encode("utf-8")) + len(
+            json.dumps(
+                metadata,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            ).encode("utf-8")
+        )
+    return total
+
+
+def snapshot_tree_matches_fd(
+    root: Path,
+    snapshot: Mapping[str, Mapping[str, Any]],
+    directory_fd: int,
+    *,
+    include_ignored_entries: bool = False,
+) -> bool:
+    """Re-snapshot one held root and compare its complete logical tree."""
+    observed = snapshot_package_entries(
+        root,
+        include_ignored_entries=include_ignored_entries,
+        root_directory_fd=directory_fd,
+    )
+    return (
+        snapshot_root_identity_matches_fd(snapshot, directory_fd)
+        and snapshot_metadata_view(
+            snapshot,
+            ignore_root_timestamps=True,
+        )
+        == snapshot_metadata_view(
+            observed,
+            ignore_root_timestamps=True,
+        )
+    )
+
+
+def _open_snapshot_parent(
+    root: Path,
+    components: Sequence[str],
+    snapshot: Mapping[str, Mapping[str, Any]],
+) -> Tuple[int, int]:
+    """Open an expected parent chain without links; return root and leaf FDs."""
+    root = Path(os.path.abspath(root))
+    root_fd = _open_absolute_directory_no_follow(root)
+    parent_fd = os.dup(root_fd)
+    try:
+        root_entry = snapshot.get(".")
+        if (
+            not isinstance(root_entry, Mapping)
+            or not _snapshot_entry_matches_stat(root_entry, os.fstat(root_fd))
+        ):
+            raise PackageTreeSafetyError("package root differs from snapshot")
+        prefix: List[str] = []
+        for component in components:
+            prefix.append(component)
+            relative = "/".join(prefix)
+            expected = snapshot.get(relative)
+            child_fd = os.open(
+                component,
+                _directory_open_flags_no_follow(),
+                dir_fd=parent_fd,
+            )
+            if (
+                not isinstance(expected, Mapping)
+                or expected.get("type") != "directory"
+                or not _snapshot_entry_matches_stat(
+                    expected,
+                    os.fstat(child_fd),
+                )
+            ):
+                os.close(child_fd)
+                raise PackageTreeSafetyError(
+                    "package directory differs from snapshot: " + relative
+                )
+            os.close(parent_fd)
+            parent_fd = child_fd
+        return root_fd, parent_fd
+    except BaseException:
+        os.close(parent_fd)
+        os.close(root_fd)
+        raise
+
+
+def _verify_snapshot_entry_path(
+    root: Path,
+    relative: str,
+    snapshot: Mapping[str, Mapping[str, Any]],
+) -> None:
+    """Revalidate one lexical entry through its captured parent FDs."""
+    posix, path_error = safe_relative_posix_path(relative)
+    if path_error is not None or posix is None:
+        raise PackageTreeSafetyError(
+            f"unsafe snapshot path {relative!r}: {path_error}"
+        )
+    expected = snapshot.get(relative)
+    if not isinstance(expected, Mapping):
+        raise PackageTreeSafetyError(
+            "entry is absent from captured package snapshot: " + relative
+        )
+    parent_components = posix.parts[:-1]
+    name = posix.parts[-1]
+    root_fd, parent_fd = _open_snapshot_parent(
+        root,
+        parent_components,
+        snapshot,
+    )
+    opened_fd: int | None = None
+    try:
+        before = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+        if not _snapshot_entry_matches_stat(expected, before):
+            raise PackageTreeSafetyError(
+                "package entry differs from snapshot: " + relative
+            )
+        if expected.get("type") == "directory":
+            opened_fd = os.open(
+                name,
+                _directory_open_flags_no_follow(),
+                dir_fd=parent_fd,
+            )
+        elif expected.get("type") == "regular":
+            opened_fd = os.open(
+                name,
+                _regular_file_open_flags_no_follow(),
+                dir_fd=parent_fd,
+            )
+        elif expected.get("type") == "symlink":
+            if os.readlink(name, dir_fd=parent_fd) != expected.get(
+                "target"
+            ):
+                raise PackageTreeSafetyError(
+                    "package symlink target differs from snapshot: "
+                    + relative
+                )
+        if opened_fd is not None and not _snapshot_entry_matches_stat(
+            expected,
+            os.fstat(opened_fd),
+        ):
+            raise PackageTreeSafetyError(
+                "package entry changed during open: " + relative
+            )
+        after = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+        if not _snapshot_entry_matches_stat(expected, after):
+            raise PackageTreeSafetyError(
+                "package entry changed during verification: " + relative
+            )
+        if not _markdown_directory_path_matches_fd(root, root_fd):
+            raise PackageTreeSafetyError("package root changed during use")
+    finally:
+        if opened_fd is not None:
+            os.close(opened_fd)
+        os.close(parent_fd)
+        os.close(root_fd)
+
+
+def read_snapshot_regular_file(
+    root: Path,
+    relative: str,
+    snapshot: Mapping[str, Mapping[str, Any]],
+) -> bytes:
+    """Read one captured private file without lexical reopen or link following."""
+    posix, path_error = safe_relative_posix_path(relative)
+    if path_error is not None or posix is None:
+        raise PackageTreeSafetyError(
+            f"unsafe snapshot path {relative!r}: {path_error}"
+        )
+    expected = snapshot.get(relative)
+    if (
+        not isinstance(expected, Mapping)
+        or expected.get("type") != "regular"
+        or expected.get("links") != 1
+        or type(expected.get("size")) is not int
+        or not isinstance(expected.get("sha256"), str)
+    ):
+        raise PackageTreeSafetyError(
+            "entry is not a captured private regular file: " + relative
+        )
+    captured = expected.get("content")
+    if captured is not None:
+        if (
+            not isinstance(captured, bytes)
+            or len(captured) != expected.get("size")
+            or hashlib.sha256(captured).hexdigest()
+            != expected.get("sha256")
+        ):
+            raise PackageTreeSafetyError(
+                "captured regular-file content is inconsistent: " + relative
+            )
+        return captured
+    parent_components = posix.parts[:-1]
+    name = posix.parts[-1]
+    root_fd, parent_fd = _open_snapshot_parent(
+        Path(os.path.abspath(root)),
+        parent_components,
+        snapshot,
+    )
+    file_fd: int | None = None
+    try:
+        before = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+        if not _snapshot_entry_matches_stat(expected, before):
+            raise PackageTreeSafetyError(
+                "package regular file differs from snapshot: " + relative
+            )
+        file_fd = os.open(
+            name,
+            _regular_file_open_flags_no_follow(),
+            dir_fd=parent_fd,
+        )
+        opened = os.fstat(file_fd)
+        if not _snapshot_entry_matches_stat(expected, opened):
+            raise PackageTreeSafetyError(
+                "package regular file changed during open: " + relative
+            )
+        payload = bytearray()
+        digest = hashlib.sha256()
+        expected_size = int(expected["size"])
+        while True:
+            chunk = os.read(file_fd, min(1024 * 1024, expected_size + 1))
+            if not chunk:
+                break
+            payload.extend(chunk)
+            digest.update(chunk)
+            if len(payload) > expected_size:
+                raise PackageTreeSafetyError(
+                    "package regular file grew during read: " + relative
+                )
+        after_open = os.fstat(file_fd)
+        after_path = os.stat(
+            name,
+            dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        if (
+            not _snapshot_entry_matches_stat(expected, after_open)
+            or not _snapshot_entry_matches_stat(expected, after_path)
+            or len(payload) != expected_size
+            or digest.hexdigest() != expected.get("sha256")
+        ):
+            raise PackageTreeSafetyError(
+                "package regular file changed during read: " + relative
+            )
+        if not _markdown_directory_path_matches_fd(root, root_fd):
+            raise PackageTreeSafetyError("package root changed during read")
+        return bytes(payload)
+    finally:
+        if file_fd is not None:
+            os.close(file_fd)
+        os.close(parent_fd)
+        os.close(root_fd)
+
+
+def captured_snapshot_regular_file(
+    relative: str,
+    snapshot: Mapping[str, Mapping[str, Any]],
+) -> bytes:
+    """Return verified bytes that were captured in the initial snapshot."""
+    posix, path_error = safe_relative_posix_path(relative)
+    if path_error is not None or posix is None:
+        raise PackageTreeSafetyError(
+            f"unsafe captured snapshot path {relative!r}: {path_error}"
+        )
+    entry = snapshot.get(relative)
+    captured = entry.get("content") if isinstance(entry, Mapping) else None
+    if (
+        not isinstance(entry, Mapping)
+        or entry.get("type") != "regular"
+        or entry.get("links") != 1
+        or type(entry.get("size")) is not int
+        or not isinstance(entry.get("sha256"), str)
+        or not isinstance(captured, bytes)
+        or len(captured) != entry.get("size")
+        or hashlib.sha256(captured).hexdigest() != entry.get("sha256")
+    ):
+        raise PackageTreeSafetyError(
+            "snapshot lacks consistent captured regular-file bytes: "
+            + relative
+        )
+    return captured
+
+
+def materialize_snapshot(
+    destination: Path,
+    snapshot: Mapping[str, Mapping[str, Any]],
+    *,
+    excluded_prefixes: Sequence[str] = (),
+    exclude_cruft: bool = True,
+) -> Path:
+    """Create one private tree using only captured bytes and metadata.
+
+    This is the sole package-fixture materializer.  It never reopens either
+    the source root or the validator's private mirror, so pathname A-B-A swaps
+    cannot inject bytes into mutation, checkout, or self-test fixtures.
+    """
+    target = Path(os.path.abspath(destination))
+    normalized_prefixes: List[str] = []
+    for raw_prefix in excluded_prefixes:
+        posix, path_error = safe_relative_posix_path(raw_prefix)
+        if path_error is not None or posix is None:
+            raise ValueError(
+                f"unsafe materialization exclusion {raw_prefix!r}: "
+                f"{path_error}"
+            )
+        normalized_prefixes.append(posix.as_posix())
+
+    def excluded(relative: str) -> bool:
+        return (
+            (exclude_cruft and _is_cruft_relpath(relative))
+            or any(
+                relative == prefix or relative.startswith(prefix + "/")
+                for prefix in normalized_prefixes
+            )
+        )
+
+    if target.exists() or target.is_symlink():
+        raise FileExistsError("snapshot materialization target already exists")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.mkdir(mode=0o700)
+    try:
+        directories = sorted(
+            (
+                relative
+                for relative, entry in snapshot.items()
+                if relative != "."
+                and not excluded(relative)
+                and entry.get("type") == "directory"
+            ),
+            key=lambda value: (len(PurePosixPath(value).parts), value),
+        )
+        for relative in directories:
+            (target / relative).mkdir(mode=0o700)
+        for relative, entry in sorted(snapshot.items()):
+            if relative == "." or excluded(relative):
+                continue
+            entry_type = entry.get("type")
+            if entry_type == "directory":
+                continue
+            if entry_type != "regular":
+                raise PackageTreeSafetyError(
+                    "cannot materialize non-regular snapshot entry: "
+                    + relative
+                )
+            output = target / relative
+            output.write_bytes(
+                captured_snapshot_regular_file(relative, snapshot)
+            )
+            output.chmod(int(entry.get("mode", 0)) & 0o777)
+        for relative in reversed(directories):
+            (target / relative).chmod(
+                int(snapshot[relative].get("mode", 0)) & 0o777
+            )
+        return target
+    except BaseException:
+        shutil.rmtree(target, ignore_errors=True)
+        raise
 
 
 def path_resolves_within(root: Path, candidate: Path) -> bool:
@@ -2505,29 +3866,76 @@ def active_ci_run_steps(text: str) -> List[Dict[str, Any]]:
     return steps
 
 
-def normalize_cli_display(value: Any, package_root: Path) -> Any:
-    """Replace only the exact root or a path rooted beneath it."""
-    root_text = str(package_root.resolve())
+def normalize_cli_display(
+    value: Any,
+    package_root: Path,
+    *,
+    private_paths: Sequence[str] = (),
+) -> Any:
+    """Scrub lexical absolute path capabilities without resolving symlinks.
+
+    Display normalization is deliberately independent from authorization.
+    Resolving here would let a post-validation pathname swap disclose (and
+    mislabel) the target of a symlink.  Private snapshot spellings are sorted
+    longest-first so the mirror is scrubbed before its temporary parent.
+    """
+    replacements = [
+        (str(Path(os.path.abspath(package_root))), "<package-root>"),
+        *(
+            (str(Path(os.path.abspath(path))), "<private-snapshot>")
+            for path in private_paths
+        ),
+    ]
+    replacements = sorted(
+        dict(replacements).items(),
+        key=lambda item: len(item[0]),
+        reverse=True,
+    )
     if isinstance(value, str):
-        return re.sub(
-            re.escape(root_text) + r"(?=$|[\\/])",
-            lambda _match: "<package-root>",
-            value,
-        )
+        normalized = value
+        for path_text, replacement in replacements:
+            normalized = re.sub(
+                # Quotes and closing/diagnostic punctuation commonly follow
+                # filenames in repr(OSError), JSON, and exception messages.
+                # Do not match whitespace, @, or word punctuation: lexical
+                # sibling-prefix strings must remain untouched.
+                re.escape(path_text) + r'''(?=$|[\\/'"\]\[(){}:,;])''',
+                lambda _match, label=replacement: label,
+                normalized,
+            )
+        return normalized
     if isinstance(value, list):
-        return [normalize_cli_display(item, package_root) for item in value]
+        return [
+            normalize_cli_display(
+                item,
+                package_root,
+                private_paths=private_paths,
+            )
+            for item in value
+        ]
     if isinstance(value, tuple):
-        return [normalize_cli_display(item, package_root) for item in value]
+        return [
+            normalize_cli_display(
+                item,
+                package_root,
+                private_paths=private_paths,
+            )
+            for item in value
+        ]
     if isinstance(value, Mapping):
         return {
-            key: normalize_cli_display(item, package_root)
+            key: normalize_cli_display(
+                item,
+                package_root,
+                private_paths=private_paths,
+            )
             for key, item in value.items()
         }
     return value
 
 
-def parse_frontmatter(path: Path) -> Tuple[Dict[str, Any], str, List[str]]:
-    text = path.read_text(encoding="utf-8")
+def parse_frontmatter_text(text: str) -> Tuple[Dict[str, Any], str, List[str]]:
+    """Parse already-authorized frontmatter text without reopening a path."""
     if not text.startswith("---\n"):
         return {}, text, ["missing YAML frontmatter"]
     parts = text.split("---", 2)
@@ -2550,10 +3958,14 @@ def parse_frontmatter(path: Path) -> Tuple[Dict[str, Any], str, List[str]]:
     return data, body, problems
 
 
-def load_manifest(path: Path) -> Dict[str, str]:
+def parse_frontmatter(path: Path) -> Tuple[Dict[str, Any], str, List[str]]:
+    """Compatibility wrapper for validator-owned disposable fixtures."""
+    return parse_frontmatter_text(path.read_text(encoding="utf-8"))
+
+
+def parse_manifest_text(text: str) -> Dict[str, str]:
     out: Dict[str, str] = {}
-    if not path.exists(): return out
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in text.splitlines():
         line = line.strip()
         if not line or line.startswith("#"): continue
         try:
@@ -2562,6 +3974,12 @@ def load_manifest(path: Path) -> Dict[str, str]:
         except ValueError:
             out[f"<malformed:{line}>"] = ""
     return out
+
+
+def load_manifest(path: Path) -> Dict[str, str]:
+    if not path.exists():
+        return {}
+    return parse_manifest_text(path.read_text(encoding="utf-8"))
 
 
 def atomic_write_fixed_text(
@@ -2697,12 +4115,28 @@ def acquire_fixed_manifest_parent(root: Path) -> Tuple[Path, int]:
             os.close(descriptor)
 
 
-def iter_behavior_files(root: Path) -> List[str]:
+def iter_behavior_files(
+    root: Path,
+    *,
+    tree_snapshot: Mapping[str, Mapping[str, Any]] | None = None,
+    root_directory_fd: int | None = None,
+) -> List[str]:
+    snapshot = (
+        snapshot_package_entries(
+            root,
+            root_directory_fd=root_directory_fd,
+        )
+        if tree_snapshot is None
+        else tree_snapshot
+    )
     rels: List[str] = []
-    for p, is_symlink, _is_dir, is_file in iter_package_entries(root):
-        if is_symlink or not is_file: continue
-        if '__pycache__' in p.parts or p.suffix == '.pyc': continue
-        rel = relpath(root, p)
+    for rel, entry in snapshot.items():
+        if (
+            rel == "."
+            or entry.get("type") != "regular"
+            or _is_cruft_relpath(rel)
+        ):
+            continue
         if rel == "MANIFEST.sha256" or rel.startswith("self_validation/"):
             continue
         if rel.startswith("skills/nozickian-verify/assets/"):
@@ -2732,9 +4166,38 @@ def update_manifest(
             raise ValueError("fixed manifest root differs from held parent")
         if not _markdown_directory_path_matches_fd(held_root, held_fd):
             raise ValueError("fixed manifest package root changed before build")
+        tree_snapshot = snapshot_package_entries(
+            root,
+            capture_file_bytes=True,
+            root_directory_fd=held_fd,
+        )
+        if not snapshot_root_matches_fd(tree_snapshot, held_fd):
+            raise PackageTreeSafetyError(
+                "behavior manifest snapshot does not match held package root"
+            )
         lines = []
-        for rel in iter_behavior_files(root):
-            lines.append(f"{sha256_path(root/rel)}  {rel}")
+        for rel in iter_behavior_files(
+            root,
+            tree_snapshot=tree_snapshot,
+        ):
+            entry = tree_snapshot.get(rel)
+            if (
+                not isinstance(entry, Mapping)
+                or entry.get("type") != "regular"
+                or not isinstance(entry.get("sha256"), str)
+            ):
+                raise PackageTreeSafetyError(
+                    "behavior inventory changed after snapshot: " + rel
+                )
+            lines.append(f"{entry['sha256']}  {rel}")
+        if not snapshot_tree_matches_fd(
+            held_root,
+            tree_snapshot,
+            held_fd,
+        ):
+            raise PackageTreeSafetyError(
+                "behavior manifest package tree changed during build"
+            )
         atomic_write_fixed_text(
             held_root / "MANIFEST.sha256",
             "\n".join(lines) + "\n",
@@ -2742,19 +4205,37 @@ def update_manifest(
             directory_fd=held_fd,
             lexical_parent=held_root,
         )
+        if not _markdown_directory_path_matches_fd(held_root, held_fd):
+            raise PackageTreeSafetyError(
+                "behavior manifest package root changed during update"
+            )
     finally:
         if owns_fd:
             os.close(held_fd)
 
 
-def iter_release_inventory_files(root: Path) -> List[str]:
+def iter_release_inventory_files(
+    root: Path,
+    *,
+    tree_snapshot: Mapping[str, Mapping[str, Any]] | None = None,
+    root_directory_fd: int | None = None,
+) -> List[str]:
+    snapshot = (
+        snapshot_package_entries(
+            root,
+            root_directory_fd=root_directory_fd,
+        )
+        if tree_snapshot is None
+        else tree_snapshot
+    )
     rels: List[str] = []
-    for p, is_symlink, _is_dir, is_file in iter_package_entries(root):
-        if is_symlink or not is_file:
+    for rel, entry in snapshot.items():
+        if (
+            rel == "."
+            or entry.get("type") != "regular"
+            or _is_cruft_relpath(rel)
+        ):
             continue
-        if _is_cruft_path(root, p):
-            continue
-        rel = relpath(root, p)
         if rel == STABLE_RELEASE_MANIFEST or is_volatile_release_file(rel):
             continue
         rels.append(rel)
@@ -2799,7 +4280,12 @@ def stable_release_tree_digest(
     return hashlib.sha256(canonical).hexdigest()
 
 
-def compute_stable_release_tree(root: Path) -> Dict[str, Any]:
+def compute_stable_release_tree(
+    root: Path,
+    *,
+    tree_snapshot: Mapping[str, Mapping[str, Any]] | None = None,
+    root_directory_fd: int | None = None,
+) -> Dict[str, Any]:
     """Verify and hash the current independently derived stable package tree.
 
     The manifest supplies expected hashes and release identity, but it never
@@ -2809,17 +4295,52 @@ def compute_stable_release_tree(root: Path) -> Dict[str, Any]:
     file's Git-compatible executable/non-executable mode in addition to path,
     bytes, and content digest.
     """
-    manifest_path = root / STABLE_RELEASE_MANIFEST
-    manifest_error = regular_file_error(manifest_path)
-    if manifest_error is not None:
+    root = Path(os.path.abspath(root))
+    try:
+        if tree_snapshot is None:
+            tree_snapshot = snapshot_package_entries(
+                root,
+                capture_file_bytes=True,
+                root_directory_fd=root_directory_fd,
+            )
+        if (
+            root_directory_fd is not None
+            and not snapshot_root_identity_matches_fd(
+                tree_snapshot,
+                root_directory_fd,
+            )
+        ):
+            raise PackageTreeSafetyError(
+                "stable-tree snapshot does not match held package root"
+            )
+    except (OSError, RuntimeError, ValueError) as exc:
         return {
             "algorithm": PACKAGE_TREE_ALGORITHM,
             "valid": False,
             "sha256": None,
-            "errors": [manifest_error],
+            "errors": ["bounded package snapshot failed: " + repr(exc)],
+        }
+    manifest_entry = tree_snapshot.get(STABLE_RELEASE_MANIFEST)
+    if (
+        not isinstance(manifest_entry, Mapping)
+        or manifest_entry.get("type") != "regular"
+    ):
+        return {
+            "algorithm": PACKAGE_TREE_ALGORITHM,
+            "valid": False,
+            "sha256": None,
+            "errors": [
+                f"{STABLE_RELEASE_MANIFEST} is not a captured regular file"
+            ],
         }
     try:
-        manifest = strict_json_loads(manifest_path.read_text(encoding="utf-8"))
+        manifest = strict_json_loads(
+            read_snapshot_regular_file(
+                root,
+                STABLE_RELEASE_MANIFEST,
+                tree_snapshot,
+            ).decode("utf-8")
+        )
     except Exception as exc:
         return {
             "algorithm": PACKAGE_TREE_ALGORITHM,
@@ -2850,14 +4371,22 @@ def compute_stable_release_tree(root: Path) -> Dict[str, Any]:
         ("plugin", ".claude-plugin/plugin.json"),
         ("release lock", "RELEASE_LOCK.json"),
     ):
-        identity_path = root / relative
-        identity_error = regular_file_error(identity_path)
-        if identity_error is not None:
-            errors.append(f"{label} identity source is invalid: {identity_error}")
+        identity_entry = tree_snapshot.get(relative)
+        if (
+            not isinstance(identity_entry, Mapping)
+            or identity_entry.get("type") != "regular"
+        ):
+            errors.append(
+                f"{label} identity source is not a captured regular file"
+            )
             continue
         try:
             identity_data = strict_json_loads(
-                identity_path.read_text(encoding="utf-8")
+                read_snapshot_regular_file(
+                    root,
+                    relative,
+                    tree_snapshot,
+                ).decode("utf-8")
             )
         except Exception as exc:
             errors.append(
@@ -2905,13 +4434,11 @@ def compute_stable_release_tree(root: Path) -> Dict[str, Any]:
     if manifest.get("self_file") != STABLE_RELEASE_MANIFEST:
         errors.append("stable release manifest self_file is not canonical")
     claimed_self_mode = manifest.get("self_mode")
-    try:
-        actual_self_mode = stable_release_file_mode(manifest_path)
-    except (OSError, ValueError) as exc:
-        actual_self_mode = None
-        errors.append(
-            "stable release manifest mode could not be read: " + repr(exc)
-        )
+    actual_self_mode = (
+        "100755"
+        if int(manifest_entry.get("mode", 0)) & stat.S_IXUSR
+        else "100644"
+    )
     if claimed_self_mode != "100644":
         errors.append(
             "stable release manifest self_mode is not canonical 100644"
@@ -2925,7 +4452,10 @@ def compute_stable_release_tree(root: Path) -> Dict[str, Any]:
     current_excluded_files = sorted(VOLATILE_RELEASE_EXCLUSION_FILES)
     current_excluded_prefixes = sorted(VOLATILE_RELEASE_EXCLUSION_PREFIXES)
     try:
-        derived_paths = iter_release_inventory_files(root)
+        derived_paths = iter_release_inventory_files(
+            root,
+            tree_snapshot=tree_snapshot,
+        )
     except Exception as exc:
         derived_paths = []
         errors.append(
@@ -2999,21 +4529,16 @@ def compute_stable_release_tree(root: Path) -> Dict[str, Any]:
             errors.append(f"duplicate stable inventory path: {rel}")
         declared[rel] = item
 
-    try:
-        entries = list(iter_package_entries(root))
-    except Exception as exc:
-        entries = []
-        errors.append("package tree walk failed: " + repr(exc))
-    for path, is_symlink, is_dir, is_file in entries:
-        if _is_cruft_path(root, path) or is_dir:
+    for rel, entry in tree_snapshot.items():
+        if rel == "." or entry.get("type") == "directory":
             continue
-        if is_symlink:
+        if entry.get("type") == "symlink":
             errors.append(
-                f"unsafe package tree entry: {relpath(root, path)}: symlink"
+                f"unsafe package tree entry: {rel}: symlink"
             )
-        elif not is_file:
+        elif entry.get("type") != "regular":
             errors.append(
-                f"unsafe package tree entry: {relpath(root, path)}: special"
+                f"unsafe package tree entry: {rel}: special"
             )
 
     actual_paths = sorted(set(derived_paths))
@@ -3035,14 +4560,20 @@ def compute_stable_release_tree(root: Path) -> Dict[str, Any]:
         item = declared.get(rel)
         if item is None:
             continue
-        path = root / rel
-        file_error = regular_file_error(path)
-        if file_error is not None:
-            errors.append(f"{rel}: {file_error}")
+        entry = tree_snapshot.get(rel)
+        if (
+            not isinstance(entry, Mapping)
+            or entry.get("type") != "regular"
+        ):
+            errors.append(f"{rel}: not a captured regular file")
             continue
-        actual_hash = sha256_path(path)
-        actual_bytes = path.lstat().st_size
-        actual_mode = stable_release_file_mode(path)
+        actual_hash = entry.get("sha256")
+        actual_bytes = entry.get("size")
+        actual_mode = (
+            "100755"
+            if int(entry.get("mode", 0)) & stat.S_IXUSR
+            else "100644"
+        )
         claimed_hash = item.get("sha256")
         claimed_bytes = item.get("bytes")
         claimed_mode = item.get("mode")
@@ -3112,30 +4643,88 @@ def compute_stable_release_tree(root: Path) -> Dict[str, Any]:
 def build_stable_release_manifest(
     root: Path,
 ) -> Dict[str, Any]:
+    lexical_root = Path(os.path.abspath(root))
+    active_context = _STABLE_MANIFEST_BUILD_CONTEXT.get()
+    if (
+        isinstance(active_context, tuple)
+        and len(active_context) == 3
+        and active_context[0] == lexical_root
+        and type(active_context[1]) is int
+        and isinstance(active_context[2], Mapping)
+    ):
+        tree_snapshot = active_context[2]
+        if not snapshot_root_identity_matches_fd(
+            tree_snapshot,
+            active_context[1],
+        ):
+            raise PackageTreeSafetyError(
+                "active stable manifest snapshot/root capability mismatch"
+            )
+    else:
+        held_root, held_fd = acquire_fixed_manifest_parent(lexical_root)
+        try:
+            tree_snapshot = snapshot_package_entries(
+                held_root,
+                capture_file_bytes=True,
+                root_directory_fd=held_fd,
+            )
+            if not snapshot_root_matches_fd(tree_snapshot, held_fd):
+                raise PackageTreeSafetyError(
+                    "stable manifest snapshot does not match held package root"
+                )
+        finally:
+            os.close(held_fd)
     try:
-        plugin = strict_json_loads((root/".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+        plugin = strict_json_loads(
+            read_snapshot_regular_file(
+                root,
+                ".claude-plugin/plugin.json",
+                tree_snapshot,
+            ).decode("utf-8")
+        )
         if not isinstance(plugin, Mapping):
             plugin = {}
+    except PackageTreeSafetyError:
+        raise
     except Exception:
         plugin = {}
     try:
-        release_lock = strict_json_loads((root/"RELEASE_LOCK.json").read_text(encoding="utf-8"))
+        release_lock = strict_json_loads(
+            read_snapshot_regular_file(
+                root,
+                "RELEASE_LOCK.json",
+                tree_snapshot,
+            ).decode("utf-8")
+        )
         if not isinstance(release_lock, Mapping):
             release_lock = {}
+    except PackageTreeSafetyError:
+        raise
     except Exception:
         release_lock = {}
     inventory = []
-    behavior_set = set(iter_behavior_files(root))
-    for rel in iter_release_inventory_files(root):
-        p = root / rel
-        if not p.exists():
-            continue
+    behavior_set = set(
+        iter_behavior_files(root, tree_snapshot=tree_snapshot)
+    )
+    for rel in iter_release_inventory_files(
+        root,
+        tree_snapshot=tree_snapshot,
+    ):
+        entry = tree_snapshot.get(rel)
+        if not isinstance(entry, Mapping):
+            raise PackageTreeSafetyError(
+                "release inventory entry disappeared from snapshot: " + rel
+            )
         role = "behavior" if rel in behavior_set else ("self_validation" if rel.startswith("self_validation/") else "release-metadata")
         inventory.append({
             "path": rel,
-            "sha256": sha256_path(p),
-            "bytes": p.stat().st_size,
-            "mode": stable_release_file_mode(p),
+            "sha256": entry.get("sha256"),
+            "bytes": entry.get("size"),
+            "mode": (
+                "100755"
+                if int(entry.get("mode", 0)) & stat.S_IXUSR
+                else "100644"
+            ),
             "role": role,
         })
     data: Dict[str, Any] = {
@@ -3196,7 +4785,33 @@ def write_stable_release_manifest(
             raise ValueError(
                 "stable release manifest package root changed before build"
             )
-        data = build_stable_release_manifest(root)
+        tree_snapshot = snapshot_package_entries(
+            held_root,
+            capture_file_bytes=True,
+            root_directory_fd=held_fd,
+        )
+        if not snapshot_root_matches_fd(tree_snapshot, held_fd):
+            raise PackageTreeSafetyError(
+                "stable manifest snapshot does not match held package root"
+            )
+        context_token = _STABLE_MANIFEST_BUILD_CONTEXT.set(
+            (held_root, held_fd, tree_snapshot)
+        )
+        try:
+            # Keep the public one-argument builder call so contract probes can
+            # interpose at this boundary; the builder consumes only the
+            # operation-scoped snapshot carried by the context above.
+            data = build_stable_release_manifest(root)
+        finally:
+            _STABLE_MANIFEST_BUILD_CONTEXT.reset(context_token)
+        if not snapshot_tree_matches_fd(
+            held_root,
+            tree_snapshot,
+            held_fd,
+        ):
+            raise PackageTreeSafetyError(
+                "stable manifest held package root changed during build"
+            )
         atomic_write_fixed_text(
             held_root / STABLE_RELEASE_MANIFEST,
             json.dumps(data, indent=2, sort_keys=True) + "\n",
@@ -3204,16 +4819,28 @@ def write_stable_release_manifest(
             directory_fd=held_fd,
             lexical_parent=held_root,
         )
+        if not _markdown_directory_path_matches_fd(held_root, held_fd):
+            raise PackageTreeSafetyError(
+                "stable manifest package root changed during update"
+            )
     finally:
         if owns_fd:
             os.close(held_fd)
 
 
-def load_module_from_path(name: str, path: Path):
-    spec = importlib.util.spec_from_file_location(name, str(path))
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot import {path}")
+def load_module_from_captured_bytes(
+    name: str,
+    payload: bytes,
+    *,
+    origin: str,
+):
+    """Compile and execute one module from already-authorized bytes."""
+    spec = importlib.util.spec_from_loader(name, loader=None, origin=origin)
+    if spec is None:
+        raise RuntimeError("cannot create captured module specification")
     module = importlib.util.module_from_spec(spec)
+    module.__file__ = origin
+    previous_module = sys.modules.get(name)
     sys.modules[name] = module
     previous_dont_write = sys.dont_write_bytecode
     import_stdout = io.StringIO()
@@ -3224,15 +4851,43 @@ def load_module_from_path(name: str, path: Path):
         # import time. Contain their stdout so the outer CLI emits exactly one
         # machine-readable JSON document.
         with contextlib.redirect_stdout(import_stdout):
-            spec.loader.exec_module(module)  # type: ignore[attr-defined]
+            exec(compile(payload, origin, "exec"), module.__dict__)
+    except BaseException:
+        if previous_module is None:
+            sys.modules.pop(name, None)
+        else:
+            sys.modules[name] = previous_module
+        raise
     finally:
         sys.dont_write_bytecode = previous_dont_write
     return module
 
 
+def load_module_from_path(name: str, path: Path):
+    """Compatibility loader for validator-owned disposable paths."""
+    return load_module_from_captured_bytes(
+        name,
+        path.read_bytes(),
+        origin=str(path),
+    )
+
+
 class Validator:
     def __init__(self, root: Path, run_self_test: bool = False, skip_release_idempotence: bool = False):
-        self.root = root.resolve()
+        self.source_root = Path(os.path.abspath(root))
+        self.root = self.source_root
+        self.source_root_fd: int | None = None
+        self.source_root_open_error: str | None = None
+        try:
+            self.source_root_fd = _open_absolute_directory_no_follow(
+                self.source_root
+            )
+        except (OSError, ValueError) as exc:
+            self.source_root_open_error = f"{type(exc).__name__}: {exc}"
+        self.tree_snapshot: Dict[str, Dict[str, Any]] | None = None
+        self.snapshot_root_fd: int | None = None
+        self._snapshot_temporary: tempfile.TemporaryDirectory[str] | None = None
+        self._private_display_paths: List[str] = []
         self.run_self_test = run_self_test
         self.skip_release_idempotence = skip_release_idempotence
         self.checks: List[Dict[str, Any]] = []
@@ -3249,6 +4904,218 @@ class Validator:
     def path(self, rel: str) -> Path:
         return self.root / rel
 
+    def _activate_immutable_snapshot(
+        self,
+        snapshot: Dict[str, Dict[str, Any]],
+    ) -> None:
+        """Materialize captured bytes in a private root for imports/checks."""
+        if self.source_root_fd is None or not snapshot_root_identity_matches_fd(
+            snapshot,
+            self.source_root_fd,
+        ):
+            raise PackageTreeSafetyError(
+                "captured snapshot does not match held source root"
+            )
+        temporary = tempfile.TemporaryDirectory(
+            prefix="nozickian_validator_snapshot_"
+        )
+        mirror = Path(temporary.name) / self.source_root.name
+        # Record private spellings before materialization so even activation
+        # errors are scrubbed after a pathname substitution or cleanup.
+        self._private_display_paths.extend(
+            [str(mirror), str(Path(temporary.name))]
+        )
+        try:
+            materialize_snapshot(mirror, snapshot)
+            mirror_fd = _open_absolute_directory_no_follow(mirror)
+        except BaseException:
+            # Cleanup must never replace the activation exception with a
+            # second OSError that contains the random private parent path.
+            try:
+                temporary.cleanup()
+            except BaseException:
+                pass
+            raise
+        self._snapshot_temporary = temporary
+        self.tree_snapshot = snapshot
+        self.snapshot_root_fd = mirror_fd
+        self.root = mirror
+
+    def _snapshot_text(self, relative: str) -> str:
+        if self.tree_snapshot is None:
+            raise PackageTreeSafetyError("validator snapshot is unavailable")
+        return captured_snapshot_regular_file(
+            relative,
+            self.tree_snapshot,
+        ).decode("utf-8")
+
+    def _snapshot_entry(
+        self,
+        relative: str,
+    ) -> Mapping[str, Any] | None:
+        entry = (self.tree_snapshot or {}).get(relative)
+        return entry if isinstance(entry, Mapping) else None
+
+    def _snapshot_has(self, relative: str, entry_type: str | None = None) -> bool:
+        entry = (self.tree_snapshot or {}).get(relative)
+        return isinstance(entry, Mapping) and (
+            entry_type is None or entry.get("type") == entry_type
+        )
+
+    def _snapshot_frontmatter(
+        self,
+        relative: str,
+    ) -> Tuple[Dict[str, Any], str, List[str]]:
+        return parse_frontmatter_text(self._snapshot_text(relative))
+
+    def _load_snapshot_module(
+        self,
+        name: str,
+        relative: str,
+        *,
+        origin: Path | None = None,
+    ):
+        if self.tree_snapshot is None:
+            raise PackageTreeSafetyError("validator snapshot is unavailable")
+        payload = captured_snapshot_regular_file(
+            relative,
+            self.tree_snapshot,
+        )
+        return load_module_from_captured_bytes(
+            name,
+            payload,
+            origin=str(
+                origin
+                if origin is not None
+                else self.source_root / relative
+            ),
+        )
+
+    def _materialize_snapshot(
+        self,
+        destination: Path,
+        *,
+        excluded_prefixes: Sequence[str] = (),
+    ) -> Path:
+        if self.tree_snapshot is None:
+            raise PackageTreeSafetyError("validator snapshot is unavailable")
+        return materialize_snapshot(
+            destination,
+            self.tree_snapshot,
+            excluded_prefixes=excluded_prefixes,
+        )
+
+    def _finalize_root_bound_operation(self) -> None:
+        source_stable = False
+        source_details = self.source_root_open_error or "snapshot unavailable"
+        if self.source_root_fd is not None and self.tree_snapshot is not None:
+            try:
+                observed_source = snapshot_package_entries(
+                    self.source_root,
+                    include_ignored_entries=True,
+                    root_directory_fd=self.source_root_fd,
+                )
+
+                expected_source_view = snapshot_metadata_view(
+                    self.tree_snapshot,
+                    ignore_root_timestamps=True,
+                )
+                observed_source_view = snapshot_metadata_view(
+                    observed_source,
+                    ignore_root_timestamps=True,
+                )
+                source_stable = (
+                    expected_source_view == observed_source_view
+                    and snapshot_root_identity_matches_fd(
+                        self.tree_snapshot,
+                        self.source_root_fd,
+                    )
+                    and _markdown_directory_path_matches_fd(
+                        self.source_root,
+                        self.source_root_fd,
+                    )
+                )
+                source_details = (
+                    f"expected={len(expected_source_view)} "
+                    f"observed={len(observed_source_view)}"
+                )
+            except (OSError, RuntimeError, ValueError) as exc:
+                source_details = f"{type(exc).__name__}: {exc}"
+        self.add(
+            "validator source package remains descriptor-identical through finalization",
+            source_stable,
+            details=source_details,
+        )
+        mirror_stable = False
+        mirror_details = "snapshot mirror unavailable"
+        if (
+            self.snapshot_root_fd is not None
+            and self.tree_snapshot is not None
+        ):
+            try:
+                observed = snapshot_package_entries(
+                    self.root,
+                    root_directory_fd=self.snapshot_root_fd,
+                )
+                def logical_entry(entry: Mapping[str, Any]) -> Dict[str, Any]:
+                    entry_type = entry.get("type")
+                    value: Dict[str, Any] = {"type": entry_type}
+                    if entry_type == "regular":
+                        value.update(
+                            {
+                                "mode": entry.get("mode"),
+                                "size": entry.get("size"),
+                                "sha256": entry.get("sha256"),
+                            }
+                        )
+                    elif entry_type == "symlink":
+                        value["target"] = entry.get("target")
+                    return value
+                expected_view = {
+                    relative: logical_entry(entry)
+                    for relative, entry in self.tree_snapshot.items()
+                    if relative != "." and not _is_cruft_relpath(relative)
+                }
+                observed_view = {
+                    relative: logical_entry(entry)
+                    for relative, entry in observed.items()
+                    if relative != "." and not _is_cruft_relpath(relative)
+                }
+                mirror_stable = (
+                    expected_view == observed_view
+                    and _markdown_directory_path_matches_fd(
+                        self.root,
+                        self.snapshot_root_fd,
+                    )
+                )
+                mirror_details = (
+                    f"expected={len(expected_view)} observed={len(observed_view)}"
+                )
+            except (OSError, RuntimeError, ValueError) as exc:
+                mirror_details = f"{type(exc).__name__}: {exc}"
+        self.add(
+            "validator immutable snapshot remains byte-identical through finalization",
+            mirror_stable,
+            details=mirror_details,
+        )
+
+    def close(self) -> None:
+        if self.snapshot_root_fd is not None:
+            os.close(self.snapshot_root_fd)
+            self.snapshot_root_fd = None
+        if self.source_root_fd is not None:
+            os.close(self.source_root_fd)
+            self.source_root_fd = None
+        if self._snapshot_temporary is not None:
+            self._snapshot_temporary.cleanup()
+            self._snapshot_temporary = None
+
+    def __del__(self) -> None:
+        try:
+            self.close()
+        except Exception:
+            pass
+
     def progress(self, message: str) -> None:
         # Progress is written to stderr so stdout remains valid JSON/markdown output.
         if os.environ.get("NTT_SELFTEST_PROGRESS", "1") != "0":
@@ -3262,13 +5129,13 @@ class Validator:
             check["severity"] == "critical" and not check["passed"]
             for check in self.checks
         ):
+            self._finalize_root_bound_operation()
             return self.result()
         if self.run_self_test:
-            # This is the exact package state on which the current outer
-            # --self-test invocation runs. The later release replay uses it to
-            # verify the real command without recursively simulating it.
-            self.self_test_start_snapshot = snapshot_package_entries(
-                self.root
+            # Bind the current outer self-test to the initial authorization
+            # snapshot.  Do not reopen the private mirror for a second input.
+            self.self_test_start_snapshot = materialized_snapshot_logical_view(
+                self.tree_snapshot or {},
             )
         self.check_basic_structure()
         self.check_release_lock()
@@ -3335,15 +5202,18 @@ class Validator:
                 self.run_release_lock_idempotence_test()
                 gc.collect()
                 self.progress("release-lock stable-tree replay complete")
+        self._finalize_root_bound_operation()
         return self.result()
 
     def check_basic_structure(self) -> None:
-        p = self.path(".claude-plugin/plugin.json")
-        plugin_is_regular = p.exists() and not p.is_symlink() and p.is_file()
-        self.add("plugin manifest exists as a regular file", plugin_is_regular, details=str(p))
+        plugin_relative = ".claude-plugin/plugin.json"
+        plugin_is_regular = self._snapshot_has(plugin_relative, "regular")
+        self.add("plugin manifest exists as a regular file", plugin_is_regular, details=plugin_relative)
         if plugin_is_regular:
             try:
-                data = strict_json_loads(p.read_text(encoding="utf-8"))
+                data = strict_json_loads(
+                    self._snapshot_text(".claude-plugin/plugin.json")
+                )
             except Exception as exc:
                 self.add("plugin manifest parses", False, details=str(exc)); return
             plugin_is_object = isinstance(data, Mapping)
@@ -3366,15 +5236,15 @@ class Validator:
             exp_runtime = sorted((set(exp.keys()) & FORBIDDEN_EXPERIMENTAL_FIELDS) if isinstance(exp, dict) else ({"experimental"} if exp is not None else set()))
             self.add("plugin manifest has no experimental runtime fields", not exp_runtime, details=", ".join(exp_runtime))
         for rel in [f"{SKILL_DIR}/SKILL.md", "agents", "README.md", "LICENSE", "PACKAGE_SURFACE.json", "RELEASE_LOCK.json", "TEAM_INTERNAL_USE.md", AUDIT_REPORT, STABLE_RELEASE_MANIFEST, ".github/workflows/nozickian-team-ci.yml"]:
-            self.add(f"required path exists: {rel}", self.path(rel).exists(), details=rel)
+            self.add(f"required path exists: {rel}", self._snapshot_has(rel), details=rel)
 
     def check_release_lock(self) -> None:
-        p = self.path("RELEASE_LOCK.json")
-        self.add("release lock exists", p.exists(), details=str(p))
-        if not p.exists():
+        release_lock_present = self._snapshot_has("RELEASE_LOCK.json", "regular")
+        self.add("release lock exists", release_lock_present, details="RELEASE_LOCK.json")
+        if not release_lock_present:
             return
         try:
-            data = strict_json_loads(p.read_text(encoding="utf-8"))
+            data = strict_json_loads(self._snapshot_text("RELEASE_LOCK.json"))
         except Exception as exc:
             self.add("release lock parses", False, details=str(exc)); return
         release_lock_is_object = isinstance(data, Mapping)
@@ -3406,16 +5276,20 @@ class Validator:
             details=repr(data.get("release_status")),
         )
         try:
-            plugin = strict_json_loads(self.path(".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+            plugin = strict_json_loads(
+                self._snapshot_text(".claude-plugin/plugin.json")
+            )
             if not isinstance(plugin, Mapping):
                 plugin = {}
         except Exception:
             plugin = {}
         self.add("release lock version matches plugin", data.get("plugin_version") == plugin.get("version"), details=f"lock={data.get('plugin_version')} plugin={plugin.get('version')}")
-        cert_path = self.path("self_validation/self_certificate.json")
-        if cert_path.exists():
+        cert_relative = "self_validation/self_certificate.json"
+        if self._snapshot_has(cert_relative, "regular"):
             try:
-                cert = strict_json_loads(cert_path.read_text(encoding="utf-8"))
+                cert = strict_json_loads(
+                    self._snapshot_text("self_validation/self_certificate.json")
+                )
                 artifact = cert.get("artifact")
                 cert_version = artifact.get("version") if isinstance(artifact, Mapping) else None
                 self.add("self certificate artifact version matches plugin", cert_version == plugin.get("version"), details=f"certificate={cert_version} plugin={plugin.get('version')}")
@@ -3425,7 +5299,7 @@ class Validator:
             # Mutation and benign-variation copies intentionally omit generated
             # self_validation artifacts; when a self-certificate is present the
             # artifact-version match check above is mandatory.
-            self.add("self certificate absent; artifact version match check not applicable", True, details=str(cert_path))
+            self.add("self certificate absent; artifact version match check not applicable", True, details=cert_relative)
         cmds = data.get("required_commands")
         self.add("release lock commands listed", isinstance(cmds, list) and len(cmds) >= 5, details=str(cmds))
         commands_are_unique_strings = is_unique_string_list(cmds)
@@ -3465,7 +5339,7 @@ class Validator:
             else ""
         )
         for token in [
-            "44/44",
+            "46/46",
             "production certifier CLI",
             "promotion-contract-v2-complete",
             "Issue #8",
@@ -3480,10 +5354,10 @@ class Validator:
         self.add("release lock records external generated-output path", ("/tmp/nozickian-formal-dry-run-result.json" in joined or "../ntt_release_formal_invocation_dry_run" in joined), details=joined)
 
     def check_release_audit_artifacts(self) -> None:
-        audit = self.path(AUDIT_REPORT)
-        self.add("full tabulated audit report exists", audit.exists(), details=AUDIT_REPORT)
-        if audit.exists():
-            text = audit.read_text(encoding="utf-8")
+        audit_present = self._snapshot_has(AUDIT_REPORT, "regular")
+        self.add("full tabulated audit report exists", audit_present, details=AUDIT_REPORT)
+        if audit_present:
+            text = self._snapshot_text(AUDIT_REPORT)
             self.add("audit report is substantive", len(text) >= 6000, details=f"chars={len(text)}")
             required_headings = ["Validation command ledger", "Evidence-gated CoVe table", "Nozickian truth-tracking matrix", "Release-workflow idempotence", "Residual risks", "Stable release manifest"]
             for heading in required_headings:
@@ -3491,9 +5365,10 @@ class Validator:
             table_rows = len(re.findall(r"^\|", text, flags=re.M))
             self.add("audit report is tabulated", table_rows >= 35, details=f"table_rows={table_rows}")
             self.add("audit report records PASS-SCOPED and UNVERIFIED_RUNTIME", "PASS-SCOPED" in text and "UNVERIFIED_RUNTIME" in text, details="status labels")
-        self_certificate_present = self.path(
-            "self_validation/self_certificate.json"
-        ).exists()
+        self_certificate_present = self._snapshot_has(
+            "self_validation/self_certificate.json",
+            "regular",
+        )
         for rel in sorted(EXPECTED_CURRENT_PROMOTION_EVIDENCE_FILES):
             if not self_certificate_present:
                 self.add(
@@ -3505,23 +5380,31 @@ class Validator:
                     details=rel,
                 )
                 continue
-            evidence_path = self.path(rel)
-            evidence_error = (
-                regular_file_error(evidence_path)
-                if os.path.lexists(evidence_path)
-                else "missing"
-            )
+            evidence_entry = self._snapshot_entry(rel)
+            evidence_error = None
+            if evidence_entry is None:
+                evidence_error = "missing"
+            elif (
+                evidence_entry.get("type") != "regular"
+                or evidence_entry.get("links") != 1
+            ):
+                evidence_error = "captured entry is not a private regular file"
             self.add(
                 f"current promotion evidence record is stable and regular: {rel}",
                 evidence_error is None,
                 details=evidence_error or rel,
             )
-        manifest = self.path(STABLE_RELEASE_MANIFEST)
-        self.add("stable release manifest exists", manifest.exists(), details=STABLE_RELEASE_MANIFEST)
-        if not manifest.exists():
+        manifest_present = self._snapshot_has(
+            STABLE_RELEASE_MANIFEST,
+            "regular",
+        )
+        self.add("stable release manifest exists", manifest_present, details=STABLE_RELEASE_MANIFEST)
+        if not manifest_present:
             return
         try:
-            data = strict_json_loads(manifest.read_text(encoding="utf-8"))
+            data = strict_json_loads(
+                self._snapshot_text(STABLE_RELEASE_MANIFEST)
+            )
         except Exception as exc:
             self.add("stable release manifest parses", False, details=str(exc)); return
         stable_manifest_is_object = isinstance(data, Mapping)
@@ -3549,7 +5432,9 @@ class Validator:
             details=str(data.get("generated_utc_semantics")),
         )
         try:
-            plugin = strict_json_loads(self.path(".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+            plugin = strict_json_loads(
+                self._snapshot_text(".claude-plugin/plugin.json")
+            )
             if not isinstance(plugin, Mapping):
                 plugin = {}
         except Exception:
@@ -3570,7 +5455,12 @@ class Validator:
         actual_self = stable_manifest_self_hash(data)
         self.add("stable release manifest self-hash matches canonical content", claimed_self == actual_self, details=f"claimed={claimed_self} actual={actual_self}")
         claimed_self_mode = data.get("self_mode")
-        actual_self_mode = stable_release_file_mode(manifest)
+        manifest_entry = self._snapshot_entry(STABLE_RELEASE_MANIFEST) or {}
+        actual_self_mode = (
+            "100755"
+            if int(manifest_entry.get("mode", 0)) & stat.S_IXUSR
+            else "100644"
+        )
         self.add(
             "stable release manifest self mode is canonical and matches",
             claimed_self_mode == "100644"
@@ -3592,7 +5482,23 @@ class Validator:
             if path in entries: dupes.append(path)
             entries[path] = item
         self.add("stable release manifest has no duplicate paths", not dupes, details=", ".join(dupes))
-        actual_files = iter_release_inventory_files(self.root)
+        try:
+            if self.tree_snapshot is None:
+                raise PackageTreeSafetyError(
+                    "validator snapshot is unavailable"
+                )
+            tree_snapshot = self.tree_snapshot
+        except (OSError, RuntimeError, ValueError) as exc:
+            self.add(
+                "stable release inventory uses one bounded no-follow package snapshot",
+                False,
+                details=f"{type(exc).__name__}: {exc}",
+            )
+            return
+        actual_files = iter_release_inventory_files(
+            self.root,
+            tree_snapshot=tree_snapshot,
+        )
         missing = sorted(set(actual_files) - set(entries))
         extra = sorted(set(entries) - set(actual_files))
         self.add("stable release manifest covers all non-self package files", not missing, details=", ".join(missing[:20]))
@@ -3601,13 +5507,17 @@ class Validator:
             item = entries.get(rel)
             if not item:
                 continue
-            p = self.path(rel)
+            entry = tree_snapshot.get(rel, {})
             claimed_hash = item.get("sha256")
             claimed_bytes = item.get("bytes")
             claimed_mode = item.get("mode")
-            actual_hash = sha256_path(p)
-            actual_bytes = p.stat().st_size
-            actual_mode = stable_release_file_mode(p)
+            actual_hash = entry.get("sha256")
+            actual_bytes = entry.get("size")
+            actual_mode = (
+                "100755"
+                if int(entry.get("mode", 0)) & stat.S_IXUSR
+                else "100644"
+            )
             self.add(f"stable release manifest hash matches: {rel}", claimed_hash == actual_hash, details=f"claimed={claimed_hash} actual={actual_hash}")
             self.add(
                 f"stable release manifest bytes match: {rel}",
@@ -3619,7 +5529,11 @@ class Validator:
                 claimed_mode == actual_mode,
                 details=f"claimed={claimed_mode} actual={actual_mode}",
             )
-        stable_tree = compute_stable_release_tree(self.root)
+        stable_tree = compute_stable_release_tree(
+            self.source_root,
+            tree_snapshot=tree_snapshot,
+            root_directory_fd=self.source_root_fd,
+        )
         self.add(
             "stable release tree verifies through the authoritative shared algorithm",
             stable_tree.get("valid") is True
@@ -3644,7 +5558,19 @@ class Validator:
         ledgers, old version roots, and absolute build paths from being bundled
         as apparent current-release evidence.
         """
-        hits = scan_release_provenance_hygiene(self.root)
+        try:
+            hits = scan_release_provenance_hygiene(
+                self.source_root,
+                tree_snapshot=self.tree_snapshot,
+                root_directory_fd=self.source_root_fd,
+            )
+        except (OSError, RuntimeError, ValueError) as exc:
+            self.add(
+                "release provenance hygiene uses one stable no-follow package snapshot",
+                False,
+                details=f"{type(exc).__name__}: {exc}",
+            )
+            return
         self.add(
             "release provenance hygiene has no stale generated artifact or absolute build path tokens",
             not hits,
@@ -3653,18 +5579,20 @@ class Validator:
 
 
     def check_self_certificate_nonclosure(self) -> None:
-        p = self.path("self_validation/self_certificate.json")
-        if not p.exists():
+        certificate_relative = "self_validation/self_certificate.json"
+        if not self._snapshot_has(certificate_relative, "regular"):
             # Mutation and benign-variation copies intentionally omit generated
             # self_validation artifacts. Stable release validation still fails
             # if a package claims those artifacts in STABLE_RELEASE_MANIFEST but
             # omits them. When a self-certificate is present, the active
             # non-closure and stale-version checks below are mandatory.
-            self.add("self certificate absent; downstream non-closure check not applicable", True, details=str(p))
+            self.add("self certificate absent; downstream non-closure check not applicable", True, details=certificate_relative)
             return
-        self.add("self certificate exists for downstream non-closure check", True, details=str(p))
+        self.add("self certificate exists for downstream non-closure check", True, details=certificate_relative)
         try:
-            data = strict_json_loads(p.read_text(encoding="utf-8"))
+            data = strict_json_loads(
+                self._snapshot_text("self_validation/self_certificate.json")
+            )
         except Exception as exc:
             self.add("self certificate parses for downstream non-closure check", False, details=str(exc))
             return
@@ -3677,8 +5605,9 @@ class Validator:
         if not self_certificate_is_object:
             return
         locator_problems = validate_consistency_sweep_locator_bindings(
-            self.root,
+            self.source_root,
             data,
+            tree_snapshot=self.tree_snapshot,
         )
         self.add(
             "self certificate consistency-sweep correction locators are canonical and unique with resolvable excerpt-bound current targets",
@@ -3725,7 +5654,7 @@ class Validator:
             == "promotion-evidence-v2"
             and upgrade_audit.get("formal_result_schema_version") == "2.0"
             and type(aggregate_contract) is dict
-            and aggregate_contract.get("expected_result") == "44/44"
+            and aggregate_contract.get("expected_result") == "46/46"
             and aggregate_contract.get(
                 "production_certifier_cli_baseline_and_negatives"
             )
@@ -3739,9 +5668,9 @@ class Validator:
             details=repr(actual_cap),
         )
         try:
-            gate = load_module_from_path(
+            gate = self._load_snapshot_module(
                 "ntt_gate_for_package_downstream_policy",
-                self.path(f"{SKILL_DIR}/scripts/ntt_gate.py"),
+                f"{SKILL_DIR}/scripts/ntt_gate.py",
             )
             downstream_evaluator = getattr(
                 gate,
@@ -3760,12 +5689,12 @@ class Validator:
         self.add("self certificate declares downstream non-closure records", not downstream_problems, details="; ".join(downstream_problems[:20]))
 
     def check_package_surface_policy(self) -> None:
-        p = self.path("PACKAGE_SURFACE.json")
-        self.add("package surface policy exists", p.exists(), details=str(p))
-        if not p.exists():
+        surface_present = self._snapshot_has("PACKAGE_SURFACE.json", "regular")
+        self.add("package surface policy exists", surface_present, details="PACKAGE_SURFACE.json")
+        if not surface_present:
             return
         try:
-            data = strict_json_loads(p.read_text(encoding="utf-8"))
+            data = strict_json_loads(self._snapshot_text("PACKAGE_SURFACE.json"))
             self.add("package surface policy parses", True)
         except Exception as exc:
             self.add("package surface policy parses", False, details=str(exc)); return
@@ -3939,7 +5868,7 @@ class Validator:
             "promotion-evidence-v2",
             "formal result 2.0",
             "canonical FAIL plus failure_kind",
-            "synthetic 44/44",
+            "synthetic 46/46",
             "promotion-contract-v2-complete",
             "aggregate-certifier.json",
             "promotion-v2-reference.json",
@@ -3953,48 +5882,67 @@ class Validator:
 
     def check_github_readmes(self) -> None:
         """Validate the GitHub-facing README documentation set without expanding runtime surface."""
-        root_readme = self.path("README.md")
-        self.add("root GitHub README exists", root_readme.exists(), details="README.md")
-        if root_readme.exists():
-            text = root_readme.read_text(encoding="utf-8")
+        root_readme_present = self._snapshot_has("README.md", "regular")
+        self.add("root GitHub README exists", root_readme_present, details="README.md")
+        if root_readme_present:
+            text = self._snapshot_text("README.md")
             required = ["Documentation map", "docs/README.md", "PASS-SCOPED", "PASS-TRACKED", "GitHub README policy", "nozickian-verify"]
             self.add("root GitHub README is substantive", len(text) >= 3500, details=f"chars={len(text)}")
             for term in required:
                 self.add(f"root GitHub README contains term: {term}", term.lower() in text.lower(), details=term)
-        docs_dir = self.path("docs")
-        self.add("GitHub docs directory exists", docs_dir.is_dir(), details="docs/")
+        docs_present = self._snapshot_has("docs", "directory")
+        self.add("GitHub docs directory exists", docs_present, details="docs/")
         expected = set(EXPECTED_GITHUB_READMES)
         doc_files = [
-            p for p, is_symlink, _is_dir, is_file in iter_package_entries(self.root)
-            if is_file and not is_symlink and relpath(self.root, p).startswith("docs/")
-        ] if docs_dir.exists() else []
-        found_readmes = sorted(relpath(self.root, p) for p in doc_files if p.name == "README.md")
+            relative
+            for relative, entry in (self.tree_snapshot or {}).items()
+            if relative.startswith("docs/")
+            and entry.get("type") == "regular"
+        ] if docs_present else []
+        found_readmes = sorted(
+            relative
+            for relative in doc_files
+            if PurePosixPath(relative).name == "README.md"
+        )
         self.add("GitHub README set matches expected docs tree", set(found_readmes) == {p for p in expected if p.startswith("docs/")}, details=", ".join(sorted(set(found_readmes) ^ {p for p in expected if p.startswith("docs/")})))
-        if docs_dir.exists():
-            non_readme_md = sorted(relpath(self.root, p) for p in doc_files if p.suffix == ".md" and p.name != "README.md")
-            non_md_files = sorted(relpath(self.root, p) for p in doc_files if p.suffix != ".md" and not _is_cruft_name(p.name))
+        if docs_present:
+            non_readme_md = sorted(
+                relative
+                for relative in doc_files
+                if PurePosixPath(relative).suffix == ".md"
+                and PurePosixPath(relative).name != "README.md"
+            )
+            non_md_files = sorted(
+                relative
+                for relative in doc_files
+                if PurePosixPath(relative).suffix != ".md"
+                and not _is_cruft_name(PurePosixPath(relative).name)
+            )
             self.add("GitHub docs tree uses README.md-only Markdown files", not non_readme_md, details=", ".join(non_readme_md))
             self.add("GitHub docs tree has no non-Markdown files", not non_md_files, details=", ".join(non_md_files))
         for rel, terms in EXPECTED_GITHUB_READMES.items():
-            p = self.path(rel)
-            self.add(f"GitHub README exists: {rel}", p.exists(), details=rel)
-            if not p.exists():
+            present = self._snapshot_has(rel, "regular")
+            self.add(f"GitHub README exists: {rel}", present, details=rel)
+            if not present:
                 continue
-            text = p.read_text(encoding="utf-8")
+            text = self._snapshot_text(rel)
             self.add(f"GitHub README substantive: {rel}", len(text) >= 700, details=f"chars={len(text)}")
             self.add(f"GitHub README has heading: {rel}", text.lstrip().startswith("# "), details=rel)
             self.add(f"GitHub README avoids placeholder text: {rel}", not re.search(r"\b(TODO|TBD|lorem ipsum|coming soon)\b", text, flags=re.I), details=rel)
             for term in terms:
                 self.add(f"GitHub README {rel} contains term: {term}", term.lower() in text.lower(), details=term)
-        sv_readme = self.path("self_validation/README.md")
-        if self.path("self_validation").exists():
-            self.add("self_validation GitHub README exists when self_validation is bundled", sv_readme.exists(), details="self_validation/README.md")
-            if sv_readme.exists():
-                sv_text = sv_readme.read_text(encoding="utf-8")
+        if self._snapshot_has("self_validation", "directory"):
+            sv_readme_present = self._snapshot_has(
+                "self_validation/README.md",
+                "regular",
+            )
+            self.add("self_validation GitHub README exists when self_validation is bundled", sv_readme_present, details="self_validation/README.md")
+            if sv_readme_present:
+                sv_text = self._snapshot_text("self_validation/README.md")
                 self.add("self_validation GitHub README substantive", len(sv_text) >= 700, details=f"chars={len(sv_text)}")
                 for token in [
                     "current_observations.json",
-                    "44/44",
+                    "46/46",
                     "synthetic contract evidence",
                     "CAPPED",
                 ]:
@@ -4007,55 +5955,137 @@ class Validator:
                     self.add(f"self_validation GitHub README contains term: {term}", term.lower() in sv_text.lower(), details=term)
         else:
             self.add("self_validation GitHub README not required in generated-free validation copy", True, details="self_validation absent")
-        forbidden_present = sorted(rel for rel in FORBIDDEN_RUNTIME_README_PATHS if self.path(rel).exists())
+        forbidden_present = sorted(
+            rel
+            for rel in FORBIDDEN_RUNTIME_README_PATHS
+            if self._snapshot_has(rel)
+        )
         self.add("GitHub README docs avoid plugin-loadable runtime component paths", not forbidden_present, details=", ".join(forbidden_present))
 
     def check_closed_surface(self) -> None:
         entries: List[Tuple[Path, bool, bool, bool]] = []
-        if self.root.exists():
+        tree_snapshot: Dict[str, Dict[str, Any]] = {}
+        if self.source_root_fd is None:
+            self.add(
+                "package root is acquired as a no-follow directory capability",
+                False,
+                details=self.source_root_open_error or "unavailable",
+            )
+            return
+        if self.source_root_fd is not None:
             try:
-                for entry in iter_package_entries(self.root):
-                    entries.append(entry)
+                tree_snapshot = snapshot_package_entries(
+                    self.source_root,
+                    include_ignored_entries=True,
+                    capture_file_bytes=True,
+                    root_directory_fd=self.source_root_fd,
+                )
             except PackageTreeResourceLimitError as exc:
+                limit_details = str(exc)
+                path_metadata_failure = (
+                    "path/metadata byte limit exceeded" in limit_details
+                )
+                file_byte_failure = (
+                    not path_metadata_failure
+                    and (
+                        "per-file byte limit exceeded" in limit_details
+                        or "aggregate byte limit exceeded" in limit_details
+                    )
+                )
+                entry_failure = not (
+                    path_metadata_failure or file_byte_failure
+                )
                 self.add(
                     "package tree remains within per-directory and total entry limits",
-                    False,
-                    details=str(exc),
+                    not entry_failure,
+                    details=limit_details,
+                )
+                self.add(
+                    PACKAGE_PATH_METADATA_CHECK,
+                    not path_metadata_failure,
+                    details=limit_details,
+                )
+                self.add(
+                    "package regular-file bytes remain within per-file and aggregate limits",
+                    not file_byte_failure,
+                    details=limit_details,
                 )
                 return
+            except (OSError, RuntimeError, PackageTreeSafetyError) as exc:
+                hardlink_failure = (
+                    isinstance(exc, PackageTreeSafetyError)
+                    and "not private" in str(exc)
+                )
+                if hardlink_failure:
+                    self.add(
+                        "package tree remains within per-directory and total entry limits",
+                        True,
+                        details="entry walk reached private-file preflight",
+                    )
+                    self.add(
+                        "package regular files are private single-link entries",
+                        False,
+                        details=str(exc),
+                    )
+                    return
+                self.add(
+                    "package tree is captured through a stable no-follow descriptor walk",
+                    False,
+                    details=f"{type(exc).__name__}: {exc}",
+                )
+                return
+            for relative in sorted(
+                item for item in tree_snapshot if item != "."
+            ):
+                entry_type = tree_snapshot[relative].get("type")
+                entries.append(
+                    (
+                        self.root / relative,
+                        entry_type == "symlink",
+                        entry_type == "directory",
+                        entry_type == "regular",
+                    )
+                )
         self.add(
             "package tree remains within per-directory and total entry limits",
             True,
             details=(
                 f"entries={len(entries)} "
                 f"directory_limit={MAX_PACKAGE_DIRECTORY_ENTRIES} "
-                f"total_limit={MAX_PACKAGE_TOTAL_ENTRIES}"
+                f"total_limit={MAX_PACKAGE_TOTAL_ENTRIES} "
+                f"depth_limit={MAX_PACKAGE_DIRECTORY_DEPTH}"
+            ),
+        )
+        self.add(
+            "package regular files are private single-link entries",
+            True,
+            details="snapshot rejected every st_nlink != 1 regular file",
+        )
+        path_metadata_bytes = snapshot_path_metadata_bytes(tree_snapshot)
+        self.add(
+            PACKAGE_PATH_METADATA_CHECK,
+            path_metadata_bytes <= MAX_PACKAGE_PATH_METADATA_BYTES,
+            details=(
+                f"bytes={path_metadata_bytes} "
+                f"limit={MAX_PACKAGE_PATH_METADATA_BYTES}"
             ),
         )
         oversized_files: List[str] = []
         package_bytes = 0
-        try:
-            for path, is_symlink, _is_dir, is_file in entries:
-                if is_symlink or not is_file or _is_cruft_path(self.root, path):
-                    continue
-                metadata = path.lstat()
-                if not stat.S_ISREG(metadata.st_mode):
-                    oversized_files.append(
-                        f"{relpath(self.root, path)}=<type-changed>"
-                    )
-                    continue
-                package_bytes += metadata.st_size
-                if metadata.st_size > MAX_PACKAGE_FILE_BYTES:
-                    oversized_files.append(
-                        f"{relpath(self.root, path)}={metadata.st_size}"
-                    )
-        except OSError as exc:
-            self.add(
-                "package regular-file bytes remain within per-file and aggregate limits",
-                False,
-                details=f"{type(exc).__name__}: package changed during byte preflight",
-            )
-            return
+        for relative, entry in tree_snapshot.items():
+            if (
+                relative == "."
+                or entry.get("type") != "regular"
+                or _is_cruft_relpath(relative)
+            ):
+                continue
+            size = entry.get("size")
+            if type(size) is not int:
+                oversized_files.append(f"{relative}=<missing-size>")
+                continue
+            package_bytes += size
+            if size > MAX_PACKAGE_FILE_BYTES:
+                oversized_files.append(f"{relative}={size}")
         package_bytes_valid = (
             not oversized_files and package_bytes <= MAX_PACKAGE_TOTAL_BYTES
         )
@@ -4070,9 +6100,12 @@ class Validator:
         )
         if not package_bytes_valid:
             return
-        git_surface = git_tracked_files(self.root)
+        git_surface = git_tracked_files(
+            self.source_root,
+            root_directory_fd=self.source_root_fd,
+        )
         self.add(
-            "package Git evidence is verified or genuinely absent",
+            "sanitized Git observation completed or package has no .git marker",
             git_surface.state != GitSurfaceState.GIT_EVIDENCE_FAILURE,
             details=f"state={git_surface.state.value}; {git_surface.details}",
         )
@@ -4088,21 +6121,30 @@ class Validator:
             if entry.mode not in {"100644", "100755"}
         )
         self.add(
-            "Git index has only stage-zero entries",
+            "observational Git index reports only stage-zero entries",
             not nonzero_stage_entries,
             details=", ".join(nonzero_stage_entries[:20]),
         )
         self.add(
-            "Git index has only regular blob modes 100644/100755",
+            "observational Git index reports only regular blob modes 100644/100755",
             not nonregular_mode_entries,
             details=", ".join(nonregular_mode_entries[:20]),
         )
-        tracked = set(git_surface.tracked_files)
         symlink_rels = sorted(relpath(self.root, p) for p, is_symlink, _is_dir, _is_file in entries if is_symlink)
         unsupported_rels = sorted(
             relpath(self.root, p)
             for p, is_symlink, is_dir, is_file in entries
             if not (is_symlink or is_dir or is_file)
+        )
+        # Physical cruft comes exclusively from the immutable initial package
+        # snapshot. A later Git/index answer may add a tracked-cruft reason,
+        # but can never subtract or authorize a captured physical entry.
+        physical_cruft = sorted(
+            relpath(self.root, p)
+            for p, _is_symlink, _is_dir, _is_file in entries
+            if _is_cruft_relpath(relpath(self.root, p))
+            and relpath(self.root, p) != ".git"
+            and not relpath(self.root, p).startswith(".git/")
         )
         if git_surface.state == GitSurfaceState.VERIFIED_WORKTREE:
             shippable_symlinks = symlink_rels
@@ -4113,61 +6155,52 @@ class Validator:
                     if _is_cruft_relpath(entry.path)
                 }
             )
-            physical_cruft = sorted(
-                relpath(self.root, p)
-                for p, _is_symlink, _is_dir, _is_file in entries
-                if _is_cruft_relpath(relpath(self.root, p))
-                and relpath(self.root, p) != ".git"
-                and not relpath(self.root, p).startswith(".git/")
+            observed_head_tree_cruft = sorted(
+                path
+                for path in git_surface.head_files
+                if _is_cruft_relpath(path)
             )
-            tolerated_untracked_bytecode = sorted(
-                rel
-                for rel in physical_cruft
-                if rel not in tracked and _is_untracked_bytecode_relpath(rel)
-            )
-            shippable_cruft = sorted(
+            rejected_cruft_evidence = sorted(
                 set(tracked_cruft)
-                | {
-                    rel
-                    for rel in physical_cruft
-                    if rel not in tolerated_untracked_bytecode
-                }
+                | set(observed_head_tree_cruft)
+                | set(physical_cruft)
             )
             shippable_unsupported = unsupported_rels
             cruft_details = (
-                "tracked index cruft: "
+                "observational index cruft: "
                 + ", ".join(tracked_cruft)
-                + "; rejected physical/tracked cruft: "
-                + ", ".join(shippable_cruft[:20])
-                + "; tolerated untracked bytecode: "
-                + ", ".join(tolerated_untracked_bytecode[:20])
+                + "; observational HEAD tree cruft: "
+                + ", ".join(observed_head_tree_cruft)
+                + "; rejected physical/observational cruft evidence: "
+                + ", ".join(rejected_cruft_evidence[:20])
+                + "; untracked bytecode exemption: disabled"
             )
             symlink_details = "physical worktree symlinks: " + ", ".join(shippable_symlinks[:20])
             unsupported_details = "physical worktree unsupported entries: " + ", ".join(shippable_unsupported[:20])
         elif git_surface.state == GitSurfaceState.GIT_FREE_PACKAGE:
             shippable_symlinks = symlink_rels
-            shippable_cruft = sorted(
-                relpath(self.root, p)
-                for p, _is_symlink, _is_dir, _is_file in entries
-                if _is_cruft_relpath(relpath(self.root, p))
-            )
+            rejected_cruft_evidence = physical_cruft
             shippable_unsupported = unsupported_rels
-            cruft_details = "physical Git-free package cruft: " + ", ".join(shippable_cruft[:20])
+            cruft_details = "physical Git-free package cruft: " + ", ".join(rejected_cruft_evidence[:20])
             symlink_details = "physical Git-free package symlinks: " + ", ".join(shippable_symlinks[:20])
             unsupported_details = "physical Git-free unsupported entries: " + ", ".join(shippable_unsupported[:20])
         else:
-            # Without trustworthy Git evidence, tracked/untracked distinctions
-            # cannot justify accepting either physical cruft or symlink entries.
+            # Git failure is independently critical. It cannot add a positive
+            # authorization or change the initial physical snapshot decision.
             shippable_symlinks = symlink_rels
-            shippable_cruft = ["<Git evidence unavailable>"]
+            rejected_cruft_evidence = physical_cruft
             shippable_unsupported = unsupported_rels
-            cruft_details = git_surface.details
+            cruft_details = git_surface.details + (
+                "; physical cruft: " + ", ".join(physical_cruft[:20])
+                if physical_cruft
+                else "; physical cruft: none"
+            )
             symlink_details = git_surface.details + ("; physical symlinks: " + ", ".join(symlink_rels[:20]) if symlink_rels else "")
             unsupported_details = git_surface.details + ("; physical unsupported entries: " + ", ".join(unsupported_rels[:20]) if unsupported_rels else "")
-        self.add(SHIPPABLE_CRUFT_CHECK, not shippable_cruft, details=cruft_details)
-        self.add("no shippable symlink package entries", not shippable_symlinks, details=symlink_details)
+        self.add(PHYSICAL_CRUFT_CHECK, not rejected_cruft_evidence, details=cruft_details)
+        self.add("physical package symlinks are absent", not shippable_symlinks, details=symlink_details)
         self.add(
-            "no shippable unsupported package entry types",
+            "physical unsupported package entry types are absent",
             not shippable_unsupported,
             details=unsupported_details,
         )
@@ -4178,6 +6211,31 @@ class Validator:
             # Stop before opening CI, plugin, or other package content when Git
             # evidence or no-follow physical entry preflight is already unsafe.
             return
+        try:
+            self._activate_immutable_snapshot(tree_snapshot)
+        except (OSError, RuntimeError, ValueError) as exc:
+            self.add(
+                "post-preflight checks consume one immutable root-bound snapshot",
+                False,
+                details=f"{type(exc).__name__}: {exc}",
+            )
+            return
+        entries = []
+        for relative in sorted(item for item in tree_snapshot if item != "."):
+            entry_type = tree_snapshot[relative].get("type")
+            entries.append(
+                (
+                    self.root / relative,
+                    entry_type == "symlink",
+                    entry_type == "directory",
+                    entry_type == "regular",
+                )
+            )
+        self.add(
+            "post-preflight checks consume one immutable root-bound snapshot",
+            True,
+            details=f"captured_files={sum(1 for entry in tree_snapshot.values() if entry.get('type') == 'regular')}",
+        )
         # Top-level surface closure.
         top_files = {
             p.name for p, is_symlink, _is_dir, is_file in entries
@@ -4192,15 +6250,19 @@ class Validator:
         self.add("no unexpected top-level files", not extra_files, details=", ".join(extra_files))
         self.add("no unexpected top-level directories", not extra_dirs, details=", ".join(extra_dirs))
         # CI directory is allowed only for the scoped deterministic workflow.
-        if self.path(".github").exists():
+        if self._snapshot_has(".github", "directory"):
             ci_files = sorted(
                 relpath(self.root, p) for p, is_symlink, _is_dir, is_file in entries
                 if is_file and not is_symlink and relpath(self.root, p).startswith(".github/") and not _is_cruft_name(p.name)
             )
             self.add("only expected team CI workflow present", set(ci_files) == ALLOWED_CI_FILES, details=", ".join(ci_files))
-            ci_path = self.path(".github/workflows/nozickian-team-ci.yml")
-            if ci_path.exists() and not ci_path.is_symlink():
-                ci_text = ci_path.read_text(encoding="utf-8")
+            if self._snapshot_has(
+                ".github/workflows/nozickian-team-ci.yml",
+                "regular",
+            ):
+                ci_text = self._snapshot_text(
+                    ".github/workflows/nozickian-team-ci.yml"
+                )
                 try:
                     workflow_model = parse_restricted_ci_workflow(ci_text)
                     workflow_parse_error = None
@@ -4235,7 +6297,7 @@ class Validator:
                     for step in active_steps
                     for command in step["commands"]
                 ]
-                for token in ["validate_package.py . --self-test", 'archive_root="$(mktemp -d)"', 'git archive --format=tar HEAD | tar -xf - -C "$archive_root"', ARCHIVE_SELF_TEST_COMMAND, "ntt_gate.py self_validation/self_certificate.json --evidence-root .", "run_regression_evals.py .", "run_formal_runner_contract_tests.py .", "run_formal_artifact_verification.py . README.md --dry-run"]:
+                for token in ["validate_package.py . --self-test", 'archive_root="$(mktemp -d)"', 'git archive --format=tar HEAD | tar -xf - -C "$archive_root"', ARCHIVE_SELF_TEST_COMMAND, "ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --downstream-policy package-self", "run_regression_evals.py .", "run_formal_runner_contract_tests.py .", "run_formal_artifact_verification.py . README.md --dry-run"]:
                     self.add(
                         f"CI active run step includes {token}",
                         any(token in command for command in active_commands),
@@ -4293,12 +6355,12 @@ class Validator:
                     details=repr(archive_self_test_steps),
                 )
         for name in sorted(FORBIDDEN_ROOT_FILES):
-            self.add(f"forbidden root file absent: {name}", not self.path(name).exists(), details=name)
+            self.add(f"forbidden root file absent: {name}", not self._snapshot_has(name), details=name)
         for name in sorted(FORBIDDEN_SURFACES):
-            self.add(f"forbidden plugin surface absent: {name}/", not self.path(name).exists(), details=name)
+            self.add(f"forbidden plugin surface absent: {name}/", not self._snapshot_has(name), details=name)
         # Plugin manifest directory contains only plugin.json.
         plugdir = self.path(".claude-plugin")
-        if plugdir.exists():
+        if self._snapshot_has(".claude-plugin", "directory"):
             files = sorted(
                 relpath(self.root, p) for p, is_symlink, _is_dir, is_file in entries
                 if is_file and not is_symlink and relpath(self.root, p).startswith(".claude-plugin/") and not _is_cruft_name(p.name)
@@ -4306,14 +6368,14 @@ class Validator:
             self.add(".claude-plugin contains only plugin.json", set(files) == ALLOWED_PLUGIN_MANIFEST_FILES, details=", ".join(files))
         # Only one skill directory.
         skills = self.path("skills")
-        if skills.exists():
+        if self._snapshot_has("skills", "directory"):
             skill_dirs = sorted(
                 relpath(self.root, p) for p, is_symlink, is_dir, _is_file in entries
                 if p.parent == skills and is_dir and not is_symlink and not _is_cruft_name(p.name)
             )
             self.add("only expected skill directory present", skill_dirs == [SKILL_DIR], details=", ".join(skill_dirs))
         agents = self.path("agents")
-        if agents.exists():
+        if self._snapshot_has("agents", "directory"):
             # Claude Code plugin agents are plugin-loadable recursively, so the
             # closed-surface check must enumerate agents/**/*.md rather than
             # only agents/*.md. This guards nested recursive plugin agent false
@@ -4333,7 +6395,7 @@ class Validator:
             self.add("plugin agents directory contains only markdown agent files", not non_md_agent_files, details=", ".join(non_md_agent_files))
         # Skill subdirs: no commands/hooks under skill.
         sdir = self.path(SKILL_DIR)
-        if sdir.exists():
+        if self._snapshot_has(SKILL_DIR, "directory"):
             allowed = {"SKILL.md"} | ALLOWED_SKILL_RUNTIME_DIRS
             children = {
                 p.name for p, is_symlink, _is_dir, _is_file in entries
@@ -4341,14 +6403,14 @@ class Validator:
             }
             self.add("skill directory contains only expected children", not (children - allowed), details=", ".join(sorted(children - allowed)))
             scripts_dir = sdir/"scripts"
-            if scripts_dir.exists():
+            if self._snapshot_has(f"{SKILL_DIR}/scripts", "directory"):
                 files = {
                     p.name for p, is_symlink, _is_dir, is_file in entries
                     if p.parent == scripts_dir and is_file and not is_symlink and not _is_cruft_name(p.name)
                 }
                 self.add("scripts directory contains only expected scripts", files == EXPECTED_SCRIPTS, details=", ".join(sorted(files)))
             refs_dir = sdir/"references"
-            if refs_dir.exists():
+            if self._snapshot_has(f"{SKILL_DIR}/references", "directory"):
                 files = {
                     p.name for p, is_symlink, _is_dir, is_file in entries
                     if p.parent == refs_dir and is_file and not is_symlink and not _is_cruft_name(p.name)
@@ -4356,26 +6418,43 @@ class Validator:
                 self.add("references directory contains only expected files", files == EXPECTED_REFERENCES, details=", ".join(sorted(files)))
 
     def check_manifest_hashes(self) -> None:
-        manifest_path = self.path("MANIFEST.sha256")
-        self.add("behavior manifest exists", manifest_path.exists(), details=str(manifest_path))
-        if not manifest_path.exists(): return
-        expected = load_manifest(manifest_path)
+        manifest_present = self._snapshot_has("MANIFEST.sha256", "regular")
+        self.add("behavior manifest exists", manifest_present, details="MANIFEST.sha256")
+        if not manifest_present: return
+        try:
+            if self.tree_snapshot is None:
+                raise PackageTreeSafetyError(
+                    "validator snapshot is unavailable"
+                )
+            tree_snapshot = self.tree_snapshot
+            expected = parse_manifest_text(
+                self._snapshot_text("MANIFEST.sha256")
+            )
+        except (OSError, RuntimeError, ValueError, UnicodeError) as exc:
+            self.add(
+                "behavior manifest verification uses one bounded no-follow package snapshot",
+                False,
+                details=f"{type(exc).__name__}: {exc}",
+            )
+            return
         malformed = [k for k in expected if k.startswith("<malformed:")]
         self.add("manifest lines parse", not malformed, details=", ".join(malformed))
-        behavior_files = iter_behavior_files(self.root)
+        behavior_files = iter_behavior_files(
+            self.root,
+            tree_snapshot=tree_snapshot,
+        )
         missing = sorted(set(behavior_files) - set(expected))
         extra = sorted(set(expected) - set(behavior_files))
         self.add("manifest covers all behavior files", not missing, details=", ".join(missing))
         self.add("manifest has no non-behavior files", not extra, details=", ".join(extra))
         for rel in behavior_files:
-            p = self.path(rel)
-            actual = sha256_path(p)
+            actual = tree_snapshot[rel].get("sha256")
             self.add(f"manifest hash matches: {rel}", expected.get(rel) == actual, details=f"expected={expected.get(rel)} actual={actual}")
 
     def check_skill(self) -> None:
-        p = self.path(f"{SKILL_DIR}/SKILL.md")
-        if not p.exists(): return
-        fm, body, problems = parse_frontmatter(p)
+        skill_relative = f"{SKILL_DIR}/SKILL.md"
+        if not self._snapshot_has(skill_relative, "regular"): return
+        fm, body, problems = self._snapshot_frontmatter(skill_relative)
         self.add("skill frontmatter parses", not problems, details="; ".join(problems))
         skeys = set(fm.keys())
         unknown_skill_keys = sorted(skeys - ALLOWED_SKILL_FRONTMATTER_KEYS)
@@ -4387,7 +6466,7 @@ class Validator:
         self.add("skill description substantive", isinstance(desc, str) and len(desc) >= 120)
         comp = fm.get("compatibility")
         self.add("skill compatibility length valid", comp is None or (isinstance(comp, str) and 1 <= len(comp) <= 500), details=f"length={len(comp) if isinstance(comp, str) else 'none'}")
-        text = p.read_text(encoding="utf-8")
+        text = self._snapshot_text(f"{SKILL_DIR}/SKILL.md")
         for pat in SKILL_BROAD_TOOL_PATTERNS:
             self.add(f"skill avoids broad permission pattern: {pat}", re.search(pat, text, flags=re.I | re.S) is None, details=pat)
         self.add("skill avoids dynamic shell fenced blocks", "```!" not in text, details="dynamic skill shell disabled for team/internal tier")
@@ -4407,11 +6486,12 @@ class Validator:
                 token in text,
                 details=token,
             )
-        template_path = self.path(
-            f"{SKILL_DIR}/assets/certificate-template.json"
-        )
         try:
-            template = strict_json_loads(template_path.read_text(encoding="utf-8"))
+            template = strict_json_loads(
+                self._snapshot_text(
+                    f"{SKILL_DIR}/assets/certificate-template.json"
+                )
+            )
             upgrade = template.get("pass_tracked_upgrade_audit")
         except Exception as exc:
             upgrade = None
@@ -4434,7 +6514,7 @@ class Validator:
             == "promotion-evidence-v2"
             and isinstance(upgrade.get("aggregate_contract"), Mapping)
             and upgrade["aggregate_contract"].get("expected_cases")
-            == "44/44"
+            == "46/46"
             and isinstance(upgrade.get("formal_result_contract"), Mapping)
             and upgrade["formal_result_contract"].get("output_check_policy")
             == EXPECTED_FORMAL_OUTPUT_CHECK_POLICY
@@ -4453,23 +6533,30 @@ class Validator:
         )
 
     def check_references(self) -> None:
-        std = self.path(f"{SKILL_DIR}/references/STANDARD.md")
-        self.add("STANDARD.md exists", std.exists())
-        if std.exists():
-            text = std.read_text(encoding="utf-8")
+        standard_relative = f"{SKILL_DIR}/references/STANDARD.md"
+        standard_present = self._snapshot_has(standard_relative, "regular")
+        self.add("STANDARD.md exists", standard_present)
+        if standard_present:
+            text = self._snapshot_text(f"{SKILL_DIR}/references/STANDARD.md")
             self.add("STANDARD.md substantive length", len(text) >= 3000, details=f"chars={len(text)}")
             for term in REQUIRED_STANDARD_TERMS:
                 self.add(f"STANDARD.md contains term: {term}", term.lower() in text.lower(), details=term)
             nonsense_ratio = sum(ch.isalpha() for ch in text) / max(1, len(text))
             self.add("STANDARD.md not obvious nonsense", nonsense_ratio > 0.55, details=f"alpha_ratio={nonsense_ratio:.2f}")
         for rel in sorted(EXPECTED_REFERENCES):
-            p = self.path(f"{SKILL_DIR}/references/{rel}")
-            self.add(f"reference exists: {rel}", p.exists(), details=rel)
-            if p.exists():
-                rtext = p.read_text(encoding="utf-8")
+            reference_relative = f"{SKILL_DIR}/references/{rel}"
+            reference_present = self._snapshot_has(
+                reference_relative,
+                "regular",
+            )
+            self.add(f"reference exists: {rel}", reference_present, details=rel)
+            if reference_present:
+                rtext = self._snapshot_text(
+                    f"{SKILL_DIR}/references/{rel}"
+                )
                 self.add(f"reference substantive: {rel}", len(rtext) >= 600, details=rel)
                 if rel == "PASS_TRACKED_UPGRADE_AUDIT.md":
-                    upgrade_terms = ["PASS-SCOPED to PASS-TRACKED", "Required audit bundle layout", "Required command sequence", "--output-format stream-json", "--include-hook-events", "--plugin-dir", "run_live_skill_evals.py", "run_formal_artifact_verification.py", "--require-trace-auth", "certify_pass_tracked_upgrade.py", "promotion_certificate.json", "UNVERIFIED_RUNTIME", "downstream", "no automatic", "promotion_schema_version", "promotion-evidence-v2", "formal result `2.0`", "fresh allowlisted official validators", "CAPPED", "44/44", "O_DIRECTORY", "O_NOFOLLOW", "pass_fds", "INVALID_INPUT", "before requested output mutation", "self_mode", "\"mode\": \"100644\""]
+                    upgrade_terms = ["PASS-SCOPED to PASS-TRACKED", "Required audit bundle layout", "Required command sequence", "--output-format stream-json", "--include-hook-events", "--plugin-dir", "run_live_skill_evals.py", "run_formal_artifact_verification.py", "--require-trace-auth", "certify_pass_tracked_upgrade.py", "promotion_certificate.json", "UNVERIFIED_RUNTIME", "downstream", "no automatic", "promotion_schema_version", "promotion-evidence-v2", "formal result `2.0`", "fresh allowlisted official validators", "CAPPED", "46/46", "O_DIRECTORY", "O_NOFOLLOW", "pass_fds", "INVALID_INPUT", "before requested output mutation", "self_mode", "\"mode\": \"100644\""]
                     for term in upgrade_terms:
                         self.add(f"PASS-TRACKED upgrade audit contains term: {term}", term.lower() in rtext.lower(), details=term)
                 if rel in {"EVIDENCE_SCHEMA.md", "OUTPUT_TEMPLATES.md"}:
@@ -4504,10 +6591,11 @@ class Validator:
 
     def check_agents(self) -> None:
         for name, policy in EXPECTED_AGENTS.items():
-            p = self.path(f"agents/{name}.md")
-            self.add(f"agent exists: {name}", p.exists(), details=name)
-            if not p.exists(): continue
-            fm, body, problems = parse_frontmatter(p)
+            agent_relative = f"agents/{name}.md"
+            agent_present = self._snapshot_has(agent_relative, "regular")
+            self.add(f"agent exists: {name}", agent_present, details=name)
+            if not agent_present: continue
+            fm, body, problems = self._snapshot_frontmatter(agent_relative)
             self.add(f"agent frontmatter parses: {name}", not problems, details="; ".join(problems))
             keys = set(fm.keys())
             unknown_keys = sorted(keys - ALLOWED_AGENT_FRONTMATTER_KEYS)
@@ -4539,11 +6627,14 @@ class Validator:
             self.add(f"agent lacks suspicious pass-through language: {name}", not any(s in low for s in suspicious), details=name)
 
     def check_evals(self) -> None:
-        p = self.path(f"{SKILL_DIR}/evals/evals.json")
-        self.add("evals.json exists", p.exists())
-        if not p.exists(): return
+        evals_relative = f"{SKILL_DIR}/evals/evals.json"
+        evals_present = self._snapshot_has(evals_relative, "regular")
+        self.add("evals.json exists", evals_present)
+        if not evals_present: return
         try:
-            data = strict_json_loads(p.read_text(encoding="utf-8"))
+            data = strict_json_loads(
+                self._snapshot_text(f"{SKILL_DIR}/evals/evals.json")
+            )
         except Exception as exc:
             self.add("evals.json parses", False, details=str(exc)); return
         evals_is_object = isinstance(data, Mapping)
@@ -4595,15 +6686,14 @@ class Validator:
             )
             art = item.get("artifact")
             artifact_posix, artifact_error = safe_relative_posix_path(art)
-            artifact_path = (
-                self.path(f"{SKILL_DIR}/evals").joinpath(*artifact_posix.parts)
+            artifact_relative = (
+                f"{SKILL_DIR}/evals/{artifact_posix.as_posix()}"
                 if artifact_posix is not None
                 else None
             )
             artifact_is_regular = (
-                artifact_path is not None
-                and artifact_path.exists()
-                and regular_file_error(artifact_path) is None
+                artifact_relative is not None
+                and self._snapshot_has(artifact_relative, "regular")
             )
             self.add(
                 f"eval fixture artifact path is canonical and regular: {art}",
@@ -4631,9 +6721,8 @@ class Validator:
                     self.add(f"{kind} requires evidence: {fid}/{wid}", w.get("evidence_required") is True)
 
     def check_scripts(self) -> None:
-        sdir = self.path(f"{SKILL_DIR}/scripts")
         scripts = {
-            "ntt_gate.py": ["DEFAULT_THRESHOLDS", "DOWNSTREAM_STATUSES", "unknown downstream policy", "derived_or_downstream_claims", "evaluate_downstream_nonclosure", "automatic closure", "threshold relaxation attempt ignored", "false_world_tests", "true_world_tests", "method_completeness", "evidence_refs", "unresolved_contradictions", "--evidence-root", "structured evidence", "structured_evidence_count", "evidence_schema_version", "_verify_artifact_sha256", "hash_or_version does not match artifact_path SHA-256", "_ref_to_path_checked", "_canonical_relative_path", "_atomic_write_new_text", "invalid evidence refs", "traverses a symlink", "canonical relative POSIX path", "urlparse", "URI schemes are case-insensitive", "non-empty URI scheme", "unique evidence refs", "unique structured evidence artifacts", "duplicate or aliased evidence refs", "missing modal test id", "test target_claim does not match evaluated claim", "target_claim_ids"],
+            "ntt_gate.py": ["DEFAULT_THRESHOLDS", "DOWNSTREAM_STATUSES", "unknown downstream policy", "--downstream-policy", "package-self", "derived_or_downstream_claims", "evaluate_downstream_nonclosure", "automatic closure", "threshold relaxation attempt ignored", "false_world_tests", "true_world_tests", "method_completeness", "evidence_refs", "unresolved_contradictions", "--evidence-root", "structured evidence", "structured_evidence_count", "evidence_schema_version", "_verify_artifact_sha256", "hash_or_version does not match artifact_path SHA-256", "_ref_to_path_checked", "_canonical_relative_path", "_atomic_write_new_text", "invalid evidence refs", "traverses a symlink", "canonical relative POSIX path", "urlparse", "URI schemes are case-insensitive", "non-empty URI scheme", "unique evidence refs", "unique structured evidence artifacts", "duplicate or aliased evidence refs", "missing modal test id", "test target_claim does not match evaluated claim", "target_claim_ids"],
             "validate_package.py": [
                 "check_closed_surface", "GitEntry", "ls-files\", \"--stage",
                 "regular blob modes 100644/100755", "atomic_write_fixed_text",
@@ -4673,11 +6762,12 @@ class Validator:
             "run_live_skill_evals.py": ["--plugin-dir", "-p", "--output-format", "--max-turns", "build_fixture_prompt", "package_tree_algorithm", "package_tree_sha256", "fixture_spec_sha256", "artifact_sha256", "run_config", "compute_stable_release_tree", "prompt_sha256", "transcript_sha256", "sha256_text", "transcript_checks", "structured_json_envelope", "report_field", "runtime_identity", "provenance_schema_version", "observed-not-cryptographically-authenticated", "runtime_preflight_succeeded", "resolve_claude_executable", "load_regular_json", "executable_sha256_pre", "executable_sha256_post", "fingerprint_stable", "regular non-symlink", "UNVERIFIED_RUNTIME", "--run-fixtures", "ACCEPTABLE_PASS_STATUSES", "dominant_status"],
             "run_regression_evals.py": ["REQUIRED_FIXTURE_FIELDS", "false_worlds", "true_worlds", "expected_gate", "evidence_required"],
             "run_formal_artifact_verification.py": ["ntt-formal-coordinator", "FORMAL_SUBAGENT_FAILURE", "FORMAL_COMPANION_SPECS", "target_snapshot_stability", "cap_status_by_target_stability", "atomic_write_new", "reserve_regular_output", "formal_output_collision_error", "certificate.json", "ntt_gate.py", "INVOCATION_LEDGER", "--agent", "--plugin-dir", "--dry-run", "Substitution used: none", "check_required_outputs", "authenticate_trace", "--include-hook-events", "trace_authentication", "cap_status_by_trace", "--require-trace-auth", "--skip-prechecks", "--refresh-release-manifest", "release tree output requires --refresh-release-manifest", "missing successful matching tool-result/completion events", "_tool_result_ids", "_structured_subagent_selector", "duplicate_tool_use_ids", "structured selector exact match", "empty/generic result", "text-only or mismatched-id", "_candidate_trace_nodes", "recognized stream-json event positions", "nested-fake-result", "result_before_call_ids", "CONTENT_METADATA_KEYS", "metadata-only", "payload-bearing fields", "role_violations", "role-inverted", "hard event boundary", "tool_result.data", "payload"],
-            "certify_pass_tracked_upgrade.py": ["PASS-SCOPED to PASS-TRACKED", "PROMOTION_EVIDENCE_SPECS", "CHECK_SUITE_PROJECTION_SPECS", "MAX_EVIDENCE_NODES", "promotion_certificate.json", "official validators", "validator_contradiction", "live runtime eval", "live provenance schema is 1.0", "live runtime executable fingerprints are valid and stable", "live plugin validation preflight exact normalized argv succeeded", "live fixture IDs exactly match the current package once each", "live fixture specification SHA-256 matches current evals bytes", "live fixture bundle-local transcript paths are unique and complete", "artifact SHA-256 matches current exact bytes", "transcript SHA-256 matches fixture record", "transcript command exactly matches normalized argv", "transcript command prompt binds exact fixture and artifact", "self-reported checks match transcript replay", "structured JSON envelope", "observed-not-cryptographically-authenticated", "formal result", "formal result package-tree identity has exact JSON schema", "formal transcript re-authenticates", "bundle-local regular file", "package_tree_sha256", "compute_stable_release_tree", "current package tree verifies through shared validator helper", "fresh deterministic package validator still passes", "fresh_validation_unconditional", "promotion evidence roles exactly match required semantic roles", "returncode_is_integer_zero", "TEXT_NONZERO_FAILURE_SUMMARY_RE", "anchored negative status", "stale-token input is readable regular file", "regular_file_error", "PASS-TRACKED", "UNVERIFIED_RUNTIME", "derived_or_downstream_claims", "evaluate_downstream_nonclosure", "run-fresh-package-validator", "allow-official-validator-scope-exclusion", "strict gate PASS-TRACKED", "native stream-json trace authentication", "failure_kind", "iterative_evidence_graph_analysis", "OFFICIAL_POLICY_SCHEMA"],
+            "certify_pass_tracked_upgrade.py": ["PASS-SCOPED to PASS-TRACKED", "PROMOTION_EVIDENCE_SPECS", "CHECK_SUITE_PROJECTION_SPECS", "MAX_EVIDENCE_NODES", "promotion_certificate.json", "official validators", "validator_contradiction", "live runtime eval", "live provenance schema is 2.0", "live runtime executable fingerprints are valid and stable", "live plugin validation preflight exact normalized argv succeeded", "live fixture IDs exactly match the current package once each", "live fixture specification SHA-256 matches current evals bytes", "live fixture bundle-local transcript paths are unique and complete", "artifact SHA-256 matches current exact bytes", "transcript SHA-256 matches fixture record", "transcript command exactly matches normalized argv", "transcript command prompt binds exact fixture and artifact", "self-reported checks match transcript replay", "structured JSON envelope", "observed-not-cryptographically-authenticated", "formal result", "formal result package-tree identity has exact JSON schema", "formal transcript re-authenticates", "bundle-local regular file", "package_tree_sha256", "compute_stable_release_tree", "current package tree verifies through shared validator helper", "fresh deterministic package validator still passes", "fresh_validation_unconditional", "promotion evidence roles exactly match required semantic roles", "returncode_is_integer_zero", "TEXT_NONZERO_FAILURE_SUMMARY_RE", "anchored negative status", "stale-token input is readable regular file", "regular_file_error", "PASS-TRACKED", "UNVERIFIED_RUNTIME", "derived_or_downstream_claims", "evaluate_downstream_nonclosure", "run-fresh-package-validator", "allow-official-validator-scope-exclusion", "strict gate PASS-TRACKED", "native stream-json trace authentication", "failure_kind", "iterative_evidence_graph_analysis", "OFFICIAL_POLICY_SCHEMA"],
             "run_promotion_certifier_contract_tests.py": ["production_certifier_cli_baseline", "complete_synthetic_baseline_cli_is_capped", "distinct_formal_roles_may_contain_equal_bytes", "stale_deterministic_capture_wrong_tree", "fabricated_official_text_policy", "decoy_formal_companion", "swapped_formal_companions", "dummy_untyped_evidence", "official_stderr_contradiction_dominates_stdout", "formal_package_identity_bool_int_alias", "noncanonical_promotion_evidence_path", "fake_own_claim_id", "malformed_scalar", "oversized_evidence_graph_is_bounded"],
             "run_formal_runner_contract_tests.py": ["fake claude", "no tool_use events", "PASS-TRACKED", "trace authentication", "run_formal_artifact_verification.py", "target_mutation_forbids_formal_pass", "target_snapshot_mutation_forbids_formal_pass", "formal_runner_rejects_preexisting_output_symlink_sentinel", "formal_runner_rejects_preexisting_output_hardlink_sentinel", "formal_runner_rejects_preexisting_special_output", "native_tool_use_without_results_does_not_authenticate", "failed_native_result_does_not_authenticate", "mismatched_tool_result_id_does_not_authenticate", "single_agent_call_mentions_all_lanes_does_not_authenticate", "duplicate_tool_use_id_across_lanes_does_not_authenticate", "empty_tool_result_content_does_not_authenticate", "generic_result_without_status_or_is_error_does_not_authenticate", "structured_subagent_type_exact_match_required", "nested_tool_result_inside_tool_input_does_not_authenticate", "nested_tool_result_inside_arguments_does_not_authenticate", "tool_result_before_tool_use_does_not_authenticate", "same_event_input_embedded_result_does_not_authenticate", "text_block_tool_use_does_not_authenticate", "text_block_tool_result_does_not_authenticate", "assistant_message_tool_use_masquerade_does_not_authenticate", "message_result_masquerade_does_not_authenticate", "unexpected_agent_call_without_structured_selector_rejected", "unknown_agent_selector_rejected", "tool_result_metadata_only_text_block_does_not_authenticate", "tool_result_document_block_without_data_does_not_authenticate", "tool_result_nonempty_text_block_authenticates", "missing_result_agents", "tool_use_inside_tool_result_payload_does_not_authenticate", "tool_result_inside_tool_result_payload_does_not_authenticate", "fake_tool_use_and_result_inside_tool_result_data_does_not_authenticate", "tool_use_inside_tool_result_delta_does_not_authenticate", "user_message_tool_use_does_not_authenticate", "assistant_message_tool_result_does_not_authenticate", "role_inverted_tool_use_result_trace_does_not_authenticate", "valid_assistant_tool_use_user_tool_result_still_authenticates"],
         }
         scripts["certify_pass_tracked_upgrade.py"].extend([
+            'LIVE_PROVENANCE_SCHEMA_VERSION = "2.0"',
             "_formal_output_checks_recomputed",
             "formal output checks recompute exactly from declared companions",
             "bool(recomputed_projection)",
@@ -4758,6 +6848,14 @@ class Validator:
             "dst_dir_fd=parent_fd",
             "_acquire_markdown_output_capability",
             "markdown_directory_fd",
+            'PACKAGE_WORLD_REGISTRY_VERSION = "1.0"',
+            "REVIEWED_PACKAGE_WORLD_TRANSITION_SHA256",
+            "_package_world_registry_inventory_reasons",
+            "_certificate_assurance_payload",
+            "certificate_assurance=certificate_assurance",
+            "package-self reviewed registry missing modal test IDs",
+            "package-self unreviewed modal test IDs",
+            "package-self duplicate modal test IDs",
         ])
         scripts["run_live_skill_evals.py"].extend([
             "MAX_CAPTURE_BYTES",
@@ -4784,6 +6882,12 @@ class Validator:
             "prepare_json_output",
             "JSON output aliases a selected fixture transcript",
             "Path(os.path.abspath(args.output_dir))",
+            'PROVENANCE_SCHEMA_VERSION = "2.0"',
+            "_envelope_error_diagnostics",
+            "type is not canonical result",
+            "exactly the canonical result payload channel is required",
+            "api_error_status is non-null",
+            "stop_reason is not exact end_turn",
         ])
         scripts["run_formal_artifact_verification.py"].extend([
             "FORMAL_VERIFICATION_CONTEXT",
@@ -4820,6 +6924,12 @@ class Validator:
             "Path(\"/proc/self/status\")",
             "json_is_canonical",
             "frozen during pre-execution collision analysis",
+            "_terminal_result_diagnostics",
+            "terminal type is not canonical result",
+            "terminal requires exactly the canonical result payload",
+            "terminal api_error_status is non-null",
+            "terminal stop_reason is not exact end_turn",
+            '"evidence_origin": evidence_origin',
         ])
         scripts["run_live_skill_evals.py"].append(
             "previous_dont_write = sys.dont_write_bytecode"
@@ -4839,6 +6949,9 @@ class Validator:
             "linux-child-subreaper-plus-process-group",
             "detached_descendant_survivor",
             "process_containment_cleanup_complete",
+            'PROMOTION_METHOD_SCHEMA = "promotion-method-m-v2"',
+            "live provenance schema is 2.0",
+            "formal_origin = formal.get(\"evidence_origin\")",
         ])
         scripts["run_promotion_certifier_contract_tests.py"].extend([
             "official_structured_stderr_failure_dominates_stdout",
@@ -4865,11 +6978,24 @@ class Validator:
             "certifier_json_special_target_rejected",
             "_acquire_json_output_capability",
             "directory_fd=output_directory_fd",
+            "origin_flip_error",
+            "bound lane provenance",
         ])
         scripts["run_gate_contract_tests.py"].extend([
             "gate_markdown_holds_parent_across_real_directory_substitution",
             "_acquire_json_output_capability",
             "directory_fd=output_directory_fd",
+            "package_self_registry_exact_80_once_inventory_passes",
+            "package_self_delete_nonminimum_transition_fails_inventory",
+            "package_self_total_80_delete_one_duplicate_another_fails",
+            "package_self_duplicate_across_claim_and_lane_fails",
+            "package_self_cross_claim_lane_move_fails_full_pin",
+            "package_self_80_plus_unknown_transition_fails",
+            "supported_c_r_short_ids_without_anchor_do_not_satisfy_method_m",
+            "supported_c_r_short_ids_work_alongside_distinct_anchors",
+            "migrated_release_certificate_and_all_claim_methods_complete",
+            "production_payloads_match_registry",
+            "certificate_assurance_payload",
         ])
         scripts["run_regression_evals.py"].extend([
             "_acquire_json_output_capability",
@@ -4898,6 +7024,8 @@ class Validator:
             "capture_kills_full_group_on_descendant_overflow",
             "_acquire_json_output_capability",
             "directory_fd=output_directory_fd",
+            "live_json_envelope_requires_canonical_result_true_control",
+            "live_nested_status_outcome_rejects_exact_official_negatives_",
         ])
         scripts["validate_package.py"].extend([
             "prepare_markdown_output",
@@ -4914,12 +7042,40 @@ class Validator:
             "fixed manifest writers reject symlinked ancestors without sentinel overwrite",
             "fixed manifest builders hold the package root across real-directory substitution",
             "update-manifest CLI holds package root before closed-surface preflight",
+            "captured_snapshot_regular_file",
+            "materialize_snapshot",
+            "_activate_immutable_snapshot",
+            "PACKAGE_PATH_METADATA_CHECK",
+            "_kill_and_reap_bounded_process_group",
+            "_prepare_bounded_git_process_containment",
+            "_cleanup_bounded_git_descendants",
+            "linux-child-subreaper-plus-process-group",
+            "start_new_session=True",
+            "bounded Git kills a leader-exit descendant that inherits capture pipes",
+            "bounded Git kills detached-session inherited-pipe descendants before survivor markers",
+            "bounded Git kills same-group closed-pipe descendants after ordinary leader exit",
+            "bounded Git cleans detached descendants after post-Popen selector setup failure",
+            "physical cruft rejection survives .git alternate-index A-B-A substitution",
+            "sanitized Git observations add rejection for physically deleted HEAD-tree cruft despite alternate index override",
+            "sanitized bounded Git environment retains normal Git control",
+            "git ls-tree -r --full-tree HEAD",
+            "if not key.startswith(\"GIT_\")",
+            "untracked bytecode exemption: disabled",
+            "Absence of reported Git cruft does not prove HEAD/archive equivalence",
+            "only the required unpacked git archive HEAD full self-test establishes committed-archive behavior",
+            "Trusted PATH/Git binary selection and same-UID mutable Git metadata remain explicit",
+            "rejects ignored untracked checkout .pyc",
+            "quoted private mirror and parent diagnostics are scrubbed without sibling-prefix overmatch",
+            "semantic module execution consumes captured bytes after mirror pathname substitution",
+            "package fixture materialization consumes captured bytes after mirror pathname substitution",
+            "private activation errors never disclose temporary snapshot paths",
         ])
         for name, tokens in scripts.items():
-            p = sdir/name
-            self.add(f"script exists: {name}", p.exists(), details=name)
-            if not p.exists(): continue
-            text = p.read_text(encoding="utf-8")
+            script_relative = f"{SKILL_DIR}/scripts/{name}"
+            script_present = self._snapshot_has(script_relative, "regular")
+            self.add(f"script exists: {name}", script_present, details=name)
+            if not script_present: continue
+            text = self._snapshot_text(script_relative)
             min_len = 4000 if name in {"run_gate_contract_tests.py", "run_live_skill_evals.py", "run_regression_evals.py"} else (6000 if name == "run_formal_runner_contract_tests.py" else (9000 if name in {"run_formal_artifact_verification.py", "certify_pass_tracked_upgrade.py"} else 10000))
             self.add(f"script substantive length: {name}", len(text) >= min_len, details=f"chars={len(text)}")
             for token in tokens:
@@ -4972,9 +7128,9 @@ class Validator:
                     details=f"chars={len(text)}",
                 )
                 try:
-                    certifier_module = load_module_from_path(
+                    certifier_module = self._load_snapshot_module(
                         "ntt_certifier_release_policy",
-                        p,
+                        f"{SKILL_DIR}/scripts/certify_pass_tracked_upgrade.py",
                     )
                     production_obligations = getattr(
                         certifier_module,
@@ -4995,10 +7151,20 @@ class Validator:
                     )
 
     def run_gate_contract_tests(self) -> None:
-        script = self.path(f"{SKILL_DIR}/scripts/run_gate_contract_tests.py")
+        temporary = Path(tempfile.mkdtemp(prefix="ntt_gate_contract_snapshot_"))
+        fixture = temporary / self.source_root.name
         try:
-            mod = load_module_from_path("ntt_gate_contract_selftest", script)
-            gate_mod = mod.load_gate(self.path(f"{SKILL_DIR}/scripts/ntt_gate.py"))
+            self._materialize_snapshot(fixture)
+            mod = self._load_snapshot_module(
+                "ntt_gate_contract_selftest",
+                f"{SKILL_DIR}/scripts/run_gate_contract_tests.py",
+                origin=fixture / SKILL_DIR / "scripts" / "run_gate_contract_tests.py",
+            )
+            gate_mod = self._load_snapshot_module(
+                "ntt_gate_contract_module_selftest",
+                f"{SKILL_DIR}/scripts/ntt_gate.py",
+                origin=fixture / SKILL_DIR / "scripts" / "ntt_gate.py",
+            )
             cases = mod.run_cases(gate_mod)
             total = len(cases)
             passed_count = sum(1 for c in cases if c.get("passed"))
@@ -5007,6 +7173,8 @@ class Validator:
         except Exception as exc:
             self.gate_contract = {"error": str(exc)}
             self.add("gate contract tests pass", False, details=str(exc))
+        finally:
+            shutil.rmtree(temporary, ignore_errors=True)
 
     def run_validator_in_copy(self, copy_root: Path) -> Dict[str, Any]:
         try:
@@ -5033,7 +7201,7 @@ class Validator:
                     (
                         dict(check)
                         for check in data.get("checks", [])
-                        if check.get("name") == SHIPPABLE_CRUFT_CHECK
+                        if check.get("name") == PHYSICAL_CRUFT_CHECK
                     ),
                     None,
                 ),
@@ -5054,10 +7222,8 @@ class Validator:
         """Return a verified disposable Git top level and index path."""
         # SECURITY-REVIEW: Fixed Git argv; the validator-owned disposable path
         # is passed as one argument and never interpolated into a shell command.
-        top = subprocess.run(
+        top = _run_bounded_git(
             ["git", "-C", str(dest), "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
         )
         if top.returncode != 0:
             raise RuntimeError(_bounded_git_failure("disposable git top-level probe", top))
@@ -5067,10 +7233,8 @@ class Validator:
             raise RuntimeError(
                 f"disposable Git top level {reported_top} does not match {expected_top}"
             )
-        index = subprocess.run(
+        index = _run_bounded_git(
             ["git", "-C", str(dest), "rev-parse", "--git-path", "index"],
-            capture_output=True,
-            text=True,
         )
         if index.returncode != 0:
             raise RuntimeError(_bounded_git_failure("disposable git index probe", index))
@@ -5090,51 +7254,57 @@ class Validator:
 
     def source_git_snapshot(self) -> Dict[str, Any]:
         """Capture source status/index identity without mutating either."""
-        surface = git_tracked_files(self.root)
+        if self.source_root_fd is None:
+            raise PackageTreeSafetyError("source root capability is unavailable")
+        surface = git_tracked_files(
+            self.source_root,
+            root_directory_fd=self.source_root_fd,
+        )
         snapshot: Dict[str, Any] = {"state": surface.state.value}
-        marker = self.root / ".git"
-        snapshot["git_marker_present"] = os.path.lexists(marker)
+        snapshot["git_marker_present"] = (
+            surface.state != GitSurfaceState.GIT_FREE_PACKAGE
+        )
         if surface.state != GitSurfaceState.VERIFIED_WORKTREE:
             return snapshot
-        index = subprocess.run(
-            ["git", "-C", str(self.root), "rev-parse", "--git-path", "index"],
-            capture_output=True,
-            text=True,
+        capability_root = f"/proc/self/fd/{self.source_root_fd}"
+        index = _run_bounded_git(
+            ["git", "-C", capability_root, "rev-parse", "--git-path", "index"],
+            pass_fds=(self.source_root_fd,),
         )
         if index.returncode != 0:
             raise RuntimeError(_bounded_git_failure("source git index snapshot", index))
         raw_index = Path(index.stdout.strip())
-        index_path = (
-            raw_index.resolve()
-            if raw_index.is_absolute()
-            else (self.root / raw_index).resolve()
-        )
-        index_hash_before = (
-            sha256_path(index_path) if index_path.is_file() else "<missing-index>"
+        index_hash_before = sha256_regular_file_capability(
+            raw_index,
+            root_directory_fd=(
+                None if raw_index.is_absolute() else self.source_root_fd
+            ),
         )
         # SECURITY-REVIEW: Fixed read-only Git argv observes the source
         # worktree with optional locks disabled. This handles both .git
         # directories and linked-worktree gitfiles without refreshing the index.
         status_env = dict(os.environ)
         status_env["GIT_OPTIONAL_LOCKS"] = "0"
-        status = subprocess.run(
+        status = _run_bounded_git(
             [
                 "git",
                 "-C",
-                str(self.root),
+                capability_root,
                 "status",
                 "--porcelain=v1",
                 "-z",
                 "--untracked-files=all",
             ],
-            capture_output=True,
-            text=True,
             env=status_env,
+            pass_fds=(self.source_root_fd,),
         )
         if status.returncode != 0:
             raise RuntimeError(_bounded_git_failure("source git status snapshot", status))
-        index_hash_after = (
-            sha256_path(index_path) if index_path.is_file() else "<missing-index>"
+        index_hash_after = sha256_regular_file_capability(
+            raw_index,
+            root_directory_fd=(
+                None if raw_index.is_absolute() else self.source_root_fd
+            ),
         )
         if index_hash_after != index_hash_before:
             raise RuntimeError(
@@ -5142,61 +7312,34 @@ class Validator:
                 f"before={index_hash_before} after={index_hash_after}"
             )
         snapshot["status_porcelain_v1_z"] = status.stdout
-        snapshot["index_path"] = str(index_path)
+        snapshot["index_path"] = str(raw_index)
         snapshot["index_sha256"] = index_hash_before
         snapshot["git_optional_locks"] = "0"
         return snapshot
 
     def mutation_copy(self) -> Path:
         tmp = Path(tempfile.mkdtemp(prefix="nozickian_pkg_mut_"))
-        dest = tmp / self.root.name
-        # SECURITY-REVIEW: The source and destination are validator-owned paths;
-        # symlinks are preserved as links so preflight can reject without reads.
-        shutil.copytree(
-            self.root,
+        dest = tmp / self.source_root.name
+        self._materialize_snapshot(
             dest,
-            symlinks=True,
-            ignore=shutil.ignore_patterns(
-                "self_validation",
-                ".git",
-                "__pycache__",
-                "*.pyc",
-                *CRUFT_IGNORE_GLOBS,
-            ),
+            excluded_prefixes=("self_validation",),
         )
         return dest
 
     def checkout_copy(self) -> Path:
         tmp = Path(tempfile.mkdtemp(prefix="nozickian_pkg_checkout_"))
-        dest = tmp / self.root.name
-        # SECURITY-REVIEW: Preserve links as links and exclude all source Git
-        # metadata, including linked-worktree gitfiles, before initializing the
-        # disposable repository.
-        shutil.copytree(
-            self.root,
-            dest,
-            symlinks=True,
-            ignore=shutil.ignore_patterns(
-                ".git",
-                "__pycache__",
-                "*.pyc",
-                ".DS_Store",
-            ),
-        )
+        dest = tmp / self.source_root.name
+        self._materialize_snapshot(dest)
         # SECURITY-REVIEW: Fixed Git argv initializes and stages only the
         # validator-owned disposable copy. No shell or Git config is used.
-        initialized = subprocess.run(
+        initialized = _run_bounded_git(
             ["git", "init", "--quiet", str(dest)],
-            capture_output=True,
-            text=True,
         )
         if initialized.returncode != 0:
             raise RuntimeError(_bounded_git_failure("disposable git init", initialized))
         self.disposable_git_metadata(dest)
-        staged = subprocess.run(
+        staged = _run_bounded_git(
             ["git", "-C", str(dest), "add", "--all", "--", "."],
-            capture_output=True,
-            text=True,
         )
         if staged.returncode != 0:
             raise RuntimeError(_bounded_git_failure("disposable baseline git add", staged))
@@ -5236,15 +7379,11 @@ class Validator:
             self.disposable_git_metadata(dest)
             # SECURITY-REVIEW: Fixed Git argv stages a fixed probe path only in
             # the already-verified disposable repository.
-            added = subprocess.run(
+            added = _run_bounded_git(
                 ["git", "-C", str(dest), "add", "--", probe_rel],
-                capture_output=True,
-                text=True,
             )
-            staged = subprocess.run(
+            staged = _run_bounded_git(
                 ["git", "-C", str(dest), "ls-files", "--error-unmatch", "--", probe_rel],
-                capture_output=True,
-                text=True,
             )
             self.add(
                 "checkout fixture mutation-specific add uses the disposable index",
@@ -5454,7 +7593,14 @@ class Validator:
                 if fixed_name == "MANIFEST.sha256":
                     original_builder = globals()["iter_behavior_files"]
 
-                    def swapping_builder(_root: Path) -> List[str]:
+                    def swapping_builder(
+                        _root: Path,
+                        *,
+                        tree_snapshot: Mapping[
+                            str,
+                            Mapping[str, Any],
+                        ] | None = None,
+                    ) -> List[str]:
                         nonlocal swapped
                         checked_root.rename(parked_root)
                         checked_root.mkdir()
@@ -5542,17 +7688,7 @@ class Validator:
             )
 
             cli_checked = dest.parent / "fixed-cli-preflight-root"
-            shutil.copytree(
-                self.root,
-                cli_checked,
-                symlinks=True,
-                ignore=shutil.ignore_patterns(
-                    ".git",
-                    "__pycache__",
-                    "*.pyc",
-                    *CRUFT_IGNORE_GLOBS,
-                ),
-            )
+            self._materialize_snapshot(cli_checked)
             # Start from a self-consistent Git-free package copy so a failure
             # after the injected swap is attributable to the held-root
             # boundary rather than stale manifest content.
@@ -5703,20 +7839,10 @@ class Validator:
     def run_json_root_shape_probes(self) -> None:
         """Require every core malformed JSON root to return one FAIL document."""
         temporary = Path(tempfile.mkdtemp(prefix="nozickian_json_roots_"))
-        dest = temporary / self.root.name
+        dest = temporary / self.source_root.name
         outcomes: List[Dict[str, Any]] = []
         try:
-            shutil.copytree(
-                self.root,
-                dest,
-                symlinks=True,
-                ignore=shutil.ignore_patterns(
-                    ".git",
-                    "__pycache__",
-                    "*.pyc",
-                    *CRUFT_IGNORE_GLOBS,
-                ),
-            )
+            self._materialize_snapshot(dest)
             validator = (
                 dest
                 / SKILL_DIR
@@ -6114,8 +8240,10 @@ class Validator:
         )
         original_directory_limit = MAX_PACKAGE_DIRECTORY_ENTRIES
         original_total_limit = MAX_PACKAGE_TOTAL_ENTRIES
+        original_depth_limit = MAX_PACKAGE_DIRECTORY_DEPTH
         original_file_byte_limit = MAX_PACKAGE_FILE_BYTES
         original_total_byte_limit = MAX_PACKAGE_TOTAL_BYTES
+        original_path_metadata_limit = MAX_PACKAGE_PATH_METADATA_BYTES
         try:
             flat = temporary / "flat"
             flat.mkdir()
@@ -6254,6 +8382,1063 @@ class Validator:
                 snapshot_depth_rejected,
             )
 
+            walker_depth_rejected = False
+            try:
+                list(
+                    iter_package_entries(
+                        deep,
+                        max_directory_depth=1,
+                    )
+                )
+            except PackageTreeResourceLimitError:
+                walker_depth_rejected = True
+            self.add(
+                "bounded package walker rejects a directory-depth overlimit tree",
+                walker_depth_rejected,
+            )
+
+            swap_root = temporary / "yield-swap-root"
+            swap_outside = temporary / "yield-swap-outside"
+            (swap_root / "a").mkdir(parents=True)
+            swap_outside.mkdir()
+            (swap_root / "a" / "inside.txt").write_text(
+                "inside\n",
+                encoding="utf-8",
+            )
+            (swap_outside / "outside-secret.txt").write_text(
+                "outside secret\n",
+                encoding="utf-8",
+            )
+            swap_iterator = iter(iter_package_entries(swap_root))
+            first_swap_entry = next(swap_iterator)
+            (swap_root / "a").rename(swap_root / "parked-a")
+            os.symlink(swap_outside, swap_root / "a")
+            directory_swap_rejected = False
+            leaked_swap_paths: List[str] = []
+            try:
+                leaked_swap_paths = [
+                    relpath(swap_root, entry[0])
+                    for entry in swap_iterator
+                ]
+            except (OSError, PackageTreeSafetyError):
+                directory_swap_rejected = True
+            self.add(
+                "package walker rejects a yielded-directory symlink swap before descendant exposure",
+                relpath(swap_root, first_swap_entry[0]) == "a"
+                and directory_swap_rejected
+                and "a/outside-secret.txt" not in leaked_swap_paths,
+                details=json.dumps(leaked_swap_paths),
+            )
+
+            hardlink_root = temporary / "hardlink-root"
+            hardlink_root.mkdir()
+            hardlink_source = temporary / "hardlink-outside-source"
+            hardlink_source.write_text("shared bytes\n", encoding="utf-8")
+            os.link(hardlink_source, hardlink_root / "linked.txt")
+            hardlink_rejected = False
+            try:
+                snapshot_package_entries(hardlink_root)
+            except PackageTreeSafetyError:
+                hardlink_rejected = True
+            private_copy_root = temporary / "private-copy-root"
+            private_copy_root.mkdir()
+            (private_copy_root / "copied.txt").write_bytes(
+                hardlink_source.read_bytes()
+            )
+            private_copy_snapshot = snapshot_package_entries(
+                private_copy_root
+            )
+            self.add(
+                "package snapshot rejects external hardlinks while retaining an independent-copy true world",
+                hardlink_rejected
+                and private_copy_snapshot["copied.txt"].get("links") == 1,
+                details=json.dumps(
+                    {
+                        "hardlink_rejected": hardlink_rejected,
+                        "private_links": private_copy_snapshot[
+                            "copied.txt"
+                        ].get("links"),
+                    },
+                    sort_keys=True,
+                ),
+            )
+
+            provenance_root = temporary / "provenance-swap-root"
+            provenance_root.mkdir()
+            (provenance_root / "README.md").write_text(
+                "clean provenance\n",
+                encoding="utf-8",
+            )
+            provenance_outside = temporary / "provenance-outside-secret"
+            provenance_outside.write_text(
+                "/" + "mnt" + "/data/OUTSIDE-SECRET\n",
+                encoding="utf-8",
+            )
+            original_provenance_inventory = globals()[
+                "iter_release_provenance_hygiene_files"
+            ]
+            provenance_swap_executed = False
+
+            def swapping_provenance_inventory(
+                root_arg: Path,
+                *,
+                tree_snapshot: Mapping[
+                    str,
+                    Mapping[str, Any],
+                ] | None = None,
+                root_directory_fd: int | None = None,
+            ) -> List[str]:
+                nonlocal provenance_swap_executed
+                rels = original_provenance_inventory(
+                    root_arg,
+                    tree_snapshot=tree_snapshot,
+                    root_directory_fd=root_directory_fd,
+                )
+                (provenance_root / "README.md").rename(
+                    provenance_root / "saved-readme"
+                )
+                os.symlink(
+                    provenance_outside,
+                    provenance_root / "README.md",
+                )
+                provenance_swap_executed = True
+                return rels
+
+            globals()[
+                "iter_release_provenance_hygiene_files"
+            ] = swapping_provenance_inventory
+            provenance_swap_rejected = False
+            provenance_hits: List[Dict[str, Any]] = []
+            try:
+                provenance_hits = scan_release_provenance_hygiene(
+                    provenance_root
+                )
+            except (OSError, PackageTreeSafetyError):
+                provenance_swap_rejected = True
+            finally:
+                globals()[
+                    "iter_release_provenance_hygiene_files"
+                ] = original_provenance_inventory
+            provenance_boundary_results: Dict[str, bool] = {}
+            for boundary_name, prefix, suffix in (
+                ("space", "producer=", " generated"),
+                ("comma", "producer=", ", generated"),
+                ("closing-parenthesis", "producer=(", ")"),
+                ("slash", "producer=", "/descendant"),
+                ("end", "producer=", ""),
+            ):
+                boundary_root = temporary / (
+                    "provenance-boundary-" + boundary_name
+                )
+                boundary_root.mkdir()
+                (boundary_root / "README.md").write_text(
+                    prefix + str(boundary_root) + suffix + "\n",
+                    encoding="utf-8",
+                )
+                boundary_hits = scan_release_provenance_hygiene(
+                    boundary_root
+                )
+                provenance_boundary_results[boundary_name] = any(
+                    hit.get("pattern") == "absolute current package root"
+                    for hit in boundary_hits
+                )
+            sibling_root = temporary / "provenance-boundary-sibling"
+            sibling_root.mkdir()
+            (sibling_root / "README.md").write_text(
+                str(sibling_root) + "-other\n",
+                encoding="utf-8",
+            )
+            sibling_hits = scan_release_provenance_hygiene(sibling_root)
+            provenance_boundary_results["hyphenated-sibling-control"] = any(
+                hit.get("pattern") == "absolute current package root"
+                for hit in sibling_hits
+            )
+            self.add(
+                "provenance scan retains snapshotted bytes across a post-snapshot file substitution",
+                provenance_swap_executed
+                and (provenance_swap_rejected or not provenance_hits)
+                and "OUTSIDE-SECRET" not in json.dumps(provenance_hits)
+                and all(
+                    provenance_boundary_results[name]
+                    for name in (
+                        "space",
+                        "comma",
+                        "closing-parenthesis",
+                        "slash",
+                        "end",
+                    )
+                )
+                and not provenance_boundary_results[
+                    "hyphenated-sibling-control"
+                ],
+                details=json.dumps(
+                    {
+                        "substitution_hits": provenance_hits,
+                        "boundary_results": provenance_boundary_results,
+                    },
+                    sort_keys=True,
+                ),
+            )
+
+            stable_root = temporary / "stable-a-b-a-root"
+            stable_outside = temporary / "stable-a-b-a-outside"
+            (stable_root / ".claude-plugin").mkdir(parents=True)
+            (stable_root / "nested" / "deeper").mkdir(parents=True)
+            stable_outside.mkdir()
+            (stable_root / ".claude-plugin" / "plugin.json").write_text(
+                json.dumps(
+                    {"name": PLUGIN_NAME, "version": EXPECTED_RELEASE_VERSION}
+                ),
+                encoding="utf-8",
+            )
+            (stable_root / "RELEASE_LOCK.json").write_text(
+                json.dumps(
+                    {
+                        "plugin_name": PLUGIN_NAME,
+                        "version": EXPECTED_RELEASE_VERSION,
+                        "assurance_tier": "team-internal-reuse",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (stable_root / "payload.txt").write_text(
+                "trusted A\n",
+                encoding="utf-8",
+            )
+            (stable_root / "nested" / "deeper" / "leaf.txt").write_text(
+                "leaf\n",
+                encoding="utf-8",
+            )
+            (stable_root / STABLE_RELEASE_MANIFEST).write_text(
+                json.dumps(
+                    build_stable_release_manifest(stable_root),
+                    sort_keys=True,
+                ),
+                encoding="utf-8",
+            )
+            stable_control = compute_stable_release_tree(stable_root)
+            stable_evil = stable_outside / "evil-payload"
+            stable_saved = stable_outside / "saved-payload"
+            stable_evil.write_text(
+                "outside secret B\n",
+                encoding="utf-8",
+            )
+            real_os_open = os.open
+            stable_swap_executed = False
+
+            def a_b_a_open(
+                path: Any,
+                flags: int,
+                mode: int = 0o777,
+                *,
+                dir_fd: int | None = None,
+            ) -> int:
+                nonlocal stable_swap_executed
+                if (
+                    path == "payload.txt"
+                    and dir_fd is not None
+                    and not stable_swap_executed
+                ):
+                    os.rename(stable_root / "payload.txt", stable_saved)
+                    os.rename(stable_evil, stable_root / "payload.txt")
+                    try:
+                        descriptor = real_os_open(
+                            path,
+                            flags,
+                            mode,
+                            dir_fd=dir_fd,
+                        )
+                    finally:
+                        os.rename(stable_root / "payload.txt", stable_evil)
+                        os.rename(stable_saved, stable_root / "payload.txt")
+                    stable_swap_executed = True
+                    return descriptor
+                return real_os_open(path, flags, mode, dir_fd=dir_fd)
+
+            os.open = a_b_a_open
+            try:
+                stable_attacked = compute_stable_release_tree(stable_root)
+            finally:
+                os.open = real_os_open
+            self.add(
+                "stable release hashing rejects a file A-B-A swap instead of hashing outside bytes",
+                stable_control.get("valid") is True
+                and stable_swap_executed
+                and stable_attacked.get("valid") is False
+                and stable_attacked.get("sha256") is None,
+                details=json.dumps(stable_attacked, sort_keys=True),
+            )
+
+            stable_bound_results: Dict[str, bool] = {}
+            for limit_name, limit_value in (
+                ("MAX_PACKAGE_DIRECTORY_ENTRIES", 1),
+                ("MAX_PACKAGE_TOTAL_ENTRIES", 1),
+                ("MAX_PACKAGE_DIRECTORY_DEPTH", 1),
+                ("MAX_PACKAGE_FILE_BYTES", 1),
+                ("MAX_PACKAGE_TOTAL_BYTES", 1),
+                ("MAX_PACKAGE_PATH_METADATA_BYTES", 1),
+            ):
+                original_value = globals()[limit_name]
+                globals()[limit_name] = limit_value
+                try:
+                    bounded_tree = compute_stable_release_tree(stable_root)
+                finally:
+                    globals()[limit_name] = original_value
+                stable_bound_results[limit_name] = (
+                    bounded_tree.get("valid") is False
+                    and bounded_tree.get("sha256") is None
+                    and any(
+                        "limit exceeded" in str(error)
+                        for error in bounded_tree.get("errors", [])
+                    )
+                )
+            self.add(
+                "stable release tree enforces directory, entry, depth, file-byte, aggregate-byte, and path-metadata limits before certification",
+                all(stable_bound_results.values()),
+                details=json.dumps(stable_bound_results, sort_keys=True),
+            )
+
+            git_capture = _run_bounded_git(
+                [
+                    sys.executable,
+                    "-c",
+                    "import os; os.write(1, b'x' * 4096)",
+                ],
+                max_capture_bytes=64,
+            )
+            git_timeout = _run_bounded_git(
+                [
+                    sys.executable,
+                    "-c",
+                    "import time; time.sleep(2)",
+                ],
+                timeout_seconds=1,
+            )
+            self.add(
+                "bounded Git capture rejects output and timeout overlimits",
+                git_capture.returncode != 0
+                and "output exceeded 64 bytes" in git_capture.stderr
+                and git_timeout.returncode != 0
+                and "exceeded 1s timeout" in git_timeout.stderr,
+                details=(
+                    f"capture={git_capture.returncode} "
+                    f"timeout={git_timeout.returncode}"
+                ),
+            )
+
+            inherited_pipe = _run_bounded_git(
+                [
+                    sys.executable,
+                    "-c",
+                    (
+                        "import os,time; child=os.fork(); "
+                        "(time.sleep(60) if child == 0 else "
+                        "print(child, flush=True)); "
+                        "os._exit(0) if child == 0 else None"
+                    ),
+                ],
+                timeout_seconds=5,
+            )
+            descendant_pid = int(inherited_pipe.stdout.strip() or "0")
+            descendant_live = False
+            if descendant_pid > 0:
+                status_path = Path(f"/proc/{descendant_pid}/status")
+                if status_path.exists():
+                    try:
+                        descendant_live = not any(
+                            line.startswith("State:") and "Z" in line
+                            for line in status_path.read_text(
+                                encoding="utf-8"
+                            ).splitlines()
+                        )
+                    except OSError:
+                        descendant_live = False
+            self.add(
+                "bounded Git kills a leader-exit descendant that inherits capture pipes",
+                inherited_pipe.returncode == 125
+                and "descendants after leader exit"
+                in inherited_pipe.stderr
+                and not descendant_live,
+                details=json.dumps(
+                    {
+                        "returncode": inherited_pipe.returncode,
+                        "pid": descendant_pid,
+                        "descendant_live": descendant_live,
+                    },
+                    sort_keys=True,
+                ),
+            )
+
+            def bounded_git_probe_pid_live(pid: int) -> bool:
+                if pid <= 1:
+                    return False
+                try:
+                    status_text = Path(f"/proc/{pid}/status").read_text(
+                        encoding="utf-8"
+                    )
+                except OSError:
+                    return False
+                return not any(
+                    line.startswith("State:") and "Z" in line
+                    for line in status_text.splitlines()
+                )
+
+            detached_marker = temporary / "detached-git-survivor"
+            detached_probe = _run_bounded_git(
+                [
+                    sys.executable,
+                    "-c",
+                    (
+                        "import os,pathlib,time\n"
+                        "c=os.fork()\n"
+                        "if c==0:\n"
+                        " os.setsid(); time.sleep(.2); "
+                        f"pathlib.Path({str(detached_marker)!r}).write_text('survived'); "
+                        "time.sleep(60); os._exit(0)\n"
+                        "print(c,flush=True)\n"
+                    ),
+                ],
+                timeout_seconds=5,
+            )
+            detached_pid = int(detached_probe.stdout.strip() or "0")
+
+            closed_marker = temporary / "closed-pipe-git-survivor"
+            closed_probe = _run_bounded_git(
+                [
+                    sys.executable,
+                    "-c",
+                    (
+                        "import os,pathlib,time\n"
+                        "c=os.fork()\n"
+                        "if c==0:\n"
+                        " os.close(1); os.close(2); time.sleep(.2); "
+                        f"pathlib.Path({str(closed_marker)!r}).write_text('survived'); "
+                        "time.sleep(60); os._exit(0)\n"
+                        "print(c,flush=True)\n"
+                    ),
+                ],
+                timeout_seconds=5,
+            )
+            closed_pid = int(closed_probe.stdout.strip() or "0")
+            time.sleep(0.3)
+            self.add(
+                "bounded Git kills detached-session inherited-pipe descendants before survivor markers",
+                detached_probe.returncode == 125
+                and "descendants after leader exit" in detached_probe.stderr
+                and not bounded_git_probe_pid_live(detached_pid)
+                and not detached_marker.exists(),
+                details=json.dumps(
+                    {
+                        "returncode": detached_probe.returncode,
+                        "pid": detached_pid,
+                        "marker": detached_marker.exists(),
+                    },
+                    sort_keys=True,
+                ),
+            )
+            self.add(
+                "bounded Git kills same-group closed-pipe descendants after ordinary leader exit",
+                closed_probe.returncode == 125
+                and "descendants after leader exit" in closed_probe.stderr
+                and not bounded_git_probe_pid_live(closed_pid)
+                and not closed_marker.exists(),
+                details=json.dumps(
+                    {
+                        "returncode": closed_probe.returncode,
+                        "pid": closed_pid,
+                        "marker": closed_marker.exists(),
+                    },
+                    sort_keys=True,
+                ),
+            )
+
+            selector_marker = temporary / "selector-setup-survivor"
+            selector_pid_file = temporary / "selector-setup-pid"
+            original_selector_factory = selectors.DefaultSelector
+
+            class RaisingSelectorFactory:
+                def __new__(cls) -> Any:
+                    # Give the spawned leader enough time to create and detach
+                    # its child, then fail in the first post-Popen setup step.
+                    time.sleep(0.5)
+                    raise OSError("injected selector setup failure")
+
+            selectors.DefaultSelector = RaisingSelectorFactory  # type: ignore[assignment,misc]
+            selector_setup_rejected = False
+            try:
+                try:
+                    _run_bounded_git(
+                        [
+                            sys.executable,
+                            "-c",
+                            (
+                                "import os,pathlib,time\n"
+                                "c=os.fork()\n"
+                                "if c==0:\n"
+                                " os.setsid(); "
+                                f"pathlib.Path({str(selector_pid_file)!r}).write_text(str(os.getpid())); "
+                                "time.sleep(1.0); "
+                                f"pathlib.Path({str(selector_marker)!r}).write_text('survived'); "
+                                "time.sleep(60); os._exit(0)\n"
+                                "time.sleep(60)\n"
+                            ),
+                        ],
+                        timeout_seconds=5,
+                    )
+                except OSError as exc:
+                    selector_setup_rejected = (
+                        "injected selector setup failure" in str(exc)
+                    )
+            finally:
+                selectors.DefaultSelector = original_selector_factory  # type: ignore[assignment]
+            time.sleep(1.05)
+            selector_pid = (
+                int(selector_pid_file.read_text(encoding="utf-8"))
+                if selector_pid_file.exists()
+                else 0
+            )
+            self.add(
+                "bounded Git cleans detached descendants after post-Popen selector setup failure",
+                selector_setup_rejected
+                and selector_pid > 1
+                and not bounded_git_probe_pid_live(selector_pid)
+                and not selector_marker.exists(),
+                details=json.dumps(
+                    {
+                        "rejected": selector_setup_rejected,
+                        "pid": selector_pid,
+                        "marker": selector_marker.exists(),
+                    },
+                    sort_keys=True,
+                ),
+            )
+
+            git_true_control = _run_bounded_git(
+                ["git", "--version"],
+            )
+            self.add(
+                "bounded Git dedicated-session runner retains normal Git control",
+                git_true_control.returncode == 0
+                and git_true_control.stdout.startswith("git version "),
+                details=git_true_control.stderr[:200],
+            )
+
+            git_count_root = temporary / "git-count-root"
+            git_count_root.mkdir()
+            for command in (
+                ["git", "-C", str(git_count_root), "init", "-q"],
+                ["git", "-C", str(git_count_root), "add", "--", "one", "two"],
+            ):
+                if len(command) > 3 and command[3] == "add":
+                    for name in ("one", "two"):
+                        (git_count_root / name).write_text(name, encoding="utf-8")
+                completed = _run_bounded_git(command)
+                if completed.returncode != 0:
+                    raise RuntimeError(
+                        _bounded_git_failure("Git count fixture", completed)
+                    )
+            original_git_entry_limit = MAX_GIT_INDEX_ENTRIES
+            globals()["MAX_GIT_INDEX_ENTRIES"] = 1
+            try:
+                git_count = git_tracked_files(git_count_root)
+            finally:
+                globals()["MAX_GIT_INDEX_ENTRIES"] = original_git_entry_limit
+            self.add(
+                "Git index evidence rejects an entry-count overlimit",
+                git_count.state == GitSurfaceState.GIT_EVIDENCE_FAILURE
+                and "index-entry limit 1" in git_count.details,
+                details=git_count.details,
+            )
+
+            cruft_aba_root = temporary / "git-metadata-aba-root"
+            cruft_aba_root.mkdir()
+            (cruft_aba_root / "README.md").write_text(
+                "ordinary\n", encoding="utf-8"
+            )
+            (cruft_aba_root / "__pycache__").mkdir()
+            cruft_aba_relative = "__pycache__/evil.pyc"
+            (cruft_aba_root / cruft_aba_relative).write_bytes(
+                b"tracked archive cruft\n"
+            )
+            for command in (
+                ["git", "init", "--quiet", str(cruft_aba_root)],
+                [
+                    "git", "-C", str(cruft_aba_root), "add", "-f", "--",
+                    "README.md", cruft_aba_relative,
+                ],
+            ):
+                completed = _run_bounded_git(command)
+                if completed.returncode != 0:
+                    raise RuntimeError(
+                        _bounded_git_failure("Git cruft A-B-A fixture", completed)
+                    )
+            alternate_git = temporary / "git-metadata-aba-alternate"
+            for command in (
+                ["git", "init", "--bare", "--quiet", str(alternate_git)],
+                [
+                    "git", "--git-dir", str(alternate_git), "config",
+                    "core.bare", "false",
+                ],
+                [
+                    "git", "--git-dir", str(alternate_git), "config",
+                    "core.worktree", str(cruft_aba_root),
+                ],
+                [
+                    "git", "--git-dir", str(alternate_git), "--work-tree",
+                    str(cruft_aba_root), "add", "--", "README.md",
+                ],
+            ):
+                completed = _run_bounded_git(command)
+                if completed.returncode != 0:
+                    raise RuntimeError(
+                        _bounded_git_failure("alternate Git cruft fixture", completed)
+                    )
+            parked_git = temporary / "git-metadata-aba-real-git"
+            original_bounded_git = globals()["_run_bounded_git"]
+            cruft_aba_state = {"swapped": False, "restored": False}
+
+            def swapping_bounded_git(
+                argv: Sequence[str],
+                **kwargs: Any,
+            ) -> subprocess.CompletedProcess[str]:
+                if not cruft_aba_state["swapped"]:
+                    (cruft_aba_root / ".git").rename(parked_git)
+                    (cruft_aba_root / ".git").write_text(
+                        f"gitdir: {alternate_git}\n", encoding="utf-8"
+                    )
+                    cruft_aba_state["swapped"] = True
+                try:
+                    return original_bounded_git(argv, **kwargs)
+                finally:
+                    if (
+                        "ls-files" in argv
+                        and not cruft_aba_state["restored"]
+                    ):
+                        (cruft_aba_root / ".git").unlink()
+                        parked_git.rename(cruft_aba_root / ".git")
+                        cruft_aba_state["restored"] = True
+
+            globals()["_run_bounded_git"] = swapping_bounded_git
+            cruft_aba_validator = Validator(cruft_aba_root)
+            try:
+                cruft_aba_validator.check_closed_surface()
+                cruft_aba_check = next(
+                    check
+                    for check in cruft_aba_validator.checks
+                    if check["name"] == PHYSICAL_CRUFT_CHECK
+                )
+            finally:
+                globals()["_run_bounded_git"] = original_bounded_git
+                if (cruft_aba_root / ".git").is_file():
+                    (cruft_aba_root / ".git").unlink()
+                if parked_git.exists():
+                    parked_git.rename(cruft_aba_root / ".git")
+                cruft_aba_validator.close()
+            self.add(
+                "physical cruft rejection survives .git alternate-index A-B-A substitution",
+                cruft_aba_state == {"swapped": True, "restored": True}
+                and cruft_aba_check.get("passed") is False
+                and "__pycache__" in cruft_aba_check.get("details", ""),
+                details=json.dumps(
+                    {"state": cruft_aba_state, "check": cruft_aba_check},
+                    sort_keys=True,
+                ),
+            )
+
+            env_root = temporary / "git-env-override-root"
+            env_root.mkdir()
+            (env_root / "README.md").write_text("ordinary\n", encoding="utf-8")
+            (env_root / "__pycache__").mkdir()
+            env_cruft_rel = "__pycache__/evil.pyc"
+            (env_root / env_cruft_rel).write_bytes(b"HEAD archive cruft\n")
+            for command in (
+                ["git", "init", "--quiet", str(env_root)],
+                ["git", "-C", str(env_root), "add", "-f", "--", "README.md", env_cruft_rel],
+                [
+                    "git", "-C", str(env_root), "-c", "user.name=validator",
+                    "-c", "user.email=validator@example.invalid", "commit",
+                    "--quiet", "--no-gpg-sign", "-m", "fixture",
+                ],
+            ):
+                # Fixture setup may legitimately use short-lived Git helper
+                # processes; the production bounded runner is the subject of
+                # the subsequent sanitized-evidence assertion.
+                completed = subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if completed.returncode != 0:
+                    raise RuntimeError(_bounded_git_failure("Git env fixture", completed))
+            (env_root / env_cruft_rel).unlink()
+            (env_root / "__pycache__").rmdir()
+            alternate_index = temporary / "git-env-alternate-index"
+            alternate_environment = dict(os.environ)
+            alternate_environment["GIT_INDEX_FILE"] = str(alternate_index)
+            for command in (
+                ["git", "-C", str(env_root), "read-tree", "--empty"],
+                ["git", "-C", str(env_root), "add", "--", "README.md"],
+            ):
+                raw_setup = subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    env=alternate_environment,
+                    check=False,
+                )
+                if raw_setup.returncode != 0:
+                    raise RuntimeError("alternate-index fixture setup failed")
+            previous_git_index = os.environ.get("GIT_INDEX_FILE")
+            os.environ["GIT_INDEX_FILE"] = str(alternate_index)
+            env_validator = Validator(env_root)
+            try:
+                sanitized_surface = git_tracked_files(env_root)
+                env_validator.check_closed_surface()
+                env_cruft_check = next(
+                    check for check in env_validator.checks
+                    if check["name"] == PHYSICAL_CRUFT_CHECK
+                )
+            finally:
+                if previous_git_index is None:
+                    os.environ.pop("GIT_INDEX_FILE", None)
+                else:
+                    os.environ["GIT_INDEX_FILE"] = previous_git_index
+                env_validator.close()
+            self.add(
+                "sanitized Git observations add rejection for physically deleted HEAD-tree cruft despite alternate index override",
+                sanitized_surface.state == GitSurfaceState.VERIFIED_WORKTREE
+                and env_cruft_rel in sanitized_surface.tracked_files
+                and env_cruft_rel in sanitized_surface.head_files
+                and env_cruft_check.get("passed") is False
+                and env_cruft_rel in env_cruft_check.get("details", ""),
+                details=json.dumps(
+                    {
+                        "tracked": list(sanitized_surface.tracked_files),
+                        "head": list(sanitized_surface.head_files),
+                        "check": env_cruft_check,
+                    },
+                    sort_keys=True,
+                ),
+            )
+            sanitized_git_control = _run_bounded_git(
+                ["git", "--version"],
+                env={**os.environ, "GIT_INDEX_FILE": str(alternate_index)},
+            )
+            self.add(
+                "sanitized bounded Git environment retains normal Git control",
+                sanitized_git_control.returncode == 0
+                and sanitized_git_control.stdout.startswith("git version "),
+                details=sanitized_git_control.stderr,
+            )
+
+            def seed_writer_root(
+                seeded_root: Path,
+                payload: str,
+                version: str = "1",
+            ) -> None:
+                (seeded_root / ".claude-plugin").mkdir(parents=True)
+                (seeded_root / ".claude-plugin/plugin.json").write_text(
+                    json.dumps({"name": PLUGIN_NAME, "version": version}),
+                    encoding="utf-8",
+                )
+                (seeded_root / "RELEASE_LOCK.json").write_text(
+                    json.dumps(
+                        {
+                            "plugin_name": PLUGIN_NAME,
+                            "version": version,
+                            "assurance_tier": "team-internal-reuse",
+                            "required_commands": [],
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                (seeded_root / "payload.txt").write_text(
+                    payload,
+                    encoding="utf-8",
+                )
+                (seeded_root / STABLE_RELEASE_MANIFEST).write_text(
+                    "{}\n",
+                    encoding="utf-8",
+                )
+
+            stable_writer_parent = temporary / "stable-writer-root-swap"
+            stable_checked = stable_writer_parent / "checked"
+            stable_parked = stable_writer_parent / "parked"
+            stable_replacement = stable_writer_parent / "replacement"
+            stable_replacement_after = stable_writer_parent / "replacement-after"
+            seed_writer_root(stable_checked, "trusted A\n")
+            seed_writer_root(stable_replacement, "outside B\n")
+            original_stable_builder = globals()[
+                "build_stable_release_manifest"
+            ]
+
+            def root_swapping_stable_builder(root_arg: Path) -> Dict[str, Any]:
+                stable_checked.rename(stable_parked)
+                stable_replacement.rename(stable_checked)
+                try:
+                    return original_stable_builder(root_arg)
+                finally:
+                    stable_checked.rename(stable_replacement_after)
+                    stable_parked.rename(stable_checked)
+
+            globals()[
+                "build_stable_release_manifest"
+            ] = root_swapping_stable_builder
+            try:
+                write_stable_release_manifest(stable_checked)
+            finally:
+                globals()[
+                    "build_stable_release_manifest"
+                ] = original_stable_builder
+            written_stable = strict_json_loads(
+                (stable_checked / STABLE_RELEASE_MANIFEST).read_text(
+                    encoding="utf-8"
+                )
+            )
+            written_payload = next(
+                item
+                for item in written_stable["file_inventory"]
+                if item["path"] == "payload.txt"
+            )
+            self.add(
+                "stable manifest writer binds the held A root across an A-B-A builder substitution",
+                written_payload.get("sha256")
+                == sha256_path(stable_checked / "payload.txt")
+                and written_payload.get("sha256")
+                != sha256_path(stable_replacement_after / "payload.txt"),
+                details=repr(written_payload.get("sha256")),
+            )
+
+            behavior_writer_parent = temporary / "behavior-writer-root-swap"
+            behavior_checked = behavior_writer_parent / "checked"
+            behavior_parked = behavior_writer_parent / "parked"
+            behavior_replacement = behavior_writer_parent / "replacement"
+            behavior_replacement_after = (
+                behavior_writer_parent / "replacement-after"
+            )
+            seed_writer_root(behavior_checked, "trusted A\n", "1")
+            seed_writer_root(behavior_replacement, "outside B\n", "2")
+            original_snapshot_builder = globals()["snapshot_package_entries"]
+            original_atomic_writer = globals()["atomic_write_fixed_text"]
+            behavior_swapped = False
+
+            def root_swapping_snapshot(root_arg: Path, **kwargs: Any) -> Any:
+                nonlocal behavior_swapped
+                if root_arg == behavior_checked and not behavior_swapped:
+                    behavior_checked.rename(behavior_parked)
+                    behavior_replacement.rename(behavior_checked)
+                    behavior_swapped = True
+                return original_snapshot_builder(root_arg, **kwargs)
+
+            def restoring_atomic_writer(
+                path: Path,
+                text: str,
+                **kwargs: Any,
+            ) -> None:
+                if behavior_swapped and behavior_parked.exists():
+                    behavior_checked.rename(behavior_replacement_after)
+                    behavior_parked.rename(behavior_checked)
+                original_atomic_writer(path, text, **kwargs)
+
+            globals()["snapshot_package_entries"] = root_swapping_snapshot
+            globals()["atomic_write_fixed_text"] = restoring_atomic_writer
+            try:
+                update_manifest(behavior_checked)
+            finally:
+                globals()["snapshot_package_entries"] = (
+                    original_snapshot_builder
+                )
+                globals()["atomic_write_fixed_text"] = original_atomic_writer
+            written_behavior = load_manifest(
+                behavior_checked / "MANIFEST.sha256"
+            )
+            plugin_relative = ".claude-plugin/plugin.json"
+            self.add(
+                "behavior manifest writer binds the held A root across an A-B-A snapshot substitution",
+                behavior_swapped
+                and written_behavior.get(plugin_relative)
+                == sha256_path(behavior_checked / plugin_relative)
+                and written_behavior.get(plugin_relative)
+                != sha256_path(behavior_replacement_after / plugin_relative),
+                details=repr(written_behavior.get(plugin_relative)),
+            )
+
+            review_package = temporary / "post-preflight-package"
+            self._materialize_snapshot(review_package)
+            review_validator = Validator(review_package)
+            review_validator.check_closed_surface()
+            review_manifest = review_package / STABLE_RELEASE_MANIFEST
+            review_outside = temporary / "post-preflight-outside.json"
+            outside_data = strict_json_loads(
+                review_manifest.read_text(encoding="utf-8")
+            )
+            outside_data["volatile_generated_exclusions"]["rationale"] = (
+                "OUTSIDE-SECRET-LEAK"
+            )
+            outside_data["self_hash_sha256"] = stable_manifest_self_hash(
+                outside_data
+            )
+            review_outside.write_text(
+                json.dumps(outside_data),
+                encoding="utf-8",
+            )
+            review_parked = review_package / (
+                STABLE_RELEASE_MANIFEST + ".parked"
+            )
+            original_path_read_text = Path.read_text
+            review_swap_triggered = False
+
+            def post_preflight_swapping_read(
+                path: Path,
+                *args: Any,
+                **kwargs: Any,
+            ) -> str:
+                nonlocal review_swap_triggered
+                if path == review_manifest and not review_swap_triggered:
+                    review_manifest.rename(review_parked)
+                    os.symlink(review_outside, review_manifest)
+                    review_swap_triggered = True
+                    try:
+                        return original_path_read_text(path, *args, **kwargs)
+                    finally:
+                        review_manifest.unlink()
+                        review_parked.rename(review_manifest)
+                return original_path_read_text(path, *args, **kwargs)
+
+            Path.read_text = post_preflight_swapping_read
+            try:
+                review_validator.check_release_audit_artifacts()
+            finally:
+                Path.read_text = original_path_read_text
+            leaked_checks = [
+                check
+                for check in review_validator.checks
+                if "OUTSIDE-SECRET-LEAK" in check.get("details", "")
+            ]
+            mirror_gate = (
+                review_validator.root
+                / SKILL_DIR
+                / "scripts"
+                / "ntt_gate.py"
+            )
+            mirror_gate_parked = mirror_gate.with_suffix(".py.parked")
+            outside_marker = temporary / "outside-module-executed"
+            outside_module = temporary / "outside-module.py"
+            outside_module.write_text(
+                "from pathlib import Path\n"
+                f"Path({str(outside_marker)!r}).write_text('executed')\n",
+                encoding="utf-8",
+            )
+            mirror_gate.rename(mirror_gate_parked)
+            os.symlink(outside_module, mirror_gate)
+            try:
+                review_validator.check_self_certificate_nonclosure()
+            finally:
+                mirror_gate.unlink()
+                mirror_gate_parked.rename(mirror_gate)
+            self.add(
+                "semantic module execution consumes captured bytes after mirror pathname substitution",
+                not outside_marker.exists(),
+            )
+
+            mirror_readme = review_validator.root / "README.md"
+            mirror_readme_parked = review_validator.root / "README.md.parked"
+            outside_readme = temporary / "outside-readme"
+            outside_readme.write_text(
+                "OUTSIDE-MATERIALIZATION-BYTES\n",
+                encoding="utf-8",
+            )
+            mirror_readme.rename(mirror_readme_parked)
+            os.symlink(outside_readme, mirror_readme)
+            mutation_fixture: Path | None = None
+            try:
+                mutation_fixture = review_validator.mutation_copy()
+                mutation_readme = (mutation_fixture / "README.md").read_text(
+                    encoding="utf-8"
+                )
+            finally:
+                mirror_readme.unlink()
+                mirror_readme_parked.rename(mirror_readme)
+                if mutation_fixture is not None:
+                    shutil.rmtree(mutation_fixture.parent, ignore_errors=True)
+            self.add(
+                "package fixture materialization consumes captured bytes after mirror pathname substitution",
+                mutation_readme
+                == review_validator._snapshot_text("README.md")
+                and "OUTSIDE-MATERIALIZATION-BYTES" not in mutation_readme,
+            )
+            review_validator._finalize_root_bound_operation()
+            mirror_final_checks = {
+                check["name"]: check["passed"]
+                for check in review_validator.checks
+                if check["name"].startswith("validator ")
+                and "finalization" in check["name"]
+            }
+            self.add(
+                "mirror substitution regressions restore both finalization identities",
+                bool(mirror_final_checks)
+                and all(mirror_final_checks.values()),
+                details=json.dumps(mirror_final_checks, sort_keys=True),
+            )
+            review_validator.close()
+            self.add(
+                "post-preflight semantic checks never reopen the attacker-controlled source root",
+                not review_swap_triggered and not leaked_checks,
+                details=json.dumps(leaked_checks, sort_keys=True),
+            )
+
+            drift_root = temporary / "persistent-source-drift"
+            drift_root.mkdir()
+            drift_file = drift_root / "payload.txt"
+            drift_file.write_text("trusted A\n", encoding="utf-8")
+            drift_validator = Validator(drift_root)
+            try:
+                assert drift_validator.source_root_fd is not None
+                drift_snapshot = snapshot_package_entries(
+                    drift_root,
+                    include_ignored_entries=True,
+                    capture_file_bytes=True,
+                    root_directory_fd=drift_validator.source_root_fd,
+                )
+                drift_validator._activate_immutable_snapshot(
+                    drift_snapshot
+                )
+                drift_file.write_text("persistent B\n", encoding="utf-8")
+                drift_validator._finalize_root_bound_operation()
+                drift_source_check = next(
+                    check
+                    for check in drift_validator.checks
+                    if check["name"]
+                    == (
+                        "validator source package remains "
+                        "descriptor-identical through finalization"
+                    )
+                )
+                drift_mirror_check = next(
+                    check
+                    for check in drift_validator.checks
+                    if check["name"]
+                    == (
+                        "validator immutable snapshot remains "
+                        "byte-identical through finalization"
+                    )
+                )
+            finally:
+                drift_validator.close()
+            self.add(
+                "validator finalization rejects persistent descriptor-relative source drift while retaining its immutable mirror",
+                drift_source_check.get("passed") is False
+                and drift_mirror_check.get("passed") is True,
+                details=json.dumps(
+                    {
+                        "source": drift_source_check,
+                        "mirror": drift_mirror_check,
+                    },
+                    sort_keys=True,
+                ),
+            )
+
             mode_probe = temporary / "mode-probe"
             mode_probe.write_text("mode\n", encoding="utf-8")
             mode_results: Dict[str, str] = {}
@@ -6320,6 +9505,156 @@ class Validator:
                 and named_byte_failure,
                 details=json.dumps(byte_result, sort_keys=True),
             )
+
+            globals()["MAX_PACKAGE_FILE_BYTES"] = original_file_byte_limit
+            globals()["MAX_PACKAGE_PATH_METADATA_BYTES"] = 1
+            path_metadata_structured = Validator(
+                flat,
+                run_self_test=False,
+                skip_release_idempotence=True,
+            )
+            path_metadata_structured.check_closed_surface()
+            path_metadata_result = path_metadata_structured.result()
+            named_path_metadata_failure = any(
+                check.get("name") == PACKAGE_PATH_METADATA_CHECK
+                and check.get("passed") is False
+                for check in path_metadata_result.get("checks", [])
+            )
+            other_failed_limits = [
+                check.get("name")
+                for check in path_metadata_result.get("checks", [])
+                if check.get("passed") is False
+                and check.get("name") != PACKAGE_PATH_METADATA_CHECK
+            ]
+            self.add(
+                "package path-metadata overlimit returns its dedicated named structured FAIL result",
+                path_metadata_result.get("status") == "FAIL"
+                and path_metadata_result.get("critical_failed", 0) == 1
+                and named_path_metadata_failure
+                and not other_failed_limits,
+                details=json.dumps(path_metadata_result, sort_keys=True),
+            )
+            path_metadata_structured.close()
+            globals()["MAX_PACKAGE_PATH_METADATA_BYTES"] = (
+                original_path_metadata_limit
+            )
+
+            display_root = temporary / "lexical-display-root"
+            display_outside = temporary / "lexical-display-outside"
+            display_root.mkdir()
+            display_outside.mkdir()
+            lexical_child = str(display_root / "child.txt")
+            display_root.rename(temporary / "lexical-display-parked")
+            os.symlink(display_outside, display_root)
+            normalized_after_swap = normalize_cli_display(
+                lexical_child,
+                display_root,
+            )
+            self.add(
+                "display normalization retains lexical package spelling after symlink substitution",
+                normalized_after_swap == "<package-root>/child.txt"
+                and str(display_outside) not in normalized_after_swap,
+                details=normalized_after_swap,
+            )
+
+            quoted_private_parent = (
+                temporary / "nozickian_validator_snapshot_SECRET"
+            )
+            quoted_private_mirror = quoted_private_parent / "package"
+            quoted_private_error = (
+                f"OSError: mirror '{quoted_private_mirror}', "
+                f"parent \"{quoted_private_parent}\""
+            )
+            quoted_private_normalized = normalize_cli_display(
+                quoted_private_error,
+                display_root,
+                private_paths=(
+                    str(quoted_private_mirror),
+                    str(quoted_private_parent),
+                ),
+            )
+            self.add(
+                "quoted private mirror and parent diagnostics are scrubbed without sibling-prefix overmatch",
+                "nozickian_validator_snapshot_SECRET"
+                not in quoted_private_normalized
+                and str(quoted_private_mirror)
+                not in quoted_private_normalized
+                and quoted_private_normalized.count("<private-snapshot>") == 2,
+                details=quoted_private_normalized,
+            )
+
+            activation_root = temporary / "activation-error-root"
+            activation_root.mkdir()
+            (activation_root / "payload.txt").write_text(
+                "payload\n",
+                encoding="utf-8",
+            )
+            activation_validator = Validator(activation_root)
+            assert activation_validator.source_root_fd is not None
+            activation_snapshot = snapshot_package_entries(
+                activation_root,
+                capture_file_bytes=True,
+                root_directory_fd=activation_validator.source_root_fd,
+            )
+            original_materializer = globals()["materialize_snapshot"]
+            original_temporary_directory = tempfile.TemporaryDirectory
+
+            def failing_private_materializer(
+                destination: Path,
+                snapshot: Mapping[str, Mapping[str, Any]],
+                **_kwargs: Any,
+            ) -> Path:
+                raise OSError(
+                    "primary activation failure: "
+                    f"mirror '{destination}', parent '{destination.parent}'"
+                )
+
+            class CleanupFailingTemporaryDirectory:
+                def __init__(self, *args: Any, **kwargs: Any) -> None:
+                    self._actual = original_temporary_directory(
+                        *args, **kwargs
+                    )
+                    self.name = self._actual.name
+
+                def cleanup(self) -> None:
+                    self._actual.cleanup()
+                    raise OSError(
+                        f"cleanup failure at '{self.name}'"
+                    )
+
+            globals()["materialize_snapshot"] = failing_private_materializer
+            tempfile.TemporaryDirectory = CleanupFailingTemporaryDirectory  # type: ignore[assignment,misc]
+            activation_error_was_primary = False
+            try:
+                try:
+                    activation_validator._activate_immutable_snapshot(
+                        activation_snapshot
+                    )
+                except OSError as exc:
+                    activation_error_was_primary = (
+                        "primary activation failure" in str(exc)
+                        and "cleanup failure" not in str(exc)
+                    )
+                    activation_validator.add(
+                        "injected activation error",
+                        False,
+                        details=str(exc),
+                    )
+            finally:
+                globals()["materialize_snapshot"] = original_materializer
+                tempfile.TemporaryDirectory = original_temporary_directory  # type: ignore[assignment]
+            activation_serialized = json.dumps(
+                activation_validator.result(),
+                sort_keys=True,
+            )
+            self.add(
+                "private activation errors never disclose temporary snapshot paths",
+                activation_error_was_primary
+                and "nozickian_validator_snapshot_" not in activation_serialized
+                and "<private-snapshot>" in activation_serialized,
+                details=activation_serialized,
+            )
+            activation_validator.close()
         except Exception as exc:
             self.add(
                 "package tree resource contract probes complete",
@@ -6331,25 +9666,29 @@ class Validator:
                 original_directory_limit
             )
             globals()["MAX_PACKAGE_TOTAL_ENTRIES"] = original_total_limit
+            globals()["MAX_PACKAGE_DIRECTORY_DEPTH"] = original_depth_limit
             globals()["MAX_PACKAGE_FILE_BYTES"] = original_file_byte_limit
             globals()["MAX_PACKAGE_TOTAL_BYTES"] = original_total_byte_limit
+            globals()["MAX_PACKAGE_PATH_METADATA_BYTES"] = (
+                original_path_metadata_limit
+            )
             shutil.rmtree(temporary, ignore_errors=True)
             gc.collect()
 
     def run_live_harness_contract_probes(self) -> None:
         """Exercise structured-output and preflight failure contracts offline."""
         try:
-            live = load_module_from_path(
+            live = self._load_snapshot_module(
                 "ntt_live_harness_contract_selftest",
-                self.path(f"{SKILL_DIR}/scripts/run_live_skill_evals.py"),
+                f"{SKILL_DIR}/scripts/run_live_skill_evals.py",
             )
-            gate = load_module_from_path(
+            gate = self._load_snapshot_module(
                 "ntt_gate_normalization_selftest",
-                self.path(f"{SKILL_DIR}/scripts/ntt_gate.py"),
+                f"{SKILL_DIR}/scripts/ntt_gate.py",
             )
-            regression = load_module_from_path(
+            regression = self._load_snapshot_module(
                 "ntt_regression_normalization_selftest",
-                self.path(f"{SKILL_DIR}/scripts/run_regression_evals.py"),
+                f"{SKILL_DIR}/scripts/run_regression_evals.py",
             )
 
             class RaisingStream:
@@ -6389,7 +9728,7 @@ class Validator:
                     sort_keys=True,
                 ),
             )
-            root_text = str(self.root.resolve())
+            root_text = str(Path(os.path.abspath(self.source_root)))
             child = root_text + "/child.txt"
             normalized_separator_child = root_text + "\\child.txt"
             boundary_false_worlds = [
@@ -6401,15 +9740,15 @@ class Validator:
             normalization_outputs = {
                 "validator": normalize_cli_display(
                     [root_text, child, normalized_separator_child, *boundary_false_worlds],
-                    self.root,
+                    self.source_root,
                 ),
                 "gate": gate.normalize_cli_display(
                     [root_text, child, normalized_separator_child, *boundary_false_worlds],
-                    self.root,
+                    self.source_root,
                 ),
                 "regression": regression.normalize_cli_display(
                     [root_text, child, normalized_separator_child, *boundary_false_worlds],
-                    self.root,
+                    self.source_root,
                 ),
                 "live": live.normalize_display(
                     [root_text, child, normalized_separator_child, *boundary_false_worlds],
@@ -6437,7 +9776,15 @@ class Validator:
                 "Final gate status: PASS-SCOPED."
             )
             valid_checks = live.transcript_checks(
-                json.dumps({"is_error": False, "result": valid_report}),
+                json.dumps(
+                    {
+                        "type": "result",
+                        "subtype": "success",
+                        "is_error": False,
+                        "permission_denials": [],
+                        "result": valid_report,
+                    }
+                ),
                 artifact,
             )
             self.add(
@@ -6450,7 +9797,10 @@ class Validator:
             recursive_echo_checks = live.transcript_checks(
                 json.dumps(
                     {
+                        "type": "result",
+                        "subtype": "success",
                         "is_error": False,
+                        "permission_denials": [],
                         "result": "No verification report was produced.",
                         "metadata": {"recursive_echo": valid_report},
                     }
@@ -6476,6 +9826,9 @@ class Validator:
             )
             with tempfile.TemporaryDirectory(prefix="nozickian_live_preflight_") as tmp_s:
                 tmp = Path(tmp_s)
+                preflight_package = tmp / "package"
+                self._materialize_snapshot(preflight_package)
+                write_stable_release_manifest(preflight_package)
                 fake_claude = tmp / "claude"
                 # SECURITY-REVIEW: Fixed offline stub content and fixed argv are
                 # confined to a validator-owned temp directory. It performs no
@@ -6501,7 +9854,7 @@ class Validator:
                     with contextlib.redirect_stdout(captured), contextlib.redirect_stderr(io.StringIO()):
                         returncode = live.main(
                             [
-                                str(self.root),
+                                str(preflight_package),
                                 "--run-fixtures",
                                 "--max-fixtures",
                                 "1",
@@ -6551,7 +9904,7 @@ class Validator:
                     "  printf '%s\\n' 'PASS'\n"
                     "  exit 0\n"
                     "fi\n"
-                    "printf '%s\\n' '{\"is_error\":false,\"result\":\"Verification report for mini_manual.md, mini_code.py, and fake_trace.json: method M inspected; false-world sensitivity and true-world adherence tested.\\nFinal gate status: PASS-SCOPED.\"}'\n"
+                    "printf '%s\\n' '{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"permission_denials\":[],\"result\":\"Verification report for mini_manual.md, mini_code.py, and fake_trace.json: method M inspected; false-world sensitivity and true-world adherence tested.\\nFinal gate status: PASS-SCOPED.\"}'\n"
                     "exit 0\n",
                     encoding="utf-8",
                 )
@@ -6559,17 +9912,8 @@ class Validator:
                 fixture_root = tmp / "fixture-package"
                 # SECURITY-REVIEW: The live binding probe needs the complete
                 # stable inventory, including self_validation evidence.
-                shutil.copytree(
-                    self.root,
-                    fixture_root,
-                    symlinks=True,
-                    ignore=shutil.ignore_patterns(
-                        ".git",
-                        "__pycache__",
-                        "*.pyc",
-                        ".DS_Store",
-                    ),
-                )
+                self._materialize_snapshot(fixture_root)
+                write_stable_release_manifest(fixture_root)
                 candidate_b = fixture_root / relative_bin / "claude"
                 candidate_b.parent.mkdir(parents=True)
                 candidate_b.write_text(
@@ -6768,11 +10112,9 @@ class Validator:
     def run_promotion_certifier_contract_probes(self) -> None:
         """Exercise bounded promotion helpers without aggregate fixture setup."""
         try:
-            certifier = load_module_from_path(
+            certifier = self._load_snapshot_module(
                 "ntt_promotion_certifier_helper_selftest",
-                self.path(
-                    f"{SKILL_DIR}/scripts/certify_pass_tracked_upgrade.py"
-                ),
+                f"{SKILL_DIR}/scripts/certify_pass_tracked_upgrade.py",
             )
             deterministic_probe = {
                 "status": "PASS",
@@ -6870,12 +10212,9 @@ class Validator:
                 details=mixed_official_reason,
             )
 
-            formal_runner = load_module_from_path(
+            formal_runner = self._load_snapshot_module(
                 "ntt_formal_runner_helper_selftest",
-                self.path(
-                    f"{SKILL_DIR}/scripts/"
-                    "run_formal_artifact_verification.py"
-                ),
+                f"{SKILL_DIR}/scripts/run_formal_artifact_verification.py",
             )
             with tempfile.TemporaryDirectory(
                 prefix="ntt_trace_type_probe_"
@@ -7015,14 +10354,49 @@ class Validator:
         with tempfile.TemporaryDirectory(prefix="nozickian_harness_error_") as tmp_s:
             not_a_package = Path(tmp_s) / "not-a-package"
             not_a_package.write_text("fixed harness-error probe\n", encoding="utf-8")
-            harness_result = self.run_validator_in_copy(not_a_package)
+            invalid_root_result = self.run_validator_in_copy(not_a_package)
+
+            class HarnessExceptionPath:
+                def __fspath__(self) -> str:
+                    raise RuntimeError("fixed harness exception probe")
+
+            exception_root: Any = HarnessExceptionPath()
+            harness_result = self.run_validator_in_copy(exception_root)
+            invalid_root_failures = {
+                "package root is acquired as a no-follow directory capability",
+                (
+                    "validator source package remains descriptor-identical "
+                    "through finalization"
+                ),
+                (
+                    "validator immutable snapshot remains byte-identical "
+                    "through finalization"
+                ),
+            }
             self.add(
                 "mutation harness classifies validator exceptions as HARNESS_ERROR",
-                harness_result.get("status") == "HARNESS_ERROR"
+                invalid_root_result.get("status") == "FAIL"
+                and invalid_root_result.get("completed") is True
+                and invalid_root_result.get("harness_error") is False
+                and invalid_root_result.get("returncode") == 2
+                and invalid_root_result.get("critical_failed") == 3
+                and set(
+                    invalid_root_result.get("failed_critical_check_names", [])
+                )
+                == invalid_root_failures
+                and harness_result.get("status") == "HARNESS_ERROR"
                 and harness_result.get("harness_error") is True
                 and harness_result.get("completed") is False
-                and bool(harness_result.get("exception")),
-                details=json.dumps(harness_result, sort_keys=True),
+                and harness_result.get("returncode") == 125
+                and harness_result.get("exception")
+                == "RuntimeError('fixed harness exception probe')",
+                details=json.dumps(
+                    {
+                        "invalid_root": invalid_root_result,
+                        "unexpected_exception": harness_result,
+                    },
+                    sort_keys=True,
+                ),
             )
         def maybe_update(dest: Path):
             update_manifest(dest)
@@ -7258,12 +10632,11 @@ class Validator:
         def self_certificate_obligation_drift(dest: Path):
             p = dest / "self_validation/self_certificate.json"
             p.parent.mkdir(parents=True, exist_ok=True)
-            # SECURITY-REVIEW: The fixed package-local certificate is copied
-            # into the disposable mutation tree without following caller input.
-            shutil.copy2(
-                self.root / "self_validation/self_certificate.json",
-                p,
-                follow_symlinks=False,
+            p.write_bytes(
+                captured_snapshot_regular_file(
+                    "self_validation/self_certificate.json",
+                    self.tree_snapshot or {},
+                )
             )
             data = strict_json_loads(p.read_text(encoding="utf-8"))
             data["pass_tracked_upgrade_audit"]["v1_0_3_cap"][
@@ -7585,10 +10958,11 @@ class Validator:
             evidence_dir.mkdir(parents=True, exist_ok=True)
             # Keep the generated-free fixture's documentation contract intact
             # while adding one provenance file with invalid UTF-8 bytes.
-            shutil.copy2(
-                self.root / "self_validation/README.md",
-                evidence_dir / "README.md",
-                follow_symlinks=False,
+            (evidence_dir / "README.md").write_bytes(
+                captured_snapshot_regular_file(
+                    "self_validation/README.md",
+                    self.tree_snapshot or {},
+                )
             )
             (evidence_dir / "non-utf8-provenance.bin").write_bytes(b"\xff\xfe\xfa")
             write_stable_release_manifest(dest)
@@ -7601,10 +10975,11 @@ class Validator:
             # under validator-owned roots; symlink following remains disabled.
             # Preserve the required documentation marker so this false world
             # differs from a clean export only by the root leak under test.
-            shutil.copy2(
-                self.root / "self_validation/README.md",
-                dest / "self_validation/README.md",
-                follow_symlinks=False,
+            (dest / "self_validation/README.md").write_bytes(
+                captured_snapshot_regular_file(
+                    "self_validation/README.md",
+                    self.tree_snapshot or {},
+                )
             )
             p.write_text(
                 json.dumps({"details": str(dest.resolve())}) + "\n",
@@ -7711,10 +11086,8 @@ class Validator:
             # SECURITY-REVIEW: Fixed git argv and a validator-owned temp path;
             # no shell or external command text is constructed.
             self.disposable_git_metadata(dest)
-            proc = subprocess.run(
+            proc = _run_bounded_git(
                 ["git", "-C", str(dest), "add", "-f", "--", rel],
-                capture_output=True,
-                text=True,
             )
             if proc.returncode != 0:
                 raise RuntimeError(_bounded_git_failure("git add tracked .pyc probe", proc))
@@ -7730,10 +11103,8 @@ class Validator:
             # SECURITY-REVIEW: Fixed git argv and a validator-owned temp path;
             # no shell or external command text is constructed.
             self.disposable_git_metadata(dest)
-            proc = subprocess.run(
+            proc = _run_bounded_git(
                 ["git", "-C", str(dest), "add", "-f", "--", rel],
-                capture_output=True,
-                text=True,
             )
             if proc.returncode != 0:
                 raise RuntimeError(
@@ -7750,10 +11121,8 @@ class Validator:
             # no user-controlled path is accepted by this self-test.
             link.symlink_to("subagent-task-card.md")
             self.disposable_git_metadata(dest)
-            proc = subprocess.run(
+            proc = _run_bounded_git(
                 ["git", "-C", str(dest), "add", "-f", "--", rel],
-                capture_output=True,
-                text=True,
             )
             if proc.returncode != 0:
                 raise RuntimeError(_bounded_git_failure("git add tracked symlink probe", proc))
@@ -7776,13 +11145,34 @@ class Validator:
                 b"fixed untracked non-bytecode cruft probe\n"
             )
 
+        def ignored_untracked_checkout_pyc(dest: Path):
+            rel = f"{SKILL_DIR}/scripts/ignored-untracked-selftest.pyc"
+            (dest / rel).write_bytes(
+                b"fixed ignored untracked bytecode rejection probe\n"
+            )
+            tracked_probe = _run_bounded_git(
+                [
+                    "git", "-C", str(dest), "ls-files",
+                    "--error-unmatch", "--", rel,
+                ],
+            )
+            ignored_probe = _run_bounded_git(
+                ["git", "-C", str(dest), "check-ignore", "-q", "--", rel],
+            )
+            if tracked_probe.returncode == 0 or ignored_probe.returncode != 0:
+                raise RuntimeError(
+                    "checkout ignored .pyc fixture setup invalid: "
+                    f"tracked_rc={tracked_probe.returncode} "
+                    f"ignored_rc={ignored_probe.returncode}"
+                )
+
         def index_only_gitlink(dest: Path):
             rel = f"{SKILL_DIR}/assets/index-only-gitlink-selftest"
             self.disposable_git_metadata(dest)
             # SECURITY-REVIEW: Fixed argv, mode, object ID, and relative path
             # mutate only the disposable index. No commit, config, network, or
             # submodule operation is performed.
-            proc = subprocess.run(
+            proc = _run_bounded_git(
                 [
                     "git",
                     "-C",
@@ -7792,8 +11182,6 @@ class Validator:
                     "--cacheinfo",
                     f"160000,1111111111111111111111111111111111111111,{rel}",
                 ],
-                capture_output=True,
-                text=True,
             )
             if proc.returncode != 0:
                 raise RuntimeError(_bounded_git_failure("gitlink index probe", proc))
@@ -7808,6 +11196,7 @@ class Validator:
             ("rejects untracked checkout symlink before reads", untracked_checkout_symlink),
             ("rejects untracked checkout FIFO before copies", untracked_checkout_fifo),
             ("rejects untracked checkout non-bytecode cruft", untracked_checkout_ds_store),
+            ("rejects ignored untracked checkout .pyc", ignored_untracked_checkout_pyc),
             ("rejects index-only gitlink mode 160000", index_only_gitlink),
         ]
         mutation_cases = [
@@ -7972,27 +11361,41 @@ class Validator:
                         "expected_path_is_tracked_cruft": (
                             expected_rel in tracked_cruft_paths
                         ),
-                        "ordinary_single_critical_failure": (
+                        "exact_fail_closed_critical_failures": (
                             result.get("status") == "FAIL"
-                            and result.get("critical_failed") == 1
+                            and result.get("critical_failed") == 3
                             and result.get("returncode") == 2
                             and result.get("harness_error") is False
+                            and set(
+                                result.get("failed_critical_check_names", [])
+                            )
+                            == {
+                                PHYSICAL_CRUFT_CHECK,
+                                (
+                                    "validator source package remains "
+                                    "descriptor-identical through finalization"
+                                ),
+                                (
+                                    "validator immutable snapshot remains "
+                                    "byte-identical through finalization"
+                                ),
+                            }
                         ),
                         "named_critical_check_failed": (
                             isinstance(cruft_check, Mapping)
-                            and cruft_check.get("name") == SHIPPABLE_CRUFT_CHECK
+                            and cruft_check.get("name") == PHYSICAL_CRUFT_CHECK
                             and cruft_check.get("severity") == "critical"
                             and cruft_check.get("passed") is False
                         ),
                         "all_tracked_cruft_paths_in_failure_details": all(
                             path in cruft_details for path in tracked_cruft_paths
                         ),
-                        "tracked_cruft_index_paths": tracked_cruft_paths,
+                        "observed_index_cruft_paths": tracked_cruft_paths,
                     }
                     failed = failed and all(
                         value is True
                         for key, value in targeted_cruft_assertion.items()
-                        if key != "tracked_cruft_index_paths"
+                        if key != "observed_index_cruft_paths"
                     )
                 self.mutation_tests.append(
                     {
@@ -8030,11 +11433,17 @@ class Validator:
                 gc.collect()
 
     def run_formal_runner_contract_tests(self) -> None:
-        script = self.path(f"{SKILL_DIR}/scripts/run_formal_runner_contract_tests.py")
+        temporary = Path(tempfile.mkdtemp(prefix="ntt_formal_contract_snapshot_"))
+        fixture = temporary / self.source_root.name
         try:
-            mod = load_module_from_path("ntt_formal_contract_selftest", script)
-            runner = mod.load_runner(self.root)
-            cases = mod.run_cases(runner, self.root)
+            self._materialize_snapshot(fixture)
+            mod = self._load_snapshot_module(
+                "ntt_formal_contract_selftest",
+                f"{SKILL_DIR}/scripts/run_formal_runner_contract_tests.py",
+                origin=fixture / SKILL_DIR / "scripts" / "run_formal_runner_contract_tests.py",
+            )
+            runner = mod.load_runner(fixture)
+            cases = mod.run_cases(runner, fixture)
             total = len(cases)
             passed_count = sum(1 for c in cases if c.get("passed"))
             self.formal_runner_contract = {"total": total, "passed": passed_count, "cases": cases}
@@ -8042,10 +11451,12 @@ class Validator:
         except Exception as exc:
             self.formal_runner_contract = {"error": str(exc)}
             self.add("formal runner contract tests pass", False, details=str(exc))
+        finally:
+            shutil.rmtree(temporary, ignore_errors=True)
 
     def run_true_world_tests(self) -> None:
         variants: List[Tuple[str, Any]] = []
-        root_text = str(self.root.resolve())
+        root_text = str(Path(os.path.abspath(self.source_root)))
         boundary_false_worlds = {
             "at_suffix": root_text + "@sibling",
             "space_suffix": root_text + " old",
@@ -8059,7 +11470,7 @@ class Validator:
                 "normalized_separator_child": root_text + "\\child.txt",
                 **boundary_false_worlds,
             },
-            self.root,
+            self.source_root,
         )
         path_probe_ok = path_probe == {
             "root": "<package-root>",
@@ -8206,33 +11617,8 @@ class Validator:
             write_stable_release_manifest(dest)
         variants.append(("retains explicit historical prose for both prior versions", explicit_historical_versions))
 
-        def ignored_untracked_checkout_pyc(dest: Path):
-            rel = f"{SKILL_DIR}/scripts/ignored-untracked-selftest.pyc"
-            (dest / rel).write_bytes(b"fixed ignored untracked bytecode probe\n")
-            # SECURITY-REVIEW: Fixed git argv against a disposable checkout;
-            # no shell or external command text is constructed.
-            tracked = subprocess.run(
-                ["git", "-C", str(dest), "ls-files", "--error-unmatch", "--", rel],
-                capture_output=True,
-                text=True,
-            )
-            ignored = subprocess.run(
-                ["git", "-C", str(dest), "check-ignore", "-q", "--", rel],
-                capture_output=True,
-                text=True,
-            )
-            if tracked.returncode == 0 or ignored.returncode != 0:
-                raise RuntimeError(
-                    f"checkout .pyc fixture setup invalid: tracked_rc={tracked.returncode} ignored_rc={ignored.returncode}"
-                )
-
-        checkout_variants: List[Tuple[str, Any]] = [
-            ("retains ignored untracked checkout .pyc", ignored_untracked_checkout_pyc),
-        ]
         variant_cases = [
             (name, mut, self.mutation_copy) for name, mut in variants
-        ] + [
-            (name, mut, self.checkout_copy) for name, mut in checkout_variants
         ]
 
         for name, mut, copy_factory in variant_cases:
@@ -8585,15 +11971,8 @@ class Validator:
                     and not any(moved_into_package.iterdir())
                 ),
             )
-            dest = tmp / self.root.name
-            # SECURITY-REVIEW: Preserve symlinks so the copied validator's
-            # preflight observes link entries rather than following targets.
-            shutil.copytree(
-                self.root,
-                dest,
-                symlinks=True,
-                ignore=shutil.ignore_patterns("__pycache__", "*.pyc", *CRUFT_IGNORE_GLOBS),
-            )
+            dest = tmp / self.source_root.name
+            self._materialize_snapshot(dest)
             command_results: List[Dict[str, Any]] = []
 
             def record(command: str, passed: bool, details: Any = None) -> None:
@@ -8602,7 +11981,12 @@ class Validator:
             previous_dont_write_bytecode = sys.dont_write_bytecode
             sys.dont_write_bytecode = True
             try:
-                outer_after = snapshot_package_entries(self.root)
+                outer_after = materialized_snapshot_logical_view(
+                    snapshot_package_entries(
+                        self.root,
+                        root_directory_fd=self.snapshot_root_fd,
+                    )
+                )
                 outer_changed = sorted(
                     relative
                     for relative in set(self.self_test_start_snapshot or {})
@@ -8975,10 +12359,12 @@ class Validator:
                             "--evidence-root",
                             ".",
                             "--strict-evidence",
+                            "--downstream-policy",
+                            "package-self",
                         ]
                     )
                     record(
-                        f"{pass_prefix}: python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence",
+                        f"{pass_prefix}: python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --downstream-policy package-self",
                         gate_proc is not None
                         and gate_proc.returncode == 0
                         and gate_result.get("status")
@@ -9090,8 +12476,8 @@ class Validator:
                         promotion_proc is not None
                         and promotion_proc.returncode == 0
                         and promotion_result.get("status") == "PASS"
-                        and promotion_result.get("passed") == 44
-                        and promotion_result.get("total") == 44
+                        and promotion_result.get("passed") == 46
+                        and promotion_result.get("total") == 46
                         and promotion_result.get(
                             "production_certifier_cli_baseline"
                         )
@@ -9225,7 +12611,15 @@ class Validator:
         critical_failed = sum(1 for c in self.checks if c["severity"] == "critical" and not c["passed"])
         noncritical_failed = sum(1 for c in self.checks if c["severity"] != "critical" and not c["passed"])
         status = "FAIL" if critical_failed else ("PASS-SCOPED" if noncritical_failed else "PASS")
-        return {"status": status, "root": str(self.root), "checks_total": len(self.checks), "checks_passed": sum(1 for c in self.checks if c["passed"]), "critical_failed": critical_failed, "noncritical_failed": noncritical_failed, "checks": self.checks, "gate_contract": self.gate_contract, "mutation_tests": self.mutation_tests, "true_world_tests": self.true_world_tests}
+        result = {"status": status, "root": str(self.source_root), "checks_total": len(self.checks), "checks_passed": sum(1 for c in self.checks if c["passed"]), "critical_failed": critical_failed, "noncritical_failed": noncritical_failed, "checks": self.checks, "gate_contract": self.gate_contract, "mutation_tests": self.mutation_tests, "true_world_tests": self.true_world_tests}
+        # The immutable mirror and its temporary parent are implementation
+        # capabilities, not provenance.  Normalize lexical absolute spellings
+        # without resolving possibly swapped paths.
+        return normalize_cli_display(
+            result,
+            self.source_root,
+            private_paths=self._private_display_paths,
+        )
 
 
 def to_markdown(result: Dict[str, Any]) -> str:

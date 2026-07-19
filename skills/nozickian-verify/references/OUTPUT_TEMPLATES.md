@@ -70,6 +70,17 @@ For every `fetched-and-readjudicated` row, include the complete companion-eviden
 
 Use `assets/certificate-template.json` for a machine-readable skeleton. Gate scripts require substantive tests and evidence for critical and major claims. Certificate authors should include `derived_or_downstream_claims` whenever they mention entailed, summarized, downstream, deployment, safety, compliance, or action-authorizing conclusions that are not independently verified as claims.
 
+Strict claim-contract schema `1.1` binds the complete claim and the
+certificate-assurance payload, including the full canonical downstream-policy
+object. Modal world-contract schema `1.1` authorizes only through its closed
+typed operator, target, and outcome fields. `outcome` and
+`observed_outcome` are separate modal-digest inputs and must agree when both
+are present; world and behavior prose remains digest-bound explanation, never
+a polarity oracle. For this package's `package-self` gate, the
+certificate-wide modal ID multiset must contain all 80 immutable reviewed
+transitions exactly once with their pinned claim/kind assignments and complete
+transition payloads.
+
 The template's `consistency_sweep` and `remote_escalations` fields remain parent-enforced record-keeping for the report contract above: `ntt_gate.py` ignores unknown certificate fields (verified against its parsing code and the self-certificate fixture) and does not evaluate them, and the formal runner (`run_formal_artifact_verification.py`) does not read or evaluate them either. The package validator mechanically validates recorded corrected-claim locator grammar, uniqueness, current-file resolution/range bounds, and excerpt SHA-256 bindings. It does not infer whether the sweep was activated when required, whether the bound excerpt is the correct semantic target, whether all stale echoes were found, or whether the resulting claim adjudication is sound. Those semantic consistency-sweep rules and all remote-escalation rules remain applied by the parent and audited by `ntt-gate-auditor`. Neither the gate script nor the formal runner applies these caps; full mechanical enforcement remains deferred to issue #5.
 
 ## PASS-TRACKED upgrade certificate skeleton
@@ -77,6 +88,7 @@ The template's `consistency_sweep` and `remote_escalations` fields remain parent
 ```json
 {
   "promotion_schema_version": "2.0",
+  "origin": "runtime-observed",
   "upgrade_from_status": "PASS-SCOPED",
   "requested_status": "PASS-TRACKED",
   "package_version": "<plugin.json version>",
@@ -170,6 +182,9 @@ The template's `consistency_sweep` and `remote_escalations` fields remain parent
       "id": "C-UPGRADE-001",
       "text": "The exact package snapshot satisfies the independently evaluated promotion contract.",
       "proposition_sha256": "sha256:<SHA-256 of the canonical claim text>",
+      "claim_contract_schema_version": "1.1",
+      "claim_contract_sha256": "sha256:<SHA-256 of the assurance-bound claim contract>",
+      "scope": "The exact identified package snapshot and independently evaluated promotion contract only.",
       "importance": "critical",
       "artifact_location": "promotion_claims/C-UPGRADE-001",
       "truth_status": "executed_confirmed",
@@ -208,11 +223,22 @@ The template's `consistency_sweep` and `remote_escalations` fields remain parent
         {
           "id": "FW-C-UPGRADE-001-STALE",
           "kind": "false_world",
-          "target_claim": "C-UPGRADE-001",
+          "target_claim_ids": ["C-UPGRADE-001"],
           "perturbation": "Replace the package binding with stale bytes.",
+          "world_contract": {
+            "schema_version": "1.1",
+            "semantic_equivalence_class": "stale-package-bytes",
+            "operator": "replace",
+            "target": "artifact.identity",
+            "precondition": "The claim is bound to the current package bytes.",
+            "state_delta": "Substitute bytes from a stale package snapshot.",
+            "oracle": "Recompute and compare the bound package identity.",
+            "expected_outcome": "rejected_false_claim"
+          },
           "expected_behavior": "The strict gate rejects the stale promotion claim.",
           "observed_behavior": "The strict gate rejected the stale promotion claim.",
           "outcome": "rejected_false_claim",
+          "observed_outcome": "rejected_false_claim",
           "result": "pass",
           "evidence_refs": [
             "promotion_claims/C-UPGRADE-001/FW-stale.json"
@@ -221,11 +247,22 @@ The template's `consistency_sweep` and `remote_escalations` fields remain parent
         {
           "id": "FW-C-UPGRADE-001-UNBOUND",
           "kind": "false_world",
-          "target_claim": "C-UPGRADE-001",
+          "target_claim_ids": ["C-UPGRADE-001"],
           "perturbation": "Remove the independent formal evidence binding.",
+          "world_contract": {
+            "schema_version": "1.1",
+            "semantic_equivalence_class": "formal-evidence-absent",
+            "operator": "remove",
+            "target": "certificate.evidence_refs",
+            "precondition": "The claim cites independently bound formal evidence.",
+            "state_delta": "Delete the formal evidence binding.",
+            "oracle": "Evaluate the strict promotion evidence graph.",
+            "expected_outcome": "blocked"
+          },
           "expected_behavior": "The strict gate blocks the unbound promotion claim.",
           "observed_behavior": "The strict gate blocked the unbound promotion claim.",
           "outcome": "blocked",
+          "observed_outcome": "blocked",
           "result": "pass",
           "evidence_refs": [
             "promotion_claims/C-UPGRADE-001/FW-unbound.json"
@@ -236,11 +273,22 @@ The template's `consistency_sweep` and `remote_escalations` fields remain parent
         {
           "id": "TW-C-UPGRADE-001-EQUIVALENT",
           "kind": "true_world",
-          "target_claim": "C-UPGRADE-001",
+          "target_claim_ids": ["C-UPGRADE-001"],
           "variant": "Retain equivalent independently bound package and formal evidence.",
+          "world_contract": {
+            "schema_version": "1.1",
+            "semantic_equivalence_class": "equivalent-independent-evidence",
+            "operator": "preserve",
+            "target": "evidence_wrapper.identity",
+            "precondition": "The original evidence is independently bound and valid.",
+            "state_delta": "Retain semantically equivalent independently bound evidence.",
+            "oracle": "Re-evaluate exact bindings and the strict claim contract.",
+            "expected_outcome": "retained_true_claim"
+          },
           "expected_behavior": "The strict gate retains the true promotion claim.",
           "observed_behavior": "The strict gate retained the true promotion claim.",
           "outcome": "retained_true_claim",
+          "observed_outcome": "retained_true_claim",
           "result": "pass",
           "evidence_refs": [
             "promotion_claims/C-UPGRADE-001/TW-equivalent.json"
@@ -260,9 +308,9 @@ The template's `consistency_sweep` and `remote_escalations` fields remain parent
 }
 ```
 
-The certifier requires exact-string `promotion_schema_version: "2.0"` and exact JSON types for every required top-level field. `claims` is a required nonempty array: every entry must be an object with the exact claim field types shown above, a unique canonical ID, `proposition_sha256`, complete method M, local evidence, modal tests, contradiction review, and residual-risk review. Every cited claim wrapper repeats the canonical claim digest; every modal wrapper adds the canonical case digest and a verified observation-ledger record as defined in `EVIDENCE_SCHEMA.md`. The certifier evaluates the claim array through the canonical strict gate and requires a nonempty all-passing result set. `claims` remains distinct from `derived_or_downstream_claims`, whose entries cannot inherit verification from an upstream claim. A performed review may use empty `claims_identified` and `derived_or_downstream_claims` arrays only with a substantive `none_identified_reason`. The certifier does not accept `package_sha256` as an alias or flat promotion `evidence_refs`. Each of the fixed nine typed nodes contains exactly `path`, `sha256`, and `depends_on`; it resolves to a distinct canonical bundle-local regular non-symlink file, binds exact bytes, uses the canonical role path, and participates in the one environment-independent bounded acyclic dependency graph. Equal bytes across distinct roles are allowed; path and file-identity aliases are not.
+The certifier requires exact-string `promotion_schema_version: "2.0"`, required string `origin`, and exact JSON types for every required top-level field. `claims` is a required nonempty array: every entry must be an object with the exact claim field types shown above, a unique canonical ID, nonempty `scope`, claim-contract schema/digest `1.1`, `proposition_sha256`, complete method M, local evidence, complete modal world contracts, contradiction review, and residual-risk review. Every cited claim wrapper repeats the canonical claim digest; every modal wrapper adds the canonical case digest and a verified observation-ledger record as defined in `EVIDENCE_SCHEMA.md`. The certifier evaluates the claim array through the canonical strict gate and requires a nonempty all-passing result set. `claims` remains distinct from `derived_or_downstream_claims`, whose entries cannot inherit verification from an upstream claim. A performed review may use empty `claims_identified` and `derived_or_downstream_claims` arrays only with a substantive `none_identified_reason`. The certifier does not accept `package_sha256` as an alias or flat promotion `evidence_refs`. Each of the fixed nine typed nodes contains exactly `path`, `sha256`, and `depends_on`; it resolves to a distinct canonical bundle-local regular non-symlink file, binds exact bytes, uses the canonical role path, and participates in the one environment-independent bounded acyclic dependency graph. Equal bytes across distinct roles are allowed; path and file-identity aliases are not. The declared origin must match live provenance schema `2.0` and formal `evidence_origin`; the certifier reconstructs that cross-binding in `promotion-method-m-v2`.
 
-Deterministic captures cannot authorize by themselves: the certifier runs the fixed suites fresh and compares typed semantic projections. Allowlisted official validators also run fresh. Claude uses the exact strict argv shown above; after ANSI normalization its real `✔ Validation passed` form succeeds only when neither complete output stream contradicts it. Full bytes determine status, byte counts, and SHA-256; bounded excerpts and truncation flags are presentation metadata. Prewritten text captures do not authorize, absent tools scope only through the explicit flag while both official-policy nodes and fixed dependencies remain mandatory, and installed failures fail. Formal result `2.0` binds the standalone endpoint-checked target copy, exact report/gate/certificate/ledger/complete-transcript/prompt/target-copy companion manifest, package-tree identity, run ID, target endpoint identities, `temporal_immutability_enforced: false`, and successful `linux-child-subreaper-plus-process-group` containment with no detached survivor and complete cleanup. Its exact output-check projection is recomputed from the bound report, certificate, ledger, and gate and must be nonempty and all passing; arbitrary self-attested checks and coherently rehashed empty report or gate companions fail closed. An otherwise `PASS-TRACKED` formal result is capped at `PASS-SCOPED`; unavailable process containment refuses execution.
+Deterministic captures cannot authorize by themselves: the certifier runs the fixed suites fresh and compares typed semantic projections. Allowlisted official validators also run fresh. Claude uses the exact strict argv shown above; after ANSI normalization its real `✔ Validation passed` form succeeds only when neither complete output stream contradicts it. Full bytes determine status, byte counts, and SHA-256; bounded excerpts and truncation flags are presentation metadata. Prewritten text captures do not authorize, absent tools scope only through the explicit flag while both official-policy nodes and fixed dependencies remain mandatory, and installed failures fail. Formal result `2.0` binds the standalone endpoint-checked target copy, exact report/gate/certificate/ledger/complete-transcript/prompt/target-copy companion manifest, package-tree identity, run ID, target endpoint identities, schema-`2.0` `evidence_origin`, `temporal_immutability_enforced: false`, and successful `linux-child-subreaper-plus-process-group` containment with no detached survivor and complete cleanup. Its terminal SDK ResultMessage must be the single final successful record after all lanes, use canonical nonempty `result`, reject non-null `api_error_status`, `deferred_tool_use`, and non-structured `structured_output`, and permit non-null `terminal_reason`/`stop_reason` only as exact `completed`/`end_turn`. Its exact output-check projection is recomputed from the bound report, certificate, ledger, and gate and must be nonempty and all passing; arbitrary self-attested checks and coherently rehashed empty report or gate companions fail closed. An otherwise `PASS-TRACKED` formal result is capped at `PASS-SCOPED`; unavailable process containment refuses execution.
 
 Gate Markdown, certifier JSON/Markdown, formal output plus compatibility JSON, live transcripts plus optional JSON, validator Markdown, gate/formal/regression/promotion wrapper JSON, and fixed behavior/stable-release manifests retain held no-follow parents from before long-running work through descriptor-relative exclusive creation, link/rename installation as applicable, and directory fsync. Role and alias classification is frozen against held identities. Direct/ancestor links, special or hardlink sentinels, cross-output aliases, and lexical-parent substitution cannot redirect writes and fail closed; validator Markdown must remain outside the package tree. These checks bind output destinations but are not temporal isolation. Formal children receive only authenticated runner-owned `/proc/<runner-pid>/fd/N`; child-FD close/rebind and self/unrelated/noncanonical/closed/file capability forms fail, while unavailable procfd support yields `INVALID_INPUT` before requested output mutation. Promotion uses the typed `formal.result` path and never basename, glob-first, or tail-only substitution; unrelated nonreserved files may remain.
 
@@ -285,4 +333,4 @@ A complete modeled v1.0.3 result has this authorization envelope:
 }
 ```
 
-The process exits nonzero. The modeled-promotion cap is certifier-specific; generic `ntt_gate.py` `PASS-TRACKED` semantics remain unchanged. The formal runner separately applies its endpoint/containment cap. The 44-case aggregate invokes the production certifier CLI for its complete baseline and every negative, but remains synthetic contract evidence rather than runtime authentication.
+The process exits nonzero. The modeled-promotion cap is certifier-specific; generic `ntt_gate.py` `PASS-TRACKED` semantics remain unchanged. The formal runner separately applies its endpoint/containment cap. The 46-case aggregate invokes the production certifier CLI for its complete baseline and every negative, but remains synthetic contract evidence rather than runtime authentication.

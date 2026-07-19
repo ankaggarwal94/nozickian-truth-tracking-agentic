@@ -76,7 +76,7 @@ PASSISH = {PASS_TRACKED, PASS_SCOPED, "PASS"}
 PROMOTION_PROFILE = "promotion-contract-v2-complete"
 PROMOTION_CERTIFICATE_SCHEMA = "2.0"
 PROMOTION_EVIDENCE_SCHEMA = "promotion-evidence-v2"
-PROMOTION_METHOD_SCHEMA = "promotion-method-m-v1"
+PROMOTION_METHOD_SCHEMA = "promotion-method-m-v2"
 DETERMINISTIC_CAPTURE_SCHEMA = "deterministic-capture-v2"
 OFFICIAL_POLICY_SCHEMA = "official-validator-policy-v1"
 FORMAL_RESULT_SCHEMA = "2.0"
@@ -136,6 +136,11 @@ PROMOTION_CERTIFICATE_REQUIRED_FIELD_TYPES = {
 PROMOTION_CERTIFICATE_OPTIONAL_FIELD_TYPES = {
     "scope_limitations": list,
 }
+PROMOTION_CERTIFICATE_TOP_LEVEL_FIELDS = (
+    {"promotion_schema_version"}
+    | set(PROMOTION_CERTIFICATE_REQUIRED_FIELD_TYPES)
+    | set(PROMOTION_CERTIFICATE_OPTIONAL_FIELD_TYPES)
+)
 PROMOTION_CLAIM_REQUIRED_FIELD_TYPES = {
     "id": str,
     "text": str,
@@ -153,7 +158,7 @@ PROMOTION_CLAIM_REQUIRED_FIELD_TYPES = {
     "residual_risks": list,
 }
 PROMOTION_CLAIM_ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_.:-]{0,127}$")
-LIVE_PROVENANCE_SCHEMA_VERSION = "1.0"
+LIVE_PROVENANCE_SCHEMA_VERSION = "2.0"
 CLAUDE_VERSION_RE = re.compile(r"\b\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?\b")
 REQUIRED_NATIVE_AGENTS = [
     "ntt-method-cartographer",
@@ -2007,6 +2012,8 @@ def _formal_precheck_inventory_typed(
             "--evidence-root",
             "<execution-package-root>",
             "--strict-evidence",
+            "--downstream-policy",
+            "package-self",
         ]
         and plugin
         == [
@@ -2215,6 +2222,7 @@ def formal_projected_fields_typed(
 ) -> bool:
     expected_keys = {
         "formal_result_schema_version",
+        "evidence_origin",
         "run_id",
         "status",
         "reason",
@@ -2247,10 +2255,13 @@ def formal_projected_fields_typed(
     )
     return (
         set(data) == expected_keys
+        and data.get("evidence_origin")
+        in {"synthetic-contract", "runtime-observed"}
         and all(
             type(data.get(field)) is str
             for field in (
                 "formal_result_schema_version",
+                "evidence_origin",
                 "run_id",
                 "status",
                 "reason",
@@ -2701,6 +2712,8 @@ def deterministic_suite_commands(
             "--evidence-root",
             str(package_root),
             "--strict-evidence",
+            "--downstream-policy",
+            "package-self",
         ],
         "regression": [
             sys.executable,
@@ -3547,9 +3560,12 @@ def live_fixture_checks(package_root: Path, bundle: Path) -> List[Check]:
     provenance = data.get("provenance")
     checks.append(
         Check(
-            "live provenance schema is 1.0",
+            "live provenance schema is 2.0",
             isinstance(provenance, Mapping)
-            and provenance.get("provenance_schema_version") == LIVE_PROVENANCE_SCHEMA_VERSION,
+            and provenance.get("provenance_schema_version")
+            == LIVE_PROVENANCE_SCHEMA_VERSION
+            and provenance.get("evidence_origin")
+            in {"synthetic-contract", "runtime-observed"},
             details=provenance,
         )
     )
@@ -5556,19 +5572,6 @@ def expected_promotion_method_m(
 ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     """Reconstruct the one closed method-M record allowed by promotion v2."""
     try:
-        origin = data.get("origin")
-        if origin == "synthetic-contract":
-            evidence_class = "synthetic-contract-non-runtime"
-            runtime_evidence = False
-        elif origin == "runtime-observed":
-            evidence_class = "observed-runtime-bundle"
-            runtime_evidence = True
-        else:
-            raise ValueError(
-                "promotion origin must explicitly identify synthetic-contract "
-                "or runtime-observed evidence"
-            )
-
         nodes = promotion_evidence_nodes(data)
         expected_roles = set(PROMOTION_EVIDENCE_SPECS)
         if type(nodes) is not dict or set(nodes) != expected_roles:
@@ -5605,6 +5608,35 @@ def expected_promotion_method_m(
 
         live = lane_data["live.runtime"]
         formal = lane_data["formal.result"]
+        live_provenance = live.get("provenance")
+        live_origin = (
+            live_provenance.get("evidence_origin")
+            if isinstance(live_provenance, Mapping)
+            else None
+        )
+        formal_origin = formal.get("evidence_origin")
+        if (
+            type(live_origin) is not str
+            or live_origin not in {"synthetic-contract", "runtime-observed"}
+            or type(formal_origin) is not str
+            or formal_origin != live_origin
+        ):
+            raise ValueError(
+                "promotion evidence origin is not consistently bound by "
+                "the live and formal lane artifacts"
+            )
+        origin = live_origin
+        if data.get("origin") != origin:
+            raise ValueError(
+                "promotion origin declaration does not match bound lane "
+                "provenance"
+            )
+        if origin == "synthetic-contract":
+            evidence_class = "synthetic-contract-non-runtime"
+            runtime_evidence = False
+        else:
+            evidence_class = "observed-runtime-bundle"
+            runtime_evidence = True
         live_run_config = live.get("run_config")
         live_runtime_identity = live.get("runtime_identity")
         live_commands = live.get("commands")
@@ -5696,6 +5728,7 @@ def expected_promotion_method_m(
         }
         method: Dict[str, Any] = {
             "schema_version": PROMOTION_METHOD_SCHEMA,
+            "evidence_origin": origin,
             "evidence_class": evidence_class,
             "runtime_evidence": runtime_evidence,
             "promotion_authorized": False,
@@ -5826,6 +5859,9 @@ def promotion_certificate_checks(
         in PROMOTION_CERTIFICATE_OPTIONAL_FIELD_TYPES.items()
         if field in data and type(data.get(field)) is not expected_type
     }
+    unexpected_top_level_fields = sorted(
+        set(data) - PROMOTION_CERTIFICATE_TOP_LEVEL_FIELDS
+    )
     expected_method_m, method_m_error = expected_promotion_method_m(
         package_root,
         bundle,
@@ -5849,12 +5885,14 @@ def promotion_certificate_checks(
             not missing_required_fields
             and not wrong_required_field_types
             and not wrong_optional_field_types
+            and not unexpected_top_level_fields
             and method_m_matches
             and live_result_bindings_match,
             details={
                 "missing": missing_required_fields,
                 "wrong_required_types": wrong_required_field_types,
                 "wrong_optional_types": wrong_optional_field_types,
+                "unexpected_top_level_fields": unexpected_top_level_fields,
                 "method_m_error": method_m_error,
                 "method_m_matches": method_m_matches,
                 "live_result_bindings_match": live_result_bindings_match,
@@ -6261,10 +6299,20 @@ def certify_bundle(
             certificate_data, _certificate_error = try_load_json(
                 bundle / "promotion_certificate.json"
             )
-            synthetic_origin = (
-                isinstance(certificate_data, Mapping)
-                and certificate_data.get("origin") == "synthetic-contract"
-            )
+            if isinstance(certificate_data, Mapping):
+                bound_method, _bound_method_error = (
+                    expected_promotion_method_m(
+                        package_root,
+                        bundle,
+                        certificate_data,
+                    )
+                )
+                synthetic_origin = (
+                    isinstance(bound_method, Mapping)
+                    and bound_method.get("evidence_origin")
+                    == "synthetic-contract"
+                    and bound_method.get("runtime_evidence") is False
+                )
             checks.extend(
                 deterministic_checks(
                     package_root,

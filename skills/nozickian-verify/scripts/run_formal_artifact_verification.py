@@ -72,6 +72,56 @@ def strict_json_loads(text: str) -> Any:
 
 PASS_STATUSES = {"PASS-TRACKED", "PASS-SCOPED"}
 FINAL_STATUSES = PASS_STATUSES | {"LIMITED", "FAIL", "UNVERIFIED", "UNVERIFIED_RUNTIME"}
+NEGATIVE_NESTED_STATUS_VALUES = frozenset({
+    "error",
+    "errored",
+    "fail",
+    "failed",
+    "failure",
+    "aborted",
+    "killed",
+    "terminated",
+    "cancelled",
+    "canceled",
+    "timed-out",
+    "timeout",
+    "skipped",
+    "not-executed",
+    "incomplete",
+    "pending",
+    "deferred",
+    "blocked",
+    "denied",
+    "refused",
+    "error-during-execution",
+    "error-max-turns",
+    "error-max-budget-usd",
+    "error-max-structured-output-retries",
+    "blocking-limit",
+    "rapid-refill-breaker",
+    "prompt-too-long",
+    "image-error",
+    "model-error",
+    "api-error",
+    "malformed-tool-use-exhausted",
+    "aborted-streaming",
+    "aborted-tools",
+    "stop-hook-prevented",
+    "hook-stopped",
+    "tool-deferred",
+    "max-turns",
+    "background-requested",
+    "budget-exhausted",
+    "structured-output-retry-exhausted",
+    "tool-deferred-unavailable",
+    "turn-setup-failed",
+    "rejected",
+    "unsuccessful",
+    "permission-denied",
+    "unverified",
+    "limited",
+    "rate-limited",
+})
 REQUIRED_NATIVE_AGENTS = [
     "ntt-method-cartographer",
     "ntt-claim-extractor",
@@ -169,6 +219,8 @@ PIPE_CLOSE_GRACE_SEC = 0.5
 READER_JOIN_GRACE_SEC = 1.0
 MAX_TRACE_ITEMS_PER_RECORD = 10_000
 MAX_TRACE_DEPTH = 64
+CLAUDE_TERMINAL_RESULT_TYPE = "result"
+CLAUDE_SUCCESS_RESULT_SUBTYPE = "success"
 
 def _debug(msg: str) -> None:
     if os.environ.get("NTT_DEBUG_FORMAL_RUNNER"):
@@ -3215,6 +3267,281 @@ def _empty_trace_authentication(reason: str) -> Dict[str, Any]:
     }
 
 
+def _terminal_result_diagnostics(event: Mapping[str, Any]) -> List[str]:
+    """Validate one top-level Claude stream terminal result record."""
+    diagnostics: List[str] = []
+    if type(event.get("type")) is not str:
+        diagnostics.append("terminal type is missing or is not a string")
+    elif event.get("type") != CLAUDE_TERMINAL_RESULT_TYPE:
+        diagnostics.append("terminal type is not canonical result")
+    if type(event.get("subtype")) is not str:
+        diagnostics.append("terminal subtype is missing or is not a string")
+    elif event.get("subtype") != CLAUDE_SUCCESS_RESULT_SUBTYPE:
+        diagnostics.append("terminal subtype is not canonical success")
+    if "is_error" not in event:
+        diagnostics.append("terminal is_error is missing")
+    elif type(event.get("is_error")) is not bool:
+        diagnostics.append("terminal is_error is not boolean")
+    elif event.get("is_error") is not False:
+        diagnostics.append("terminal is_error is true")
+    if "permission_denials" not in event:
+        diagnostics.append("terminal permission_denials is missing")
+    elif type(event.get("permission_denials")) is not list:
+        diagnostics.append("terminal permission_denials is not an array")
+    elif event.get("permission_denials"):
+        diagnostics.append("terminal permission_denials is nonempty")
+    payload_fields = [
+        field for field in ("result", "content", "output")
+        if field in event
+    ]
+    if payload_fields != ["result"]:
+        diagnostics.append(
+            "terminal requires exactly the canonical result payload; "
+            f"observed {payload_fields!r}"
+        )
+    elif type(event.get("result")) is not str or not event.get(
+        "result"
+    ).strip():
+        diagnostics.append("terminal result payload is not a nonempty string")
+    for alias in (
+        "isError",
+        "returnCode",
+        "exitCode",
+        "completionStatus",
+        "errorCode",
+        "apiErrorStatus",
+        "deferredToolUse",
+        "permissionDenials",
+        "terminalReason",
+        "stopReason",
+        "structuredOutput",
+        "api-error-status",
+        "deferred-tool-use",
+        "permission-denials",
+        "terminal-reason",
+        "stop-reason",
+        "structured-output",
+    ):
+        if alias in event:
+            diagnostics.append(f"unsupported terminal alias: {alias}")
+    if event.get("api_error_status") is not None:
+        diagnostics.append("terminal api_error_status is non-null")
+    if event.get("deferred_tool_use") is not None:
+        diagnostics.append("terminal deferred_tool_use is non-null")
+    if event.get("structured_output") is not None:
+        diagnostics.append(
+            "terminal structured_output is non-null for a non-structured run"
+        )
+    if (
+        "terminal_reason" in event
+        and event.get("terminal_reason") is not None
+        and event.get("terminal_reason") != "completed"
+    ):
+        diagnostics.append("terminal_reason is not exact completed")
+    # ``stop_reason`` is open-ended in the SDK.  This formal run requests no
+    # custom stop sequence or structured response, and tool/pause stops are not
+    # a completed coordinator result.  Therefore only an explicit ``end_turn``
+    # authenticates; absent/null is retained for older emitters.
+    if (
+        "stop_reason" in event
+        and event.get("stop_reason") is not None
+        and event.get("stop_reason") != "end_turn"
+    ):
+        diagnostics.append("terminal stop_reason is not exact end_turn")
+    for field in ("success", "completed", "executed"):
+        if field in event:
+            diagnostics.append(
+                f"unsupported terminal success/status alias: {field}"
+            )
+    for field in (
+        "failed",
+        "failure",
+        "timed_out",
+        "timeout",
+        "aborted",
+        "killed",
+        "terminated",
+        "cancelled",
+        "canceled",
+        "skipped",
+        "not_executed",
+    ):
+        if field in event:
+            diagnostics.append(
+                f"unsupported terminal failure/status alias: {field}"
+            )
+    for field in ("error", "errors"):
+        if field in event:
+            diagnostics.append(f"unsupported terminal error channel: {field}")
+    for field in (
+        "exit_code",
+        "returncode",
+        "return_code",
+        "error_code",
+    ):
+        if field in event:
+            diagnostics.append(
+                f"unsupported terminal exit/status alias: {field}"
+            )
+    for field in ("status", "outcome"):
+        if field in event:
+            diagnostics.append(f"unsupported terminal status alias: {field}")
+
+    def empty_control_value(value: Any) -> bool:
+        return value in (None, False, 0, "") or (
+            isinstance(value, (list, tuple, dict)) and not value
+        )
+
+    stack: List[Tuple[str, Any]] = [
+        (str(key), value)
+        for key, value in event.items()
+        if key != "result"
+    ]
+    while stack:
+        raw_key, value = stack.pop()
+        key = re.sub(r"[-_\s]+", "-", raw_key.strip().lower())
+        if key in {"terminal-reason", "terminalreason"}:
+            if value is not None and value != "completed":
+                diagnostics.append(
+                    f"terminal nested {raw_key} is not exact completed"
+                )
+        elif key in {"stop-reason", "stopreason"}:
+            if value is not None and value != "end_turn":
+                diagnostics.append(
+                    f"terminal nested {raw_key} is not exact end_turn"
+                )
+        elif key in {"structured-output", "structuredoutput"}:
+            if value is not None:
+                diagnostics.append(
+                    f"terminal nested {raw_key} is non-null for a "
+                    "non-structured run"
+                )
+        elif key in {
+            "error",
+            "errors",
+            "api-error",
+            "api-errors",
+            "apierror",
+            "api-error-status",
+            "apierrorstatus",
+            "error-code",
+            "error-message",
+            "deferred",
+            "deferred-error",
+            "deferred-tool-use",
+            "deferredtooluse",
+            "pending",
+            "incomplete",
+            "is-error",
+            "permission-denials",
+            "permissiondenials",
+            "exit-code",
+            "exitcode",
+            "return-code",
+            "returncode",
+            "errorcode",
+        } and not empty_control_value(value):
+            diagnostics.append(
+                f"terminal nested status/error channel is nonempty: {raw_key}"
+            )
+        elif key in {
+            "failed",
+            "failure",
+            "timed-out",
+            "timeout",
+            "aborted",
+            "killed",
+            "terminated",
+            "cancelled",
+            "canceled",
+            "skipped",
+            "not-executed",
+        } and not empty_control_value(value):
+            diagnostics.append(
+                f"terminal nested failure channel is nonempty: {raw_key}"
+            )
+        elif key in {"success", "completed", "executed"}:
+            if value is not True:
+                diagnostics.append(
+                    f"terminal nested {raw_key} is not exact boolean true"
+                )
+        elif key in {"status", "outcome"} and type(value) is str:
+            normalized = re.sub(r"[-_\s]+", "-", value.strip().lower())
+            if normalized in NEGATIVE_NESTED_STATUS_VALUES:
+                diagnostics.append(
+                    f"terminal nested {raw_key} is an explicit failure status"
+                )
+        elif key in {"type", "subtype"} and type(value) is str:
+            normalized = re.sub(r"[-_\s]+", "-", value.strip().lower())
+            if any(
+                marker in normalized
+                for marker in (
+                    "error",
+                    "fail",
+                    "defer",
+                    "pending",
+                    "incomplete",
+                    "max-turn",
+                    "max-budget",
+                )
+            ):
+                diagnostics.append(
+                    f"terminal nested {raw_key} is an error/deferred "
+                    "discriminator"
+                )
+        if isinstance(value, Mapping):
+            stack.extend(
+                (str(child_key), child)
+                for child_key, child in value.items()
+            )
+        elif isinstance(value, (list, tuple)):
+            stack.extend((raw_key, child) for child in value)
+
+    return diagnostics
+
+
+def _system_error_terminal(event: Mapping[str, Any]) -> bool:
+    """Recognize an explicit top-level system execution-failure record."""
+    if event.get("type") != "system":
+        return False
+    subtype = event.get("subtype")
+    normalized_subtype = (
+        re.sub(r"[-_\s]+", "-", subtype.strip().lower())
+        if type(subtype) is str
+        else ""
+    )
+    if normalized_subtype in {
+        "error",
+        "failed",
+        "failure",
+        "execution-error",
+        "runtime-error",
+    }:
+        return True
+    if event.get("is_error") is True:
+        return True
+    for field in ("error", "errors"):
+        value = event.get(field)
+        if value not in (None, False, 0, "") and not (
+            isinstance(value, (list, tuple, dict)) and not value
+        ):
+            return True
+    status = event.get("status")
+    return (
+        type(status) is str
+        and re.sub(r"[-_\s]+", "-", status.strip().lower())
+        in {
+            "error",
+            "failed",
+            "failure",
+            "aborted",
+            "cancelled",
+            "canceled",
+            "timed-out",
+        }
+    )
+
+
 def authenticate_trace(
     transcript_path: Path,
     *,
@@ -3288,9 +3615,36 @@ def authenticate_trace(
     trace_bound_violations: List[Dict[str, Any]] = []
     events_seen = 0
     all_results: Dict[str, List[Dict[str, Any]]] = {}
+    terminal_results: List[Dict[str, Any]] = []
+    system_error_terminals: List[Dict[str, Any]] = []
     try:
         for line_no, event in _iter_json_lines(text):
             events_seen += 1
+            event_type = event.get("type")
+            if event_type == CLAUDE_TERMINAL_RESULT_TYPE:
+                terminal_diagnostics = _terminal_result_diagnostics(event)
+                terminal_record = {
+                    "line": line_no,
+                    "record_index": events_seen,
+                    "canonical_success": not terminal_diagnostics,
+                    "diagnostics": terminal_diagnostics,
+                }
+                terminal_results.append(terminal_record)
+                evidence_events.append({
+                    **terminal_record,
+                    "phase": "terminal-result",
+                })
+            elif _system_error_terminal(event):
+                system_error_record = {
+                    "line": line_no,
+                    "record_index": events_seen,
+                    "subtype": event.get("subtype"),
+                }
+                system_error_terminals.append(system_error_record)
+                evidence_events.append({
+                    **system_error_record,
+                    "phase": "system-error-terminal",
+                })
             try:
                 calls, results_by_id, general, evidence, unexpected_calls, role_calls, invalid_bindings, all_tool_calls = _extract_trace_events(event)
             except TraceBoundError as exc:
@@ -3413,8 +3767,51 @@ def authenticate_trace(
         reasons.append("unexpected native Agent/Task tool-use events without required ntt-* structured selectors: " + str(len(unexpected_native_tool_calls)))
     if role_violations:
         reasons.append("role-inverted or role-invalid tool events observed: " + str(len(role_violations)))
+    canonical_terminal = (
+        terminal_results[0]
+        if len(terminal_results) == 1
+        and terminal_results[0].get("canonical_success") is True
+        else None
+    )
+    latest_result_position = max(
+        (
+            position_key(result)
+            for result_list in all_results.values()
+            for result in result_list
+        ),
+        default=(-1, -1),
+    )
+    terminal_after_lane_results = (
+        canonical_terminal is not None
+        and (int(canonical_terminal["line"]), 0) > latest_result_position
+    )
+    terminal_is_final_record = (
+        canonical_terminal is not None
+        and canonical_terminal.get("record_index") == events_seen
+    )
+    if not terminal_results:
+        reasons.append("missing canonical successful terminal result record")
+    elif len(terminal_results) != 1:
+        reasons.append(
+            "terminal result record occurs other than exactly once: "
+            f"{len(terminal_results)}"
+        )
+    elif canonical_terminal is None:
+        reasons.append(
+            "terminal result record is not canonical success: "
+            + "; ".join(terminal_results[0].get("diagnostics", []))
+        )
+    if canonical_terminal is not None and not terminal_after_lane_results:
+        reasons.append("terminal result record precedes a lane tool result")
+    if canonical_terminal is not None and not terminal_is_final_record:
+        reasons.append("terminal result record is not the final stream record")
+    if system_error_terminals:
+        reasons.append(
+            "system error terminal records observed: "
+            f"{len(system_error_terminals)}"
+        )
     return {
-        "authenticated": not missing and not missing_results and not duplicate_ids and not duplicate_agent_calls and not duplicate_tool_result_ids and not invalid_result_bindings and not malformed_stream_records and not trace_bound_violations and not result_before_call_ids and not saw_general and not unexpected_native_tool_calls and not role_violations and events_seen > 0,
+        "authenticated": not missing and not missing_results and not duplicate_ids and not duplicate_agent_calls and not duplicate_tool_result_ids and not invalid_result_bindings and not malformed_stream_records and not trace_bound_violations and not result_before_call_ids and not saw_general and not unexpected_native_tool_calls and not role_violations and canonical_terminal is not None and terminal_after_lane_results and terminal_is_final_record and not system_error_terminals and events_seen > 0,
         "events_seen": events_seen,
         "agent_calls_authenticated": sorted(calls_found),
         "agent_results_authenticated": sorted(result_agents),
@@ -3514,7 +3911,16 @@ def run_package_prechecks(
     commands = [
         validator_cmd,
         [py, str(root / SKILL_PATH / "scripts/run_regression_evals.py"), str(root)],
-        [py, str(root / SKILL_PATH / "scripts/ntt_gate.py"), str(root / "self_validation/self_certificate.json"), "--evidence-root", str(root), "--strict-evidence"],
+        [
+            py,
+            str(root / SKILL_PATH / "scripts/ntt_gate.py"),
+            str(root / "self_validation/self_certificate.json"),
+            "--evidence-root",
+            str(root),
+            "--strict-evidence",
+            "--downstream-policy",
+            "package-self",
+        ],
     ]
     results = [run_cmd(cmd, cwd=root, timeout=timeout) for cmd in commands]
     if claude_executable is not None:
@@ -3800,7 +4206,10 @@ def build_formal_result_v2(
     snapshot_pre_identity: Optional[Dict[str, Any]] = None,
     snapshot_post_identity: Optional[Dict[str, Any]] = None,
     evidence_root: Optional[Path] = None,
+    evidence_origin: str = "runtime-observed",
 ) -> Dict[str, Any]:
+    if evidence_origin not in {"runtime-observed", "synthetic-contract"}:
+        raise ValueError("formal evidence origin is unsupported")
     companions = _companion_records(out, output_dir)
     snapshot_sha = companions["target_snapshot"].get("sha256")
     pre_digest = (
@@ -3849,6 +4258,7 @@ def build_formal_result_v2(
     ]
     return {
         "formal_result_schema_version": "2.0",
+        "evidence_origin": evidence_origin,
         "run_id": result.get("run_id"),
         "status": result.get("status"),
         "reason": result.get("reason"),
@@ -3916,6 +4326,7 @@ def write_formal_result_v2(
     snapshot_pre_identity: Optional[Dict[str, Any]] = None,
     snapshot_post_identity: Optional[Dict[str, Any]] = None,
     evidence_root: Optional[Path] = None,
+    evidence_origin: str = "runtime-observed",
     json_path: Optional[Path] = None,
     output_directory_fd: Optional[int] = None,
     lexical_output_dir: Optional[Path] = None,
@@ -3935,6 +4346,7 @@ def write_formal_result_v2(
         snapshot_pre_identity=snapshot_pre_identity,
         snapshot_post_identity=snapshot_post_identity,
         evidence_root=evidence_root,
+        evidence_origin=evidence_origin,
     )
     payload = (
         json.dumps(canonical, indent=2, sort_keys=True) + "\n"

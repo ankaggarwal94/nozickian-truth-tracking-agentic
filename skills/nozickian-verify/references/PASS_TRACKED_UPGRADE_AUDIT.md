@@ -71,7 +71,7 @@ Run these commands from the package root, writing outputs outside the package tr
 
 ```bash
 python3 skills/nozickian-verify/scripts/validate_package.py . --self-test --markdown /tmp/ntt_v101_self_validation_report.md > pass_tracked_audit_bundle/deterministic/package_validation.json
-python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --markdown pass_tracked_audit_bundle/deterministic/gate_result.md > pass_tracked_audit_bundle/deterministic/gate_result.json
+python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --downstream-policy package-self --markdown pass_tracked_audit_bundle/deterministic/gate_result.md > pass_tracked_audit_bundle/deterministic/gate_result.json
 python3 skills/nozickian-verify/scripts/run_regression_evals.py . --json pass_tracked_audit_bundle/deterministic/regression_eval_result.json
 python3 skills/nozickian-verify/scripts/run_gate_contract_tests.py . --json pass_tracked_audit_bundle/deterministic/gate_contract_results.json
 python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json pass_tracked_audit_bundle/deterministic/formal_runner_contract_results.json
@@ -105,13 +105,15 @@ python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . \
   --json pass_tracked_audit_bundle/live_fixtures/live_runtime_eval_result.json
 ```
 
-Required result: status is `PASS-SCOPED`; provenance schema is `1.0`; provenance status is `observed-current-run`; `source_release` exactly equals the current plugin version; `carried_forward` is false; `observed_at_utc` is a valid UTC timestamp; top-level `package_tree_algorithm` is exactly `ntt-stable-release-tree-v2`; top-level `package_tree_sha256` is the current shared-validator digest; top-level `fixture_spec_sha256` hashes the exact current `evals.json` bytes; `run_config.max_turns` is a positive integer and the remaining fixed invocation settings are recorded; aggregate preflight is successful; the pre/post executable fingerprints are 64 lowercase hex, equal, and accompanied by `fingerprint_stable=true`; recorded version output matches the fixed version pattern; both version and plugin-validation commands return zero; and the observational authentication limitation remains explicit.
+Required result: status is `PASS-SCOPED`; provenance schema is `2.0`; provenance status is `observed-current-run`; `evidence_origin` is `runtime-observed`; `source_release` exactly equals the current plugin version; `carried_forward` is false; `observed_at_utc` is a valid UTC timestamp; top-level `package_tree_algorithm` is exactly `ntt-stable-release-tree-v2`; top-level `package_tree_sha256` is the current shared-validator digest; top-level `fixture_spec_sha256` hashes the exact current `evals.json` bytes; `run_config.max_turns` is a positive integer and the remaining fixed invocation settings are recorded; aggregate preflight is successful; the pre/post executable fingerprints are 64 lowercase hex, equal, and accompanied by `fingerprint_stable=true`; recorded version output matches the fixed version pattern; both version and plugin-validation commands return zero; and the observational authentication limitation remains explicit.
 
 The two preflight transcript commands must contain exactly these normalized argv arrays, in this order, with no extra or missing argument:
 
 ```json
-["<claude-cli>", "--version"]
-["<claude-cli>", "plugin", "validate", "<package-root>"]
+[
+  ["<claude-cli>", "--version"],
+  ["<claude-cli>", "plugin", "validate", "<package-root>"]
+]
 ```
 
 The result must contain exactly the fixture IDs currently declared in `skills/nozickian-verify/evals/evals.json`, each once. A partial `--max-fixtures` run cannot promote a package with more fixtures. Every fixture record contains its unique ID, normalized artifact display, lowercase `artifact_sha256` over the exact current artifact bytes, normalized prompt display, `prompt_sha256`, normalized `transcript_file`, and `transcript_sha256`. The prompt digest is over the exact UTF-8 bytes of the canonical normalized-display prompt written into the result and transcript command: the exact package root is replaced with `<package-root>` and all other prompt bytes are preserved. The transcript digest is over the exact JSON file bytes written by the harness. These self-recorded hashes bind fixture/result/transcript consistency inside the bundle; they do not cryptographically authenticate the transcript producer or prove that the executable is an official binary.
@@ -126,7 +128,12 @@ Prompt presence alone is insufficient. Missing `--plugin-dir`, a wrong output fo
 
 Before replaying reports, the certifier recomputes the current shared package-tree digest, exact `evals.json` digest, and exact artifact digest for every expected fixture. Changing an artifact, changing `evals.json`, or changing any other stable package behavior source after capture invalidates stale live evidence even if both manifests are refreshed and current package validation passes.
 
-After those bindings pass or fail independently, the certifier still replays the current harness's `transcript_checks` against each transcript's recorded `stdout` and requires exact agreement with the self-reported checks. The replay must establish a structured JSON envelope, no error envelope, a substantive `result` or `content` report, artifact identity, and `passed=true`. External absolute transcript paths, fabricated check summaries, shared transcripts, and prompt/hash substitutions are not fallback evidence.
+The live harness parses both `plugin.json` and `evals.json` with duplicate-key
+and non-finite-number rejection. Fixture artifact locators must already be exact
+relative POSIX spellings: dotted, doubled-separator, absolute, traversal,
+backslash, and non-string aliases fail before execution.
+
+After those bindings pass or fail independently, the certifier still replays the current harness's `transcript_checks` against each transcript's recorded `stdout` and requires exact agreement with the self-reported checks. The replay must establish one canonical successful SDK ResultMessage, no error envelope, canonical nonempty `result`, artifact identity, and `passed=true`; `content` and `output` are not report aliases. `api_error_status`, `deferred_tool_use`, and non-structured-harness `structured_output` must be null or absent; present non-null `terminal_reason` and `stop_reason` must be exact `completed` and `end_turn`. External absolute transcript paths, fabricated check summaries, shared transcripts, and prompt/hash substitutions are not fallback evidence.
 
 ### 4. Formal artifact verification with native trace authentication
 
@@ -142,7 +149,7 @@ python3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py \
   --json pass_tracked_audit_bundle/formal_artifacts/artifact-001/formal_result.json
 ```
 
-Required v1.0.3 result: `formal_result_schema_version` is `2.0`; the generated strict gate is `PASS-TRACKED`; the runtime transcript authenticates every required native `ntt-*` lane; no substitution was used; and the generic formal result is capped at `PASS-SCOPED`. The result binds a standalone endpoint-checked target copy, exact companion manifest (report, gate, certificate, ledger, complete transcript, prompt, and target copy), package-tree identity, run ID, target-copy identity, and target pre/post endpoint stability. Its records must state `temporal_immutability_enforced: false`, `process_containment.mechanism: linux-child-subreaper-plus-process-group`, `detached_session_descendants_contained: true`, `detached_descendant_survivor: false`, and `process_containment_cleanup_complete: true`. If that containment cannot be established before `Popen`, execution fails. Before any requested output mutation, the runner also preflights component-wise `O_DIRECTORY`/`O_NOFOLLOW` and procfd support. It holds the formal parent through descriptor-relative exclusive create, link/rename install, and directory fsync; children receive only runner-owned `/proc/<runner-pid>/fd/N` through `pass_fds`, with procfs-visible `Pid:`/direct-parent `PPid:` authentication resistant to child-FD close/rebind and self/unrelated/noncanonical/closed/file forms. Unsupported procfd capability returns `INVALID_INPUT` without the requested output directory or JSON file. The complete stream-json transcript is written and hashed before authentication; neither tail truncation nor a display excerpt can establish a lane. Relative sibling context from the mutable source location is explicitly unavailable in this mode.
+Required v1.0.3 result: `formal_result_schema_version` is `2.0`; `evidence_origin` is `runtime-observed` and matches live provenance; the generated strict gate is `PASS-TRACKED`; the runtime transcript authenticates every required native `ntt-*` lane; no substitution was used; and the generic formal result is capped at `PASS-SCOPED`. Exactly one canonical successful SDK ResultMessage must follow every lane result and be the final record, with the same `result` and control-field rules as the live harness. The result binds a standalone endpoint-checked target copy, exact companion manifest (report, gate, certificate, ledger, complete transcript, prompt, and target copy), package-tree identity, run ID, target-copy identity, and target pre/post endpoint stability. Its records must state `temporal_immutability_enforced: false`, `process_containment.mechanism: linux-child-subreaper-plus-process-group`, `detached_session_descendants_contained: true`, `detached_descendant_survivor: false`, and `process_containment_cleanup_complete: true`. If that containment cannot be established before `Popen`, execution fails. Before any requested output mutation, the runner also preflights component-wise `O_DIRECTORY`/`O_NOFOLLOW` and procfd support. It holds the formal parent through descriptor-relative exclusive create, link/rename install, and directory fsync; children receive only runner-owned `/proc/<runner-pid>/fd/N` through `pass_fds`, with procfs-visible `Pid:`/direct-parent `PPid:` authentication resistant to child-FD close/rebind and self/unrelated/noncanonical/closed/file forms. Unsupported procfd capability returns `INVALID_INPUT` without the requested output directory or JSON file. The complete stream-json transcript is written and hashed before authentication; neither tail truncation nor a display excerpt can establish a lane. Relative sibling context from the mutable source location is explicitly unavailable in this mode.
 
 The promotion certificate points to the canonical `formal_result.json` through its typed `formal.result` node. The certifier does not substitute a basename or choose a first glob match. Undeclared reserved companions fail, while unrelated nonreserved files may remain.
 
@@ -151,10 +158,11 @@ The promotion certificate points to the canonical `formal_result.json` through i
 Create `promotion_certificate.json` describing the exact upgrade claim. It must not merely copy the package self-certificate. It must include:
 
 - Exact-string `promotion_schema_version: "2.0"`.
+- Exact-string `origin: runtime-observed` for a real audit, cross-bound to both hashed live/formal lane artifacts and reconstructed in `promotion-method-m-v2`.
 - `upgrade_from_status: PASS-SCOPED`.
 - `requested_status: PASS-TRACKED`.
 - Package version and exact `package_tree_sha256`.
-- Object-valued `method_m_upgrade`, `live_result_bindings`, `evidence`, and `downstream_review`; array-valued `claims` and `derived_or_downstream_claims`; and string-valued status/version/hash fields.
+- Object-valued `method_m_upgrade`, `live_result_bindings`, `evidence`, and `downstream_review`; array-valued `claims` and `derived_or_downstream_claims`; and string-valued origin/status/version/hash fields.
 - `evidence.schema_version: promotion-evidence-v2`.
 - A typed `evidence.nodes` map whose fixed nine semantic roles contain exactly `path`, `sha256`, and `depends_on`.
 - Canonical role dependencies forming a bounded acyclic graph.
@@ -162,9 +170,20 @@ Create `promotion_certificate.json` describing the exact upgrade claim. It must 
 - At least one promotion claim. Every `claims` entry is an object with exact required field types, a unique canonical ID, a complete method manifest, local evidence, false-world tests, true-world tests, contradiction review, and residual-risk review.
 - `downstream_review` with `performed: true`, `claims_identified`, and `none_identified_reason` when the list is empty.
 - Claim-local scope limitations, if any.
+- At least one claim with nonempty `scope`, claim-contract schema/digest `1.1`, and complete schema-`1.1` modal world contracts. Their closed typed outcomes authorize; prose is explanation-only, and `outcome` plus `observed_outcome` are separately hashed.
 - Derived/downstream claims with `UNKNOWN` status unless independently verified.
 
-Legacy flat promotion `evidence_refs` fail. Missing/wrong-type top-level schema fields, non-object claim entries, null or boolean aliases, duplicate/invalid IDs, and an empty claims array fail with canonical `FAIL` plus `INVALID_INPUT`. The certifier evaluates every well-formed claim through the canonical `ntt_gate.evaluate_certificate` path using the bundle evidence root and promotion policy. Modeled completion requires a nonempty claim-result set whose entries all pass before the actual results are passed to promotion-strict downstream non-closure evaluation. An explicitly empty downstream-conclusions list remains valid when the certificate has a real passing promotion claim and a substantive performed-review reason. Every typed node path must be canonical, relative, bundle-local, regular, and non-symlink. Absolute paths, URI schemes, traversal, aliases by canonical path or file identity, missing files, wrong bytes, wrong hashes, wrong role paths, and noncanonical dependencies fail. Distinct semantic roles may contain equal bytes, but they may not alias the same path or file identity.
+Legacy flat promotion `evidence_refs` fail. Missing/wrong-type top-level schema fields, non-object claim entries, null or boolean aliases, duplicate/invalid IDs, and an empty claims array fail with canonical `FAIL` plus `INVALID_INPUT`. The certifier evaluates every well-formed claim through the canonical `ntt_gate.evaluate_certificate` path using the bundle evidence root and `promotion-v2` policy. Modeled completion requires a nonempty claim-result set whose entries all pass before the actual results are passed to promotion-v2 downstream non-closure evaluation. An explicitly empty downstream-conclusions list remains valid when the certificate has a real passing promotion claim and a substantive performed-review reason. Every typed node path must be canonical, relative, bundle-local, regular, and non-symlink. Absolute paths, URI schemes, traversal, aliases by canonical path or file identity, missing files, wrong bytes, wrong hashes, wrong role paths, and noncanonical dependencies fail. Distinct semantic roles may contain equal bytes, but they may not alias the same path or file identity.
+
+The package validator itself must authorize from its immutable initial bounded
+no-follow snapshot of captured regular-file bytes. Package reads and all
+self-test fixture trees consume or materialize only those captured bytes; a
+later lexical source or private-mirror path is not an authorization source.
+Finalization independently re-snapshots the held source and materialized mirror.
+Traversal enforces independent path/metadata and aggregate-file budgets, while
+Git discovery/index capture has separate timeout, combined-output, and entry
+ceilings. A transient A→B→A import, frontmatter, or fixture-copy mutation must
+therefore fail or remain unable to influence validation.
 
 ### Deterministic package-tree hash
 
@@ -242,7 +261,7 @@ Run:
 python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .
 ```
 
-The expected result is `44/44`. The suite invokes the production certifier CLI for the complete synthetic baseline and every negative case. It verifies exact top-level schema types, the fixed typed DAG under both validator-available and explicitly scoped-unavailable states, exact strict-validator argv and real ANSI-normalized success output, early official failure after more than 50KB of neutral output, fresh deterministic/official execution policy, a real distinct independently passing downstream claim, malformed and empty claims, formal v2 bindings including runner-exported coordinator result/argv identity and an early disallowed event before more than 50KB of valid-looking tail, complete transcript hashes/byte counts, output-path safety and atomic regular-file replacement, structured failures, the exact ordered Issue #5 obligations, and the mandatory cap. Synthetic origin is fully evaluated and then capped; this suite is not real runtime authentication.
+The expected result is `46/46`. The suite invokes the production certifier CLI for the complete synthetic baseline and every negative case. It verifies exact top-level schema types, the fixed typed DAG under both validator-available and explicitly scoped-unavailable states, exact strict-validator argv and real ANSI-normalized success output, early official failure after more than 50KB of neutral output, fresh deterministic/official execution policy, a real distinct independently passing downstream claim, malformed and empty claims, formal v2 bindings including runner-exported coordinator result/argv identity and an early disallowed event before more than 50KB of valid-looking tail, complete transcript hashes/byte counts, output-path safety and atomic regular-file replacement, structured failures, the exact ordered Issue #5 obligations, and the mandatory cap. Synthetic origin is fully evaluated and then capped; this suite is not real runtime authentication.
 
 ## Downgrade rules
 

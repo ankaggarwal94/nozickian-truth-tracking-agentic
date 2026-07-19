@@ -27,6 +27,11 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List
 
+EXPECTED_CASE_TOTAL = 231
+EXPECTED_CASE_NAME_SHA256 = (
+    "899d093fdfe74d17f06a1a2896456af53279524e07e4a53f3a4232b54b0a8041"
+)
+
 REQUIRED_NATIVE_AGENTS = [
     "ntt-method-cartographer",
     "ntt-claim-extractor",
@@ -36,6 +41,78 @@ REQUIRED_NATIVE_AGENTS = [
     "ntt-true-world-adherence",
     "ntt-gate-auditor",
 ]
+NEGATIVE_TERMINAL_REASONS = (
+    "blocking_limit",
+    "rapid_refill_breaker",
+    "prompt_too_long",
+    "image_error",
+    "model_error",
+    "api_error",
+    "malformed_tool_use_exhausted",
+    "aborted_streaming",
+    "aborted_tools",
+    "stop_hook_prevented",
+    "hook_stopped",
+    "tool_deferred",
+    "max_turns",
+    "background_requested",
+    "budget_exhausted",
+    "structured_output_retry_exhausted",
+    "tool_deferred_unavailable",
+    "turn_setup_failed",
+)
+OFFICIAL_RESULT_ERROR_SUBTYPES = (
+    "error_during_execution",
+    "error_max_turns",
+    "error_max_budget_usd",
+    "error_max_structured_output_retries",
+)
+ADDITIONAL_NEGATIVE_NESTED_STATUSES = (
+    "rejected",
+    "unsuccessful",
+    "permission-denied",
+    "unverified",
+    "limited",
+    "rate-limited",
+)
+NORMALIZED_NEGATIVE_NESTED_STATUS_VARIANTS = (
+    "ERROR_MAX_TURNS",
+    "Permission Denied",
+    "RATE_LIMITED",
+)
+BENIGN_NESTED_STATUSES = (
+    "cache_miss",
+    "warming",
+    "unknown",
+    "allowed_warning",
+)
+NESTED_TERMINAL_REASON_FIELDS = (
+    "terminal_reason",
+    "terminalReason",
+    "terminal-reason",
+)
+NESTED_STOP_REASON_FIELDS = (
+    "stop_reason",
+    "stopReason",
+    "stop-reason",
+)
+NESTED_STRUCTURED_OUTPUT_FIELDS = (
+    "structured_output",
+    "structuredOutput",
+    "structured-output",
+)
+# The SDK types stop_reason as string|null.  This harness does not request a
+# custom stop sequence, so every reported reason except end_turn is unexpected
+# or incomplete and is deliberately tested fail-closed.
+NEGATIVE_STOP_REASONS = (
+    "max_tokens",
+    "stop_sequence",
+    "tool_use",
+    "pause_turn",
+    "refusal",
+    "model_context_window_exceeded",
+    "unknown_future_stop_reason",
+)
 SKILL_PATH = "skills/nozickian-verify"
 # macOS may expose the temp root through /var -> /private/var. Resolve that
 # platform alias so positive controls do not themselves contain a link.
@@ -472,6 +549,7 @@ def content_block_results_trace(content: Any, *, status: str | None = "success",
     for agent in REQUIRED_NATIVE_AGENTS:
         lines.append(native_event(agent))
         lines.append(native_result_for_id(f"toolu-{agent}", content, status=status, is_error=is_error))
+    lines.append(canonical_terminal_result())
     return lines
 
 
@@ -493,6 +571,7 @@ def nonempty_text_block_results_trace() -> List[Dict[str, Any]]:
             status="success",
             is_error=False,
         ))
+    lines.append(canonical_terminal_result())
     return lines
 
 
@@ -962,11 +1041,55 @@ def assistant_message_tool_result_trace() -> List[Dict[str, Any]]:
         lines.append({"type": "assistant", "message": {"content": [{"type": "tool_result", "tool_use_id": f"toolu-{agent}", "status": "success", "is_error": False, "content": [{"type": "text", "text": f"{agent} assistant-side result"}]}]}})
     return lines
 
+
+def official_success_result(
+    result: str,
+    **overrides: Any,
+) -> Dict[str, Any]:
+    """Return the published SDKResultSuccess field shape used by controls."""
+    envelope: Dict[str, Any] = {
+        "type": "result",
+        "subtype": "success",
+        "duration_ms": 10,
+        "duration_api_ms": 8,
+        "ttft_ms": 1,
+        "ttft_stream_ms": 1,
+        "time_to_request_ms": 0,
+        "time_to_request_from_spawn_ms": 0,
+        "warm_spare_claimed": False,
+        "time_origin_ms": 0,
+        "is_error": False,
+        "api_error_status": None,
+        "num_turns": 8,
+        "result": result,
+        "stop_reason": "end_turn",
+        "total_cost_usd": 0.0,
+        "usage": {"input_tokens": 1, "output_tokens": 1},
+        "modelUsage": {},
+        "permission_denials": [],
+        "structured_output": None,
+        "deferred_tool_use": None,
+        "terminal_reason": "completed",
+        "fast_mode_state": "off",
+        "uuid": "00000000-0000-4000-8000-000000000001",
+        "session_id": "contract-session",
+    }
+    envelope.update(overrides)
+    return envelope
+
+
+def canonical_terminal_result() -> Dict[str, Any]:
+    return official_success_result(
+        "Formal coordinator completed after all native lanes."
+    )
+
+
 def completed_native_trace(success: bool = True) -> List[Dict[str, Any]]:
     lines: List[Dict[str, Any]] = []
     for agent in REQUIRED_NATIVE_AGENTS:
         lines.append(native_event(agent))
         lines.append(native_result(agent, success=success))
+    lines.append(canonical_terminal_result())
     return lines
 
 
@@ -1116,6 +1239,54 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
         ),
     })
 
+    with tempfile.TemporaryDirectory(
+        prefix="ntt-live-strict-config-contract-"
+    ) as strict_config_raw:
+        strict_config_root = Path(strict_config_raw)
+        duplicate_json = strict_config_root / "duplicate.json"
+        duplicate_json.write_text(
+            '{"name":"reviewed","name":"shadow","version":"1"}',
+            encoding="utf-8",
+        )
+        duplicate_json_rejected = raises_value_error(
+            live_runner.load_regular_json,
+            duplicate_json,
+            "duplicate.json",
+        )
+    canonical_artifact = "fixtures/mini-code.py"
+    canonical_artifact_path = live_runner.fixture_artifact_path(
+        package_root,
+        canonical_artifact,
+    )
+    cases.append({
+        "name": "live_fixture_config_requires_strict_json_and_paths",
+        "passed": (
+            duplicate_json_rejected
+            and canonical_artifact_path
+            == package_root.joinpath(
+                "skills",
+                "nozickian-verify",
+                "evals",
+                "fixtures",
+                "mini-code.py",
+            )
+            and all(
+                raises_value_error(
+                    live_runner.fixture_artifact_path,
+                    package_root,
+                    value,
+                )
+                for value in (
+                    "./fixture.md",
+                    "a//b.md",
+                    "a/../b.md",
+                    "/absolute.md",
+                    7,
+                )
+            )
+        ),
+    })
+
     live_artifact = "mini-code-mutation.md"
     live_report = (
         "Method M checked the mini-code-mutation.md artifact with "
@@ -1123,16 +1294,45 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
         "Residual scope remains explicit.\n"
         "Final gate status: PASS-SCOPED."
     )
-    live_true = live_runner.transcript_checks(
-        json.dumps({
+
+    def canonical_live_envelope(
+        report: str,
+        **overrides: Any,
+    ) -> Dict[str, Any]:
+        return {
+            "type": "result",
+            "subtype": "success",
             "is_error": False,
-            "result": live_report,
-            "duration_ms": 10,
-        }),
+            "permission_denials": [],
+            "result": report,
+            **overrides,
+        }
+
+    def official_live_envelope(
+        report: str,
+        **overrides: Any,
+    ) -> Dict[str, Any]:
+        envelope = official_success_result(
+            report,
+            num_turns=1,
+            uuid="00000000-0000-4000-8000-000000000002",
+            session_id="live-contract-session",
+        )
+        envelope.update(overrides)
+        return envelope
+
+    live_true = live_runner.transcript_checks(
+        json.dumps(canonical_live_envelope(live_report, duration_ms=10)),
         live_artifact,
     )
     live_content_true = live_runner.transcript_checks(
-        json.dumps({"is_error": False, "content": live_report}),
+        json.dumps({
+            "type": "result",
+            "subtype": "success",
+            "is_error": False,
+            "permission_denials": [],
+            "content": live_report,
+        }),
         live_artifact,
     )
     markdown_status_reports = [
@@ -1155,19 +1355,19 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
     ]
     markdown_status_results = [
         live_runner.transcript_checks(
-            json.dumps({"is_error": False, "result": report}),
+            json.dumps(canonical_live_envelope(report)),
             live_artifact,
         )
         for report in markdown_status_reports
     ]
     cases.append({
-        "name": "live_json_envelope_exact_error_channel_true_control",
+        "name": "live_json_envelope_requires_canonical_result_true_control",
         "passed": (
             live_true.get("passed") is True
             and live_true.get("envelope_error_diagnostics") == []
             and live_true.get("dominant_status") == "PASS-SCOPED"
-            and live_content_true.get("passed") is True
-            and live_content_true.get("report_field") == "content"
+            and live_content_true.get("passed") is False
+            and bool(live_content_true.get("payload_channel_diagnostics"))
             and all(
                 result.get("passed") is True
                 and result.get("dominant_status") == "PASS-SCOPED"
@@ -1176,13 +1376,326 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
         ),
     })
 
+    official_live_true = live_runner.transcript_checks(
+        json.dumps(official_live_envelope(live_report)),
+        live_artifact,
+    )
+    terminal_reason_results = {
+        reason: live_runner.transcript_checks(
+            json.dumps(official_live_envelope(
+                live_report,
+                terminal_reason=reason,
+            )),
+            live_artifact,
+        )
+        for reason in NEGATIVE_TERMINAL_REASONS
+    }
+    terminal_reason_null_envelope = official_live_envelope(
+        live_report,
+        terminal_reason=None,
+    )
+    terminal_reason_absent_envelope = official_live_envelope(live_report)
+    terminal_reason_absent_envelope.pop("terminal_reason")
+    terminal_reason_compatibility = [
+        live_runner.transcript_checks(
+            json.dumps(envelope),
+            live_artifact,
+        )
+        for envelope in (
+            terminal_reason_null_envelope,
+            terminal_reason_absent_envelope,
+        )
+    ]
+    cases.append({
+        "name": (
+            "live_official_result_terminal_reason_is_exact_completed_or_"
+            "compatible_null_absent"
+        ),
+        "passed": (
+            len(terminal_reason_results) == 18
+            and official_live_true.get("passed") is True
+            and all(
+                result.get("passed") is True
+                for result in terminal_reason_compatibility
+            )
+            and all(
+                result.get("passed") is False
+                and any(
+                    "terminal_reason" in diagnostic
+                    for diagnostic in result.get(
+                        "envelope_error_diagnostics",
+                        [],
+                    )
+                )
+                for result in terminal_reason_results.values()
+            )
+        ),
+        "terminal_reason_results": terminal_reason_results,
+    })
+
+    official_channel_mutations = {
+        "api_error_status": {"api_error_status": 429},
+        "deferred_tool_use": {
+            "deferred_tool_use": {
+                "tool_use_id": "toolu-deferred",
+                "tool_name": "Agent",
+                "input": {},
+            }
+        },
+        "structured_output": {"structured_output": {"verdict": "pass"}},
+        "camel_api_error_status": {"apiErrorStatus": None},
+        "camel_deferred_tool_use": {"deferredToolUse": None},
+        "camel_permission_denials": {"permissionDenials": []},
+        "conflicting_permission_denials": {
+            "permissionDenials": [{"tool_name": "Agent"}]
+        },
+        "camel_terminal_reason": {"terminalReason": "completed"},
+        "camel_terminal_reason_null": {"terminalReason": None},
+        "camel_stop_reason": {"stopReason": "end_turn"},
+        "camel_stop_reason_null": {"stopReason": None},
+        "camel_structured_output": {"structuredOutput": None},
+        "hyphen_api_error_status": {"api-error-status": None},
+        "hyphen_deferred_tool_use": {"deferred-tool-use": None},
+        "hyphen_permission_denials": {"permission-denials": []},
+        "hyphen_terminal_reason": {"terminal-reason": "completed"},
+        "hyphen_terminal_reason_null": {"terminal-reason": None},
+        "hyphen_stop_reason": {"stop-reason": "end_turn"},
+        "hyphen_stop_reason_null": {"stop-reason": None},
+        "hyphen_structured_output": {"structured-output": None},
+    }
+    official_channel_results = {
+        name: live_runner.transcript_checks(
+            json.dumps(official_live_envelope(live_report, **mutation)),
+            live_artifact,
+        )
+        for name, mutation in official_channel_mutations.items()
+    }
+    cases.append({
+        "name": (
+            "live_official_api_deferred_structured_and_camel_alias_"
+            "channels_fail_closed"
+        ),
+        "passed": all(
+            result.get("passed") is False
+            and bool(result.get("envelope_error_diagnostics"))
+            for result in official_channel_results.values()
+        ),
+        "results": official_channel_results,
+    })
+
+    nested_terminal_reason_results = {
+        f"{field}:{reason}": live_runner.transcript_checks(
+            json.dumps(official_live_envelope(
+                live_report,
+                metadata={field: reason},
+            )),
+            live_artifact,
+        )
+        for field in NESTED_TERMINAL_REASON_FIELDS
+        for reason in NEGATIVE_TERMINAL_REASONS
+    }
+    nested_stop_reason_results = {
+        f"{field}:{reason}": live_runner.transcript_checks(
+            json.dumps(official_live_envelope(
+                live_report,
+                metadata={field: reason},
+            )),
+            live_artifact,
+        )
+        for field in NESTED_STOP_REASON_FIELDS
+        for reason in NEGATIVE_STOP_REASONS
+    }
+    nested_structured_output_results = {
+        field: live_runner.transcript_checks(
+            json.dumps(official_live_envelope(
+                live_report,
+                metadata={field: {"verdict": "pass"}},
+            )),
+            live_artifact,
+        )
+        for field in NESTED_STRUCTURED_OUTPUT_FIELDS
+    }
+    nested_alias_nearby_positive_results = [
+        live_runner.transcript_checks(
+            json.dumps(official_live_envelope(
+                live_report,
+                metadata={field: value},
+            )),
+            live_artifact,
+        )
+        for fields, values in (
+            (NESTED_TERMINAL_REASON_FIELDS, ("completed", None)),
+            (NESTED_STOP_REASON_FIELDS, ("end_turn", None)),
+            (NESTED_STRUCTURED_OUTPUT_FIELDS, (None,)),
+        )
+        for field in fields
+        for value in values
+    ]
+    cases.append({
+        "name": "live_nested_snake_camel_hyphen_terminal_fields_fail_closed",
+        "passed": (
+            len(nested_terminal_reason_results)
+            == len(NESTED_TERMINAL_REASON_FIELDS)
+            * len(NEGATIVE_TERMINAL_REASONS)
+            and all(
+                result.get("passed") is False
+                and bool(result.get("envelope_error_diagnostics"))
+                for result in (
+                    *nested_terminal_reason_results.values(),
+                    *nested_stop_reason_results.values(),
+                    *nested_structured_output_results.values(),
+                )
+            )
+            and all(
+                result.get("passed") is True
+                for result in nested_alias_nearby_positive_results
+            )
+        ),
+        "terminal_reason_results": nested_terminal_reason_results,
+        "stop_reason_results": nested_stop_reason_results,
+        "structured_output_results": nested_structured_output_results,
+        "positive_results": nested_alias_nearby_positive_results,
+    })
+
+    stop_reason_results = {
+        reason: live_runner.transcript_checks(
+            json.dumps(official_live_envelope(
+                live_report,
+                stop_reason=reason,
+            )),
+            live_artifact,
+        )
+        for reason in NEGATIVE_STOP_REASONS
+    }
+    stop_reason_absent_envelope = official_live_envelope(live_report)
+    stop_reason_absent_envelope.pop("stop_reason")
+    stop_reason_nearby_positive_results = [
+        live_runner.transcript_checks(
+            json.dumps(envelope),
+            live_artifact,
+        )
+        for envelope in (
+            official_live_envelope(live_report, stop_reason="end_turn"),
+            official_live_envelope(live_report, stop_reason=None),
+            stop_reason_absent_envelope,
+        )
+    ]
+    cases.append({
+        "name": "live_stop_reason_policy_is_end_turn_with_null_absent_compatibility",
+        "passed": (
+            all(
+                result.get("passed") is True
+                for result in stop_reason_nearby_positive_results
+            )
+            and all(
+                result.get("passed") is False
+                and any(
+                    "stop_reason" in diagnostic
+                    for diagnostic in result.get(
+                        "envelope_error_diagnostics",
+                        [],
+                    )
+                )
+                for result in stop_reason_results.values()
+            )
+        ),
+        "negative_results": stop_reason_results,
+    })
+
+    arbitrary_telemetry_status = live_runner.transcript_checks(
+        json.dumps(official_live_envelope(
+            live_report,
+            metadata={
+                "status": "cache_miss",
+                "queue": {"status": "warming"},
+            },
+        )),
+        live_artifact,
+    )
+    known_negative_telemetry = [
+        live_runner.transcript_checks(
+            json.dumps(official_live_envelope(
+                live_report,
+                **mutation,
+            )),
+            live_artifact,
+        )
+        for mutation in (
+            {"metadata": {"status": "failed"}},
+            {"metadata": {"error": "runtime crashed"}},
+        )
+    ]
+    cases.append({
+        "name": "live_unknown_telemetry_status_is_tolerated_but_known_failure_is_not",
+        "passed": (
+            arbitrary_telemetry_status.get("passed") is True
+            and all(
+                result.get("passed") is False
+                and bool(result.get("envelope_error_diagnostics"))
+                for result in known_negative_telemetry
+            )
+        ),
+        "positive": arbitrary_telemetry_status,
+        "negative": known_negative_telemetry,
+    })
+
+    required_nested_negative_statuses = (
+        *OFFICIAL_RESULT_ERROR_SUBTYPES,
+        *NEGATIVE_TERMINAL_REASONS,
+        *ADDITIONAL_NEGATIVE_NESTED_STATUSES,
+        *NORMALIZED_NEGATIVE_NESTED_STATUS_VARIANTS,
+    )
+    nested_status_outcome_negative_results = {
+        f"{field}:{value}": live_runner.transcript_checks(
+            json.dumps(official_live_envelope(
+                live_report,
+                metadata={field: value},
+            )),
+            live_artifact,
+        )
+        for field in ("status", "outcome")
+        for value in required_nested_negative_statuses
+    }
+    nested_status_outcome_benign_results = {
+        f"{field}:{value}": live_runner.transcript_checks(
+            json.dumps(official_live_envelope(
+                live_report,
+                metadata={field: value},
+            )),
+            live_artifact,
+        )
+        for field in ("status", "outcome")
+        for value in BENIGN_NESTED_STATUSES
+    }
+    cases.append({
+        "name": (
+            "live_nested_status_outcome_rejects_exact_official_negatives_"
+            "and_preserves_benign_telemetry"
+        ),
+        "passed": (
+            all(
+                result.get("passed") is False
+                and bool(result.get("envelope_error_diagnostics"))
+                for result in nested_status_outcome_negative_results.values()
+            )
+            and all(
+                result.get("passed") is True
+                for result in nested_status_outcome_benign_results.values()
+            )
+        ),
+        "negative_results": nested_status_outcome_negative_results,
+        "benign_results": nested_status_outcome_benign_results,
+    })
+
     ambiguous_live_json = (
-        '{"is_error":true,"is_error":false,"result":'
+        '{"type":"result","subtype":"success",'
+        '"is_error":true,"is_error":false,"permission_denials":[],"result":'
         + json.dumps(live_report)
         + "}"
     )
     nonfinite_live_json = (
-        '{"is_error":false,"score":NaN,"result":'
+        '{"type":"result","subtype":"success",'
+        '"is_error":false,"permission_denials":[],"score":NaN,"result":'
         + json.dumps(live_report)
         + "}"
     )
@@ -1224,7 +1737,7 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
     ]
     error_signal_results = [
         live_runner.transcript_checks(
-            json.dumps({**signals, "result": live_report}),
+            json.dumps(canonical_live_envelope(live_report, **signals)),
             live_artifact,
         )
         for signals in error_signal_variants
@@ -1251,7 +1764,10 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
         {"is_error": False, "result": live_report, "output": "FAILED"},
     ]
     live_channel_results = [
-        live_runner.transcript_checks(json.dumps(value), live_artifact)
+        live_runner.transcript_checks(
+            json.dumps(canonical_live_envelope(live_report, **value)),
+            live_artifact,
+        )
         for value in live_channel_false_worlds
     ]
     cases.append({
@@ -1261,6 +1777,41 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
             and bool(result.get("envelope_error_diagnostics"))
             for result in live_channel_results
         ),
+    })
+
+    nested_control_false_worlds = [
+        {"metadata": {"status": "failed"}},
+        {"metadata": {"error": "runtime crashed"}},
+        {"diagnostics": {"failed": True}},
+        {"metadata": {"is_error": True}},
+        {"metadata": {
+            "permission_denials": [{"tool_name": "Agent"}]
+        }},
+        {"metadata": {"exit_code": 7}},
+        {"metadata": {"return_code": 7}},
+        {"metadata": {"error_code": 7}},
+        {"metadata": {"success": False}},
+        {"metadata": {"completed": False}},
+        {"metadata": {"executed": False}},
+        {"api_error": {"message": "provider failure"}},
+        {"deferred": {"reason": "result pending"}},
+        {"permission_denials": [{"tool_name": "Agent"}]},
+    ]
+    nested_control_results = [
+        live_runner.transcript_checks(
+            json.dumps(canonical_live_envelope(live_report, **mutation)),
+            live_artifact,
+        )
+        for mutation in nested_control_false_worlds
+    ]
+    cases.append({
+        "name": "live_nested_error_deferred_and_permission_channels_reject",
+        "passed": all(
+            result.get("passed") is False
+            and bool(result.get("envelope_error_diagnostics"))
+            for result in nested_control_results
+        ),
+        "results": nested_control_results,
     })
 
     laundered_report = (
@@ -1275,11 +1826,11 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
         "Final gate status: PASS-TRACKED.\nFinal gate status: PASS-SCOPED.",
     )
     laundered = live_runner.transcript_checks(
-        json.dumps({"is_error": False, "result": laundered_report}),
+        json.dumps(canonical_live_envelope(laundered_report)),
         live_artifact,
     )
     conflicting_pass = live_runner.transcript_checks(
-        json.dumps({"is_error": False, "result": conflicting_pass_report}),
+        json.dumps(canonical_live_envelope(conflicting_pass_report)),
         live_artifact,
     )
     cases.append({
@@ -1293,33 +1844,91 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
         ),
     })
 
+    suffixed_fail_results = [
+        live_runner.transcript_checks(
+            json.dumps(canonical_live_envelope(
+                live_report.replace(
+                    "Final gate status: PASS-SCOPED.",
+                    f"Final gate status: {declaration}\n"
+                    "Final gate status: PASS-SCOPED.",
+                )
+            )),
+            live_artifact,
+        )
+        for declaration in (
+            "FAIL - missing evidence.",
+            "FAIL — missing evidence.",
+            "FAIL: missing evidence.",
+        )
+    ]
+    cases.append({
+        "name": "live_authoritative_fail_with_explanation_dominates_pass",
+        "passed": all(
+            result.get("passed") is False
+            and result.get("authoritative_statuses")
+            == ["FAIL", "PASS-SCOPED"]
+            for result in suffixed_fail_results
+        ),
+        "results": suffixed_fail_results,
+    })
+
+    discriminator_false_worlds = [
+        {"type": "result", "subtype": "error_during_execution"},
+        {"type": "result", "subtype": "error_max_turns"},
+        {"type": "system", "subtype": "init"},
+    ]
+    discriminator_results = [
+        live_runner.transcript_checks(
+            json.dumps(canonical_live_envelope(live_report, **mutation)),
+            live_artifact,
+        )
+        for mutation in discriminator_false_worlds
+    ]
+    cases.append({
+        "name": "live_error_and_non_result_discriminators_reject",
+        "passed": all(
+            result.get("passed") is False
+            and bool(result.get("envelope_error_diagnostics"))
+            for result in discriminator_results
+        ),
+        "results": discriminator_results,
+    })
+
+    deeply_nested_live = live_runner.transcript_checks(
+        "[" * 20_000 + "0" + "]" * 20_000,
+        live_artifact,
+    )
+    cases.append({
+        "name": "live_overdeep_json_structured_fails_without_exception",
+        "passed": (
+            deeply_nested_live.get("passed") is False
+            and "JsonStructureBoundError" in str(
+                deeply_nested_live.get("envelope_error")
+            )
+        ),
+        "result": deeply_nested_live,
+    })
+
     contextual_negative_report = live_report.replace(
         "Method M checked",
         "The false-world probe observed FAIL as expected. Method M checked",
     )
     contextual_negative = live_runner.transcript_checks(
-        json.dumps({
-            "is_error": False,
-            "success": True,
-            "completed": True,
-            "executed": True,
-            "failed": False,
-            "timed_out": False,
-            "result": contextual_negative_report,
-        }),
+        json.dumps(canonical_live_envelope(
+            contextual_negative_report,
+        )),
         live_artifact,
     )
     incidental_status_labels = live_runner.transcript_checks(
-        json.dumps({
-            "is_error": False,
-            "result": live_report.replace(
+        json.dumps(canonical_live_envelope(
+            live_report.replace(
                 "Final gate status: PASS-SCOPED.",
                 "Expected final status: FAIL.\n"
                 "Hypothetical gate status: FAIL.\n"
                 "Baseline final status: PASS-TRACKED.\n"
                 "Final gate status: PASS-SCOPED.",
-            ),
-        }),
+            )
+        )),
         live_artifact,
     )
     cases.append({
@@ -2324,6 +2933,368 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
     auth = runner.authenticate_trace(native)
     capped, reason = runner.cap_status_by_trace("PASS-TRACKED", auth)
     cases.append({"name": "all_native_tool_use_and_result_events_authenticate", "passed": auth.get("authenticated") is True and capped == "PASS-TRACKED", "auth": auth, "capped_status": capped, "reason": reason})
+
+    terminal_reason_absent = canonical_terminal_result()
+    terminal_reason_absent.pop("terminal_reason")
+    stop_reason_absent = canonical_terminal_result()
+    stop_reason_absent.pop("stop_reason")
+    formal_terminal_nearby_positive_events = [
+        canonical_terminal_result(),
+        {**canonical_terminal_result(), "terminal_reason": None},
+        terminal_reason_absent,
+        {**canonical_terminal_result(), "stop_reason": None},
+        stop_reason_absent,
+        {
+            **canonical_terminal_result(),
+            "metadata": {
+                "status": "cache_miss",
+                "queue": {"status": "warming"},
+            },
+        },
+    ]
+    formal_terminal_nearby_positive_results = [
+        runner.authenticate_trace(write_transcript([
+            *completed_native_trace(success=True)[:-1],
+            terminal,
+        ]))
+        for terminal in formal_terminal_nearby_positive_events
+    ]
+    cases.append({
+        "name": (
+            "formal_full_official_terminal_accepts_completed_end_turn_"
+            "null_absent_and_arbitrary_telemetry"
+        ),
+        "passed": all(
+            result.get("authenticated") is True
+            for result in formal_terminal_nearby_positive_results
+        ),
+        "results": formal_terminal_nearby_positive_results,
+    })
+
+    terminal_false_worlds = {
+        "absent": completed_native_trace(success=True)[:-1],
+        "error": [
+            *completed_native_trace(success=True)[:-1],
+            {
+                "type": "result",
+                "subtype": "error_during_execution",
+                "is_error": True,
+                "result": "Execution failed after native lanes.",
+            },
+        ],
+        "duplicate": [
+            *completed_native_trace(success=True),
+            canonical_terminal_result(),
+        ],
+        "premature": [
+            *completed_native_trace(success=True)[:-3],
+            canonical_terminal_result(),
+            *completed_native_trace(success=True)[-3:-1],
+        ],
+        "system_error": [
+            *completed_native_trace(success=True),
+            {
+                "type": "system",
+                "subtype": "error",
+                "is_error": True,
+                "error": "runtime crashed after completion",
+            },
+        ],
+        "permission_denial": [
+            *completed_native_trace(success=True)[:-1],
+            {
+                **canonical_terminal_result(),
+                "permission_denials": [{"tool_name": "Agent"}],
+            },
+        ],
+        "nested_api_error": [
+            *completed_native_trace(success=True)[:-1],
+            {
+                **canonical_terminal_result(),
+                "metadata": {"api_error": "provider failed"},
+            },
+        ],
+        "nested_failed_status": [
+            *completed_native_trace(success=True)[:-1],
+            {
+                **canonical_terminal_result(),
+                "metadata": {"status": "failed"},
+            },
+        ],
+        "nested_is_error": [
+            *completed_native_trace(success=True)[:-1],
+            {
+                **canonical_terminal_result(),
+                "metadata": {"is_error": True},
+            },
+        ],
+        "nested_permission_denial": [
+            *completed_native_trace(success=True)[:-1],
+            {
+                **canonical_terminal_result(),
+                "metadata": {
+                    "permission_denials": [{"tool_name": "Agent"}]
+                },
+            },
+        ],
+        "nested_exit_code": [
+            *completed_native_trace(success=True)[:-1],
+            {
+                **canonical_terminal_result(),
+                "metadata": {"exit_code": 7},
+            },
+        ],
+        "nested_return_code": [
+            *completed_native_trace(success=True)[:-1],
+            {
+                **canonical_terminal_result(),
+                "metadata": {"return_code": 7},
+            },
+        ],
+        "nested_error_code": [
+            *completed_native_trace(success=True)[:-1],
+            {
+                **canonical_terminal_result(),
+                "metadata": {"error_code": 7},
+            },
+        ],
+        "nested_success_false": [
+            *completed_native_trace(success=True)[:-1],
+            {
+                **canonical_terminal_result(),
+                "metadata": {"success": False},
+            },
+        ],
+        "nested_completed_false": [
+            *completed_native_trace(success=True)[:-1],
+            {
+                **canonical_terminal_result(),
+                "metadata": {"completed": False},
+            },
+        ],
+        "nested_executed_false": [
+            *completed_native_trace(success=True)[:-1],
+            {
+                **canonical_terminal_result(),
+                "metadata": {"executed": False},
+            },
+        ],
+        "nested_error_outcome": [
+            *completed_native_trace(success=True)[:-1],
+            {
+                **canonical_terminal_result(),
+                "metadata": {"outcome": "error"},
+            },
+        ],
+        "empty_error_alias": [
+            *completed_native_trace(success=True)[:-1],
+            {**canonical_terminal_result(), "errors": []},
+        ],
+        "success_alias": [
+            *completed_native_trace(success=True)[:-1],
+            {**canonical_terminal_result(), "success": True},
+        ],
+        "exit_alias": [
+            *completed_native_trace(success=True)[:-1],
+            {**canonical_terminal_result(), "returncode": 0},
+        ],
+        "deferred_terminal": [
+            *completed_native_trace(success=True)[:-1],
+            {
+                **canonical_terminal_result(),
+                "terminal_reason": "deferred",
+            },
+        ],
+    }
+    for terminal_reason in NEGATIVE_TERMINAL_REASONS:
+        terminal_false_worlds[f"terminal_reason_{terminal_reason}"] = [
+            *completed_native_trace(success=True)[:-1],
+            {
+                **canonical_terminal_result(),
+                "terminal_reason": terminal_reason,
+            },
+        ]
+    for stop_reason in NEGATIVE_STOP_REASONS:
+        terminal_false_worlds[f"stop_reason_{stop_reason}"] = [
+            *completed_native_trace(success=True)[:-1],
+            {
+                **canonical_terminal_result(),
+                "stop_reason": stop_reason,
+            },
+        ]
+    official_terminal_channel_mutations = {
+        "api_error_status": {"api_error_status": 429},
+        "deferred_tool_use": {
+            "deferred_tool_use": {
+                "tool_use_id": "toolu-deferred",
+                "tool_name": "Agent",
+                "input": {},
+            }
+        },
+        "structured_output": {"structured_output": {"verdict": "pass"}},
+        "camel_api_error_status": {"apiErrorStatus": None},
+        "camel_deferred_tool_use": {"deferredToolUse": None},
+        "camel_permission_denials": {"permissionDenials": []},
+        "conflicting_permission_denials": {
+            "permissionDenials": [{"tool_name": "Agent"}]
+        },
+        "camel_terminal_reason": {"terminalReason": "completed"},
+        "camel_terminal_reason_null": {"terminalReason": None},
+        "camel_stop_reason": {"stopReason": "end_turn"},
+        "camel_stop_reason_null": {"stopReason": None},
+        "camel_structured_output": {"structuredOutput": None},
+        "hyphen_api_error_status": {"api-error-status": None},
+        "hyphen_deferred_tool_use": {"deferred-tool-use": None},
+        "hyphen_permission_denials": {"permission-denials": []},
+        "hyphen_terminal_reason": {"terminal-reason": "completed"},
+        "hyphen_terminal_reason_null": {"terminal-reason": None},
+        "hyphen_stop_reason": {"stop-reason": "end_turn"},
+        "hyphen_stop_reason_null": {"stop-reason": None},
+        "hyphen_structured_output": {"structured-output": None},
+    }
+    for mutation_name, mutation in official_terminal_channel_mutations.items():
+        terminal_false_worlds[f"official_{mutation_name}"] = [
+            *completed_native_trace(success=True)[:-1],
+            {**canonical_terminal_result(), **mutation},
+        ]
+    terminal_false_world_results = {
+        name: runner.authenticate_trace(write_transcript(lines))
+        for name, lines in terminal_false_worlds.items()
+    }
+    cases.append({
+        "name": "formal_terminal_result_is_exact_unique_success_and_last",
+        "passed": all(
+            result.get("authenticated") is False
+            and bool(result.get("reasons"))
+            for result in terminal_false_world_results.values()
+        )
+        and all(
+            terminal_false_world_results[
+                f"terminal_reason_{terminal_reason}"
+            ].get("authenticated")
+            is False
+            for terminal_reason in NEGATIVE_TERMINAL_REASONS
+        ),
+        "results": terminal_false_world_results,
+    })
+
+    def authenticate_terminal_metadata(
+        metadata: Mapping[str, Any],
+    ) -> Dict[str, Any]:
+        return runner.authenticate_trace(write_transcript([
+            *completed_native_trace(success=True)[:-1],
+            {**canonical_terminal_result(), "metadata": dict(metadata)},
+        ]))
+
+    formal_nested_terminal_reason_results = {
+        f"{field}:{reason}": authenticate_terminal_metadata({field: reason})
+        for field in NESTED_TERMINAL_REASON_FIELDS
+        for reason in NEGATIVE_TERMINAL_REASONS
+    }
+    formal_nested_stop_reason_results = {
+        f"{field}:{reason}": authenticate_terminal_metadata({field: reason})
+        for field in NESTED_STOP_REASON_FIELDS
+        for reason in NEGATIVE_STOP_REASONS
+    }
+    formal_nested_structured_output_results = {
+        field: authenticate_terminal_metadata({
+            field: {"verdict": "pass"}
+        })
+        for field in NESTED_STRUCTURED_OUTPUT_FIELDS
+    }
+    formal_nested_alias_nearby_positive_results = [
+        authenticate_terminal_metadata({field: value})
+        for fields, values in (
+            (NESTED_TERMINAL_REASON_FIELDS, ("completed", None)),
+            (NESTED_STOP_REASON_FIELDS, ("end_turn", None)),
+            (NESTED_STRUCTURED_OUTPUT_FIELDS, (None,)),
+        )
+        for field in fields
+        for value in values
+    ]
+    cases.append({
+        "name": (
+            "formal_full_trace_nested_snake_camel_hyphen_terminal_fields_"
+            "fail_closed"
+        ),
+        "passed": (
+            len(formal_nested_terminal_reason_results)
+            == len(NESTED_TERMINAL_REASON_FIELDS)
+            * len(NEGATIVE_TERMINAL_REASONS)
+            and all(
+                result.get("authenticated") is False
+                and bool(result.get("reasons"))
+                for result in (
+                    *formal_nested_terminal_reason_results.values(),
+                    *formal_nested_stop_reason_results.values(),
+                    *formal_nested_structured_output_results.values(),
+                )
+            )
+            and all(
+                result.get("authenticated") is True
+                for result in formal_nested_alias_nearby_positive_results
+            )
+        ),
+        "terminal_reason_results": formal_nested_terminal_reason_results,
+        "stop_reason_results": formal_nested_stop_reason_results,
+        "structured_output_results": formal_nested_structured_output_results,
+        "positive_results": formal_nested_alias_nearby_positive_results,
+    })
+
+    formal_required_nested_negative_statuses = (
+        *OFFICIAL_RESULT_ERROR_SUBTYPES,
+        *NEGATIVE_TERMINAL_REASONS,
+        *ADDITIONAL_NEGATIVE_NESTED_STATUSES,
+        *NORMALIZED_NEGATIVE_NESTED_STATUS_VARIANTS,
+    )
+    formal_nested_status_outcome_negative_results = {
+        f"{field}:{value}": authenticate_terminal_metadata({field: value})
+        for field in ("status", "outcome")
+        for value in formal_required_nested_negative_statuses
+    }
+    formal_nested_status_outcome_benign_results = {
+        f"{field}:{value}": authenticate_terminal_metadata({field: value})
+        for field in ("status", "outcome")
+        for value in BENIGN_NESTED_STATUSES
+    }
+    cases.append({
+        "name": (
+            "formal_full_trace_nested_status_outcome_rejects_exact_official_"
+            "negatives_and_preserves_benign_telemetry"
+        ),
+        "passed": (
+            all(
+                result.get("authenticated") is False
+                and bool(result.get("reasons"))
+                for result in (
+                    formal_nested_status_outcome_negative_results.values()
+                )
+            )
+            and all(
+                result.get("authenticated") is True
+                for result in (
+                    formal_nested_status_outcome_benign_results.values()
+                )
+            )
+        ),
+        "negative_results": formal_nested_status_outcome_negative_results,
+        "benign_results": formal_nested_status_outcome_benign_results,
+    })
+
+    system_init_then_complete = runner.authenticate_trace(write_transcript([
+        {
+            "type": "system",
+            "subtype": "init",
+            "is_error": False,
+            "session_id": "contract-session",
+        },
+        *completed_native_trace(success=True),
+    ]))
+    cases.append({
+        "name": "formal_non_error_system_init_preserves_terminal_success",
+        "passed": system_init_then_complete.get("authenticated") is True,
+        "auth": system_init_then_complete,
+    })
 
     result_alias_lines = json.loads(
         json.dumps(completed_native_trace(success=True))
@@ -3400,6 +4371,24 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
                 resolved_runtime == runtime_endpoint.resolve()
                 and len(bound_prechecks) == 4
                 and len(observed_precheck_commands) == 4
+                and observed_precheck_commands[2]
+                == [
+                    sys.executable,
+                    str(
+                        fake_root
+                        / SKILL_PATH
+                        / "scripts/ntt_gate.py"
+                    ),
+                    str(
+                        fake_root
+                        / "self_validation/self_certificate.json"
+                    ),
+                    "--evidence-root",
+                    str(fake_root),
+                    "--strict-evidence",
+                    "--downstream-policy",
+                    "package-self",
+                ]
                 and observed_precheck_commands[-1]
                 == [
                     str(runtime_endpoint.resolve()),
@@ -3867,7 +4856,10 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
                     stdout_text = "2.1.209 (Claude Code)"
                 elif "-p" in cmd:
                     stdout_text = json.dumps({
+                        "type": "result",
+                        "subtype": "success",
                         "is_error": False,
+                        "permission_denials": [],
                         "result": (
                             "Scope mini_manual.md. Method evidence was "
                             "checked with false-world sensitivity and "
@@ -4803,6 +5795,8 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
                 "--evidence-root",
                 "<execution-package-root>",
                 "--strict-evidence",
+                "--downstream-policy",
+                "package-self",
             ]),
             safe_formal_record([
                 "/opt/claude",
@@ -4841,6 +5835,7 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
         ]
         formal_projection = {
             "formal_result_schema_version": "2.0",
+            "evidence_origin": "runtime-observed",
             "run_id": "synthetic-formal-run",
             "status": "PASS-SCOPED",
             "reason": "temporal immutability is not enforced",
@@ -6296,7 +7291,48 @@ def main(argv=None) -> int:
             return 2
     runner = load_runner(args.package_root.resolve())
     cases = run_cases(runner, args.package_root.resolve())
-    result = {"total": len(cases), "passed": sum(1 for c in cases if c.get("passed")), "cases": cases}
+    case_names = tuple(str(case.get("name")) for case in cases)
+    case_name_sha256 = hashlib.sha256(
+        json.dumps(
+            list(case_names),
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+
+    def inventory_matches(names: tuple[str, ...]) -> bool:
+        digest = hashlib.sha256(
+            json.dumps(
+                list(names),
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+        return (
+            len(names) == EXPECTED_CASE_TOTAL
+            and len(set(names)) == len(names)
+            and digest == EXPECTED_CASE_NAME_SHA256
+        )
+
+    inventory_guard_self_tested = (
+        bool(case_names)
+        and not inventory_matches(case_names[:-1])
+        and not inventory_matches(case_names + (case_names[-1],))
+        and not inventory_matches(tuple(reversed(case_names)))
+    )
+    case_inventory_matches = (
+        inventory_matches(case_names) and inventory_guard_self_tested
+    )
+    result = {
+        "total": len(cases),
+        "passed": sum(1 for c in cases if c.get("passed")),
+        "expected_total": EXPECTED_CASE_TOTAL,
+        "case_name_sha256": case_name_sha256,
+        "expected_case_name_sha256": EXPECTED_CASE_NAME_SHA256,
+        "case_inventory_matches": case_inventory_matches,
+        "inventory_guard_self_tested": inventory_guard_self_tested,
+        "cases": cases,
+    }
     text = json.dumps(result, indent=2, sort_keys=True)
     if output_path is not None and output_directory_fd is not None:
         try:
@@ -6317,7 +7353,9 @@ def main(argv=None) -> int:
             return 2
         os.close(output_directory_fd)
     print(text)
-    return 0 if result["passed"] == result["total"] else 2
+    return 0 if (
+        result["passed"] == result["total"] and case_inventory_matches
+    ) else 2
 
 
 if __name__ == "__main__":

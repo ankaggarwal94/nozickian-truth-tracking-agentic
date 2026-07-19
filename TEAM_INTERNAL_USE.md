@@ -17,7 +17,7 @@ Before sharing a changed package internally:
 
 ```bash
 python3 skills/nozickian-verify/scripts/validate_package.py . --self-test --markdown /tmp/ntt_SELF_VALIDATION_REPORT.md
-python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --markdown /tmp/ntt_GATE_RESULT.md
+python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --downstream-policy package-self --markdown /tmp/ntt_GATE_RESULT.md
 python3 skills/nozickian-verify/scripts/run_regression_evals.py . --json /tmp/ntt_regression_eval_result.json
 python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .
 ```
@@ -32,7 +32,24 @@ python3 skills/nozickian-verify/scripts/run_live_skill_evals.py . --run-fixtures
 
 Manifest refreshes are fail-closed. `--update-manifest` first checks the no-follow physical surface plus Git index stage and mode evidence; symlinks, FIFOs, gitlinks/submodules, conflict stages, and other non-regular modes block the refresh. Manifest output is written through a fresh same-directory temporary file and atomically replaces the fixed destination.
 
+The package-self gate is also a closed release contract. Claim-contract `1.1`
+binds the full claim and certificate assurance, including the complete selected
+downstream-policy object. World-contract `1.1` authorization comes from closed
+typed operator/target/outcome fields; its prose is explanation-only. The
+certificate-wide modal ID multiset must contain every one of the 80 reviewed
+package transitions exactly once with its pinned claim/kind and complete
+transition payload. `outcome` and `observed_outcome` are independently hashed
+and must agree when both are present.
+
 Live fixture evidence is also fail-closed. The harness resolves `claude` once to an absolute regular non-symlink target, executes that exact target for version/plugin/fixture commands under every working directory, and requires equal pre/post SHA-256 fingerprints before `PASS-SCOPED`. At run start it records the shared `ntt-stable-release-tree-v2` package digest, which binds every stable file's path, bytes, content digest, and Git-compatible executable mode, plus exact `evals.json` bytes, fixed run config including `max_turns`, and each fixture artifact's exact bytes. Promotion additionally requires current-run provenance, exact normalized version/plugin preflight argv, the exact current fixture-ID set once each, exact ordered fixture argv with no extra or missing argument, a distinct canonical bundle-local transcript and exact transcript-byte digest per fixture, and canonical prompt text/hash binding before stdout replay. The fingerprints and version output remain observational identity evidence with `authentication_status=observed-not-cryptographically-authenticated`; they do not prove that the binary is an official Claude build.
+
+Package validation begins from captured bytes in one bounded no-follow snapshot.
+Authorization reads and self-test fixtures consume that snapshot, and fixture
+trees are materialized from it rather than recopied from a mutable lexical
+source path. Finalization independently revalidates the held source and private
+mirror. Package path/metadata and aggregate byte budgets are independent; Git
+discovery and index capture have their own timeout, combined-output, and entry
+ceilings.
 
 ## Scope boundary
 
@@ -102,7 +119,7 @@ Caller-controlled output destinations enforce their declared fresh-versus-replac
 
 For v1.0.3, a complete modeled result is deliberately capped at `status: PASS-SCOPED`, `outcome: CAPPED`, `promotion_authorized: false`, and `satisfied_profile: promotion-contract-v2-complete`, with a nonzero exit and both unresolved Issue #5 obligations: consistency-sweep activation/resolution mechanics and `REMOTE_GROUND_TRUTH_REQUIRED` escalation mechanics remain parent-enforced. Generic `ntt_gate.py` `PASS-TRACKED` semantics remain unchanged. Independently, the formal runner caps an otherwise `PASS-TRACKED` result at `PASS-SCOPED` because temporal immutability remains unenforced; unavailable process containment refuses execution.
 
-The 44-case aggregate suite invokes the production certifier CLI for the baseline and all negative cases. Treat `44/44` as synthetic contract evidence, never as live runtime authentication.
+The 46-case aggregate suite invokes the production certifier CLI for the baseline and all negative cases. Treat `46/46` as synthetic contract evidence, never as live runtime authentication.
 
 
 ## GitHub README documentation review

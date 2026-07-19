@@ -15,16 +15,58 @@ from typing import Any, Callable, Dict, List, Mapping, Sequence, Tuple, cast
 STATUS_TOKENS = ("PASS-TRACKED", "PASS-SCOPED", "LIMITED", "FAIL", "UNVERIFIED")
 ACCEPTABLE_PASS_STATUSES = {"PASS-TRACKED", "PASS-SCOPED"}
 REJECT_STATUSES = {"LIMITED", "FAIL", "UNVERIFIED"}
-POSITIVE_ENVELOPE_STATUSES = {
-    "ok",
-    "success",
-    "succeeded",
-    "complete",
-    "completed",
-    "done",
-}
+NEGATIVE_NESTED_STATUS_VALUES = frozenset({
+    "error",
+    "errored",
+    "fail",
+    "failed",
+    "failure",
+    "aborted",
+    "killed",
+    "terminated",
+    "cancelled",
+    "canceled",
+    "timed-out",
+    "timeout",
+    "skipped",
+    "not-executed",
+    "incomplete",
+    "pending",
+    "deferred",
+    "blocked",
+    "denied",
+    "refused",
+    "error-during-execution",
+    "error-max-turns",
+    "error-max-budget-usd",
+    "error-max-structured-output-retries",
+    "blocking-limit",
+    "rapid-refill-breaker",
+    "prompt-too-long",
+    "image-error",
+    "model-error",
+    "api-error",
+    "malformed-tool-use-exhausted",
+    "aborted-streaming",
+    "aborted-tools",
+    "stop-hook-prevented",
+    "hook-stopped",
+    "tool-deferred",
+    "max-turns",
+    "background-requested",
+    "budget-exhausted",
+    "structured-output-retry-exhausted",
+    "tool-deferred-unavailable",
+    "turn-setup-failed",
+    "rejected",
+    "unsuccessful",
+    "permission-denied",
+    "unverified",
+    "limited",
+    "rate-limited",
+})
 REQUIRED_OUTPUT_TERMS = ("method", "false-world", "true-world", "gate")
-PROVENANCE_SCHEMA_VERSION = "1.0"
+PROVENANCE_SCHEMA_VERSION = "2.0"
 CLAUDE_VERSION_PATTERN = r"\b\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?(?:\s+\(Claude Code\))?\b"
 RAW_EXTERNAL_TRANSCRIPT_POLICY = (
     "Raw external Claude transcripts captured separately from this harness may "
@@ -32,6 +74,8 @@ RAW_EXTERNAL_TRANSCRIPT_POLICY = (
     "use normalized-display values."
 )
 MAX_CAPTURE_BYTES = 64 * 1024 * 1024
+MAX_JSON_STRUCTURE_NODES = 200_000
+MAX_JSON_STRUCTURE_DEPTH = 64
 FIXTURE_ID_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
 PIPE_CLOSE_GRACE_SEC = 0.5
 READER_JOIN_GRACE_SEC = 1.0
@@ -45,6 +89,10 @@ class DuplicateJsonKeyError(ValueError):
     """A JSON object repeats a key and is therefore ambiguous."""
 
 
+class JsonStructureBoundError(ValueError):
+    """A JSON input exceeds the parser's explicit structural budget."""
+
+
 def _strict_json_object(pairs: List[Tuple[str, Any]]) -> Dict[str, Any]:
     value: Dict[str, Any] = {}
     for key, item in pairs:
@@ -54,8 +102,53 @@ def _strict_json_object(pairs: List[Tuple[str, Any]]) -> Dict[str, Any]:
     return value
 
 
+def _guard_json_structure(text: str) -> None:
+    """Reject over-deep/over-wide JSON before the recursive decoder runs.
+
+    The scan is deliberately syntax-light: ``json.loads`` remains the syntax
+    oracle.  We only count structural delimiters outside strings, which is
+    sufficient to stop shallow byte-bounded inputs from exhausting the Python
+    decoder's recursion limit and to bound very wide arrays/objects before
+    materialization.
+    """
+    depth = 0
+    nodes = 1
+    in_string = False
+    escaped = False
+    for char in text:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char in "[{":
+            depth += 1
+            nodes += 1
+            if depth > MAX_JSON_STRUCTURE_DEPTH:
+                raise JsonStructureBoundError(
+                    "JSON nesting depth exceeds "
+                    f"{MAX_JSON_STRUCTURE_DEPTH}"
+                )
+        elif char in "]}":
+            depth = max(0, depth - 1)
+        elif char == ",":
+            nodes += 1
+        if nodes > MAX_JSON_STRUCTURE_NODES:
+            raise JsonStructureBoundError(
+                "JSON structure node count exceeds "
+                f"{MAX_JSON_STRUCTURE_NODES}"
+            )
+
+
 def strict_json_loads(text: str) -> Any:
     """Parse standards-compliant JSON without duplicate-key last-wins."""
+    _guard_json_structure(text)
+
     def reject_nonfinite(value: str) -> Any:
         raise ValueError(f"non-finite JSON number is not allowed: {value}")
 
@@ -642,7 +735,7 @@ def load_regular_json(path: Path, label: str) -> Mapping[str, Any]:
     file_error = regular_file_error(path)
     if file_error:
         raise ValueError(f"{label}: {file_error}")
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = strict_json_loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, Mapping):
         raise ValueError(f"{label}: top-level JSON is not an object")
     return data
@@ -696,7 +789,7 @@ def fixture_artifact_path(root: Path, value: Any) -> Path:
     posix = PurePosixPath(value)
     if posix.is_absolute() or any(
         part in {"", ".", ".."} for part in posix.parts
-    ):
+    ) or posix.as_posix() != value:
         raise ValueError("artifact path is absolute, dotted, or traverses")
     return root.joinpath(
         "skills",
@@ -1460,7 +1553,10 @@ AUTHORITATIVE_STATUS_RE = re.compile(
     + _AUTHORITATIVE_STATUS_TOKEN
     + r"`)"
     r")"
-    r"[.!]?[ \t]*$",
+    # A capture-bounded explanatory suffix is part of the declaration.
+    # In particular, ``FAIL - reason`` and ``FAIL — reason`` must not vanish
+    # merely because a later bare PASS declaration is present.
+    r"[.!]?(?:(?:[ \t]*[-–—:][ \t]*|[ \t]+)[^\r\n]*)?[ \t]*$",
     re.I | re.M,
 )
 
@@ -1496,26 +1592,83 @@ def dominant_status(text: str) -> str | None:
 
 
 def _envelope_error_diagnostics(envelope: Mapping[str, Any]) -> List[str]:
-    """Validate the exact Claude JSON error channel and reject aliases."""
+    """Require the canonical successful Claude result discriminator.
+
+    Benign telemetry remains version-tolerant, but status/error-bearing fields
+    are closed recursively.  This prevents a newly nested API/deferred error
+    channel from laundering a successful outer discriminator without freezing
+    the parser to one SDK release's complete telemetry inventory.
+    """
     diagnostics: List[str] = []
+    if type(envelope.get("type")) is not str:
+        diagnostics.append("type is missing or is not a string")
+    elif envelope.get("type") != "result":
+        diagnostics.append("type is not canonical result")
+    if type(envelope.get("subtype")) is not str:
+        diagnostics.append("subtype is missing or is not a string")
+    elif envelope.get("subtype") != "success":
+        diagnostics.append("subtype is not canonical success")
     if "is_error" not in envelope:
         diagnostics.append("is_error is missing")
     elif type(envelope.get("is_error")) is not bool:
         diagnostics.append("is_error is not boolean")
     elif envelope.get("is_error") is True:
         diagnostics.append("is_error is true")
+    if "permission_denials" not in envelope:
+        diagnostics.append("permission_denials is missing")
+    elif type(envelope.get("permission_denials")) is not list:
+        diagnostics.append("permission_denials is not an array")
+    elif envelope.get("permission_denials"):
+        diagnostics.append("permission_denials is nonempty")
     for alias in (
         "isError",
         "returnCode",
         "exitCode",
         "completionStatus",
         "errorCode",
+        "apiErrorStatus",
+        "deferredToolUse",
+        "permissionDenials",
+        "terminalReason",
+        "stopReason",
+        "structuredOutput",
+        "api-error-status",
+        "deferred-tool-use",
+        "permission-denials",
+        "terminal-reason",
+        "stop-reason",
+        "structured-output",
     ):
         if alias in envelope:
             diagnostics.append(f"unsupported error/status alias: {alias}")
+    if envelope.get("api_error_status") is not None:
+        diagnostics.append("api_error_status is non-null")
+    if envelope.get("deferred_tool_use") is not None:
+        diagnostics.append("deferred_tool_use is non-null")
+    if envelope.get("structured_output") is not None:
+        diagnostics.append(
+            "structured_output is non-null for a non-structured harness run"
+        )
+    if (
+        "terminal_reason" in envelope
+        and envelope.get("terminal_reason") is not None
+        and envelope.get("terminal_reason") != "completed"
+    ):
+        diagnostics.append("terminal_reason is not exact completed")
+    # The SDK intentionally exposes ``stop_reason`` as ``string | null``.
+    # This harness requests neither a custom stop sequence nor a structured
+    # response, so a reported reason authenticates completion only when it is
+    # the ordinary assistant-completion reason.  Absent/null remains compatible
+    # with SDK/CLI versions that omit the telemetry field.
+    if (
+        "stop_reason" in envelope
+        and envelope.get("stop_reason") is not None
+        and envelope.get("stop_reason") != "end_turn"
+    ):
+        diagnostics.append("stop_reason is not exact end_turn")
     for field in ("success", "completed", "executed"):
-        if field in envelope and envelope.get(field) is not True:
-            diagnostics.append(f"{field} is not true")
+        if field in envelope:
+            diagnostics.append(f"unsupported success/status alias: {field}")
     for field in (
         "failed",
         "failure",
@@ -1529,52 +1682,144 @@ def _envelope_error_diagnostics(envelope: Mapping[str, Any]) -> List[str]:
         "skipped",
         "not_executed",
     ):
-        if field in envelope and envelope.get(field) is not False:
-            diagnostics.append(f"{field} is not false")
+        if field in envelope:
+            diagnostics.append(f"unsupported failure/status alias: {field}")
     for field in ("error", "errors"):
         if field not in envelope:
             continue
-        value = envelope.get(field)
-        if value not in (None, False, 0, "") and not (
-            isinstance(value, (list, tuple, dict)) and not value
-        ):
-            diagnostics.append(f"{field} is nonempty")
+        diagnostics.append(f"unsupported error channel: {field}")
     for field in ("exit_code", "returncode", "return_code", "error_code"):
-        if field in envelope and (
-            type(envelope.get(field)) is not int
-            or envelope.get(field) != 0
-        ):
-            diagnostics.append(f"{field} is not integer zero")
+        if field in envelope:
+            diagnostics.append(f"unsupported exit/status alias: {field}")
     for field in ("status", "outcome"):
         if field not in envelope:
             continue
-        value = envelope.get(field)
-        if type(value) is not str:
-            diagnostics.append(f"{field} is not a string")
-            continue
-        normalized = re.sub(r"[-_\s]+", "-", value.strip().lower())
-        if normalized not in POSITIVE_ENVELOPE_STATUSES:
-            diagnostics.append(f"{field} is not an explicit success status")
+        diagnostics.append(f"unsupported status alias: {field}")
+
+    def empty_control_value(value: Any) -> bool:
+        return value in (None, False, 0, "") or (
+            isinstance(value, (list, tuple, dict)) and not value
+        )
+
+    stack: List[Tuple[str, Any]] = [
+        (str(key), value)
+        for key, value in envelope.items()
+        if key != "result"
+    ]
+    while stack:
+        raw_key, value = stack.pop()
+        key = re.sub(r"[-_\s]+", "-", raw_key.strip().lower())
+        if key in {"terminal-reason", "terminalreason"}:
+            if value is not None and value != "completed":
+                diagnostics.append(
+                    f"nested {raw_key} is not exact completed"
+                )
+        elif key in {"stop-reason", "stopreason"}:
+            if value is not None and value != "end_turn":
+                diagnostics.append(
+                    f"nested {raw_key} is not exact end_turn"
+                )
+        elif key in {"structured-output", "structuredoutput"}:
+            if value is not None:
+                diagnostics.append(
+                    f"nested {raw_key} is non-null for a non-structured run"
+                )
+        elif key in {
+            "error",
+            "errors",
+            "api-error",
+            "api-errors",
+            "apierror",
+            "api-error-status",
+            "apierrorstatus",
+            "error-code",
+            "error-message",
+            "deferred",
+            "deferred-error",
+            "deferred-tool-use",
+            "deferredtooluse",
+            "pending",
+            "incomplete",
+            "is-error",
+            "permission-denials",
+            "permissiondenials",
+            "exit-code",
+            "exitcode",
+            "return-code",
+            "returncode",
+            "errorcode",
+        } and not empty_control_value(value):
+            diagnostics.append(
+                f"nested status/error-bearing channel is nonempty: {raw_key}"
+            )
+        elif key in {
+            "failed",
+            "failure",
+            "timed-out",
+            "timeout",
+            "aborted",
+            "killed",
+            "terminated",
+            "cancelled",
+            "canceled",
+            "skipped",
+            "not-executed",
+        } and not empty_control_value(value):
+            diagnostics.append(
+                f"nested failure-bearing channel is nonempty: {raw_key}"
+            )
+        elif key in {"success", "completed", "executed"}:
+            if value is not True:
+                diagnostics.append(
+                    f"nested {raw_key} is not exact boolean true"
+                )
+        elif key in {"status", "outcome"} and type(value) is str:
+            normalized = re.sub(r"[-_\s]+", "-", value.strip().lower())
+            if normalized in NEGATIVE_NESTED_STATUS_VALUES:
+                diagnostics.append(
+                    f"nested {raw_key} is an explicit failure status"
+                )
+        elif key in {"type", "subtype"} and type(value) is str:
+            normalized = re.sub(r"[-_\s]+", "-", value.strip().lower())
+            if any(
+                marker in normalized
+                for marker in (
+                    "error",
+                    "fail",
+                    "defer",
+                    "pending",
+                    "incomplete",
+                    "max-turn",
+                    "max-budget",
+                )
+            ):
+                diagnostics.append(
+                    f"nested {raw_key} is an error/deferred discriminator"
+                )
+        if isinstance(value, Mapping):
+            stack.extend((str(child_key), child) for child_key, child in value.items())
+        elif isinstance(value, (list, tuple)):
+            stack.extend((raw_key, child) for child in value)
+
     return diagnostics
 
 
 def _payload_channel_diagnostics(envelope: Mapping[str, Any]) -> List[str]:
-    """Require one exact textual live-report channel with no alias conflict."""
+    """Require the canonical textual ``result`` channel with no aliases."""
     diagnostics: List[str] = []
-    present = [field for field in ("result", "content") if field in envelope]
-    if "output" in envelope:
-        diagnostics.append("unsupported report payload alias: output")
-    if len(present) != 1:
+    present = [
+        field for field in ("result", "content", "output")
+        if field in envelope
+    ]
+    if present != ["result"]:
         diagnostics.append(
-            "exactly one report payload channel is required; "
+            "exactly the canonical result payload channel is required; "
             f"observed {present!r}"
         )
         return diagnostics
-    value = envelope.get(present[0])
+    value = envelope.get("result")
     if type(value) is not str or not value.strip():
-        diagnostics.append(
-            f"{present[0]} report payload is not a nonempty string"
-        )
+        diagnostics.append("result report payload is not a nonempty string")
     return diagnostics
 
 
@@ -1587,14 +1832,21 @@ def transcript_checks(stdout: str, artifact: str) -> Dict[str, Any]:
             envelope = parsed
         else:
             envelope_error = f"top-level JSON is {type(parsed).__name__}, not an object"
-    except (ValueError, TypeError) as exc:
+    except (
+        ValueError,
+        TypeError,
+        RecursionError,
+        MemoryError,
+        OverflowError,
+    ) as exc:
         envelope_error = f"{type(exc).__name__}: {exc}"
     report_fields: List[str] = []
     report_field = None
     report = ""
     if envelope is not None:
         report_fields = [
-            field for field in ("result", "content") if field in envelope
+            field for field in ("result", "content", "output")
+            if field in envelope
         ]
         if len(report_fields) == 1:
             candidate = envelope.get(report_fields[0])
@@ -1792,7 +2044,7 @@ def main(argv=None) -> int:
             evals_path,
             "evals.json",
         )
-        parsed_evals = json.loads(evals_path.read_bytes())
+        parsed_evals = load_regular_json(evals_path, "evals.json")
         if not isinstance(parsed_evals, Mapping):
             raise ValueError("evals.json top-level value is not an object")
         if not isinstance(parsed_evals.get("fixtures"), list):
@@ -1876,6 +2128,7 @@ def main(argv=None) -> int:
         },
         "provenance": {
             "provenance_schema_version": PROVENANCE_SCHEMA_VERSION,
+            "evidence_origin": "runtime-observed",
             "status": "observed-current-run",
             "source_release": source_release,
             "observed_at_utc": observed_at_utc,

@@ -522,7 +522,28 @@ def write_live_bundle(
         )
         stdout = json.dumps(
             {
+                "type": "result",
+                "subtype": "success",
+                "duration_ms": 10,
+                "duration_api_ms": 8,
+                "ttft_ms": 1,
                 "is_error": False,
+                "api_error_status": None,
+                "num_turns": 1,
+                "stop_reason": "end_turn",
+                "total_cost_usd": 0.0,
+                "usage": {"input_tokens": 1, "output_tokens": 1},
+                "modelUsage": {},
+                "permission_denials": [],
+                "structured_output": None,
+                "deferred_tool_use": None,
+                "terminal_reason": "completed",
+                "fast_mode_state": "off",
+                "uuid": str(uuid.uuid5(
+                    uuid.NAMESPACE_URL,
+                    f"promotion-live:{fixture_id}",
+                )),
+                "session_id": "promotion-live-contract-session",
                 "result": (
                     f"Verification report for {Path(artifact).name}: method M "
                     "was inspected; false-world sensitivity and true-world "
@@ -629,6 +650,7 @@ def write_live_bundle(
                 "provenance_schema_version": (
                     certifier.LIVE_PROVENANCE_SCHEMA_VERSION
                 ),
+                "evidence_origin": "synthetic-contract",
                 "status": "observed-current-run",
                 "source_release": plugin["version"],
                 "observed_at_utc": "2026-07-13T00:00:00Z",
@@ -695,6 +717,7 @@ def write_strict_gate_evidence(
     records_dir: str,
     observations_dir: str,
     modal_cases: Sequence[Tuple[str, Dict[str, Any], str]],
+    certificate_assurance: Mapping[str, Any],
 ) -> Tuple[List[str], str, str]:
     """Write proposition- and modal-bound evidence for one synthetic claim."""
     claim_id = str(claim.get("id") or "")
@@ -706,7 +729,8 @@ def write_strict_gate_evidence(
         raise RuntimeError("synthetic claim proposition could not be hashed")
     prefixed_claim_digest = f"sha256:{claim_digest}"
     claim_contract_digest = gate._claim_contract_sha256(  # pylint: disable=protected-access
-        claim
+        claim,
+        certificate_assurance,
     )
     if type(claim_contract_digest) is not str:
         raise RuntimeError("synthetic claim contract could not be hashed")
@@ -869,12 +893,12 @@ def write_formal_bundle(
             "world_contract": {
                 "schema_version": gate.WORLD_CONTRACT_SCHEMA_VERSION,
                 "semantic_equivalence_class": "formal.stale-artifact",
-                "operator": "replace-bytes",
-                "target": "synthetic formal artifact",
+                "operator": "replace",
+                "target": "artifact.digest",
                 "precondition": "The artifact matches its recorded digest.",
                 "state_delta": "The artifact contains stale bytes.",
                 "oracle": "The strict gate recomputes and compares the digest.",
-                "expected_outcome": "The false claim is rejected.",
+                "expected_outcome": "rejected_false_claim",
             },
         },
         {
@@ -889,12 +913,12 @@ def write_formal_bundle(
             "world_contract": {
                 "schema_version": gate.WORLD_CONTRACT_SCHEMA_VERSION,
                 "semantic_equivalence_class": "formal.swap-companion-role",
-                "operator": "swap-role",
-                "target": "typed formal companion",
+                "operator": "mutate",
+                "target": "artifact.identity",
                 "precondition": "Every companion occupies its declared role.",
                 "state_delta": "Two companion roles are exchanged.",
                 "oracle": "The strict gate checks typed role bindings.",
-                "expected_outcome": "The false claim is blocked.",
+                "expected_outcome": "blocked",
             },
         },
     ]
@@ -910,14 +934,38 @@ def write_formal_bundle(
         "world_contract": {
             "schema_version": gate.WORLD_CONTRACT_SCHEMA_VERSION,
             "semantic_equivalence_class": "formal.retain-equivalent-bytes",
-            "operator": "retain-equivalent",
-            "target": "synthetic formal artifact",
+            "operator": "preserve",
+            "target": "artifact.digest",
             "precondition": "The recorded artifact is true under method M.",
             "state_delta": "Only a semantically equivalent representation remains.",
             "oracle": "The strict gate confirms the same bound evidence.",
-            "expected_outcome": "The true claim is retained.",
+            "expected_outcome": "retained_true_claim",
         },
     }]
+    claim_identity.update({
+        "truth_status": "executed_confirmed",
+        "evidence_refs": [
+            "evidence/claim-a.json",
+            "evidence/claim-b.json",
+        ],
+        "false_world_tests": false_tests,
+        "true_world_tests": true_tests,
+        "unresolved_contradictions": [],
+        "residual_risks": [],
+    })
+    false_tests[0]["evidence_refs"] = ["evidence/fw-a.json"]
+    false_tests[1]["evidence_refs"] = ["evidence/fw-b.json"]
+    true_tests[0]["evidence_refs"] = ["evidence/tw-a.json"]
+    assurance_certificate = {
+        "schema_version": "2.0",
+        "method_manifest": method,
+        "scope_limitations": [],
+        "claims": [claim_identity],
+    }
+    certificate_assurance = gate._certificate_assurance_payload(  # pylint: disable=protected-access
+        assurance_certificate,
+        gate._resolve_downstream_policy("generic"),  # pylint: disable=protected-access
+    )
     (
         claim_refs,
         proposition_digest,
@@ -928,6 +976,7 @@ def write_formal_bundle(
         claim=claim_identity,
         records_dir="evidence",
         observations_dir="observations",
+        certificate_assurance=certificate_assurance,
         modal_cases=[
             (
                 "fw-a",
@@ -1035,7 +1084,33 @@ def write_formal_bundle(
             ]
         )
     out["transcript"].write_text(
-        "\n".join(json.dumps(item) for item in transcript_lines) + "\n",
+        "\n".join(json.dumps(item) for item in [
+            *transcript_lines,
+            {
+                "type": "result",
+                "subtype": "success",
+                "duration_ms": 10,
+                "duration_api_ms": 8,
+                "ttft_ms": 1,
+                "is_error": False,
+                "api_error_status": None,
+                "num_turns": len(transcript_lines) // 2 + 1,
+                "stop_reason": "end_turn",
+                "total_cost_usd": 0.0,
+                "usage": {"input_tokens": 1, "output_tokens": 1},
+                "modelUsage": {},
+                "permission_denials": [],
+                "structured_output": None,
+                "deferred_tool_use": None,
+                "terminal_reason": "completed",
+                "fast_mode_state": "off",
+                "uuid": "00000000-0000-4000-8000-000000000003",
+                "session_id": "promotion-formal-contract-session",
+                "result": (
+                    "Formal coordinator completed after all native lanes."
+                ),
+            },
+        ]) + "\n",
         encoding="utf-8",
     )
     trace_auth = formal.authenticate_trace(out["transcript"])
@@ -1076,6 +1151,8 @@ def write_formal_bundle(
                 "--evidence-root",
                 str(package_root),
                 "--strict-evidence",
+                "--downstream-policy",
+                "package-self",
             ],
             containment_scope,
         ),
@@ -1193,6 +1270,7 @@ def write_formal_bundle(
             out["target_snapshot"]
         ),
         evidence_root=result_dir,
+        evidence_origin="synthetic-contract",
     )
     write_json(out["formal_result"], canonical)
     return out["formal_result"]
@@ -1204,6 +1282,8 @@ def write_passing_promotion_claim(
     bundle: Path,
     claim_id: str,
     slug: str,
+    *,
+    certificate_assurance: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Write one independently gate-passable promotion claim and evidence."""
     method = synthetic_method()
@@ -1232,12 +1312,12 @@ def write_passing_promotion_claim(
             "world_contract": {
                 "schema_version": gate.WORLD_CONTRACT_SCHEMA_VERSION,
                 "semantic_equivalence_class": f"{slug}.stale-observation",
-                "operator": "replace-observation",
-                "target": f"promotion claim {claim_id} first observation",
+                "operator": "replace",
+                "target": "evidence_wrapper.artifact_digest",
                 "precondition": "The observation matches its recorded digest.",
                 "state_delta": "The observation is replaced by stale bytes.",
                 "oracle": "The strict gate recomputes the evidence digest.",
-                "expected_outcome": "The stale claim is rejected.",
+                "expected_outcome": "rejected_false_claim",
             },
         },
         {
@@ -1252,12 +1332,12 @@ def write_passing_promotion_claim(
             "world_contract": {
                 "schema_version": gate.WORLD_CONTRACT_SCHEMA_VERSION,
                 "semantic_equivalence_class": f"{slug}.remove-source-binding",
-                "operator": "remove-binding",
-                "target": f"promotion claim {claim_id} independent source",
+                "operator": "remove",
+                "target": "certificate.evidence_refs",
                 "precondition": "The claim has an independent source binding.",
                 "state_delta": "The independent source binding is absent.",
                 "oracle": "The strict gate requires bound structured evidence.",
-                "expected_outcome": "The unbound claim is blocked.",
+                "expected_outcome": "blocked",
             },
         },
     ]
@@ -1273,14 +1353,31 @@ def write_passing_promotion_claim(
         "world_contract": {
             "schema_version": gate.WORLD_CONTRACT_SCHEMA_VERSION,
             "semantic_equivalence_class": f"{slug}.retain-equivalent-bytes",
-            "operator": "retain-equivalent",
-            "target": f"promotion claim {claim_id} evidence",
+            "operator": "preserve",
+            "target": "evidence_wrapper.artifact_digest",
             "precondition": "The evidence supports the true claim.",
             "state_delta": "Equivalent independently bound bytes are retained.",
             "oracle": "The strict gate confirms the same evidence contract.",
-            "expected_outcome": "The true claim is retained.",
+            "expected_outcome": "retained_true_claim",
         },
     }]
+    records_dir = f"promotion_claims/{slug}/records"
+    claim_identity.update({
+        "truth_status": "executed_confirmed",
+        "evidence_refs": [
+            f"{records_dir}/claim-a.json",
+            f"{records_dir}/claim-b.json",
+        ],
+        "false_world_tests": false_tests,
+        "true_world_tests": true_tests,
+        "unresolved_contradictions": [],
+        "residual_risks": [],
+    })
+    false_tests[0]["evidence_refs"] = [f"{records_dir}/false-a.json"]
+    false_tests[1]["evidence_refs"] = [f"{records_dir}/false-b.json"]
+    true_tests[0]["evidence_refs"] = [f"{records_dir}/true-a.json"]
+    if certificate_assurance is None:
+        return claim_identity
     (
         claim_refs,
         proposition_digest,
@@ -1289,8 +1386,9 @@ def write_passing_promotion_claim(
         gate,
         bundle,
         claim=claim_identity,
-        records_dir=f"promotion_claims/{slug}/records",
+        records_dir=records_dir,
         observations_dir=f"promotion_claims/{slug}/observations",
+        certificate_assurance=certificate_assurance,
         modal_cases=[
             (
                 "false-a",
@@ -1388,6 +1486,20 @@ def write_promotion_certificate(
                 ),
             },
         }
+    certificate_assurance = gate._certificate_assurance_payload(  # pylint: disable=protected-access
+        certificate,
+        gate._resolve_downstream_policy("promotion-v2"),  # pylint: disable=protected-access
+    )
+    certificate["claims"] = [
+        write_passing_promotion_claim(
+            certifier,
+            gate,
+            bundle,
+            "C-UPSTREAM",
+            "upstream",
+            certificate_assurance=certificate_assurance,
+        )
+    ]
     method_m, method_error = certifier.expected_promotion_method_m(
         package_root,
         bundle,
@@ -1574,6 +1686,8 @@ EXPECTED_BASELINE_LANE_COUNTS = {
 }
 EXPECTED_CASE_NAMES = (
     "complete_synthetic_baseline_cli_is_capped",
+    "promotion_origin_is_derived_from_bound_lane_provenance",
+    "promotion_certificate_top_level_schema_is_closed",
     "promotion_method_m_cross_binding_mismatch_matrix",
     "official_fake_exact_argv_and_real_format",
     "distinct_formal_roles_may_contain_equal_bytes",
@@ -1618,155 +1732,155 @@ EXPECTED_CASE_NAMES = (
     "certifier_json_special_target_rejected",
     "normal_invocation_creates_no_python_bytecode",
 )
-EXPECTED_CASE_TOTAL = 44
+EXPECTED_CASE_TOTAL = 46
 EXPECTED_POSITIVE_MUTATION_CHECK_INVENTORIES: Dict[
     str, Tuple[int, str]
 ] = {
     "distinct_formal_roles_may_contain_equal_bytes": (
         252,
-        "d5dd400812977f16d3e3a2b0e7a40543aab716942a96c91cfb35cd0623bc19a3",
+        "01d657a6cbdeda49f12d52b28db7a9b87ecb1e882f8830583c931b5e030d14c5",
     ),
     "official_scope_exclusion_retains_fixed_role_dag": (
         252,
-        "afd32ba4df002e48c9ac8b6353ba5680ff14f908946fc51b73b0844b8ab096d5",
+        "5c82e8879fbb3ad3fde21b8c5fd3b6efbbafdb2f1ac4e673605a4af3a543d3c8",
     ),
     "independently_passing_downstream_claim_accepted_before_cap": (
         252,
-        "d5dd400812977f16d3e3a2b0e7a40543aab716942a96c91cfb35cd0623bc19a3",
+        "01d657a6cbdeda49f12d52b28db7a9b87ecb1e882f8830583c931b5e030d14c5",
     ),
 }
 EXPECTED_MUTATION_CHECK_INVENTORIES: Dict[str, Tuple[int, str]] = {
     "missing_promotion_schema_version": (
         252,
-        "6f489bab21d307a5793a91e86a17d6e77e2ff27f97d3719a238b4bed90c91265",
+        "0a55bfee9deb45f5fa9df19e314dbaed62e5e6246e24f7f5815e182277dd9114",
     ),
     "wrong_type_promotion_schema_version": (
         252,
-        "6f489bab21d307a5793a91e86a17d6e77e2ff27f97d3719a238b4bed90c91265",
+        "0a55bfee9deb45f5fa9df19e314dbaed62e5e6246e24f7f5815e182277dd9114",
     ),
     "stale_deterministic_capture_wrong_tree": (
         251,
-        "2945d5ff01342d688a3e86e9615d2b8c94360dc6711bb26a9738d066d3954062",
+        "4333c016a5786c99efb3409700b38d380a013b5f26fe27a70bf2dd57c4e5c6a5",
     ),
     "fabricated_official_text_policy": (
         252,
-        "7a0cfe450ec567f1d9eec904057df9d7a106ecd623a1378edaadc1ef27831a2b",
+        "345566cd1d08f8e632de33a8b9e60dde389531a15d8bd0852f8d5d1a3dd0d60a",
     ),
     "decoy_formal_companion": (
         252,
-        "7b706f481a66dd53aec2cd415d6a12d64a0e1603b3b3055ea1b894335dc9a726",
+        "4357869f0ec77205e257fa137bfb8e86c39fc234993c6becd93d2bb825606609",
     ),
     "swapped_formal_companions": (
         252,
-        "981bc356ce63980c54dd6e00cf6d55ac5d70fdc31d8cdfcc983a181b8f600a5b",
+        "edc24dbab8a941633b94ca41d4358d8c65714744c1eb8900257a141073eebebf",
     ),
     "formal_coordinator_result_identity_binding": (
         252,
-        "324cd779bba7e11f91a696939ff83427ed56ca0f5c4b3f014937ff0dbf7b3035",
+        "d3b60bd8ca3ab554ff41e035c1ca81b0eb8d13f4b0378fa60a13f1f7bb85beb0",
     ),
     "formal_coordinator_argv_identity_binding": (
         252,
-        "324cd779bba7e11f91a696939ff83427ed56ca0f5c4b3f014937ff0dbf7b3035",
+        "d3b60bd8ca3ab554ff41e035c1ca81b0eb8d13f4b0378fa60a13f1f7bb85beb0",
     ),
     "formal_prompt_companion_binding": (
         252,
-        "7f208bce32e09d3c5052ae15e3d82ee3c69ac1f238c757b4d78cca0df4a42cb9",
+        "fb2456b4b55d9489c985b475d87505c2eb811e20c3ef692369d21c526c6872f7",
     ),
     "formal_transcript_command_binding": (
         252,
-        "e297d262c2e5a6abb3cc68cd81dd5d17088fe3c201c1dd310c4703d238ac889e",
+        "3f74f2a0bf9a110bc42fafceabd27bef9e34ff164b19f41cd29b8c0f4cbfba81",
     ),
     "formal_gate_companion_argv_binding": (
         252,
-        "221ea147ebe034e5c431255a2e60ef10c8ee022d8ee8a4f4f19cc8872bd33289",
+        "52d3c5c4d30f430b70eb6a21d0c5971b9fb3295122f1868033d2659ebd97a0a6",
     ),
     "formal_arbitrary_output_check_rejected": (
         252,
-        "0ae4ae31a58f04c07f5089e885a6ab227eeead3ae5ecc675fc40278e5685a8ec",
+        "7d4e26857c670dcf3ebcfcd5a966381b6c8e41fb5021cefe1873e1f8e1ade2f3",
     ),
     "formal_empty_report_rejected": (
         252,
-        "0ae4ae31a58f04c07f5089e885a6ab227eeead3ae5ecc675fc40278e5685a8ec",
+        "7d4e26857c670dcf3ebcfcd5a966381b6c8e41fb5021cefe1873e1f8e1ade2f3",
     ),
     "dummy_untyped_evidence": (
         137,
-        "8bbbde46adffd1643280ce2b49d118065f819f8c436f7682ce14b1107fcab0c7",
+        "eb1a7388129d9ed5095dddfd156b3dac1b4699d3b7edf40f4fe6744c92af065f",
     ),
     "fake_own_claim_id": (
         252,
-        "460b9aa2f9d35e018c64efac59ced5a8c4954719e4ce381648741b47e531b85c",
+        "8fa0ff7d63b3d8e8614b0791243f893cb65463a300df8ba9aeba8fc9570bdd9b",
     ),
     "malformed_claim_nonobject": (
         250,
-        "b362ba33b3c334ff3ef1ef346bf6bac08914c9e0badcaad896937fb851bd1490",
+        "db52818627d4d7ab2fdba513e544dcd255ed0e032d4776920db8040f7959c230",
     ),
     "malformed_claim_null_entry": (
         250,
-        "b362ba33b3c334ff3ef1ef346bf6bac08914c9e0badcaad896937fb851bd1490",
+        "db52818627d4d7ab2fdba513e544dcd255ed0e032d4776920db8040f7959c230",
     ),
     "malformed_claims_null": (
         250,
-        "011b7ab9d86c9c008fae02362fe7489745a86ea3b65d39309af9af1c03c7a6ff",
+        "9e3af09c54b9d0432c43afb7df6a3095b8eb8666e3d88c729f0df0ae703e1cea",
     ),
     "empty_promotion_claims_rejected": (
         250,
-        "b362ba33b3c334ff3ef1ef346bf6bac08914c9e0badcaad896937fb851bd1490",
+        "db52818627d4d7ab2fdba513e544dcd255ed0e032d4776920db8040f7959c230",
     ),
     "malformed_claim_bool_id": (
         250,
-        "b362ba33b3c334ff3ef1ef346bf6bac08914c9e0badcaad896937fb851bd1490",
+        "db52818627d4d7ab2fdba513e544dcd255ed0e032d4776920db8040f7959c230",
     ),
     "malformed_claim_duplicate_id": (
         250,
-        "b362ba33b3c334ff3ef1ef346bf6bac08914c9e0badcaad896937fb851bd1490",
+        "db52818627d4d7ab2fdba513e544dcd255ed0e032d4776920db8040f7959c230",
     ),
     "malformed_claim_invalid_id": (
         250,
-        "b362ba33b3c334ff3ef1ef346bf6bac08914c9e0badcaad896937fb851bd1490",
+        "db52818627d4d7ab2fdba513e544dcd255ed0e032d4776920db8040f7959c230",
     ),
     "malformed_scalar": (
         252,
-        "9cf4a76249e4f90ae4fd7464187740601682d7819725e1f9c5194e9e5652c5e8",
+        "1b768fe3ea875d92328f306a7b92b30ac23e82ca119a28039e1648c545304dc6",
     ),
     "official_stderr_contradiction_dominates_stdout": (
         252,
-        "f0d3bd8450b26f2ac7032fc7c38f030424fed33eaed83f7b6a86112f90023a20",
+        "bc101a75f45aac9916aed474a6dfbda603e52dc4d2e512e0182c0b9cd2e78e83",
     ),
     "official_structured_stderr_failure_dominates_stdout": (
         252,
-        "f0d3bd8450b26f2ac7032fc7c38f030424fed33eaed83f7b6a86112f90023a20",
+        "bc101a75f45aac9916aed474a6dfbda603e52dc4d2e512e0182c0b9cd2e78e83",
     ),
     "official_mixed_jsonl_stderr_failure_dominates_stdout": (
         252,
-        "f0d3bd8450b26f2ac7032fc7c38f030424fed33eaed83f7b6a86112f90023a20",
+        "bc101a75f45aac9916aed474a6dfbda603e52dc4d2e512e0182c0b9cd2e78e83",
     ),
     "official_early_failure_survives_large_neutral_tail": (
         252,
-        "f0d3bd8450b26f2ac7032fc7c38f030424fed33eaed83f7b6a86112f90023a20",
+        "bc101a75f45aac9916aed474a6dfbda603e52dc4d2e512e0182c0b9cd2e78e83",
     ),
     "formal_package_identity_bool_int_alias": (
         252,
-        "278a6205d761aade0aeb541c6dc19919460dcc4a35d6d2945b008991821e6878",
+        "d9f16cf47d11dc707437032da8f3c0c6720ae62d00fd59609dd4d677d65e42ae",
     ),
     "formal_trace_authenticated_bool_int_alias": (
         252,
-        "d6dc03b66f5d3fe834ba99e33cc4ffffc2e262d245d95e75717dc9eac1c67795",
+        "e63fb252d4c88b665cf98c3ca1adf65fc68fbe17d962671322c883d435d9a419",
     ),
     "formal_transcript_without_authentic_native_events": (
         252,
-        "217f27d4a6ebde9b312b5db4a634228c521d95149ebc717700807851a69f2634",
+        "2ecbcf1e69ad9f75e128123c1c4b65f164545eee099a561ecd1463f8a00c2cf4",
     ),
     "formal_trace_authentication_missing": (
         252,
-        "cad6313d03774a594c5a8c687adc959d487cc435e9924d8e00b5a5bd295e4a0a",
+        "ab6ccde676015264447e1e93ad3a0844bb0c06adfe3917159d84494a7f2f6d9c",
     ),
     "noncanonical_promotion_evidence_path": (
         249,
-        "97b94c1755e4593b7537711eca90d41ef29e9fc8f93daa7f9a20aa812ddd4e15",
+        "7d0dc49781d109557a89982dd18f1280f125d6635ea204b4bea24bc2eb55901d",
     ),
     "oversized_evidence_graph_is_bounded": (
         191,
-        "93efa09fb5b0ed8345f5647cba02bdda8d8571596403ff7504ac8dd4690da08f",
+        "1566f5ce37c52bea31aaa8aa1b26532d2c90ff78cd580538b305608589f30885",
     ),
 }
 
@@ -1819,7 +1933,7 @@ def expected_baseline_lanes() -> Dict[str, List[str]]:
         "live runtime status has an exact string type",
         "live runtime was executed",
         "live runtime status is PASS-SCOPED",
-        "live provenance schema is 1.0",
+        "live provenance schema is 2.0",
         "live provenance records the current observed run",
         "live runtime executable fingerprints are valid and stable",
         "live runtime version output matches expected pattern",
@@ -2117,6 +2231,9 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                     encoding="utf-8"
                 )
             )
+            baseline_formal_result = json.loads(
+                formal_result.read_text(encoding="utf-8")
+            )
             baseline_nodes = baseline_certificate["evidence"]["nodes"]
             baseline_roles_and_dag_exact = (
                 tuple(sorted(baseline_nodes)) == EXPECTED_PROMOTION_ROLES
@@ -2259,6 +2376,53 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                     "<package-root>/skills/nozickian-verify",
                 ]
             )
+            deterministic_gate_result_argv_exact = (
+                isinstance(deterministic_execution, Mapping)
+                and deterministic_execution.get("gate_result", {}).get(
+                    "argv"
+                )
+                == [
+                    "<python>",
+                    (
+                        "<package-root>/skills/nozickian-verify/scripts/"
+                        "ntt_gate.py"
+                    ),
+                    (
+                        "<package-root>/self_validation/"
+                        "self_certificate.json"
+                    ),
+                    "--evidence-root",
+                    "<package-root>",
+                    "--strict-evidence",
+                    "--downstream-policy",
+                    "package-self",
+                ]
+            )
+            baseline_formal_prechecks = baseline_formal_result.get(
+                "prechecks"
+            )
+            formal_self_certificate_precheck_argv_exact = (
+                isinstance(baseline_formal_prechecks, list)
+                and len(baseline_formal_prechecks) == 4
+                and isinstance(baseline_formal_prechecks[2], Mapping)
+                and baseline_formal_prechecks[2].get("argv")
+                == [
+                    "<python>",
+                    (
+                        "<execution-package-root>/skills/"
+                        "nozickian-verify/scripts/ntt_gate.py"
+                    ),
+                    (
+                        "<execution-package-root>/self_validation/"
+                        "self_certificate.json"
+                    ),
+                    "--evidence-root",
+                    "<execution-package-root>",
+                    "--strict-evidence",
+                    "--downstream-policy",
+                    "package-self",
+                ]
+            )
             malformed_failed_checks_rejected = False
             try:
                 failed_check_inventory({"failed_checks": ["not-an-object"]})
@@ -2296,6 +2460,8 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                     and checks_typed_and_passing
                     and execution_records_typed
                     and official_argv_exact
+                    and deterministic_gate_result_argv_exact
+                    and formal_self_certificate_precheck_argv_exact
                     and production_certifier_cli_baseline
                     and malformed_failed_checks_rejected
                     and bounded_json_reader_rejected_oversized
@@ -2333,6 +2499,12 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 ),
                 "unresolved_charter_obligations_exact": obligations_exact,
                 "official_argv_exact": official_argv_exact,
+                "deterministic_gate_result_argv_exact": (
+                    deterministic_gate_result_argv_exact
+                ),
+                "formal_self_certificate_precheck_argv_exact": (
+                    formal_self_certificate_precheck_argv_exact
+                ),
                 "synthetic_non_runtime_method_m_exact": (
                     baseline_method_exact
                 ),
@@ -2487,6 +2659,113 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 "cli_invocation_verified": missing_origin_invocation.get(
                     "verified"
                 ),
+            })
+
+            origin_flip_bundle = root / "method-mismatch-origin-flip"
+            shutil.copytree(
+                baseline_bundle,
+                origin_flip_bundle,
+                symlinks=True,
+            )
+            origin_flip_path = (
+                origin_flip_bundle / "promotion_certificate.json"
+            )
+            origin_flip_certificate = json.loads(
+                origin_flip_path.read_text(encoding="utf-8")
+            )
+            origin_flip_certificate["origin"] = "runtime-observed"
+            recomputed_after_flip, origin_flip_error = (
+                certifier.expected_promotion_method_m(
+                    package_root,
+                    origin_flip_bundle,
+                    origin_flip_certificate,
+                )
+            )
+            write_json(origin_flip_path, origin_flip_certificate)
+            (
+                origin_flip_rc,
+                origin_flip_result,
+                origin_flip_invocation,
+            ) = certifier_cli(package_root, origin_flip_bundle)
+            origin_flip_failures = failed_check_inventory(
+                origin_flip_result
+            )
+            cases.append({
+                "name": "promotion_origin_is_derived_from_bound_lane_provenance",
+                "passed": (
+                    recomputed_after_flip is None
+                    and isinstance(origin_flip_error, str)
+                    and "bound lane provenance" in origin_flip_error
+                    and origin_flip_rc == 2
+                    and origin_flip_result.get("status") == "FAIL"
+                    and origin_flip_result.get("outcome") == "FAILED"
+                    and origin_flip_result.get("promotion_authorized")
+                    is False
+                    and origin_flip_result.get("synthetic_origin") is False
+                    and any(
+                        name == method_m_check
+                        for name, _kind in origin_flip_failures
+                    )
+                    and origin_flip_invocation.get("verified") is True
+                ),
+                "method_error": origin_flip_error,
+                "failed_checks": sorted(origin_flip_failures.elements()),
+                "cli_invocation_verified": origin_flip_invocation.get(
+                    "verified"
+                ),
+            })
+
+            contradictory_top_level_fields = {
+                "promotion_authorized": True,
+                "status": certifier.PASS_TRACKED,
+                "outcome": "AUTHORIZED",
+                "runtime_evidence": True,
+                "error": "runtime failed",
+            }
+            closed_schema_outcomes: List[Dict[str, Any]] = []
+            for field, value in contradictory_top_level_fields.items():
+                extra_bundle = root / f"closed-schema-{field}"
+                shutil.copytree(
+                    baseline_bundle,
+                    extra_bundle,
+                    symlinks=True,
+                )
+                extra_path = extra_bundle / "promotion_certificate.json"
+                extra_certificate = json.loads(
+                    extra_path.read_text(encoding="utf-8")
+                )
+                extra_certificate[field] = value
+                write_json(extra_path, extra_certificate)
+                extra_rc, extra_result, extra_invocation = certifier_cli(
+                    package_root,
+                    extra_bundle,
+                )
+                extra_failures = failed_check_inventory(extra_result)
+                closed_schema_outcomes.append({
+                    "field": field,
+                    "passed": (
+                        extra_rc == 2
+                        and extra_result.get("status") == "FAIL"
+                        and extra_result.get("outcome") == "FAILED"
+                        and extra_result.get("promotion_authorized") is False
+                        and any(
+                            name == method_m_check
+                            for name, _kind in extra_failures
+                        )
+                        and extra_invocation.get("verified") is True
+                    ),
+                    "failed_checks": sorted(extra_failures.elements()),
+                    "cli_invocation_verified": extra_invocation.get(
+                        "verified"
+                    ),
+                })
+            cases.append({
+                "name": "promotion_certificate_top_level_schema_is_closed",
+                "passed": all(
+                    outcome.get("passed") is True
+                    for outcome in closed_schema_outcomes
+                ),
+                "outcomes": closed_schema_outcomes,
             })
 
             malformed_live_bundle = root / "method-mismatch-live-shape"
@@ -3162,6 +3441,47 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 "performed": True,
                 "claims_identified": ["D-INDEPENDENT"],
             }
+            downstream_assurance = gate._certificate_assurance_payload(  # pylint: disable=protected-access
+                downstream_certificate,
+                gate._resolve_downstream_policy("promotion-v2"),  # pylint: disable=protected-access
+            )
+            downstream_certificate["claims"] = [
+                write_passing_promotion_claim(
+                    certifier,
+                    gate,
+                    downstream_bundle,
+                    "C-UPSTREAM",
+                    "upstream",
+                    certificate_assurance=downstream_assurance,
+                ),
+                write_passing_promotion_claim(
+                    certifier,
+                    gate,
+                    downstream_bundle,
+                    "C-INDEPENDENT",
+                    "independent",
+                    certificate_assurance=downstream_assurance,
+                ),
+            ]
+            downstream_method_m, downstream_method_error = (
+                certifier.expected_promotion_method_m(
+                    package_root,
+                    downstream_bundle,
+                    downstream_certificate,
+                )
+            )
+            if (
+                downstream_method_error is not None
+                or not isinstance(downstream_method_m, dict)
+            ):
+                raise RuntimeError(
+                    "downstream promotion method M could not be rebound: "
+                    f"{downstream_method_error}"
+                )
+            downstream_certificate["method_m_upgrade"] = downstream_method_m
+            downstream_certificate["live_result_bindings"] = (
+                downstream_method_m["live"]
+            )
             write_json(downstream_certificate_path, downstream_certificate)
             (
                 downstream_rc,
@@ -3853,6 +4173,22 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                         "performed": True,
                         "claims_identified": ["D-FAKE"],
                     }
+                    fake_assurance = gate._certificate_assurance_payload(  # pylint: disable=protected-access
+                        certificate,
+                        gate._resolve_downstream_policy(  # pylint: disable=protected-access
+                            "promotion-v2"
+                        ),
+                    )
+                    certificate["claims"] = [
+                        write_passing_promotion_claim(
+                            certifier,
+                            gate,
+                            bundle,
+                            "C-UPSTREAM",
+                            "upstream",
+                            certificate_assurance=fake_assurance,
+                        )
+                    ]
                 update_certificate(bundle, mutate)
 
             run_mutation(

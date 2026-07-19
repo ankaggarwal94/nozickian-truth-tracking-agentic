@@ -1,16 +1,16 @@
 {
   "artifact_path": "self_validation/current_observations.json",
-  "claim_contract_schema_version": "1.0",
-  "claim_contract_sha256": "sha256:ff43a1873c9ab7dc030bf7b75235f2c23c4c2b3ea5ff9569956b3d66c5b5c1a4",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:5ba6a134f65782f01d30390b637ccf2c4797e6cdd4e4671aee075730757615e0",
   "claim_id": "C-formal-invocation",
-  "claim_proposition_sha256": "sha256:a05396ec05369fcfc399ecbc3cf448c3df95d9ef09abfbde441dc0fc4a19a162",
+  "claim_proposition_sha256": "sha256:f5da52da553cc0d8ab52af1bc0078b19700224080934f8c50c4f7f0efafb8bf4",
   "command_or_source": "Declared case context (not authenticated execution): run_formal_runner_contract_tests.py",
   "evidence_schema_version": "1.1",
-  "hash_or_version": "sha256:c85ac043e984b99023e65fdba70d5e95f818a6d64886bf2e7ca55434fd8ad62a",
-  "modal_case_sha256": "sha256:50b747401d3b5dcfe340e98cb364f32978bf7322fa8e6a69153507b1e54dd8ae",
+  "hash_or_version": "sha256:e85d7f8986be371565a38b442f10a15004bd3919a1d4403c6d89bd24f4049150",
+  "modal_case_sha256": "sha256:ee5c3fc39319730a53176b482a2e959dc556b14136649319bf412ae4eb96ebcb",
   "observation_id": "obs:C-formal-invocation:FW-live-output-direct-symlink",
   "observed_result": "Declared release result (not authenticated execution): The formal contract rejected the direct transcript-directory symlink with zero runtime subprocess calls.",
   "support_summary": "This wrapper binds FW-live-output-direct-symlink to one exact case-bound release-declaration identity, the current claim proposition and full method-relative claim contract, and the canonical structured modal-case digest.",
   "test_id": "FW-live-output-direct-symlink",
-  "timestamp_utc": "2026-07-16T05:15:11Z"
+  "timestamp_utc": "2026-07-18T00:00:00Z"
 }

@@ -1,7 +1,7 @@
 {
   "artifact_path": ".claude-plugin/plugin.json",
-  "claim_contract_schema_version": "1.0",
-  "claim_contract_sha256": "sha256:d9fa519143e5603b1054e46abbf0e289db7f3f423eed31f957637a64d9674914",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:d4328c652eef3e1e203fb1db064ea7f7ea8795df49d10133724bcee6e8eb30e6",
   "claim_id": "C-structure",
   "claim_proposition_sha256": "sha256:e39cd26592f8c552b3f3720ff85adf034ee97f2b2843fa7fe6c833e46c7baa51",
   "command_or_source": "current v1.0.3 reviewed package source",
@@ -9,5 +9,5 @@
   "hash_or_version": "sha256:8e16ce008bbc7f71b2fe428342b1189d3862cf3b392e56773660cf26c634b10a",
   "observed_result": "Current source bytes support the scoped proposition for C-structure.",
   "support_summary": "This wrapper binds C-structure to current package artifact .claude-plugin/plugin.json by exact SHA-256 and to the canonical claim proposition digest. It also binds the wrapper to the canonical full method-relative claim contract.",
-  "timestamp_utc": "2026-07-16T05:15:11Z"
+  "timestamp_utc": "2026-07-18T00:00:00Z"
 }

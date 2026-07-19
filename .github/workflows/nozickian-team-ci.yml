@@ -35,7 +35,7 @@ jobs:
           python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .
       - name: Run Nozickian gate on self-certificate
         run: |
-          python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --markdown /tmp/ntt_ci_outputs/GATE_RESULT.md
+          python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --downstream-policy package-self --markdown /tmp/ntt_ci_outputs/GATE_RESULT.md
       - name: Run deterministic regression evals
         run: |
           python3 skills/nozickian-verify/scripts/run_regression_evals.py . --json /tmp/ntt_ci_outputs/regression_eval_result.json

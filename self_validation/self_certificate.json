@@ -8,8 +8,8 @@
   "claims": [
     {
       "artifact_location": "PACKAGE_SURFACE.json; .claude-plugin/plugin.json",
-      "claim_contract_schema_version": "1.0",
-      "claim_contract_sha256": "sha256:d9fa519143e5603b1054e46abbf0e289db7f3f423eed31f957637a64d9674914",
+      "claim_contract_schema_version": "1.1",
+      "claim_contract_sha256": "sha256:d4328c652eef3e1e203fb1db064ea7f7ea8795df49d10133724bcee6e8eb30e6",
       "evidence_refs": [
         "self_validation/evidence/C-structure__claim.json",
         "self_validation/evidence/C-structure__surface.json"
@@ -31,13 +31,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "remove",
             "oracle": "The package validator must reject the incomplete integrity surface.",
             "precondition": "The baseline C-structure claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-structure-missing-manifest",
             "state_delta": "Remove MANIFEST.sha256 from an otherwise intact package copy.",
-            "target": "C-structure method-relative claim at PACKAGE_SURFACE.json; .claude-plugin/plugin.json"
+            "target": "manifest.entry"
           }
         },
         {
@@ -56,13 +56,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The closed team-internal surface must reject new dynamic execution behavior.",
             "precondition": "The baseline C-structure claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-structure-dynamic-shell",
             "state_delta": "Add an inline dynamic shell substitution to SKILL.md and refresh manifests.",
-            "target": "C-structure method-relative claim at PACKAGE_SURFACE.json; .claude-plugin/plugin.json"
+            "target": "workflow.command"
           }
         }
       ],
@@ -123,13 +123,13 @@
           "variant": "Add an unused inert text asset outside every executable behavior path.",
           "world_contract": {
             "expected_outcome": "retained_true_claim",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "The validator should retain the package when the stable inventory is refreshed.",
             "precondition": "The baseline C-structure claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-structure-unused-asset",
             "state_delta": "Add an unused inert text asset outside every executable behavior path.",
-            "target": "C-structure method-relative claim at PACKAGE_SURFACE.json; .claude-plugin/plugin.json"
+            "target": "manifest.entry"
           }
         }
       ],
@@ -138,8 +138,8 @@
     },
     {
       "artifact_location": "skills/nozickian-verify/scripts/ntt_gate.py; skills/nozickian-verify/scripts/run_gate_contract_tests.py",
-      "claim_contract_schema_version": "1.0",
-      "claim_contract_sha256": "sha256:0fec90f15228730fe6dfeb706fbd8e807f4a5498f9a99f4ee41d8dfdd5eb1ff1",
+      "claim_contract_schema_version": "1.1",
+      "claim_contract_sha256": "sha256:d05443ab15076b56513ffce8efbb0e3aebacba08d0f91fed9f6d6b287bc82d8a",
       "evidence_refs": [
         "self_validation/evidence/C-gate-hardening__claim.json",
         "self_validation/evidence/C-gate-hardening__contracts.json"
@@ -161,13 +161,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "remove",
             "oracle": "The request must be classified as invalid input without a traceback.",
             "precondition": "The baseline C-gate-hardening claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-gate-strict-root",
             "state_delta": "Request strict evidence validation without supplying an evidence root.",
-            "target": "C-gate-hardening method-relative claim at skills/nozickian-verify/scripts/ntt_gate.py; skills/nozickian-verify/scripts/run_gate_contract_tests.py"
+            "target": "certificate.assurance"
           }
         },
         {
@@ -186,13 +186,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The gate must reject the coordinated semantic substitution.",
             "precondition": "The baseline C-gate-hardening claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-gate-proposition-substitution",
             "state_delta": "Change a claim and downstream proposition together while leaving hashed evidence unchanged.",
-            "target": "C-gate-hardening method-relative claim at skills/nozickian-verify/scripts/ntt_gate.py; skills/nozickian-verify/scripts/run_gate_contract_tests.py"
+            "target": "certificate.claim_contract"
           }
         },
         {
@@ -211,13 +211,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The gate must reject the case whose canonical modal digest no longer matches.",
             "precondition": "The baseline C-gate-hardening claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-gate-modal-substitution",
             "state_delta": "Change a modal perturbation and expected behavior while retaining its prior observation wrapper.",
-            "target": "C-gate-hardening method-relative claim at skills/nozickian-verify/scripts/ntt_gate.py; skills/nozickian-verify/scripts/run_gate_contract_tests.py"
+            "target": "certificate.modal_tests"
           }
         },
         {
@@ -236,13 +236,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "The gate must return structured invalid input within its resource policy.",
             "precondition": "The baseline C-gate-hardening claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-gate-resource-bounds",
             "state_delta": "Supply an observation ledger that exceeds the configured JSON recursion bound.",
-            "target": "C-gate-hardening method-relative claim at skills/nozickian-verify/scripts/ntt_gate.py; skills/nozickian-verify/scripts/run_gate_contract_tests.py"
+            "target": "certificate.assurance"
           }
         },
         {
@@ -261,13 +261,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "The gate must reject the noncanonical path through its ordinary result API.",
             "precondition": "The baseline C-gate-hardening claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-gate-path-control",
             "state_delta": "Place a Unicode control character in an otherwise plausible artifact path.",
-            "target": "C-gate-hardening method-relative claim at skills/nozickian-verify/scripts/ntt_gate.py; skills/nozickian-verify/scripts/run_gate_contract_tests.py"
+            "target": "artifact.path"
           }
         },
         {
@@ -286,13 +286,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The gate must refuse every nonfresh final destination and preserve linked sentinel bytes.",
             "precondition": "The baseline C-gate-hardening claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-gate-markdown-linked-target",
             "state_delta": "Direct gate Markdown output to an existing regular file, symlink, or hardlink alias.",
-            "target": "C-gate-hardening method-relative claim at skills/nozickian-verify/scripts/ntt_gate.py; skills/nozickian-verify/scripts/run_gate_contract_tests.py"
+            "target": "markdown.output"
           }
         },
         {
@@ -311,13 +311,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "The gate must reject the ancestor traversal without creating the external file.",
             "precondition": "The baseline C-gate-hardening claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-gate-markdown-symlinked-ancestor",
             "state_delta": "Place the requested gate Markdown file beneath a symlinked ancestor that leads outside its lexical tree.",
-            "target": "C-gate-hardening method-relative claim at skills/nozickian-verify/scripts/ntt_gate.py; skills/nozickian-verify/scripts/run_gate_contract_tests.py"
+            "target": "markdown.output"
           }
         },
         {
@@ -336,13 +336,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The held parent must prevent redirected installation and the lexical identity mismatch must fail closed.",
             "precondition": "The baseline C-gate-hardening claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-gate-markdown-parent-substitution",
             "state_delta": "Replace the gate Markdown parent with a different real directory after the output capability has been acquired.",
-            "target": "C-gate-hardening method-relative claim at skills/nozickian-verify/scripts/ntt_gate.py; skills/nozickian-verify/scripts/run_gate_contract_tests.py"
+            "target": "filesystem.parent"
           }
         }
       ],
@@ -375,7 +375,8 @@
           "scalar_false_method_fields_do_not_count_as_method_m",
           "coordinated_scope_widening_cannot_inherit_original_evidence",
           "changing_only_equivalence_class_slug_does_not_inflate_coverage",
-          "distinct_equivalence_classes_and_structural_worlds_still_pass"
+          "distinct_equivalence_classes_and_structural_worlds_still_pass",
+          "skills/nozickian-verify/scripts/run_gate_contract_tests.py"
         ],
         "human_review": "Independent subagent cross-review followed by focused reruns and final fixed-point validation.",
         "producer": "v1.0.3 package source and deterministic verification scripts",
@@ -391,12 +392,12 @@
           "AUDIT_REPORT.md"
         ]
       },
-      "proposition_sha256": "sha256:2f0dfbad2ee2fc1a997e6af1f333fdf571ca9f1e2a4e9e775bd4702360ce8a46",
+      "proposition_sha256": "sha256:876e000613ddee01551e89a760f761874a9eef3a81ffe29a31ab286a8654fa4e",
       "residual_risks": [
         "The gate authenticates local bytes and declared bindings but cannot itself establish the external semantic adequacy of every source."
       ],
       "scope": "The current package-local ntt_gate.py, its declared certificate and evidence schemas, and deterministic gate-contract fixtures evaluated against a caller-supplied local evidence root; semantic adequacy and execution provenance remain separate review obligations.",
-      "text": "The deterministic gate fails closed on relaxed thresholds, missing or aliased evidence, malformed or resource-exhausting JSON, invalid local paths, unsafe Markdown output destinations, unresolved contradictions, and automatic downstream closure. It requires substantive field-typed method M; binds canonical claim text, explicit scope, artifact or referent, importance, and method M in a versioned full claim contract carried by every strict evidence wrapper and observation record; and independently requires both reviewer-assigned semantic-equivalence classes and canonical structural fingerprints for nearby-world coverage. Its Markdown parent is acquired before evaluation and held through descriptor-relative installation. Ledger declarations are threshold-deduplication identities, not execution provenance.",
+      "text": "The deterministic gate fails closed on relaxed thresholds, missing or aliased evidence, malformed or resource-exhausting JSON, invalid local paths, unsafe Markdown output destinations, unresolved contradictions, and automatic downstream closure. It requires substantive field-typed method M; binds canonical claim text, explicit scope, artifact or referent, importance, and method M in a versioned full claim contract carried by every strict evidence wrapper and observation record; and independently requires both reviewer-assigned semantic-equivalence classes and canonical structural fingerprints for nearby-world coverage. Its Markdown parent is acquired before evaluation and held through descriptor-relative installation. Ledger declarations are threshold-deduplication identities, not execution provenance. Under package-self, every modal declaration must match a complete immutable reviewed transition pin and the certificate-wide multiset must contain each of the 80 registered IDs exactly once; missing, extra, duplicate, or cross-claim/lane assignments fail.",
       "true_world_tests": [
         {
           "evidence_refs": [
@@ -414,13 +415,13 @@
           "variant": "Use one hashed ledger with distinct verified observation IDs and exact case bindings.",
           "world_contract": {
             "expected_outcome": "retained_true_claim",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "The gate should retain a substantive certificate with distinct proposition- and case-bound declaration identities while making no execution-provenance claim.",
             "precondition": "The baseline C-gate-hardening claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-gate-shared-ledger",
             "state_delta": "Use one hashed ledger with distinct verified observation IDs and exact case bindings.",
-            "target": "C-gate-hardening method-relative claim at skills/nozickian-verify/scripts/ntt_gate.py; skills/nozickian-verify/scripts/run_gate_contract_tests.py"
+            "target": "runtime.trace"
           }
         },
         {
@@ -439,13 +440,13 @@
           "variant": "Write the gate report to a fresh nested Markdown path under a private output root.",
           "world_contract": {
             "expected_outcome": "retained_true_claim",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "The gate should create one private regular report atomically.",
             "precondition": "The baseline C-gate-hardening claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-gate-private-markdown-output",
             "state_delta": "Write the gate report to a fresh nested Markdown path under a private output root.",
-            "target": "C-gate-hardening method-relative claim at skills/nozickian-verify/scripts/ntt_gate.py; skills/nozickian-verify/scripts/run_gate_contract_tests.py"
+            "target": "markdown.output"
           }
         }
       ],
@@ -454,8 +455,8 @@
     },
     {
       "artifact_location": "skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json",
-      "claim_contract_schema_version": "1.0",
-      "claim_contract_sha256": "sha256:7fb277b25876fd3cd834863e556b25439915e2f438116ac7e1b4cd4555dd37b5",
+      "claim_contract_schema_version": "1.1",
+      "claim_contract_sha256": "sha256:bafd358afd151804e30271480df4ddf4ff037940886c73588e40775ca9096042",
       "evidence_refs": [
         "self_validation/evidence/C-validator-sensitivity__claim.json",
         "self_validation/evidence/C-validator-sensitivity__fixtures.json"
@@ -477,13 +478,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "The exact CI semantic surface must reject the extra action.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-extra-ci-action",
             "state_delta": "Add an unreviewed active external action to the CI job and refresh manifests.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "workflow.step"
           }
         },
         {
@@ -502,13 +503,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The validator must reject a fixture identifier that could escape transcript naming roots.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-unsafe-fixture-id",
             "state_delta": "Replace a canonical fixture slug with an absolute-path identifier and refresh manifests.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "artifact.path"
           }
         },
         {
@@ -527,13 +528,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "The validator must reject the changed ordered command policy.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-extra-release-command",
             "state_delta": "Append an unreviewed executable command to RELEASE_LOCK.json and refresh manifests.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "workflow.command"
           }
         },
         {
@@ -552,13 +553,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The exact workflow policy must reject the mutable action identity.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-mutable-checkout-action",
             "state_delta": "Replace the reviewed checkout action commit identity with the mutable major-version tag actions/checkout@v4.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "workflow.step"
           }
         },
         {
@@ -577,13 +578,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The exact workflow policy must reject the mutable action identity.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-mutable-setup-python-action",
             "state_delta": "Replace the reviewed setup-python action commit identity with the mutable major-version tag actions/setup-python@v5.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "workflow.step"
           }
         },
         {
@@ -602,13 +603,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "Comment text must not satisfy the archive execution policy.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-archive-self-test-comment",
             "state_delta": "Comment out the direct archive full-self-test command while leaving its exact text in the run block.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "workflow.command"
           }
         },
         {
@@ -627,13 +628,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "Unreachable function text must not satisfy the archive execution policy.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-archive-self-test-function",
             "state_delta": "Move the exact archive full-self-test command into an uncalled shell function.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "workflow.command"
           }
         },
         {
@@ -652,13 +653,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "remove",
             "oracle": "The validator must reject the weakened surface even when manifest hashes are current.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-formal-output-invariant",
             "state_delta": "Remove the exact package-surface requirement that formal output checks be recomputed from nonempty bound companions, then refresh manifests.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "certificate.assurance"
           }
         },
         {
@@ -677,13 +678,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "remove",
             "oracle": "The validator must reject the weakened output-capability surface even when manifest hashes are current.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-held-output-capability-invariant",
             "state_delta": "Remove the exact package-surface requirement that certifier and formal outputs retain no-follow directory capabilities across evaluation and installation, then refresh manifests.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "process.output"
           }
         },
         {
@@ -702,13 +703,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The external-report writer must reject the changed lexical parent without overwriting either replacement sentinel.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-markdown-parent-substitution",
             "state_delta": "Replace the held validator Markdown parent with either a symlink or a different real directory at temporary-file creation.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "filesystem.parent"
           }
         },
         {
@@ -727,13 +728,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "The writer must detect that the held directory is now within the package and refuse installation.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-markdown-moved-into-package",
             "state_delta": "Move the pre-acquired external Markdown parent into the measured package after the package snapshot.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "filesystem.parent"
           }
         },
         {
@@ -752,13 +753,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "Both manifest writers must reject the final link without altering the sentinel.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-fixed-manifest-symlink",
             "state_delta": "Replace either fixed manifest final entry with a symlink to a sentinel.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "manifest.entry"
           }
         },
         {
@@ -777,13 +778,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "Both manifest writers must reject the alias without truncating or replacing the shared inode.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-fixed-manifest-hardlink",
             "state_delta": "Replace either fixed manifest final entry with a hardlink to a shared file.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "manifest.entry"
           }
         },
         {
@@ -802,13 +803,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "Both manifest writers must reject the special final entry without blocking or replacing it.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-fixed-manifest-special",
             "state_delta": "Replace either fixed manifest final entry with a FIFO.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "filesystem.entry"
           }
         },
         {
@@ -827,13 +828,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "Component-wise no-follow acquisition must reject the ancestor and preserve the external sentinel.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-fixed-manifest-linked-ancestor",
             "state_delta": "Place either fixed manifest under a symlinked package-root ancestor.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "filesystem.entry"
           }
         },
         {
@@ -852,13 +853,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The pre-acquired package-root capability must prevent installation into the replacement and fail closed.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-fixed-manifest-real-substitution",
             "state_delta": "Replace the package root with a different real directory while either manifest's bytes are being built.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "filesystem.parent"
           }
         },
         {
@@ -877,13 +878,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "The CLI must have acquired the package-root capability before preflight, reject installation into either directory, and emit the intended named failure.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-validator-update-manifest-cli-preflight-substitution",
             "state_delta": "Replace the package root during the update-manifest CLI's closed-surface preflight after argument parsing.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "workflow.step"
           }
         }
       ],
@@ -926,7 +927,16 @@
           "fixed manifest writers retain normal private-file replacement",
           "consistency locator true control accepts exact current line/range excerpt bindings",
           "bounded package walker rejects a per-directory overlimit tree",
-          "bounded package snapshot rejects a total-entry overlimit tree"
+          "bounded package snapshot rejects a total-entry overlimit tree",
+          "bounded Git kills a leader-exit descendant that inherits capture pipes",
+          "bounded Git contains detached and closed-pipe descendants on every exit",
+          "bounded Git post-Popen setup failure leaves no descendant survivor",
+          "semantic module execution consumes captured bytes after mirror pathname substitution",
+          "package fixture materialization consumes captured bytes after mirror pathname substitution",
+          "private activation errors never disclose temporary snapshot paths",
+          "package path-metadata overlimit returns its dedicated named structured FAIL result",
+          "rejects ignored untracked checkout .pyc before module activation",
+          "sanitized Git metadata is observational additive rejection evidence only"
         ],
         "human_review": "Independent subagent cross-review followed by focused reruns and final fixed-point validation.",
         "producer": "v1.0.3 package source and deterministic verification scripts",
@@ -942,12 +952,15 @@
           "AUDIT_REPORT.md"
         ]
       },
-      "proposition_sha256": "sha256:fe2157f0029dc87422ebbd554cd8fbc9fe65dd58af35ce8942225f8ab1a21aef",
+      "proposition_sha256": "sha256:9d95decf899181e7148e830fa9ba3ed99c515a7e8ca0276b739aed9d6c5b92a5",
       "residual_risks": [
-        "The dependency-free CI parser intentionally accepts only its documented restricted YAML subset."
+        "The dependency-free CI parser intentionally accepts only its documented restricted YAML subset.",
+        "Trusted PATH/Git binary selection and same-UID mutable Git metadata are environment assumptions; Git evidence is observational and additive only.",
+        "Linux subreaper cleanup assumes a single-purpose process with trustworthy /proc and no concurrent unrelated child ownership.",
+        "Private-mirror finalization does not bind non-root directory-mode drift; no authorization consumer depends on those directory modes."
       ],
-      "scope": "The exact current package snapshot, stable-release inventory, declared workflow and release policy, self-certificate locator schema, and deterministic validator mutation fixtures; future repository state and unavailable official validators are excluded.",
-      "text": "The closed-surface validator enforces exact SHA-pinned CI action identities, full self-test-then-promotion ordering in both the checkout and unpacked Git archive, exact release-command policy, canonical fixture identifiers and paths, resource-bounded complete no-follow package-tree walks and snapshots with per-directory and total-entry caps, manifest and provenance integrity, and executable-surface mutation rejection. Current consistency-sweep locators use canonical exact line or range syntax with bounded excerpt reads and expected excerpt SHA-256 bindings. The validator retains policy-equivalent presentation variants and direct commands amid inert comment or function decoys. Validator Markdown and stable manifest destinations use pre-acquired held no-follow parents and fail closed on observed boundary substitution.",
+      "scope": "The exact current physical package snapshot, stable-release inventory, declared workflow and release policy, self-certificate locator schema, and deterministic validator mutation fixtures. Standalone worktree validation does not prove HEAD/archive equivalence; the required unpacked git archive HEAD full self-test is the committed-archive behavior control. Future repository state, concurrent same-UID Git metadata coherence, and unavailable official validators are excluded.",
+      "text": "The closed-surface validator authorizes semantic reads, module execution, frontmatter parsing, and every package-derived fixture from one bounded immutable initial captured-byte and metadata snapshot. It rejects every physical cruft entry before activation in Git and Git-free packages, materializes fixtures only from captured bytes, applies independent path/metadata, file, aggregate, entry, depth, Git output, Git timeout, and Git index-entry ceilings, and independently revalidates the held source and private mirror at finalization. Bounded Git execution establishes Linux child-subreaper containment before spawn and kills and reaps original-group and adopted detached-session descendants on every exit, including ordinary success and post-Popen setup failure. Sanitized Git index/HEAD stage, mode, and cruft evidence is observational and additive rejection evidence only; absence never authorizes bytes or proves HEAD/archive equivalence, which is assessed only by the required unpacked git archive HEAD full self-test. The validator also enforces exact SHA-pinned CI action identities, release-command policy, canonical fixture identifiers, manifest and provenance integrity, executable-surface mutation rejection, descriptor-bound correction locators, and held no-follow output capabilities.",
       "true_world_tests": [
         {
           "evidence_refs": [
@@ -965,13 +978,13 @@
           "variant": "Quote the workflow name and add a benign YAML comment without changing executable structure.",
           "world_contract": {
             "expected_outcome": "accepted_equivalent",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "The validator should retain the exact semantic workflow after manifest refresh.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-validator-ci-presentation",
             "state_delta": "Quote the workflow name and add a benign YAML comment without changing executable structure.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "workflow.step"
           }
         },
         {
@@ -990,13 +1003,13 @@
           "variant": "Present one direct archive full-self-test command alongside identical text in an inert comment and uncalled function.",
           "world_contract": {
             "expected_outcome": "retained_true_claim",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "The reachability parser must retain exactly the direct command and ignore both decoys.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-validator-direct-archive-command",
             "state_delta": "Present one direct archive full-self-test command alongside identical text in an inert comment and uncalled function.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "workflow.command"
           }
         },
         {
@@ -1015,13 +1028,13 @@
           "variant": "Keep a private external Markdown parent stable from acquisition through descriptor-relative installation.",
           "world_contract": {
             "expected_outcome": "retained_true_claim",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "The ordinary external report should be retained as one private regular file.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-validator-held-markdown",
             "state_delta": "Keep a private external Markdown parent stable from acquisition through descriptor-relative installation.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "markdown.output"
           }
         },
         {
@@ -1040,13 +1053,13 @@
           "variant": "Replace existing private regular fixed manifests beneath a stable held package root.",
           "world_contract": {
             "expected_outcome": "retained_true_claim",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "Both fixed manifest writers should retain their supported atomic replacement behavior.",
             "precondition": "The baseline C-validator-sensitivity claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-validator-fixed-manifest-normal",
             "state_delta": "Replace existing private regular fixed manifests beneath a stable held package root.",
-            "target": "C-validator-sensitivity method-relative claim at skills/nozickian-verify/scripts/validate_package.py; skills/nozickian-verify/evals/evals.json"
+            "target": "manifest.entry"
           }
         }
       ],
@@ -1055,8 +1068,8 @@
     },
     {
       "artifact_location": "skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py",
-      "claim_contract_schema_version": "1.0",
-      "claim_contract_sha256": "sha256:ff43a1873c9ab7dc030bf7b75235f2c23c4c2b3ea5ff9569956b3d66c5b5c1a4",
+      "claim_contract_schema_version": "1.1",
+      "claim_contract_sha256": "sha256:5ba6a134f65782f01d30390b637ccf2c4797e6cdd4e4671aee075730757615e0",
       "evidence_refs": [
         "self_validation/evidence/C-formal-invocation__claim.json",
         "self_validation/evidence/C-formal-invocation__contracts.json"
@@ -1078,13 +1091,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "The complete stream must be rejected rather than silently skipping the malformed record.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-formal-malformed-jsonl",
             "state_delta": "Insert one malformed nonblank JSONL record before an otherwise authentic-looking complete trace.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "runtime.trace"
           }
         },
         {
@@ -1103,13 +1116,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The parser must enforce total chronology within its node and resource bounds.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-formal-large-reordered-result",
             "state_delta": "Place a result before its call in a very wide JSONL record followed by valid-looking native events.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "runtime.trace"
           }
         },
         {
@@ -1128,13 +1141,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "Capture must terminate and reap the descendant within the bound and prevent the sentinel write.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-formal-descendant-pipe",
             "state_delta": "Have a parent exit while a grouped child keeps inherited output pipes open and delays a sentinel write.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "process.containment"
           }
         },
         {
@@ -1153,13 +1166,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "Normal leader exit must still trigger descendant discovery, kill, and reap before success is returned.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-formal-closed-stdio-descendant",
             "state_delta": "Have a grouped child close inherited stdio, outlive its successful parent, and delay a sentinel write.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "process.containment"
           }
         },
         {
@@ -1178,13 +1191,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "remove",
             "oracle": "The runner must refuse execution before Popen rather than claim a narrower successful scope.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-formal-containment-unavailable",
             "state_delta": "Make supported detached-session containment unavailable before the runner starts the requested command.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "process.containment"
           }
         },
         {
@@ -1203,13 +1216,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "Supported Linux execution must adopt, kill, and reap the detached child; unavailable containment must refuse execution before spawn.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-formal-detached-session",
             "state_delta": "Have a child call setsid(), close inherited stdio, outlive its parent, and delay a sentinel write.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "process.output"
           }
         },
         {
@@ -1228,13 +1241,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The Linux subreaper traversal must discover, kill, and reap the full graph to a bounded quiet state.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-formal-deep-detached-chain",
             "state_delta": "Spawn a 150-process descendant chain whose tail detaches into a new session and delays a sentinel write.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "process.output"
           }
         },
         {
@@ -1253,13 +1266,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The certifier must reject every companion substitution instead of accepting a self-consistent alternate bundle.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-formal-companion-substitution",
             "state_delta": "Substitute the formal prompt digest, coordinator transcript hash, or coordinated gate/certificate companion argv after preparation.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "artifact.identity"
           }
         },
         {
@@ -1278,13 +1291,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "Certification must derive the exact allowed check set from current report and gate content and reject the invented label.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-formal-self-attested-output-check",
             "state_delta": "Add a plausible but arbitrary output-check label to an otherwise bound formal result.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "certificate.assurance"
           }
         },
         {
@@ -1303,13 +1316,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "remove",
             "oracle": "Certification must reject both empty semantic companions after recomputing their bindings.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-formal-empty-report-gate",
             "state_delta": "Make the formal report or gate companion empty and update its recorded hash and size consistently.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "artifact.identity"
           }
         },
         {
@@ -1328,13 +1341,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The atomic writers must reject the lexical-parent identity change and never write through the replacement link.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-formal-held-dirfd-symlink-swap",
             "state_delta": "Replace a formal output ancestor with a symlink between validation and descriptor-relative installation.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "filesystem.parent"
           }
         },
         {
@@ -1353,13 +1366,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "Coordinator and gate writes must still use the runner-owned procfd capability, reject invalid procfd spellings, and never enter the replacement directory.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-formal-child-fd-rebind",
             "state_delta": "Have a formal child close and rebind inherited FD N while the lexical output directory is replaced with a different real directory.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "process.output"
           }
         },
         {
@@ -1378,13 +1391,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "remove",
             "oracle": "The runner must return INVALID_INPUT before creating the output directory or compatibility JSON file.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-formal-procfd-unavailable",
             "state_delta": "Make the required procfd output capability unavailable before formal argument processing creates its requested destinations.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "process.output"
           }
         },
         {
@@ -1403,13 +1416,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "Canonical-versus-compatibility classification must remain frozen from pre-execution held identities and no late compatibility write may occur.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-formal-canonical-json-classification",
             "state_delta": "Substitute the formal output parent after the canonical result write so late lexical alias resolution would misclassify canonical JSON as a compatibility copy.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "artifact.path"
           }
         },
         {
@@ -1428,13 +1441,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The held transcript capability must prevent redirected output and reject the lexical-parent identity mismatch.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-live-transcript-symlink-substitution",
             "state_delta": "Replace a live transcript parent with a symlink at temporary-file creation.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "artifact.path"
           }
         },
         {
@@ -1453,13 +1466,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "The held transcript parent must prevent writes into the replacement and fail closed on lexical identity drift.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-live-transcript-real-substitution",
             "state_delta": "Replace the selected live transcript directory with a different real directory during a long run.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "filesystem.parent"
           }
         },
         {
@@ -1478,13 +1491,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The pre-acquired JSON capability must prevent redirected output and return a failed publication result.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-live-json-real-substitution",
             "state_delta": "Replace the optional live JSON parent with a different real directory during long-running work.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "filesystem.parent"
           }
         },
         {
@@ -1503,13 +1516,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "Cross-output alias analysis must reject the run before invoking the runtime command.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-live-json-transcript-alias",
             "state_delta": "Choose the optional live JSON destination to be the same held parent and final name as a selected fixture transcript.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "artifact.identity"
           }
         },
         {
@@ -1528,13 +1541,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "Capability acquisition must reject the link before any runtime subprocess executes.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-live-output-direct-symlink",
             "state_delta": "Point the explicit live transcript directory itself at a symlink before invocation.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "filesystem.entry"
           }
         },
         {
@@ -1553,13 +1566,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "Component-wise no-follow acquisition must reject the ancestor before any runtime subprocess executes.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-live-output-ancestor-symlink",
             "state_delta": "Place the explicit live transcript directory beneath a symlinked ancestor before invocation.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "filesystem.entry"
           }
         },
         {
@@ -1578,13 +1591,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "The transcript capability must already be held before preflight so an A-to-B-to-A lexical substitution cannot select the alternate directory.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-live-explicit-output-a-b-a",
             "state_delta": "Replace and restore the explicit live transcript directory during package/runtime preflight after argument parsing.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "filesystem.parent"
           }
         },
         {
@@ -1603,13 +1616,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The run must reject the lexical-parent mismatch before fixture execution and never publish into the replacement.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-live-explicit-output-persistent-substitution",
             "state_delta": "Persistently replace the explicit transcript directory with a different real directory during preflight.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "process.output"
           }
         },
         {
@@ -1628,13 +1641,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "Every wrapper must reject the destination without following or truncating any sentinel.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-wrapper-json-unsafe-targets",
             "state_delta": "Direct each deterministic contract/regression wrapper JSON output at linked ancestors or unsafe final entries.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "artifact.path"
           }
         },
         {
@@ -1653,13 +1666,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "Pre-acquired wrapper capabilities must prevent redirected result publication and fail closed.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-wrapper-json-parent-substitution",
             "state_delta": "Replace each deterministic wrapper JSON parent with a different real directory while its suite executes.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "filesystem.parent"
           }
         },
         {
@@ -1678,13 +1691,13 @@
           ],
           "world_contract": {
             "expected_outcome": "downgraded",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "An otherwise PASS-TRACKED formal result must be capped at PASS-SCOPED solely for the temporal limitation.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-formal-temporal-cap",
             "state_delta": "Present stable endpoint identities and valid process containment while truthfully declaring temporal immutability unenforced.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "certificate.assurance"
           }
         }
       ],
@@ -1740,7 +1753,8 @@
           "live_json_error_signals_and_aliases_dominate_pass_report",
           "bare_terminal_failure_payloads_do_not_authenticate",
           "formal_target_copy_rejects_sparse_over_limit_before_allocation",
-          "formal_package_snapshot_rejects_declared_file_over_limit_before_copy"
+          "formal_package_snapshot_rejects_declared_file_over_limit_before_copy",
+          "skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
         ],
         "human_review": "Independent subagent cross-review followed by focused reruns and final fixed-point validation.",
         "producer": "v1.0.3 package source and deterministic verification scripts",
@@ -1756,14 +1770,14 @@
           "AUDIT_REPORT.md"
         ]
       },
-      "proposition_sha256": "sha256:a05396ec05369fcfc399ecbc3cf448c3df95d9ef09abfbde441dc0fc4a19a162",
+      "proposition_sha256": "sha256:f5da52da553cc0d8ab52af1bc0078b19700224080934f8c50c4f7f0efafb8bf4",
       "residual_risks": [
-        "The 215-case suite uses synthetic stream-json and process fixtures; live Claude Code formal execution remains UNVERIFIED_RUNTIME.",
+        "The 231-case suite uses synthetic stream-json and process fixtures; live Claude Code formal execution remains UNVERIFIED_RUNTIME.",
         "Endpoint equality does not establish temporal immutability, so an otherwise PASS-TRACKED result remains capped at PASS-SCOPED.",
         "The runtime identity binds the resolved entrypoint bytes, not the transitive interpreter, shared-library, kernel, or host dependency closure."
       ],
       "scope": "The current formal and live runner implementations and deterministic Linux contract fixtures under their declared JSON, process-containment, filesystem-capability, and resource limits; no live Claude Code run or temporal immutability is claimed.",
-      "text": "The formal and live runners authenticate a would-be PASS-TRACKED run only when the certificate gate passes and bounded complete runtime streams authenticate the exact native ntt-* call and result lanes with valid roles, unique matching IDs, and call-before-result ordering. Strict duplicate-key and finite-number JSON parsing, closed envelope validation, canonical and alias error-signal dominance, and authoritative-status conflict detection prevent contradictory live results from passing; formal result authentication rejects bare terminal-failure and unsupported scalar payloads while retaining contextual target-failure analysis. Untrusted captures, target copies, release trees, snapshots, and formal companions have explicit per-file, per-directory, entry, and aggregate resource caps. Execution requires supported Linux child-subreaper plus process-group containment before Popen and fails closed on unavailable containment or surviving descendants. Results bind endpoint-checked target and runtime identities plus the exact prompt, complete transcript, and gate and certificate companions; output checks are recomputed rather than self-attested. Output parents are acquired component-by-component without following links and held across evaluation, with canonical-result classification frozen before execution. These endpoint and capability observations are not temporal isolation, so results remain capped at PASS-SCOPED because temporal immutability is not mechanically enforced.",
+      "text": "The formal and live runners authenticate a would-be PASS-TRACKED run only when the certificate gate passes and bounded complete runtime streams authenticate the exact native ntt-* call and result lanes with valid roles, unique matching IDs, and call-before-result ordering. Strict duplicate-key and finite-number JSON parsing, closed envelope validation, canonical and alias error-signal dominance, and authoritative-status conflict detection prevent contradictory live results from passing; formal result authentication rejects bare terminal-failure and unsupported scalar payloads while retaining contextual target-failure analysis. Untrusted captures, target copies, release trees, snapshots, and formal companions have explicit per-file, per-directory, entry, and aggregate resource caps. Execution requires supported Linux child-subreaper plus process-group containment before Popen and fails closed on unavailable containment or surviving descendants. Results bind endpoint-checked target and runtime identities plus the exact prompt, complete transcript, and gate and certificate companions; output checks are recomputed rather than self-attested. Output parents are acquired component-by-component without following links and held across evaluation, with canonical-result classification frozen before execution. These endpoint and capability observations are not temporal isolation, so results remain capped at PASS-SCOPED because temporal immutability is not mechanically enforced. Canonical SDK success requires api_error_status and deferred_tool_use to be null or absent, structured_output to be null or absent for this non-structured harness, terminal_reason to be null, absent, or completed, and stop_reason to be null, absent, or end_turn; live provenance and formal evidence_origin use schema 2.0.",
       "true_world_tests": [
         {
           "evidence_refs": [
@@ -1781,13 +1795,13 @@
           "variant": "Use assistant-origin native tool calls followed by user-origin matching results for every required lane.",
           "world_contract": {
             "expected_outcome": "retained_true_claim",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "The authenticator should retain the complete well-directed trace.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-formal-valid-role-direction",
             "state_delta": "Use assistant-origin native tool calls followed by user-origin matching results for every required lane.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "runtime.trace"
           }
         },
         {
@@ -1806,13 +1820,13 @@
           "variant": "Create and replace ordinary private regular outputs beneath stable held directory parents.",
           "world_contract": {
             "expected_outcome": "retained_true_claim",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "Capability-bound output operations should retain supported new-file, replacement, reservation, and safe-directory behavior.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-formal-held-dirfd-ordinary-output",
             "state_delta": "Create and replace ordinary private regular outputs beneath stable held directory parents.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "filesystem.parent"
           }
         },
         {
@@ -1831,13 +1845,13 @@
           "variant": "Keep an explicit live transcript output directory stable from early capability acquisition through fixture publication.",
           "world_contract": {
             "expected_outcome": "retained_true_claim",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "The live runner should retain ordinary explicit-output behavior while binding the directory before preflight.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-live-explicit-output-early-capability",
             "state_delta": "Keep an explicit live transcript output directory stable from early capability acquisition through fixture publication.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "process.output"
           }
         },
         {
@@ -1856,13 +1870,13 @@
           "variant": "Use stable held wrapper JSON parents, including a normalized parent-relative path, for all deterministic suites.",
           "world_contract": {
             "expected_outcome": "retained_true_claim",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "Every wrapper should publish the exact stdout document as a private regular JSON file.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-wrapper-json-held-output",
             "state_delta": "Use stable held wrapper JSON parents, including a normalized parent-relative path, for all deterministic suites.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "artifact.path"
           }
         },
         {
@@ -1881,13 +1895,13 @@
           "variant": "Instrument every deterministic wrapper to observe output-capability acquisition before its suite body begins.",
           "world_contract": {
             "expected_outcome": "retained_true_claim",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "All wrappers should acquire and retain their JSON parent before executing any contract or regression case.",
             "precondition": "The baseline C-formal-invocation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-wrapper-json-early-capability",
             "state_delta": "Instrument every deterministic wrapper to observe output-capability acquisition before its suite body begins.",
-            "target": "C-formal-invocation method-relative claim at skills/nozickian-verify/scripts/run_formal_artifact_verification.py; skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py"
+            "target": "filesystem.parent"
           }
         }
       ],
@@ -1896,8 +1910,8 @@
     },
     {
       "artifact_location": "skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py; skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md",
-      "claim_contract_schema_version": "1.0",
-      "claim_contract_sha256": "sha256:b02f5ce45c892178e97ceb9438a6d5ac975a2b079ef720c57ff0e9010af28dab",
+      "claim_contract_schema_version": "1.1",
+      "claim_contract_sha256": "sha256:f7efee64b12379bfc6c7325f38b8ce488053499831ce390838afc41524d9b29b",
       "evidence_refs": [
         "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json",
         "self_validation/evidence/C-pass-tracked-upgrade-audit__promotion-v2-reference.json"
@@ -1919,13 +1933,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "The promotion contract must block automatic downstream closure.",
             "precondition": "The baseline C-pass-tracked-upgrade-audit claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-promotion-auto-closure",
             "state_delta": "Use a source claim as its own downstream authorization instead of an independent proposition-bound claim.",
-            "target": "C-pass-tracked-upgrade-audit method-relative claim at skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py; skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md"
+            "target": "certificate.assurance"
           }
         },
         {
@@ -1944,13 +1958,13 @@
           ],
           "world_contract": {
             "expected_outcome": "not_certified",
-            "operator": "apply false-world mutation",
+            "operator": "remove",
             "oracle": "Complete-stream authentication must reject the promotion evidence.",
             "precondition": "The baseline C-pass-tracked-upgrade-audit claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-promotion-missing-trace",
             "state_delta": "Replace the formal transcript with text lacking authentic native tool events while refreshing dependent hashes.",
-            "target": "C-pass-tracked-upgrade-audit method-relative claim at skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py; skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md"
+            "target": "runtime.trace"
           }
         },
         {
@@ -1969,13 +1983,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The certifier must reject the unsafe destination without changing the sentinel.",
             "precondition": "The baseline C-pass-tracked-upgrade-audit claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-promotion-unsafe-output",
             "state_delta": "Point the certifier JSON output at a symlink to an external sentinel.",
-            "target": "C-pass-tracked-upgrade-audit method-relative claim at skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py; skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md"
+            "target": "artifact.path"
           }
         },
         {
@@ -1994,13 +2008,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "The production certifier must recompute the allowed output-check set and reject the invented assertion.",
             "precondition": "The baseline C-pass-tracked-upgrade-audit claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-promotion-self-attested-output-check",
             "state_delta": "Insert an arbitrary self-attested formal output-check name that is not derivable from the bound report and gate companions.",
-            "target": "C-pass-tracked-upgrade-audit method-relative claim at skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py; skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md"
+            "target": "certificate.assurance"
           }
         },
         {
@@ -2019,13 +2033,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "remove",
             "oracle": "The certifier must reject empty semantic companions even when their metadata is internally consistent.",
             "precondition": "The baseline C-pass-tracked-upgrade-audit claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-promotion-empty-formal-output",
             "state_delta": "Replace a bound formal report or gate companion with an empty file and recompute its manifest hash and byte count.",
-            "target": "C-pass-tracked-upgrade-audit method-relative claim at skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py; skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md"
+            "target": "artifact.identity"
           }
         },
         {
@@ -2044,13 +2058,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The production certifier must bind the formal result to the runner-exported coordinator identity and reject the substitution.",
             "precondition": "The baseline C-pass-tracked-upgrade-audit claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-promotion-coordinator-result-identity",
             "state_delta": "Substitute an attacker-controlled formal coordinator identity in the bound formal result while refreshing the dependent artifact hash.",
-            "target": "C-pass-tracked-upgrade-audit method-relative claim at skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py; skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md"
+            "target": "artifact.identity"
           }
         },
         {
@@ -2069,13 +2083,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "The production certifier must bind the formal command argv to the runner-exported coordinator identity and reject the substitution.",
             "precondition": "The baseline C-pass-tracked-upgrade-audit claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-promotion-coordinator-argv-identity",
             "state_delta": "Substitute an attacker-controlled coordinator identity in the authenticated formal command argv while refreshing the dependent artifact hash.",
-            "target": "C-pass-tracked-upgrade-audit method-relative claim at skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py; skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md"
+            "target": "workflow.command"
           }
         },
         {
@@ -2094,13 +2108,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "mutate",
             "oracle": "The certifier must reject both destination aliases before evaluating or replacing either file.",
             "precondition": "The baseline C-pass-tracked-upgrade-audit claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-certifier-json-markdown-alias",
             "state_delta": "Choose identical or hardlinked JSON and Markdown destinations for one certifier invocation.",
-            "target": "C-pass-tracked-upgrade-audit method-relative claim at skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py; skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md"
+            "target": "artifact.identity"
           }
         },
         {
@@ -2119,13 +2133,13 @@
           ],
           "world_contract": {
             "expected_outcome": "blocked",
-            "operator": "apply false-world mutation",
+            "operator": "replace",
             "oracle": "Held parent capabilities must prevent redirected output and fail closed when the lexical parents no longer match.",
             "precondition": "The baseline C-pass-tracked-upgrade-audit claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-certifier-parent-substitution",
             "state_delta": "Replace both certifier output parents with different real directories after evaluation begins.",
-            "target": "C-pass-tracked-upgrade-audit method-relative claim at skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py; skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md"
+            "target": "filesystem.parent"
           }
         }
       ],
@@ -2173,7 +2187,7 @@
           "AUDIT_REPORT.md"
         ]
       },
-      "proposition_sha256": "sha256:20662ae4a2639cb88c3db1e41be7bbd44fbc784e538a6be1672195150f259c31",
+      "proposition_sha256": "sha256:ff78184f24c425dab306f31d50e0ee25a69c96d6f785500b6ae2f367d18f0f51",
       "residual_risks": [
         "The aggregate is synthetic contract evidence and does not authenticate a live Claude Code runtime.",
         "Issue #5 consistency-sweep activation and resolution mechanics remain parent-enforced.",
@@ -2181,7 +2195,7 @@
         "The formal runner remains independently capped for unenforced temporal immutability."
       ],
       "scope": "The current synthetic promotion-certificate-v2 model, certifier implementation, and deterministic promotion fixtures for the exact package snapshot; promotion remains CAPPED, non-authorizing, and is not runtime-authenticated.",
-      "text": "v1.0.3 machine-checks the complete promotion certificate v2 model, but certify_pass_tracked_upgrade.py caps every modeled success at PASS-SCOPED/CAPPED, sets promotion_authorized false, requires promotion-contract-v2-complete, preserves both unresolved Issue #5 obligations, and exits nonzero. Official-validator evidence uses strict JSON and canonical success fields; duplicate keys, nonfinite numbers, known camelCase error or exit aliases, nested negative diagnostics, and contradictory complete-stream signals dominate apparent success. method_m_upgrade must exactly equal the certifier-reconstructed closed method record binding origin, package identity, evidence-node digests, live run configuration and commands, formal coordinator argv, model, effort, runtime and trace identities, gate companions, official-validator policy, and current parser identities and limits. The certifier recomputes formal output checks, rejects self-attestation and empty companions, and holds distinct output parent capabilities through descriptor-relative installation. Generic ntt_gate.py PASS-TRACKED semantics remain method-relative; independently, the formal runner caps otherwise passing results for unenforced temporal immutability and refuses unavailable containment.",
+      "text": "v1.0.3 machine-checks the complete promotion certificate v2 model, but certify_pass_tracked_upgrade.py caps every modeled success at PASS-SCOPED/CAPPED, sets promotion_authorized false, requires promotion-contract-v2-complete, preserves both unresolved Issue #5 obligations, and exits nonzero. Official-validator evidence uses strict JSON and canonical success fields; duplicate keys, nonfinite numbers, known camelCase error or exit aliases, nested negative diagnostics, and contradictory complete-stream signals dominate apparent success. method_m_upgrade must exactly equal the certifier-reconstructed closed method record binding origin, package identity, evidence-node digests, live run configuration and commands, formal coordinator argv, model, effort, runtime and trace identities, gate companions, official-validator policy, and current parser identities and limits. The certifier recomputes formal output checks, rejects self-attestation and empty companions, and holds distinct output parent capabilities through descriptor-relative installation. Generic ntt_gate.py PASS-TRACKED semantics remain method-relative; independently, the formal runner caps otherwise passing results for unenforced temporal immutability and refuses unavailable containment. Promotion cross-binds declared origin to live provenance 2.0 and formal evidence_origin, then reconstructs the exact closed promotion-method-m-v2 record.",
       "true_world_tests": [
         {
           "evidence_refs": [
@@ -2199,13 +2213,13 @@
           "variant": "Provide the complete synthetic promotion-v2 bundle with every required deterministic role and binding.",
           "world_contract": {
             "expected_outcome": "retained_true_claim",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "The production certifier should validate the model while retaining the mandatory non-authorizing cap.",
             "precondition": "The baseline C-pass-tracked-upgrade-audit claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-promotion-capped-baseline",
             "state_delta": "Provide the complete synthetic promotion-v2 bundle with every required deterministic role and binding.",
-            "target": "C-pass-tracked-upgrade-audit method-relative claim at skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py; skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md"
+            "target": "certificate.assurance"
           }
         },
         {
@@ -2224,13 +2238,13 @@
           "variant": "Use distinct private regular JSON and Markdown destinations under stable real parents.",
           "world_contract": {
             "expected_outcome": "retained_true_claim",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "The certifier should retain both supported outputs while preserving its mandatory non-authorizing cap.",
             "precondition": "The baseline C-pass-tracked-upgrade-audit claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-certifier-distinct-outputs",
             "state_delta": "Use distinct private regular JSON and Markdown destinations under stable real parents.",
-            "target": "C-pass-tracked-upgrade-audit method-relative claim at skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py; skills/nozickian-verify/references/PASS_TRACKED_UPGRADE_AUDIT.md"
+            "target": "artifact.path"
           }
         }
       ],
@@ -2239,8 +2253,8 @@
     },
     {
       "artifact_location": "docs/README.md; skills/nozickian-verify/scripts/validate_package.py",
-      "claim_contract_schema_version": "1.0",
-      "claim_contract_sha256": "sha256:699aa04a9ceb6767305181e6c0e21b5259a133d95cb1b35c8d68bc4f159e149b",
+      "claim_contract_schema_version": "1.1",
+      "claim_contract_sha256": "sha256:bbdb1003758e035fd6f9378f703a7da362811719443574478c732ee073108aa7",
       "evidence_refs": [
         "self_validation/evidence/C-github-readme-documentation__docs-hub.json",
         "self_validation/evidence/C-github-readme-documentation__validator.json"
@@ -2262,13 +2276,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "remove",
             "oracle": "The validator must reject the degraded documentation set.",
             "precondition": "The baseline C-github-readme-documentation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-github-readmes-degraded",
             "state_delta": "Replace docs/README.md with a TODO placeholder and refresh manifests.",
-            "target": "C-github-readme-documentation method-relative claim at docs/README.md; skills/nozickian-verify/scripts/validate_package.py"
+            "target": "documentation.claim"
           }
         }
       ],
@@ -2328,13 +2342,13 @@
           "variant": "Append a substantive-preserving explanatory note to a documentation README.",
           "world_contract": {
             "expected_outcome": "retained_true_claim",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "The validator should retain the documentation claim after manifest refresh.",
             "precondition": "The baseline C-github-readme-documentation claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-github-readmes-benign-note",
             "state_delta": "Append a substantive-preserving explanatory note to a documentation README.",
-            "target": "C-github-readme-documentation method-relative claim at docs/README.md; skills/nozickian-verify/scripts/validate_package.py"
+            "target": "documentation.claim"
           }
         }
       ],
@@ -2343,8 +2357,8 @@
     },
     {
       "artifact_location": "skills/nozickian-verify/SKILL.md; skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md",
-      "claim_contract_schema_version": "1.0",
-      "claim_contract_sha256": "sha256:f2932260deebf29cb955c7b7501a92e40006f1a437fde0bd851c36064f09a946",
+      "claim_contract_schema_version": "1.1",
+      "claim_contract_sha256": "sha256:4fd82ea9e44d43d5bb0499ec6922722aa84b70d47f9345033f91bc4eb2edc580",
       "evidence_refs": [
         "self_validation/evidence/C-charter-caps__claim.json",
         "self_validation/evidence/C-charter-caps__protocols.json"
@@ -2366,13 +2380,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "remove",
             "oracle": "The package validator must reject the altered charter bytes.",
             "precondition": "The baseline C-charter-caps claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-charter-sweep-removed",
             "state_delta": "Delete the mandatory consistency-sweep activation step without refreshing integrity manifests.",
-            "target": "C-charter-caps method-relative claim at skills/nozickian-verify/SKILL.md; skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md"
+            "target": "documentation.claim"
           }
         },
         {
@@ -2391,13 +2405,13 @@
           ],
           "world_contract": {
             "expected_outcome": "rejected_false_claim",
-            "operator": "apply false-world mutation",
+            "operator": "remove",
             "oracle": "The package validator must reject the altered escalation charter bytes.",
             "precondition": "The baseline C-charter-caps claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "fw-charter-remote-fields-removed",
             "state_delta": "Delete the fetched-and-readjudicated companion-field contract without refreshing integrity manifests.",
-            "target": "C-charter-caps method-relative claim at skills/nozickian-verify/SKILL.md; skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md"
+            "target": "certificate.assurance"
           }
         }
       ],
@@ -2458,13 +2472,13 @@
           "variant": "Retain the complete charter text and its explicit parent-enforced scope limitation.",
           "world_contract": {
             "expected_outcome": "retained_true_claim",
-            "operator": "apply benign true-world variation",
+            "operator": "preserve",
             "oracle": "Source inspection and strict package integrity should retain the scoped charter claim.",
             "precondition": "The baseline C-charter-caps claim, method, and bound evidence satisfy their current scoped contract.",
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "semantic_equivalence_class": "tw-charter-intact",
             "state_delta": "Retain the complete charter text and its explicit parent-enforced scope limitation.",
-            "target": "C-charter-caps method-relative claim at skills/nozickian-verify/SKILL.md; skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md"
+            "target": "documentation.claim"
           }
         }
       ],
@@ -2473,7 +2487,7 @@
     }
   ],
   "consistency_sweep": {
-    "activation_reason": "The repeated PR #3 ultra-review corrected claim-contract, nearby-world, live/formal parser, promotion method-binding, consistency-locator, resource-bound, and Git-mode semantics, so the mandatory whole-artifact stale-echo sweep was rerun against the final implementation.",
+    "activation_reason": "The repeated PR #3 ultra-review corrected assurance-bound claim/world contracts, exact package transition inventory, official SDK result controls, provenance/origin promotion binding, immutable captured-byte package authorization, Git descendant containment and nonauthorization, physical-cruft policy, path privacy, and resource ceilings, so the mandatory whole-artifact stale-echo sweep was rerun against the final implementation.",
     "applies": true,
     "corrected_claims": [
       {
@@ -2482,24 +2496,49 @@
         ],
         "correction_location_bindings": [
           {
-            "expected_excerpt_sha256": "cb97292f18fc730b2ad8ec7ef0b24c2be1a092db31ef4ad2c4c66d1554e93177",
-            "locator": "skills/nozickian-verify/scripts/ntt_gate.py:1400-1480"
+            "expected_excerpt_sha256": "7b8d4f00914fee5b8ef33e7ac78cd70ee773faa64809e966b1b52e59e4a97b74",
+            "locator": "skills/nozickian-verify/scripts/ntt_gate.py:966-977"
           },
           {
-            "expected_excerpt_sha256": "c5d0e0ea82286fcc76805c788eb145a5f1577171cb8c9a6f52dd4edb79a51a2a",
-            "locator": "skills/nozickian-verify/scripts/ntt_gate.py:1688-1740"
+            "expected_excerpt_sha256": "7d4c6ab114991d6fbc1fc54697e65c243e84fbd74479a49bed54543fbd70bb0a",
+            "locator": "skills/nozickian-verify/scripts/ntt_gate.py:1440-1665"
           },
           {
-            "expected_excerpt_sha256": "ae22c9103d79f24474f02021ccc1aab03ea970a8ff4596908eab8f03689abf0f",
-            "locator": "skills/nozickian-verify/scripts/ntt_gate.py:2105-2165"
+            "expected_excerpt_sha256": "8e3039cd37eadfa95a9144ba461cb7a29b655415dd26b6f9f517935cac75abae",
+            "locator": "skills/nozickian-verify/scripts/ntt_gate.py:1748-2027"
+          },
+          {
+            "expected_excerpt_sha256": "19579820a87c7d14bee3c8f297d953991dbd4bbd77d7d5ef0e52761ac653d70e",
+            "locator": "skills/nozickian-verify/scripts/ntt_gate.py:2029-2207"
+          },
+          {
+            "expected_excerpt_sha256": "d518ecd4207c709203280f2f063a21b0c0892dff9ffaaf8e230922a644c6e07f",
+            "locator": "skills/nozickian-verify/scripts/ntt_gate.py:2209-2512"
+          },
+          {
+            "expected_excerpt_sha256": "bc4c652da876c437684e7cfa0941969d367343be235f37fe934d6e582020f256",
+            "locator": "skills/nozickian-verify/scripts/ntt_gate.py:2514-2935"
+          },
+          {
+            "expected_excerpt_sha256": "f9d57e858d981022cdfa6e9bf7d836cf4d09c175892285c74ad21cfe348eeb1d",
+            "locator": "skills/nozickian-verify/scripts/ntt_gate.py:2937-3331"
+          },
+          {
+            "expected_excerpt_sha256": "0e041873d93c1eead83066f6c410a800cf09d766ab32ce418c2b6e72e2d11898",
+            "locator": "skills/nozickian-verify/scripts/ntt_gate.py:3333-3448"
           }
         ],
         "correction_locations": [
-          "skills/nozickian-verify/scripts/ntt_gate.py:1400-1480",
-          "skills/nozickian-verify/scripts/ntt_gate.py:1688-1740",
-          "skills/nozickian-verify/scripts/ntt_gate.py:2105-2165"
+          "skills/nozickian-verify/scripts/ntt_gate.py:966-977",
+          "skills/nozickian-verify/scripts/ntt_gate.py:1440-1665",
+          "skills/nozickian-verify/scripts/ntt_gate.py:1748-2027",
+          "skills/nozickian-verify/scripts/ntt_gate.py:2029-2207",
+          "skills/nozickian-verify/scripts/ntt_gate.py:2209-2512",
+          "skills/nozickian-verify/scripts/ntt_gate.py:2514-2935",
+          "skills/nozickian-verify/scripts/ntt_gate.py:2937-3331",
+          "skills/nozickian-verify/scripts/ntt_gate.py:3333-3448"
         ],
-        "new_wording": "Strict evidence requires substantive typed method fields, a versioned digest over claim text, scope, referent, importance, and method M, plus independent reviewer-class and structural nearby-world identities.",
+        "new_wording": "Strict evidence requires string-typed SHA identities, closed type-checked evidence wrappers whose present optional identities are independently valid, substantive typed method fields, exact array-shaped claim reviews/modal collections, and an assurance-bound claim-contract 1.1 over the full claim; generic claim/modal IDs, targets, and evidence-reference lists have exact canonical shapes; world-contract 1.1 uses closed typed authorization fields, and package-self requires the complete immutable reviewed 80-transition multiset exactly once with pinned claim/kind and payload identities.",
         "old_wording": "Method fields, claim identity, and nearby-world diversity could be weakened or relabeled without binding the complete reviewed contract."
       },
       {
@@ -2509,39 +2548,49 @@
         ],
         "correction_location_bindings": [
           {
-            "expected_excerpt_sha256": "c673d83e0f0d10f0b0c45446da6f4cd45a1098ab679025b57cca35ec8fe994f7",
-            "locator": "skills/nozickian-verify/scripts/run_live_skill_evals.py:1424-1646"
+            "expected_excerpt_sha256": "c8dcb4633a683af51f8fd9365644ce2906d2a3acae4e9616285241b1956b382f",
+            "locator": "skills/nozickian-verify/scripts/run_live_skill_evals.py:732-800"
           },
           {
-            "expected_excerpt_sha256": "f2e694ec8b29aa0f30b8c9a300f82b66d3035b5e56e50d271be4dc16da2f51c3",
-            "locator": "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:809-925"
+            "expected_excerpt_sha256": "0f8ecadcc442c4ecf5824d5c1bfd1e08c2cb83653b461bd463fe9690ca7f0a42",
+            "locator": "skills/nozickian-verify/scripts/run_live_skill_evals.py:1594-1900"
           },
           {
-            "expected_excerpt_sha256": "ebad06774f2d8174068f309ee945754f622bf795a928785f2b615d060d317286",
-            "locator": "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:1408-1540"
+            "expected_excerpt_sha256": "705617250b936a754e14ce04fe3e36dc9291a87ebd47b360b7f77aa5d8687bd5",
+            "locator": "skills/nozickian-verify/scripts/run_live_skill_evals.py:2038-2056"
           },
           {
-            "expected_excerpt_sha256": "aa9276a5dcab47a4795fe04836b1ddf48bd26e102234adb267b5239aa92a05ae",
-            "locator": "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:2774-3047"
+            "expected_excerpt_sha256": "73df95c64c25683b46a6a577c15fef021a18e7f4203c4041b8d1f0b39e7a21f5",
+            "locator": "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:2826-3101"
           },
           {
-            "expected_excerpt_sha256": "048e09ae15d76749363d2ba829c7a97c2a2326166a8bbae78976649dc4dd1121",
-            "locator": "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:5552-5768"
+            "expected_excerpt_sha256": "72cece21146be73655d04be884cab8f1440e3ba718e681616676aa3132095426",
+            "locator": "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:3270-3415"
           },
           {
-            "expected_excerpt_sha256": "019e3ee5a2962700f46be5b8548e2ce68be5dca94b762e6232df8f2cef0ca740",
-            "locator": "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:5829-5865"
+            "expected_excerpt_sha256": "2bb778322c42246e63e149aa6115d13fc7e8d4d11161826019e7cbd169cdb85c",
+            "locator": "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:4196-4315"
+          },
+          {
+            "expected_excerpt_sha256": "b7c8df59d0ae6fd9b1923afcf0835cd8d574b5994bc7d310ef952dae50bfad22",
+            "locator": "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:955-1012"
+          },
+          {
+            "expected_excerpt_sha256": "74194226142e7d1f71dc5d72322ba8f062e2118478c74f56c1486ac0bc76e0e2",
+            "locator": "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:5568-5790"
           }
         ],
         "correction_locations": [
-          "skills/nozickian-verify/scripts/run_live_skill_evals.py:1424-1646",
-          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:809-925",
-          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:1408-1540",
-          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:2774-3047",
-          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:5552-5768",
-          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:5829-5865"
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:732-800",
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:1594-1900",
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:2038-2056",
+          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:2826-3101",
+          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:3270-3415",
+          "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:4196-4315",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:955-1012",
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:5568-5790"
         ],
-        "new_wording": "Live JSON and authoritative status declarations fail closed on ambiguity and error signals; formal result content rejects bare/scalar failures; bounded snapshotting applies explicit resource ceilings; and promotion reconstructs one closed method-M record from exact evidence, runtime, formal, gate, policy, and parser bindings.",
+        "new_wording": "Live configuration accepts only strict duplicate-free finite JSON and exact relative POSIX fixture paths; live and formal parsing accepts only canonical SDK ResultMessage success with explicit API/deferred/structured/terminal/stop controls; provenance/evidence-origin 2.0 is cross-bound into one exact promotion-method-m-v2 record, and formal output checks remain recomputed rather than self-attested.",
         "old_wording": "Ambiguous live envelopes, incidental status text, scalar failure results, and caller-authored promotion method summaries could influence modeled pass decisions."
       },
       {
@@ -2551,16 +2600,28 @@
         ],
         "correction_location_bindings": [
           {
-            "expected_excerpt_sha256": "c56dd5ab86ac806c51d76a19d53669bbda261ce9f19d40c4d387dbc4765f4650",
-            "locator": "skills/nozickian-verify/scripts/validate_package.py:998-1223"
+            "expected_excerpt_sha256": "a6cf27a5ef4c94692ce870317def25d69dfe608cda03b9fdfc74c5d5324ad7d6",
+            "locator": "skills/nozickian-verify/scripts/validate_package.py:920-1156"
           },
           {
-            "expected_excerpt_sha256": "0b679713102a518ef01616861ee6e136423ee19445f8e8508d285994acde6dc8",
-            "locator": "skills/nozickian-verify/scripts/validate_package.py:1365-1628"
+            "expected_excerpt_sha256": "21884b04bb3a79cee50b9b3acf14cad249bb9e1577adcd90a8b9ed43a4f92e37",
+            "locator": "skills/nozickian-verify/scripts/validate_package.py:1461-1528"
           },
           {
-            "expected_excerpt_sha256": "0785cbb0e6e89f6f3eb4d132ecc20d30fb9774b5508c878e5c1b94b303acd1ba",
-            "locator": "skills/nozickian-verify/scripts/validate_package.py:2771-2778"
+            "expected_excerpt_sha256": "fc1b9f1beee9a63f5e58657d19aac8aa10fc0bf532cb982f91c7a828609e45d7",
+            "locator": "skills/nozickian-verify/scripts/validate_package.py:2180-2505"
+          },
+          {
+            "expected_excerpt_sha256": "0bbfe9c061ea6062fb47d47a6ec3a470ebaf82f4936686cb3275eb5c0bd03716",
+            "locator": "skills/nozickian-verify/scripts/validate_package.py:2915-2990"
+          },
+          {
+            "expected_excerpt_sha256": "7700cdcef9677ccfbe6f90f56e18971dc54b2f30fe9447faebcb0b0514ef6a50",
+            "locator": "skills/nozickian-verify/scripts/validate_package.py:8522-8581"
+          },
+          {
+            "expected_excerpt_sha256": "58366e93cba31859ef7de9b748241490d90a9e3cfe7ae4c02c683da6c8cb07ea",
+            "locator": "skills/nozickian-verify/assets/certificate-template.json:9-204"
           },
           {
             "expected_excerpt_sha256": "a548dc7be724b1b8a58cae4e45cd87ccb56538c31fc84a479ad4c44fa5aa4b18",
@@ -2572,13 +2633,16 @@
           }
         ],
         "correction_locations": [
-          "skills/nozickian-verify/scripts/validate_package.py:998-1223",
-          "skills/nozickian-verify/scripts/validate_package.py:1365-1628",
-          "skills/nozickian-verify/scripts/validate_package.py:2771-2778",
+          "skills/nozickian-verify/scripts/validate_package.py:920-1156",
+          "skills/nozickian-verify/scripts/validate_package.py:1461-1528",
+          "skills/nozickian-verify/scripts/validate_package.py:2180-2505",
+          "skills/nozickian-verify/scripts/validate_package.py:2915-2990",
+          "skills/nozickian-verify/scripts/validate_package.py:8522-8581",
+          "skills/nozickian-verify/assets/certificate-template.json:9-204",
           "skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md:60",
           "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:49-50"
         ],
-        "new_wording": "Every current correction locator is canonical, descriptor-opened, resource-bounded, and bound to an exact logical-line digest; package snapshots stop at directory, tree, depth, per-file, and aggregate limits; release modes follow Git owner-execute semantics.",
+        "new_wording": "Package authorization consumes one bounded immutable initial captured-byte snapshot; semantic modules, frontmatter, and fixtures never reopen the mirror pathname. Physical cruft is rejected before activation, Git evidence is additive-only, bounded Git children are contained and reaped on every exit, and source plus private mirror are independently finalized. Exact current-root provenance is rejected before prose, path, and end delimiters without matching a hyphenated sibling. The certificate template records every correction locator with a one-to-one excerpt binding and accurately scaffolds the closed wrapper fields, modal binding alternatives, typed eight-field method manifests, and critical evidence/world minima enforced by the gate.",
         "old_wording": "Consistency corrections could use unresolvable descriptive paths, and package snapshots or mode identities could diverge from bounded Git semantics."
       },
       {
@@ -2635,7 +2699,7 @@
         "old_wording": "Some active material used UNVERIFIED as a claim status."
       }
     ],
-    "correction_evidence_checked": "Re-reviewed the corrected implementation ranges, regenerated every current locator binding from the selected logical UTF-8 lines, searched current release claims and evidence for superseded parser, method, locator, resource, and mode wording, and strict-gate validated the migrated certificate, ledger, and wrappers. Fresh suite outcomes remain separate release evidence; the observation ledger is not execution provenance.",
+    "correction_evidence_checked": "Re-reviewed every corrected implementation span, regenerated all current locator bindings from selected logical UTF-8 lines, searched active release claims for superseded schema, parser, Git-authorization, cruft, snapshot, and count wording, and strict-gate validated the migrated certificate, ledger, and wrappers. Fresh suite outcomes remain separate release evidence; the observation ledger is not execution provenance.",
     "echo_findings": [],
     "none_found": true,
     "not_applicable_reason": "",
@@ -2692,15 +2756,17 @@
       "local Linux filesystem",
       "Python 3.12.13",
       "temporary isolated mutation copies under /tmp",
-      "official Claude Code validators unavailable"
+      "official Claude Code validators unavailable",
+      "single-purpose Linux process with trustworthy /proc child-subreaper semantics",
+      "trusted PATH/Git executable; mutable Git metadata is observational rejection evidence only"
     ],
     "evidence_process": "Fresh suite outcomes come from separate release commands. The package-local observation ledger supplies byte-hashed proposition- and case-bound release declarations and deduplication identities only; it is not execution provenance and is not reconciled per record to suite output.",
     "graders_or_tests": [
-      "validate_package.py --self-test (1911 checks; 82 false worlds; 13 true worlds)",
-      "run_gate_contract_tests.py (166 cases)",
-      "run_formal_runner_contract_tests.py (215 cases)",
+      "validate_package.py --self-test (2017 checks; 83 false worlds; 12 true worlds)",
+      "run_gate_contract_tests.py (232 cases)",
+      "run_formal_runner_contract_tests.py (231 cases)",
       "run_regression_evals.py (166 checks)",
-      "run_promotion_certifier_contract_tests.py (44 cases; 252 baseline checks)"
+      "run_promotion_certifier_contract_tests.py (46 cases; 252 baseline checks)"
     ],
     "human_review": "Independent implementation lanes, adversarial cross-review, follow-up fixes, and final pushed-commit audit.",
     "producer": "v1.0.3 package and the 2026-07-18 required-before-re-review rerun",
@@ -2723,10 +2789,10 @@
   },
   "pass_tracked_upgrade_audit": {
     "aggregate_contract": {
-      "actual_result": "44/44",
+      "actual_result": "46/46",
       "baseline_check_count": 252,
       "command": "python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .",
-      "expected_result": "44/44",
+      "expected_result": "46/46",
       "production_certifier_cli_baseline_and_negatives": true,
       "runtime_authentication": false,
       "status": "PASS",
@@ -2806,14 +2872,14 @@
   },
   "release_validation": {
     "formal_runner_contract": {
-      "passed": 215,
+      "passed": 231,
       "status": "PASS",
-      "total": 215
+      "total": 231
     },
     "gate_contract": {
-      "passed": 166,
+      "passed": 232,
       "status": "PASS",
-      "total": 166
+      "total": 232
     },
     "official_validators": {
       "claude_plugin_validate": {
@@ -2826,27 +2892,27 @@
       }
     },
     "package_basic": {
-      "checks_passed": 1748,
-      "checks_total": 1748,
+      "checks_passed": 1827,
+      "checks_total": 1827,
       "status": "PASS"
     },
     "package_self_test": {
-      "checks_passed": 1911,
-      "checks_total": 1911,
-      "false_worlds_passed": 82,
-      "false_worlds_total": 82,
+      "checks_passed": 2017,
+      "checks_total": 2017,
+      "false_worlds_passed": 83,
+      "false_worlds_total": 83,
       "status": "PASS",
-      "true_worlds_passed": 13,
-      "true_worlds_total": 13
+      "true_worlds_passed": 12,
+      "true_worlds_total": 12
     },
     "promotion_contract": {
       "baseline_checks_passed": 252,
       "baseline_checks_total": 252,
-      "expected_total": 44,
-      "passed": 44,
+      "expected_total": 46,
+      "passed": 46,
       "runtime_authentication": false,
       "status": "PASS",
-      "total": 44
+      "total": 46
     },
     "regression": {
       "checks_passed": 166,
@@ -2871,6 +2937,9 @@
     "Synthetic formal and promotion contracts do not cryptographically authenticate an official Claude binary.",
     "The charter consistency-sweep and remote-escalation rules remain parent/auditor-enforced rather than gate-enforced.",
     "STABLE_RELEASE_MANIFEST.json is excluded from its file inventory to avoid a self-referential hash cycle; its canonical content self-hash and required non-executable mode are verified separately.",
-    "This certificate does not defend against a maintainer who can coherently rewrite validators, manifests, evidence, and certificate together."
+    "This certificate does not defend against a maintainer who can coherently rewrite validators, manifests, evidence, and certificate together.",
+    "Trusted PATH/Git binary selection and same-UID mutable Git metadata are environment assumptions; sanitized Git evidence is observational rejection evidence only and never authorizes package bytes.",
+    "Linux subreaper cleanup assumes a single-purpose process with trustworthy /proc and no concurrent unrelated child ownership.",
+    "Standalone worktree validation does not prove HEAD/archive equivalence; committed-archive behavior is checked by the required unpacked git archive HEAD full self-test."
   ]
 }

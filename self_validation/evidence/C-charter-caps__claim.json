@@ -1,13 +1,13 @@
 {
   "artifact_path": "skills/nozickian-verify/SKILL.md",
-  "claim_contract_schema_version": "1.0",
-  "claim_contract_sha256": "sha256:f2932260deebf29cb955c7b7501a92e40006f1a437fde0bd851c36064f09a946",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:4fd82ea9e44d43d5bb0499ec6922722aa84b70d47f9345033f91bc4eb2edc580",
   "claim_id": "C-charter-caps",
   "claim_proposition_sha256": "sha256:59845efcc628f15149c6bea69aff553ed1aa99d835f450b9e7e529740c877536",
   "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.1",
-  "hash_or_version": "sha256:a3165f6b04990210ffdc8716a597e8bd40c658a8b1388dc9bd5170c149783af4",
+  "hash_or_version": "sha256:e7cc1f7a7f48fc03253d66ef31b6922d7a0a185557049262e39cfd310424202c",
   "observed_result": "Current source bytes support the scoped proposition for C-charter-caps.",
   "support_summary": "This wrapper binds C-charter-caps to current package artifact skills/nozickian-verify/SKILL.md by exact SHA-256 and to the canonical claim proposition digest. It also binds the wrapper to the canonical full method-relative claim contract.",
-  "timestamp_utc": "2026-07-16T05:15:11Z"
+  "timestamp_utc": "2026-07-18T00:00:00Z"
 }

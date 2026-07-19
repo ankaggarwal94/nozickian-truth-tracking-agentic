@@ -1,16 +1,16 @@
 {
   "artifact_path": "self_validation/current_observations.json",
-  "claim_contract_schema_version": "1.0",
-  "claim_contract_sha256": "sha256:d9fa519143e5603b1054e46abbf0e289db7f3f423eed31f957637a64d9674914",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:d4328c652eef3e1e203fb1db064ea7f7ea8795df49d10133724bcee6e8eb30e6",
   "claim_id": "C-structure",
   "claim_proposition_sha256": "sha256:e39cd26592f8c552b3f3720ff85adf034ee97f2b2843fa7fe6c833e46c7baa51",
   "command_or_source": "Declared case context (not authenticated execution): validate_package.py --self-test",
   "evidence_schema_version": "1.1",
-  "hash_or_version": "sha256:c85ac043e984b99023e65fdba70d5e95f818a6d64886bf2e7ca55434fd8ad62a",
-  "modal_case_sha256": "sha256:b73b530159795984a8499febde0da4e6507d7341a648327f0445a537efe17487",
+  "hash_or_version": "sha256:e85d7f8986be371565a38b442f10a15004bd3919a1d4403c6d89bd24f4049150",
+  "modal_case_sha256": "sha256:66bfdde9e938e2064c956140cf7d80333a8ca3855058381c03e5368684a85878",
   "observation_id": "obs:C-structure:TW-structure-unused-asset",
   "observed_result": "Declared release result (not authenticated execution): The validator true-world lane retained the package after an unused inert asset was added.",
   "support_summary": "This wrapper binds TW-structure-unused-asset to one exact case-bound release-declaration identity, the current claim proposition and full method-relative claim contract, and the canonical structured modal-case digest.",
   "test_id": "TW-structure-unused-asset",
-  "timestamp_utc": "2026-07-16T05:15:11Z"
+  "timestamp_utc": "2026-07-18T00:00:00Z"
 }

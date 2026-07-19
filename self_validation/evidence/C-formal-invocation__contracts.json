@@ -1,13 +1,13 @@
 {
   "artifact_path": "skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py",
-  "claim_contract_schema_version": "1.0",
-  "claim_contract_sha256": "sha256:ff43a1873c9ab7dc030bf7b75235f2c23c4c2b3ea5ff9569956b3d66c5b5c1a4",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:5ba6a134f65782f01d30390b637ccf2c4797e6cdd4e4671aee075730757615e0",
   "claim_id": "C-formal-invocation",
-  "claim_proposition_sha256": "sha256:a05396ec05369fcfc399ecbc3cf448c3df95d9ef09abfbde441dc0fc4a19a162",
+  "claim_proposition_sha256": "sha256:f5da52da553cc0d8ab52af1bc0078b19700224080934f8c50c4f7f0efafb8bf4",
   "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.1",
-  "hash_or_version": "sha256:e455839798e24d9a9fc93925245926b9291b1d5c2653fcf1ca719fdc846d869a",
+  "hash_or_version": "sha256:cfe96232396575120cf56d98acc8c33181535d88bb12bbdc7f1586e439e4de03",
   "observed_result": "Current source bytes support the scoped proposition for C-formal-invocation.",
   "support_summary": "This wrapper binds C-formal-invocation to current package artifact skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py by exact SHA-256 and to the canonical claim proposition digest. It also binds the wrapper to the canonical full method-relative claim contract.",
-  "timestamp_utc": "2026-07-16T05:15:11Z"
+  "timestamp_utc": "2026-07-18T00:00:00Z"
 }

@@ -48,7 +48,7 @@ Run the synthetic contract suite separately:
 python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .
 ```
 
-Its expected `44/44` result invokes the production certifier CLI for the complete baseline and every negative case. It is synthetic contract evidence, not real runtime authentication.
+Its expected `46/46` result invokes the production certifier CLI for the complete baseline and every negative case. It is synthetic contract evidence, not real runtime authentication.
 
 ## Non-closure reminder
 

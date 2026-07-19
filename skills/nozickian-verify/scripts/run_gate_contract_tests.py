@@ -16,11 +16,12 @@ of Nozickian verification. v0.7.2 hardens strict local evidence semantics:
   test objects, and Markdown report output never follows final or ancestor links;
 * method components reject scalar and flag-only placeholders while retaining
   substantive string and structured descriptions;
-* wrapper 1.1 and ledger 1.2 evidence binds a versioned method-relative claim
-  contract covering text, scope, artifact/referent, importance, and method M; and
+* wrapper 1.1 and ledger 1.2 evidence binds a versioned claim contract covering
+  local claim assurance plus the certificate-level limitation/downstream state;
+  and
 * modal case hashes bind closed world contracts while coverage independently
-  requires reviewer-assigned semantic-equivalence classes and structural
-  fingerprints rather than trusting either a relabelable slug or display prose.
+  requires reviewer classes and schema-1.1 typed operator/target/outcome
+  identities, never punctuation or free-form paraphrase fingerprints.
 """
 from __future__ import annotations
 import argparse
@@ -55,6 +56,190 @@ ARTIFACT_URI_PATHS = {
     "arbitrary_scheme": "nozickian-artifact:artifact.txt",
 }
 BASE_CLAIM_TEXT = "The package gate rejects fake Nozickian certificates that omit evidence, tests, method components, contradiction resolution, invalid local evidence refs, or valid structured evidence hashes."
+EXPECTED_CASE_TOTAL = 232
+EXPECTED_CASE_NAME_SHA256 = (
+    "9ee785be4af6bfbff87d3a89d9701930381ea4957ca68614f19ea1e6237476d6"
+)
+
+# Independently recorded golden migration oracle.  Keep this literal separate
+# from ntt_gate.py so a mistaken production tuple cannot validate itself.
+INDEPENDENT_LEGACY_WORLD_IDENTITY = {
+    parts[0]: (parts[1], parts[2])
+    for line in """
+FW-structure-missing-manifest|remove|manifest.entry
+FW-structure-dynamic-shell|replace|workflow.command
+TW-structure-unused-asset|preserve|manifest.entry
+FW-gate-strict-root|remove|certificate.assurance
+FW-gate-proposition-substitution|replace|certificate.claim_contract
+FW-gate-modal-substitution|replace|certificate.modal_tests
+FW-gate-resource-bounds|mutate|certificate.assurance
+FW-gate-path-control|mutate|artifact.path
+FW-gate-markdown-linked-target|replace|markdown.output
+FW-gate-markdown-symlinked-ancestor|mutate|markdown.output
+FW-gate-markdown-parent-substitution|replace|filesystem.parent
+TW-gate-shared-ledger|preserve|runtime.trace
+TW-gate-private-markdown-output|preserve|markdown.output
+FW-validator-extra-ci-action|mutate|workflow.step
+FW-validator-unsafe-fixture-id|replace|artifact.path
+FW-validator-extra-release-command|mutate|workflow.command
+FW-validator-mutable-checkout-action|replace|workflow.step
+FW-validator-mutable-setup-python-action|replace|workflow.step
+FW-validator-archive-self-test-comment|mutate|workflow.command
+FW-validator-archive-self-test-function|replace|workflow.command
+FW-validator-formal-output-invariant|remove|certificate.assurance
+FW-validator-held-output-capability-invariant|remove|process.output
+FW-validator-markdown-parent-substitution|replace|filesystem.parent
+FW-validator-markdown-moved-into-package|mutate|filesystem.parent
+FW-validator-fixed-manifest-symlink|replace|manifest.entry
+FW-validator-fixed-manifest-hardlink|mutate|manifest.entry
+FW-validator-fixed-manifest-special|replace|filesystem.entry
+FW-validator-fixed-manifest-linked-ancestor|mutate|filesystem.entry
+FW-validator-fixed-manifest-real-substitution|replace|filesystem.parent
+FW-validator-update-manifest-cli-preflight-substitution|mutate|workflow.step
+TW-validator-ci-presentation|preserve|workflow.step
+TW-validator-direct-archive-command|preserve|workflow.command
+TW-validator-held-markdown|preserve|markdown.output
+TW-validator-fixed-manifest-normal|preserve|manifest.entry
+FW-formal-malformed-jsonl|mutate|runtime.trace
+FW-formal-large-reordered-result|replace|runtime.trace
+FW-formal-descendant-pipe|mutate|process.containment
+FW-formal-closed-stdio-descendant|replace|process.containment
+FW-formal-containment-unavailable|remove|process.containment
+FW-formal-detached-session|mutate|process.output
+FW-formal-deep-detached-chain|replace|process.output
+FW-formal-companion-substitution|replace|artifact.identity
+FW-formal-self-attested-output-check|mutate|certificate.assurance
+FW-formal-empty-report-gate|remove|artifact.identity
+FW-formal-held-dirfd-symlink-swap|replace|filesystem.parent
+FW-formal-child-fd-rebind|mutate|process.output
+FW-formal-procfd-unavailable|remove|process.output
+FW-formal-canonical-json-classification|replace|artifact.path
+FW-live-transcript-symlink-substitution|replace|artifact.path
+FW-live-transcript-real-substitution|mutate|filesystem.parent
+FW-live-json-real-substitution|replace|filesystem.parent
+FW-live-json-transcript-alias|mutate|artifact.identity
+FW-live-output-direct-symlink|replace|filesystem.entry
+FW-live-output-ancestor-symlink|mutate|filesystem.entry
+FW-live-explicit-output-a-b-a|mutate|filesystem.parent
+FW-live-explicit-output-persistent-substitution|replace|process.output
+FW-wrapper-json-unsafe-targets|replace|artifact.path
+FW-wrapper-json-parent-substitution|replace|filesystem.parent
+FW-formal-temporal-cap|mutate|certificate.assurance
+TW-formal-valid-role-direction|preserve|runtime.trace
+TW-formal-held-dirfd-ordinary-output|preserve|filesystem.parent
+TW-live-explicit-output-early-capability|preserve|process.output
+TW-wrapper-json-held-output|preserve|artifact.path
+TW-wrapper-json-early-capability|preserve|filesystem.parent
+FW-promotion-auto-closure|mutate|certificate.assurance
+FW-promotion-missing-trace|remove|runtime.trace
+FW-promotion-unsafe-output|replace|artifact.path
+FW-promotion-self-attested-output-check|mutate|certificate.assurance
+FW-promotion-empty-formal-output|remove|artifact.identity
+FW-promotion-coordinator-result-identity|replace|artifact.identity
+FW-promotion-coordinator-argv-identity|replace|workflow.command
+FW-certifier-json-markdown-alias|mutate|artifact.identity
+FW-certifier-parent-substitution|replace|filesystem.parent
+TW-promotion-capped-baseline|preserve|certificate.assurance
+TW-certifier-distinct-outputs|preserve|artifact.path
+FW-github-readmes-degraded|remove|documentation.claim
+TW-github-readmes-benign-note|preserve|documentation.claim
+FW-charter-sweep-removed|remove|documentation.claim
+FW-charter-remote-fields-removed|remove|certificate.assurance
+TW-charter-intact|preserve|documentation.claim
+""".strip().splitlines()
+    for parts in [line.split("|")]
+}
+
+
+# Static full-transition oracle recorded independently of the production
+# registry and current release certificate. Tests compare current migrated
+# declarations to these pins before separately comparing production pins.
+INDEPENDENT_PACKAGE_WORLD_TRANSITION_SHA256 = {
+    parts[0]: parts[1]
+    for line in """
+FW-structure-missing-manifest|49f31ec839f5bd436dacab9d49d23233b453fb4ab2889ca0b1db7d33c259577a
+FW-structure-dynamic-shell|2a316b8f68ac5c5a887cabaa3071781fb6df15353fa966bc70d4a6961a0cdbda
+TW-structure-unused-asset|d8b583e8f2e35a69818c2984f430216c1811da322b5e96a6c33d3588bb5e976a
+FW-gate-strict-root|d4c6e6d4255f87a8c800c45a7e5a3d672f4101cf160b5e14dd34cdb11c1eee64
+FW-gate-proposition-substitution|c22daa535b85b93154271fb5f9a9a978fc40c080eaddf8decbf32d06d6b3e2a7
+FW-gate-modal-substitution|c01e24853c93239f6a09f869a0b820e692e9c80e6c638966c619ee2db96d7891
+FW-gate-resource-bounds|5c93ad2c9a958cbb4d6963b27e1f8e2f222048e92ea43fd51627a40f5746e5b6
+FW-gate-path-control|bd92b0575533d796de252d60d04f180c940c51f26325f06e59deb3049696681f
+FW-gate-markdown-linked-target|bb75eaa863f7f17ecfbc1e999c5f7f5cd3bcf593ee4fb1afa3e7dc759ae568e8
+FW-gate-markdown-symlinked-ancestor|7fe34d6b923eb3c41a774b6b35619557021c39766794a14292a7ce7c74b03969
+FW-gate-markdown-parent-substitution|a13c5b9a1f7ad60a047803b9d5f9ec74e26e4e054089368e5029b2f0cadd2568
+TW-gate-shared-ledger|ecfa1a2c3cc71fd81c63b4b1a21a6769f1d47df67e835b93a2e46b04ab301d23
+TW-gate-private-markdown-output|99617cc03822858b3f5280a73c3b365b0c64d38a48d8bc5c91ccc72023fded68
+FW-validator-extra-ci-action|b3a2c4c69b918cd672d8f1e6a05e5a2c64d3f92089c4f409c734d720cd7c49c1
+FW-validator-unsafe-fixture-id|a97961b7b6dd1cf2e61ec32e4342a596b23d867eaea965e9234429866ef349f0
+FW-validator-extra-release-command|3389d0b5a8593a7c272b683741e03526fdf3d4aa8b42c40973f81dcd28dfdbf8
+FW-validator-mutable-checkout-action|4aa103e5f4466f8e1397caff2fed355e3e84c6cf8272e1ee641433bda0e66ed1
+FW-validator-mutable-setup-python-action|434a4815dfa14d9987a7f138f7aa67959ac5e8c3496e87c91bda8a8ef98a6940
+FW-validator-archive-self-test-comment|aa1038467af7417dc070450c3b6d9caf501293cfd90d28c90cbb3ec5370ff19d
+FW-validator-archive-self-test-function|b0a379f905322f7973d20e9effafee672d4a496179c5c11ef9b007172aef7955
+FW-validator-formal-output-invariant|ba35ce695bc7d561dddeaf5b852aa69237e5c1bd62a8f893d92f9b9189e297c4
+FW-validator-held-output-capability-invariant|4a10c44129cfe34107e1110986eba394c4b9bedab031e2241febb96ba51243a7
+FW-validator-markdown-parent-substitution|d88452af9d74b0d6489fbaf6ff0ebd908d85fb35108c1d5fb5333932a1ab3165
+FW-validator-markdown-moved-into-package|75382e43fd917792876ef98abb16a4fcf877e2783a70490c946719175dd5d15f
+FW-validator-fixed-manifest-symlink|2e3a092c66ce05b8302f3e76ce4fbfa9559d0d37d1e109f893137773dabb8a7e
+FW-validator-fixed-manifest-hardlink|3a9787e6869d9905b423ae99c4554f14422a187329a7998be19a52719c890c8d
+FW-validator-fixed-manifest-special|741641058277911edefdbdf870a3a389c5d904567d609c9b74e8a3a0c0b15cea
+FW-validator-fixed-manifest-linked-ancestor|e932490dd95490c0eeb900694dc4f886b16a1e839dde20c155713748686a5f5e
+FW-validator-fixed-manifest-real-substitution|35666b18d5dcb676ac2b110bb019ee565a485098a1d98ecb49417144eae6bb2b
+FW-validator-update-manifest-cli-preflight-substitution|34136fce46ec20b5bd4bf8fcf185a139d7e128c462864d01f34358d753399312
+TW-validator-ci-presentation|45c3bd626c1c9cea947c71f2de3f9e1d238d273ddb40c21de829d806fc1dffe6
+TW-validator-direct-archive-command|b20862092ba55b813ce5a08ca0a34f67ba6e5148f8ba64245f312d85c024b67d
+TW-validator-held-markdown|745b038e13ec8891604e2d9747bbb815912e4d61971b66cdc175e95294af1e65
+TW-validator-fixed-manifest-normal|60897f5bf8328044ad77e20335e703390c6e68da5ef01a4087509b20a196c516
+FW-formal-malformed-jsonl|5f2f315873f68b6640fcc224a395c087ea5c769f125d98abaafc409e245fab7e
+FW-formal-large-reordered-result|062419c3480817b3137d77922e6d3171f42cf7871b94c28d71ea507d4d4221b2
+FW-formal-descendant-pipe|eb75e5e37343d9693745f290c0741f2f90a5ec921ffd0975c24812c3cf5b7715
+FW-formal-closed-stdio-descendant|ecae58386dbc6502ce304f6df6f33baaf5090341aa265ddf07e0151582f8536a
+FW-formal-containment-unavailable|599a2ee2738c8bbd8af366b7f06c34963c2e526c7603948d2310d68dca26bb7a
+FW-formal-detached-session|0d3fd73a5443a0c53c6fd93b690999e203dffd8f44706f390e1ed7903915b676
+FW-formal-deep-detached-chain|296819b2de828685ed3f0c29d7b172e80da8e17a124cbc6c418f71fcba4fe482
+FW-formal-companion-substitution|1828e76c0e9d35e961643afa6f154de6a74dfdb7e7bcd84925408f4e635c5f19
+FW-formal-self-attested-output-check|39cf5fec57a6de11f5f9a13db5ff290a85ffbec85424baa86c0fd17117e4c951
+FW-formal-empty-report-gate|a2eda41f6bc22e98ae9ad463dd818c20dc63c39c1a3b588333438663eb8fc970
+FW-formal-held-dirfd-symlink-swap|f4daaf6849f75a5c664d6bce8616de5ed4782b4ea124bcdf9888c35ec8fb39f7
+FW-formal-child-fd-rebind|015d16d66a5ba08e2ef9ec03b9d5d7b7d8328819c047c161a47565f7b40e6115
+FW-formal-procfd-unavailable|8c550d82e19cead1bc80865de63999d48ca54de2f8c2a09036fefc949f18e729
+FW-formal-canonical-json-classification|a7c5cd330d5f6f2d15ce8bd77ea68c6fa52b77852949c962ec427781ac668dee
+FW-live-transcript-symlink-substitution|924e561a3e9322be27f6494d811c5e415161cc259c039dde539bc3dbd12b09e1
+FW-live-transcript-real-substitution|2ea040663735f9424be9caa3bd8606520a02b3b91d06e2b824555b1085159410
+FW-live-json-real-substitution|5781669dc6bdcc8aee7ff0678562f306a54e07bcf03abbfb8bb20961431f2117
+FW-live-json-transcript-alias|2d8b602b38da379000db29744e0fb2166610fd48b9fcc67089a68a6d9f8a0fea
+FW-live-output-direct-symlink|02ab4da1526722d20c9bf2e562c503ca0343b3274e87577abaa0dcdab3e298c3
+FW-live-output-ancestor-symlink|99b90523befffb894d35c214d384fcf8ab3538fceb58ce48897ddd99b07f6da6
+FW-live-explicit-output-a-b-a|c855298f69ddbae6300f747fa9cd9ecc7e99dee48c641f6c7ebcf5a9076cd7e3
+FW-live-explicit-output-persistent-substitution|391f52fcd77efc701d3c57d368d472dc5f102234574d2460f3276852fffa6545
+FW-wrapper-json-unsafe-targets|d9302ad40390b92312328fa55f9cd10d3bdddac8392cadfe76d662e82c408eb7
+FW-wrapper-json-parent-substitution|d2a7a8ab99d33356bc7a8b1e077d010171081c7accb32af51a1e009656c47b50
+FW-formal-temporal-cap|064a3d551e56979f44517336d3b4c1e62a1e82f7079ac9887003c840b0c93178
+TW-formal-valid-role-direction|950fae052f3528695ed2ecb6a422510db7e4ce2439a986f2be6f2faea8ada2dd
+TW-formal-held-dirfd-ordinary-output|d63c0014ce53a7b207dd37479ae99365e4aa109166ecb1dcf09c7b9e1837f669
+TW-live-explicit-output-early-capability|d80874747bdb2a3254be2d2df055f87b09cc67b2572db76efe71c07d707a450f
+TW-wrapper-json-held-output|785a1dabf1d14d3f397a08f48a3f3d0ce377756b84b87cb2785361e02b9236a8
+TW-wrapper-json-early-capability|86d7a4954a33e38e70b444041826e62581c5b93f61714d8b7c97d5e53ee75b91
+FW-promotion-auto-closure|9cf69fd3dd172d167834dd2c688320291ffc7d01d3d14ea1dcd90b2b098c556b
+FW-promotion-missing-trace|a67ffc90ff5c3e9b65382dc422a39ffba2efdaa6b94676c5fa43658c89f2a18b
+FW-promotion-unsafe-output|b02b8552996b6ca50af3aa89854c20b2acc45f0399c01fe3bc459934b35943b9
+FW-promotion-self-attested-output-check|7d7a225d39b5daa9fa1163d02d6df2c829315f77a5be6c80890651217416b214
+FW-promotion-empty-formal-output|4d33b9b11768290e652730988f35e88c4a82e657801d0d44f7e023ce117c7429
+FW-promotion-coordinator-result-identity|1d215c25ba7558f3d35eb45b82ab68c7ef1644780dbc92fc33876a3d10f22ea9
+FW-promotion-coordinator-argv-identity|18fdec7c2f1e3cd8cfca14e5d5b559a531b86660e8a7f8efbdc8bdbea562bd0b
+FW-certifier-json-markdown-alias|6584eb861f92638a0f7a07ae11b82667f3ede80efd8a6d33a984ace037f58a80
+FW-certifier-parent-substitution|9e81155384dc3d4d4a18d5c09ad408085acddf09bbf7c893a2a65b3cd3621036
+TW-promotion-capped-baseline|79f2b9bd21edd25b9363a50df19c0e46c51c864d2241dd09630e691ec2745176
+TW-certifier-distinct-outputs|a8687b111cdb80a34358384542f0bec9eb39650cda4d50a62a6d3bdca919f63c
+FW-github-readmes-degraded|00eed35d0430228514dbb88a09217f4e3ef7f91e4ba27ab4c9aad18356591d79
+TW-github-readmes-benign-note|11256f4dc9f457a53f85307faa5af7d7e54fb8d05c611757cc22f174dcd299f8
+FW-charter-sweep-removed|9aa6efa23770499d8a83a9783111910d2bd88579f89dc3b6cc3ecc9e2f22b8cf
+FW-charter-remote-fields-removed|2b97a840cb6ca97ecb7f737f547427197a7c07d01150b49998c825aaaa337ebc
+TW-charter-intact|3545392d01961c4cec1ad9278959853c829073f76784a78999ecde29632cbe55
+""".strip().splitlines()
+    for parts in [line.split("|")]
+}
 
 
 def _private_tempdir(prefix: str) -> Path:
@@ -134,9 +319,69 @@ def canonical_identity_json(value: Any) -> Any:
     raise TypeError(f"unsupported identity value {type(value).__name__}")
 
 
-def claim_contract_sha256(claim: Mapping[str, Any]) -> str:
-    payload = {
+def certificate_assurance_payload(
+    cert: Optional[Mapping[str, Any]],
+    *,
+    downstream_policy: str = "generic",
+) -> Optional[Dict[str, Any]]:
+    if cert is None:
+        return None
+    policy_requirements = {
+        "generic": (False, False, False),
+        "package-self": (True, False, False),
+        "promotion-v2": (False, True, True),
+    }
+    require_records, require_review, require_own_claim_field = (
+        policy_requirements[downstream_policy]
+    )
+    return canonical_identity_json({
         "schema_version": "1.0",
+        "downstream_policy": {
+            "name": downstream_policy,
+            "require_records": require_records,
+            "require_review": require_review,
+            "require_own_claim_field": require_own_claim_field,
+        },
+        "method_manifest": cert.get("method_manifest"),
+        "scope_limitations": cert.get("scope_limitations", []),
+        "unknowns": cert.get("unknowns", []),
+        "method_unknowns": cert.get("method_unknowns", []),
+        "gate_thresholds": cert.get("gate_thresholds"),
+        "derived_or_downstream_claims": cert.get(
+            "derived_or_downstream_claims", []
+        ),
+        "downstream_review": cert.get("downstream_review"),
+        "claim_inventory": [
+            {
+                "id": canonical_proposition(claim.get("id")),
+                "local_claim_contract_sha256": claim_contract_sha256(claim),
+            }
+            for claim in cert.get("claims", [])
+            if isinstance(claim, Mapping)
+        ],
+    })
+
+
+def claim_contradictions(claim: Mapping[str, Any]) -> List[Any]:
+    values: List[Any] = []
+    if "unresolved_contradictions" in claim:
+        raw = claim.get("unresolved_contradictions")
+        values.extend(raw if isinstance(raw, list) else [raw])
+    if "contradictions" in claim:
+        raw = claim.get("contradictions")
+        values.extend(raw if isinstance(raw, list) else [raw])
+    return values
+
+
+def claim_contract_sha256(
+    claim: Mapping[str, Any],
+    cert: Optional[Mapping[str, Any]] = None,
+    *,
+    downstream_policy: str = "generic",
+) -> str:
+    payload = {
+        "schema_version": "1.1",
+        "id": canonical_proposition(claim.get("id")),
         "text": canonical_proposition(claim.get("text")),
         "scope": canonical_proposition(claim.get("scope")),
         "artifact_location": canonical_proposition(
@@ -144,6 +389,27 @@ def claim_contract_sha256(claim: Mapping[str, Any]) -> str:
         ),
         "importance": claim.get("importance"),
         "method_m": canonical_identity_json(claim.get("method_m")),
+        "truth_status": str(claim.get("truth_status") or "").strip().lower(),
+        "method_completeness": claim.get("method_completeness"),
+        "unresolved_contradictions": canonical_identity_json(
+            claim_contradictions(claim)
+        ),
+        "residual_risks": canonical_identity_json(
+            claim.get("residual_risks", [])
+        ),
+        "evidence_refs": canonical_identity_json(
+            claim.get("evidence_refs", [])
+        ),
+        "false_world_tests": canonical_identity_json(
+            claim.get("false_world_tests", [])
+        ),
+        "true_world_tests": canonical_identity_json(
+            claim.get("true_world_tests", [])
+        ),
+        "certificate_assurance": certificate_assurance_payload(
+            cert,
+            downstream_policy=downstream_policy,
+        ),
     }
     return hashlib.sha256(
         json.dumps(
@@ -155,11 +421,35 @@ def claim_contract_sha256(claim: Mapping[str, Any]) -> str:
     ).hexdigest()
 
 
-def finalize_claim_contract(claim: Dict[str, Any]) -> None:
-    claim["claim_contract_schema_version"] = "1.0"
+def finalize_claim_contract(
+    claim: Dict[str, Any],
+    cert: Optional[Mapping[str, Any]] = None,
+    *,
+    downstream_policy: str = "generic",
+) -> None:
+    claim["claim_contract_schema_version"] = "1.1"
     claim["claim_contract_sha256"] = (
-        f"sha256:{claim_contract_sha256(claim)}"
+        "sha256:"
+        + claim_contract_sha256(
+            claim,
+            cert,
+            downstream_policy=downstream_policy,
+        )
     )
+
+
+def finalize_certificate_contracts(
+    cert: Dict[str, Any],
+    *,
+    downstream_policy: str = "generic",
+) -> None:
+    for claim in cert.get("claims", []):
+        if isinstance(claim, dict):
+            finalize_claim_contract(
+                claim,
+                cert,
+                downstream_policy=downstream_policy,
+            )
 
 
 def world_contract(
@@ -173,7 +463,7 @@ def world_contract(
     expected_outcome: str,
 ) -> Dict[str, str]:
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "semantic_equivalence_class": semantic_equivalence_class,
         "operator": operator,
         "target": target,
@@ -184,11 +474,88 @@ def world_contract(
     }
 
 
+def independent_package_world_transition_payload(
+    test: Mapping[str, Any],
+    claim_id: str,
+    kind: str,
+) -> Dict[str, Any]:
+    """Build the golden full-transition payload without production helpers."""
+    required_fields = {
+        "id",
+        "kind",
+        "target_claim_ids",
+        "expected_behavior",
+        "observed_behavior",
+        "outcome",
+        "result",
+        "evidence_refs",
+        "world_contract",
+    }
+    optional_fields = {"observed_outcome", "fixture_sha256"}
+    variation_fields = [
+        field for field in ("perturbation", "variant") if field in test
+    ]
+    if len(variation_fields) != 1:
+        raise AssertionError("golden transition has ambiguous variation")
+    variation_field = variation_fields[0]
+    fields = set(test)
+    if required_fields - fields or fields - (
+        required_fields
+        | optional_fields
+        | {"perturbation", "variant"}
+    ):
+        raise AssertionError("golden transition fields are not closed")
+    targets = [canonical_proposition(value) for value in test[
+        "target_claim_ids"
+    ]]
+    if not targets or any(not value for value in targets):
+        raise AssertionError("golden transition target list is invalid")
+    if len(targets) != len(set(targets)):
+        raise AssertionError("golden transition target list is duplicated")
+    if canonical_proposition(claim_id) not in targets:
+        raise AssertionError("golden transition does not target its claim")
+    if str(test.get("kind") or "").strip().lower() != kind:
+        raise AssertionError("golden transition kind differs from its lane")
+    fixture_sha256 = ""
+    if "fixture_sha256" in test:
+        fixture_sha256 = str(test.get("fixture_sha256") or "").strip()
+        if fixture_sha256.lower().startswith("sha256:"):
+            fixture_sha256 = fixture_sha256.split(":", 1)[1]
+        fixture_sha256 = fixture_sha256.lower()
+        if not re.fullmatch(r"[0-9a-f]{64}", fixture_sha256):
+            raise AssertionError("golden fixture SHA-256 is invalid")
+    return {
+        "registry_version": "1.0",
+        "claim_id": canonical_proposition(claim_id),
+        "test_id": str(test.get("id") or "").strip(),
+        "kind": str(test.get("kind") or "").strip().lower(),
+        "target_claim_ids": sorted(targets),
+        "variation_field": variation_field,
+        "variation": canonical_proposition(test.get(variation_field)),
+        "world_contract": canonical_identity_json(test["world_contract"]),
+        "expected_behavior": canonical_proposition(
+            test.get("expected_behavior")
+        ),
+        "observed_behavior": canonical_proposition(
+            test.get("observed_behavior")
+        ),
+        "outcome": str(test.get("outcome") or "").strip().lower(),
+        "observed_outcome": str(
+            test.get("observed_outcome") or ""
+        ).strip().lower(),
+        "result": str(test.get("result") or "").strip().lower(),
+        "fixture_sha256": fixture_sha256,
+    }
+
+
 def modal_case_sha256(
     test: Mapping[str, Any],
     claim: Mapping[str, Any],
     expected_kind: str,
     evidence_observed_result: Any = None,
+    cert: Optional[Mapping[str, Any]] = None,
+    *,
+    downstream_policy: str = "generic",
 ) -> str:
     target_raw = test.get("target_claim_ids", test.get("target_claim"))
     targets = target_raw if isinstance(target_raw, list) else [target_raw]
@@ -200,7 +567,11 @@ def modal_case_sha256(
         variation = test.get("variant")
     payload = {
         "claim_proposition": canonical_proposition(claim.get("text")),
-        "claim_contract_sha256": claim_contract_sha256(claim),
+        "claim_contract_sha256": claim_contract_sha256(
+            claim,
+            cert,
+            downstream_policy=downstream_policy,
+        ),
         "kind": str(test.get("kind") or expected_kind).strip().lower(),
         "test_id": str(test.get("id") or test.get("test_id") or "").strip(),
         "target_claim_ids": sorted({
@@ -220,8 +591,9 @@ def modal_case_sha256(
             if evidence_observed_result is not None
             else test.get("observed_result")
         ),
-        "outcome": str(
-            test.get("outcome") or test.get("observed_outcome") or ""
+        "outcome": str(test.get("outcome") or "").strip().lower(),
+        "observed_outcome": str(
+            test.get("observed_outcome") or ""
         ).strip().lower(),
         "result": str(test.get("result") or "").strip().lower(),
     }
@@ -251,7 +623,7 @@ def false_test(i: str) -> Dict[str, Any]:
         test["world_contract"] = world_contract(
             semantic_equivalence_class="claim-evidence-absent",
             operator="remove",
-            target="claims[C-001].evidence_refs",
+            target="certificate.evidence_refs",
             precondition="The critical claim cites two distinct evidence wrappers.",
             state_delta="Replace the evidence_refs array with an empty array.",
             oracle="The strict gate must return FAIL for missing critical evidence.",
@@ -261,7 +633,7 @@ def false_test(i: str) -> Dict[str, Any]:
         test["world_contract"] = world_contract(
             semantic_equivalence_class="artifact-digest-mismatch",
             operator="replace",
-            target="evidence wrapper hash_or_version",
+            target="evidence_wrapper.artifact_digest",
             precondition="The wrapper names the exact SHA-256 of its artifact.",
             state_delta="Replace the digest with sixty-four zero hexadecimal characters.",
             oracle="The strict gate must return FAIL for the wrong artifact digest.",
@@ -273,7 +645,7 @@ def false_test(i: str) -> Dict[str, Any]:
                 "fixture-" + re.sub(r"[^a-z0-9]+", "-", i.lower()).strip("-")
             ),
             operator="mutate",
-            target=f"contract fixture {i}",
+            target="fixture.contract",
             precondition="The baseline nearby-world contract is valid.",
             state_delta=f"Apply the independently identified false mutation {i}.",
             oracle="The strict gate must reject the declared false world.",
@@ -296,7 +668,7 @@ def true_test(i: str) -> Dict[str, Any]:
         "world_contract": world_contract(
             semantic_equivalence_class="benign-presentation-equivalence",
             operator="preserve",
-            target="canonical claim and evidence semantics",
+            target="claim.presentation",
             precondition="The baseline strict certificate is valid.",
             state_delta=f"Apply benign presentation-equivalent variation {i}.",
             oracle="The strict gate must retain the supported claim.",
@@ -324,16 +696,17 @@ def valid_cert() -> Dict[str, Any]:
         "false_world_tests": [false_test("FW-001"), false_test("FW-002")],
         "true_world_tests": [true_test("TW-001")],
         "unresolved_contradictions": [],
-        "residual_risks": ["This contract test does not execute Claude Code runtime."],
+        "residual_risks": [],
     }
-    finalize_claim_contract(claim)
-    return {
+    cert = {
         "schema_version": "2.0",
         "artifact": {"name": "contract-test-artifact", "version": "2.0.0"},
         "method_manifest": copy.deepcopy(m),
         "scope_limitations": [],
         "claims": [claim],
     }
+    finalize_claim_contract(claim, cert)
+    return cert
 
 
 def all_evidence_refs(
@@ -379,7 +752,9 @@ def _write_one_evidence(
     claim: Mapping[str, Any],
     modal_test: Optional[Mapping[str, Any]],
     test_kind: Optional[str],
+    cert: Mapping[str, Any],
     *,
+    downstream_policy: str = "generic",
     wrong_hash: bool = False,
     artifact_escape: bool = False,
     artifact_absolute: bool = False,
@@ -422,8 +797,15 @@ def _write_one_evidence(
         "claim_proposition_sha256": (
             f"sha256:{proposition_sha256(claim.get('text'))}"
         ),
-        "claim_contract_schema_version": "1.0",
-        "claim_contract_sha256": f"sha256:{claim_contract_sha256(claim)}",
+        "claim_contract_schema_version": "1.1",
+        "claim_contract_sha256": (
+            "sha256:"
+            + claim_contract_sha256(
+                claim,
+                cert,
+                downstream_policy=downstream_policy,
+            )
+        ),
         "artifact_path": artifact_rel,
         "command_or_source": "run_gate_contract_tests.py structured evidence fixture",
         "observed_result": f"Structured evidence fixture for {ref} observed a deterministic gate contract case.",
@@ -441,6 +823,8 @@ def _write_one_evidence(
                 claim,
                 test_kind,
                 data["observed_result"],
+                cert,
+                downstream_policy=downstream_policy,
             )
         )
     else:
@@ -452,16 +836,17 @@ def write_external_evidence(evidence_root: Path, ref_path: Path, *, artifact_rel
     artifact = evidence_root / artifact_rel
     artifact.parent.mkdir(parents=True, exist_ok=True)
     artifact.write_text("In-root artifact intentionally cited by an out-of-root evidence JSON.\n", encoding="utf-8")
-    base_claim = valid_cert()["claims"][0]
+    base_cert = valid_cert()
+    base_claim = base_cert["claims"][0]
     data = {
         "evidence_schema_version": "1.1",
         "claim_id": "C-001",
         "claim_proposition_sha256": (
             f"sha256:{proposition_sha256(BASE_CLAIM_TEXT)}"
         ),
-        "claim_contract_schema_version": "1.0",
+        "claim_contract_schema_version": "1.1",
         "claim_contract_sha256": (
-            f"sha256:{claim_contract_sha256(base_claim)}"
+            f"sha256:{claim_contract_sha256(base_claim, base_cert)}"
         ),
         "applies_to_tests": ["*"],
         "artifact_path": artifact_rel,
@@ -478,6 +863,7 @@ def write_external_evidence(evidence_root: Path, ref_path: Path, *, artifact_rel
 def write_structured_evidence_tree(
     cert: Mapping[str, Any],
     *,
+    downstream_policy: str = "generic",
     wrong_refs: Optional[Set[str]] = None,
     artifact_escape_refs: Optional[Set[str]] = None,
     artifact_absolute_refs: Optional[Set[str]] = None,
@@ -501,6 +887,8 @@ def write_structured_evidence_tree(
             claim,
             modal_test,
             test_kind,
+            cert,
+            downstream_policy=downstream_policy,
             wrong_hash=ref in wrong_refs,
             artifact_escape=ref in artifact_escape_refs,
             artifact_absolute=ref in artifact_absolute_refs,
@@ -599,6 +987,10 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
             cid = claim.get("claim_id")
             for reason in claim.get("reasons", []) or []:
                 out.append(clean(f"{cid}: {reason}"))
+            for test in claim.get("test_results", []) or []:
+                test_id = test.get("test_id")
+                for reason in test.get("reasons", []) or []:
+                    out.append(clean(f"{cid}/{test_id}: {reason}"))
         return out[:12]
 
     def add(
@@ -663,9 +1055,19 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         artifact_uri_refs: Optional[Mapping[str, str]] = None,
         external_ref: Optional[str] = None,
         absolute_ref: bool = False,
+        downstream_policy: str = "generic",
     ) -> None:
+        # Strict fixtures authenticate the complete certificate assurance
+        # payload. Refresh their declared digests after intentional fixture
+        # construction; substitution cases that must retain old evidence use
+        # add_claim_contract_substitution below instead.
+        finalize_certificate_contracts(
+            cert,
+            downstream_policy=downstream_policy,
+        )
         evidence_root, outside_root = write_structured_evidence_tree(
             cert,
+            downstream_policy=downstream_policy,
             wrong_refs=wrong_refs,
             artifact_escape_refs=artifact_escape_refs,
             artifact_absolute_refs=artifact_absolute_refs,
@@ -687,7 +1089,12 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
             ]
             if ref_value not in refs:
                 refs.append(ref_value)
-        result = gate_mod.evaluate_certificate(cert, evidence_root=evidence_root, strict_evidence=True)
+        result = gate_mod.evaluate_certificate(
+            cert,
+            evidence_root=evidence_root,
+            strict_evidence=True,
+            downstream_policy=downstream_policy,
+        )
         status = result.get("status")
         cases.append({
             "name": name,
@@ -708,7 +1115,7 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         cert = copy.deepcopy(base)
         evidence_root, _outside_root = write_structured_evidence_tree(cert)
         mutate(cert["claims"][0])
-        finalize_claim_contract(cert["claims"][0])
+        finalize_claim_contract(cert["claims"][0], cert)
         result = gate_mod.evaluate_certificate(
             cert,
             evidence_root=evidence_root,
@@ -911,6 +1318,12 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
             observations["OBS-FW-002"]["modal_case_sha256"] = (
                 "sha256:" + "0" * 64
             )
+        elif observation_mode == "wrong-typed-outcome":
+            # Both values are valid false-world outcomes; exact world binding,
+            # rather than family membership, must reject the disagreement.
+            observations["OBS-FW-002"]["outcome"] = (
+                "accepted_false_claim"
+            )
         elif observation_mode == "extra-record-field":
             observations["OBS-FW-001"]["source_suite"] = (
                 "fabricated-suite-result.json"
@@ -981,6 +1394,8 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
             }:
                 data["observation_id"] = f"OBS-FW-{index:03d}"
             elif observation_mode == "wrong-modal-digest":
+                data["observation_id"] = f"OBS-FW-{index:03d}"
+            elif observation_mode == "wrong-typed-outcome":
                 data["observation_id"] = f"OBS-FW-{index:03d}"
             elif observation_mode == "duplicate":
                 data["observation_id"] = "OBS-FW-001"
@@ -1086,6 +1501,463 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
 
     base = valid_cert()
     add("valid_substantive_certificate", copy.deepcopy(base), {"PASS-TRACKED"})
+
+    claim_id_probe_results: Dict[str, Dict[str, Any]] = {}
+    for variant_name, raw_claim_id in (
+        ("non-string", 1),
+        ("noncanonical", " C-001 "),
+    ):
+        claim_id_cert = copy.deepcopy(base)
+        claim_id_cert["claims"][0]["id"] = raw_claim_id
+        for lane in ("false_world_tests", "true_world_tests"):
+            for modal_test in claim_id_cert["claims"][0][lane]:
+                modal_test["target_claim"] = str(raw_claim_id)
+        finalize_certificate_contracts(claim_id_cert)
+        claim_id_root, _claim_id_outside = (
+            write_structured_evidence_tree(claim_id_cert)
+        )
+        claim_id_result = gate_mod.evaluate_certificate(
+            claim_id_cert,
+            evidence_root=claim_id_root,
+            strict_evidence=True,
+        )
+        claim_id_probe_results[variant_name] = {
+            "status": claim_id_result.get("status"),
+            "serialized": json.dumps(claim_id_result, sort_keys=True),
+        }
+
+    def materialize_identity_probe_tree(
+        certificate: Mapping[str, Any],
+    ) -> Path:
+        evidence_root = _private_tempdir(
+            "ntt_gate_identity_shape_contract_"
+        )
+        (evidence_root / "observations").mkdir(parents=True, exist_ok=True)
+        for claim in certificate.get("claims", []):
+            claim_id = str(claim.get("id"))
+            raw_claim_refs = claim.get("evidence_refs")
+            claim_refs = (
+                list(raw_claim_refs)
+                if type(raw_claim_refs) is list
+                else [raw_claim_refs]
+            )
+            for ref in claim_refs:
+                _write_one_evidence(
+                    evidence_root,
+                    str(ref),
+                    claim_id,
+                    None,
+                    claim,
+                    None,
+                    None,
+                    certificate,
+                )
+            for lane, kind in (
+                ("false_world_tests", "false_world"),
+                ("true_world_tests", "true_world"),
+            ):
+                for modal_test in claim.get(lane, []):
+                    raw_test_refs = modal_test.get("evidence_refs")
+                    test_refs = (
+                        list(raw_test_refs)
+                        if type(raw_test_refs) is list
+                        else [raw_test_refs]
+                    )
+                    test_id = str(
+                        modal_test.get(
+                            "id",
+                            modal_test.get("test_id", ""),
+                        )
+                    ).strip()
+                    for ref in test_refs:
+                        _write_one_evidence(
+                            evidence_root,
+                            str(ref),
+                            claim_id,
+                            test_id,
+                            claim,
+                            modal_test,
+                            kind,
+                            certificate,
+                        )
+        return evidence_root
+
+    identity_shape_probes = (
+        (
+            "scalar-claim-evidence-refs",
+            lambda certificate: certificate["claims"][0].update({
+                "importance": "minor",
+                "evidence_refs": ev("run-gate-contract-tests"),
+                "false_world_tests": [],
+                "true_world_tests": [],
+            }),
+            "claim evidence_refs must be a duplicate-free list",
+        ),
+        (
+            "scalar-modal-evidence-refs",
+            lambda certificate: [
+                modal_test.update({
+                    "evidence_refs": modal_test["evidence_refs"][0],
+                })
+                for lane in ("false_world_tests", "true_world_tests")
+                for modal_test in certificate["claims"][0][lane]
+            ],
+            "test evidence_refs must be a duplicate-free list",
+        ),
+        (
+            "non-string-modal-ids",
+            lambda certificate: [
+                modal_test.update({"id": index})
+                for index, modal_test in enumerate(
+                    [
+                        *certificate["claims"][0]["false_world_tests"],
+                        *certificate["claims"][0]["true_world_tests"],
+                    ],
+                    start=1,
+                )
+            ],
+            "modal test id must be a string",
+        ),
+        (
+            "conflicting-modal-id-aliases",
+            lambda certificate: [
+                modal_test.update({
+                    "test_id": modal_test["id"] + "-CONFLICT",
+                })
+                for lane in ("false_world_tests", "true_world_tests")
+                for modal_test in certificate["claims"][0][lane]
+            ],
+            "modal test id and test_id aliases conflict",
+        ),
+        (
+            "non-string-target-members",
+            lambda certificate: [
+                (
+                    modal_test.pop("target_claim", None),
+                    modal_test.update({
+                        "target_claim_ids": ["C-001", 7],
+                    }),
+                )
+                for lane in ("false_world_tests", "true_world_tests")
+                for modal_test in certificate["claims"][0][lane]
+            ],
+            "modal target member 1 must be a string",
+        ),
+    )
+    for variant_name, mutate_identity, expected_reason in (
+        identity_shape_probes
+    ):
+        identity_cert = copy.deepcopy(base)
+        mutate_identity(identity_cert)
+        finalize_certificate_contracts(identity_cert)
+        identity_root = materialize_identity_probe_tree(identity_cert)
+        identity_result = gate_mod.evaluate_certificate(
+            identity_cert,
+            evidence_root=identity_root,
+            strict_evidence=True,
+        )
+        serialized_identity_result = json.dumps(
+            identity_result,
+            sort_keys=True,
+        )
+        claim_id_probe_results[variant_name] = {
+            "status": identity_result.get("status"),
+            "expected_reason_present": (
+                expected_reason in serialized_identity_result
+            ),
+        }
+    numeric_digest = int("1" * 64)
+    claim_id_probe_results["numeric-sha256-identity"] = {
+        "numeric_rejected": (
+            gate_mod._canonical_claimed_sha256(numeric_digest) is None
+        ),
+        "canonical_string_retained": (
+            gate_mod._canonical_claimed_sha256("sha256:" + "1" * 64)
+            == "1" * 64
+        ),
+    }
+    cases.append({
+        "name": "strict_generic_claim_and_modal_identities_are_exact",
+        "passed": (
+            claim_id_probe_results["non-string"]["status"] == "FAIL"
+            and "claim id must be a nonempty string"
+            in claim_id_probe_results["non-string"]["serialized"]
+            and claim_id_probe_results["noncanonical"]["status"] == "FAIL"
+            and "claim id is not canonical"
+            in claim_id_probe_results["noncanonical"]["serialized"]
+            and all(
+                claim_id_probe_results[name]["status"]
+                not in {"PASS-TRACKED", "PASS-SCOPED"}
+                and claim_id_probe_results[name][
+                    "expected_reason_present"
+                ]
+                is True
+                for name, _mutate, _reason in identity_shape_probes
+            )
+            and claim_id_probe_results["numeric-sha256-identity"] == {
+                "numeric_rejected": True,
+                "canonical_string_retained": True,
+            }
+        ),
+        "results": claim_id_probe_results,
+    })
+
+    wrapper_schema_probe_results: Dict[str, Dict[str, Any]] = {}
+    wrapper_schema_probes = (
+        (
+            "non-string-identities",
+            ev("run-gate-contract-tests"),
+            {"command_or_source": True, "timestamp_utc": True},
+            (
+                "structured evidence command_or_source must be a nonempty string",
+                "structured evidence timestamp_utc must be a nonempty string",
+            ),
+        ),
+        (
+            "non-string-narratives",
+            ev("FW-001"),
+            {
+                "support_summary": 123456789012345678901234567890,
+                "observed_result": 12345678901234567890,
+            },
+            (
+                "structured evidence support_summary must be a nonempty string",
+                "structured evidence observed_result must be a nonempty string",
+            ),
+        ),
+        (
+            "unknown-field",
+            ev("run-gate-contract-tests"),
+            {"fabricated_provenance": "unsupported"},
+            ("structured evidence fields are not closed",),
+        ),
+        (
+            "scalar-applies-list",
+            ev("run-gate-contract-tests"),
+            {"applies_to_claims": "C-001"},
+            (
+                "structured evidence applies_to_claims must be a nonempty, "
+                "duplicate-free list of canonical strings",
+            ),
+        ),
+        (
+            "numeric-test-id-with-valid-applies-list",
+            ev("FW-001"),
+            {"test_id": 1, "applies_to_tests": ["FW-001"]},
+            (
+                "structured evidence test_id must be a canonical "
+                "nonempty string",
+            ),
+        ),
+        (
+            "numeric-modal-digest-on-claim-wrapper",
+            ev("run-gate-contract-tests"),
+            {"modal_case_sha256": int("1" * 64)},
+            (
+                "structured evidence modal_case_sha256 must be a "
+                "string-typed SHA-256 identity",
+            ),
+        ),
+    )
+    for variant_name, wrapper_ref, mutations, expected_reasons in (
+        wrapper_schema_probes
+    ):
+        wrapper_cert = copy.deepcopy(base)
+        finalize_certificate_contracts(wrapper_cert)
+        wrapper_root, _wrapper_outside = write_structured_evidence_tree(
+            wrapper_cert
+        )
+        wrapper_path = wrapper_root / wrapper_ref
+        wrapper_data = json.loads(wrapper_path.read_text(encoding="utf-8"))
+        wrapper_data.update(mutations)
+        wrapper_path.write_text(
+            json.dumps(wrapper_data, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        wrapper_result = gate_mod.evaluate_certificate(
+            wrapper_cert,
+            evidence_root=wrapper_root,
+            strict_evidence=True,
+        )
+        serialized_wrapper_result = json.dumps(
+            wrapper_result,
+            sort_keys=True,
+        )
+        wrapper_schema_probe_results[variant_name] = {
+            "status": wrapper_result.get("status"),
+            "expected_reasons_present": all(
+                reason in serialized_wrapper_result
+                for reason in expected_reasons
+            ),
+        }
+    shared_wrapper_cert = copy.deepcopy(base)
+    finalize_certificate_contracts(shared_wrapper_cert)
+    shared_wrapper_root, _shared_wrapper_outside = (
+        write_structured_evidence_tree(shared_wrapper_cert)
+    )
+    shared_wrapper_path = shared_wrapper_root / ev("FW-001")
+    shared_wrapper_data = json.loads(
+        shared_wrapper_path.read_text(encoding="utf-8")
+    )
+    shared_wrapper_data.update({
+        "test_id": "ANOTHER-CANONICAL-TEST",
+        "applies_to_tests": ["FW-001"],
+    })
+    shared_wrapper_path.write_text(
+        json.dumps(shared_wrapper_data, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    shared_wrapper_result = gate_mod.evaluate_certificate(
+        shared_wrapper_cert,
+        evidence_root=shared_wrapper_root,
+        strict_evidence=True,
+    )
+    wrapper_schema_probe_results["canonical-shared-wrapper-binding"] = {
+        "status": shared_wrapper_result.get("status"),
+        "expected_reasons_present": True,
+        "positive_control": True,
+    }
+    cases.append({
+        "name": (
+            "structured_evidence_schema_rejects_non_string_and_unknown_fields"
+        ),
+        "passed": all(
+            result["status"] == "FAIL"
+            and result["expected_reasons_present"] is True
+            for result in wrapper_schema_probe_results.values()
+            if not result.get("positive_control")
+        ) and wrapper_schema_probe_results[
+            "canonical-shared-wrapper-binding"
+        ]["status"] == "PASS-TRACKED",
+        "results": wrapper_schema_probe_results,
+    })
+
+    collection_probe_results: Dict[str, Dict[str, Any]] = {}
+    collection_shape_probes = (
+        (
+            "null-unresolved-contradictions",
+            lambda claim: claim.__setitem__(
+                "unresolved_contradictions", None
+            ),
+            ("claim unresolved_contradictions must be a list",),
+        ),
+        (
+            "null-legacy-contradictions",
+            lambda claim: (
+                claim.pop("unresolved_contradictions", None),
+                claim.__setitem__("contradictions", None),
+            ),
+            ("claim contradictions must be a list",),
+        ),
+        (
+            "missing-contradiction-review",
+            lambda claim: (
+                claim.pop("unresolved_contradictions", None),
+                claim.pop("contradictions", None),
+            ),
+            (
+                "claim must include unresolved_contradictions or "
+                "contradictions as a list",
+            ),
+        ),
+        (
+            "null-residual-risks",
+            lambda claim: claim.__setitem__("residual_risks", None),
+            ("claim residual_risks must be a list",),
+        ),
+        (
+            "missing-residual-risks",
+            lambda claim: claim.pop("residual_risks", None),
+            ("claim residual_risks must be a list",),
+        ),
+        (
+            "minor-null-modal-arrays",
+            lambda claim: claim.update({
+                "importance": "minor",
+                "false_world_tests": None,
+                "true_world_tests": None,
+            }),
+            (
+                "claim false_world_tests must be a list",
+                "claim true_world_tests must be a list",
+            ),
+        ),
+        (
+            "missing-modal-arrays",
+            lambda claim: (
+                claim.pop("false_world_tests", None),
+                claim.pop("true_world_tests", None),
+            ),
+            (
+                "claim false_world_tests must be a list",
+                "claim true_world_tests must be a list",
+            ),
+        ),
+    )
+    for variant_name, mutate_collection, expected_reasons in (
+        collection_shape_probes
+    ):
+        collection_cert = copy.deepcopy(base)
+        finalize_certificate_contracts(collection_cert)
+        collection_root, _collection_outside = (
+            write_structured_evidence_tree(collection_cert)
+        )
+        mutate_collection(collection_cert["claims"][0])
+        collection_result = gate_mod.evaluate_certificate(
+            collection_cert,
+            evidence_root=collection_root,
+            strict_evidence=True,
+        )
+        serialized_collection_result = json.dumps(
+            collection_result,
+            sort_keys=True,
+        )
+        collection_probe_results[variant_name] = {
+            "status": collection_result.get("status"),
+            "expected_reasons_present": all(
+                reason in serialized_collection_result
+                for reason in expected_reasons
+            ),
+        }
+    empty_collection_cert = copy.deepcopy(base)
+    empty_collection_claim = empty_collection_cert["claims"][0]
+    empty_collection_claim.update({
+        "importance": "minor",
+        "unresolved_contradictions": [],
+        "residual_risks": [],
+        "false_world_tests": [],
+        "true_world_tests": [],
+    })
+    finalize_certificate_contracts(empty_collection_cert)
+    empty_collection_root, _empty_collection_outside = (
+        write_structured_evidence_tree(empty_collection_cert)
+    )
+    empty_collection_result = gate_mod.evaluate_certificate(
+        empty_collection_cert,
+        evidence_root=empty_collection_root,
+        strict_evidence=True,
+    )
+    collection_probe_results["minor-empty-array-positive-control"] = {
+        "status": empty_collection_result.get("status"),
+        "expected_reasons_present": True,
+        "positive_control": True,
+    }
+    cases.append({
+        "name": "strict_claim_collection_fields_require_exact_arrays",
+        "passed": (
+            all(
+                result["status"] not in {"PASS-TRACKED", "PASS-SCOPED"}
+                and result["expected_reasons_present"] is True
+                for result in collection_probe_results.values()
+                if not result.get("positive_control")
+            )
+            and collection_probe_results[
+                "minor-empty-array-positive-control"
+            ]["status"] == "PASS-TRACKED"
+        ),
+        "results": collection_probe_results,
+    })
+
     add_invalid("non_object_certificate_is_invalid_input", 7)
     malformed_claims = copy.deepcopy(base)
     malformed_claims["claims"] = "not-a-list"
@@ -1814,6 +2686,12 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         observation_mode="wrong-modal-digest",
         allowed={"FAIL"},
     )
+    add_shared_modal_ledger(
+        "shared_ledger_typed_outcome_mismatch_rejected",
+        copy.deepcopy(base),
+        observation_mode="wrong-typed-outcome",
+        allowed={"FAIL"},
+    )
     add_hardlink_alias(
         "hardlinked_modal_artifacts_are_one_observation",
         copy.deepcopy(base),
@@ -2199,11 +3077,27 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     independent_claim["proposition_sha256"] = (
         f"sha256:{proposition_sha256(independent_proposition)}"
     )
+    independent_claim["evidence_refs"] = [
+        ev("downstream-independent-evaluation"),
+        ev("downstream-independent-source"),
+    ]
+    independent_modal_ids = (
+        "FW-DOWNSTREAM-001",
+        "FW-DOWNSTREAM-002",
+        "TW-DOWNSTREAM-001",
+    )
     for test in (
         independent_claim["false_world_tests"]
         + independent_claim["true_world_tests"]
     ):
         test["target_claim"] = "C-DOWNSTREAM-001"
+    for test, distinct_test_id in zip(
+        independent_claim["false_world_tests"]
+        + independent_claim["true_world_tests"],
+        independent_modal_ids,
+    ):
+        test["id"] = distinct_test_id
+        test["evidence_refs"] = [ev(distinct_test_id)]
     downstream_independent["claims"].append(independent_claim)
     downstream_independent["derived_or_downstream_claims"] = [{
         "id": "D-INDEPENDENT",
@@ -2214,7 +3108,7 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         "proposition_binding": proposition_binding(independent_proposition),
         "reason": "The distinct claim record carries its own complete evaluation.",
     }]
-    add(
+    add_strict(
         "downstream_independent_pass_is_proposition_bound",
         downstream_independent,
         {"PASS-TRACKED"},
@@ -2259,8 +3153,8 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         "performed": True,
         "claims_identified": ["D-INDEPENDENT"],
     }
-    add(
-        "promotion_downstream_pass_is_proposition_bound",
+    add_strict(
+        "strict_promotion_downstream_pass_is_proposition_bound",
         promotion_bound,
         {"PASS-TRACKED"},
         downstream_policy="promotion-v2",
@@ -2322,6 +3216,40 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
             "reasons": unknown_policy_reasons,
         }
     )
+    canonical_package_policy = gate_mod.DOWNSTREAM_POLICIES["package-self"]
+    relaxed_same_name_policy = gate_mod.DownstreamPolicy(
+        name="package-self",
+        require_records=False,
+        require_review=False,
+        require_own_claim_field=False,
+    )
+    relaxed_policy_result = gate_mod.evaluate_certificate(
+        copy.deepcopy(base),
+        downstream_policy=relaxed_same_name_policy,
+    )
+    canonical_policy_payload = gate_mod._certificate_assurance_payload(
+        base,
+        canonical_package_policy,
+    )
+    relaxed_policy_payload = gate_mod._certificate_assurance_payload(
+        base,
+        relaxed_same_name_policy,
+    )
+    relaxed_policy_reasons = summarize(relaxed_policy_result)
+    cases.append({
+        "name": "same_name_relaxed_policy_object_is_rejected_and_digests_differ",
+        "status": relaxed_policy_result.get("status"),
+        "expected_any": ["INVALID_INPUT"],
+        "passed": (
+            relaxed_policy_result.get("status") == "INVALID_INPUT"
+            and canonical_policy_payload != relaxed_policy_payload
+            and any(
+                "not an exact registered policy" in reason
+                for reason in relaxed_policy_reasons
+            )
+        ),
+        "reasons": relaxed_policy_reasons,
+    })
 
     promotion_missing_review = copy.deepcopy(base)
     add(
@@ -2428,7 +3356,7 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         scalar_method["claims"][0]["method_m"] = {
             field: scalar for field in gate_mod.REQ_METHOD
         }
-        finalize_claim_contract(scalar_method["claims"][0])
+        finalize_claim_contract(scalar_method["claims"][0], scalar_method)
         add_strict(
             f"scalar_{scalar_name}_method_fields_do_not_count_as_method_m",
             scalar_method,
@@ -2443,7 +3371,7 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     flag_only_method["claims"][0]["method_m"] = copy.deepcopy(
         flag_only_method["method_manifest"]
     )
-    finalize_claim_contract(flag_only_method["claims"][0])
+    finalize_claim_contract(flag_only_method["claims"][0], flag_only_method)
     add_strict(
         "boolean_flag_only_objects_do_not_count_as_method_m",
         flag_only_method,
@@ -2452,23 +3380,30 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
 
     structured_method = copy.deepcopy(base)
     structured_value = {
-        "producer": {"implementation": "package source", "fresh": True},
-        "checker": "strict deterministic gate",
+        "producer": {
+            "implementation": (
+                "versioned package source with deterministic fixture generation"
+            ),
+            "fresh": True,
+        },
+        "checker": "strict deterministic package contract gate",
         "artifacts": {"primary": "ntt_gate.py", "count": 1},
-        "environment": "local Python execution environment",
-        "tools": ["Python", {"shell": "Bash", "version": 5}],
+        "environment": ["local Python execution environment"],
+        "tools": ["Python", {"shell": "Bash", "version": "5.2"}],
         "evidence_process": {
             "workflow": "fresh strict evidence evaluation",
             "replayed": True,
         },
-        "graders_or_tests": "run_gate_contract_tests.py",
+        "graders_or_tests": ["run_gate_contract_tests.py"],
         "trace_or_logs": {"report": "gate-contract-result.json"},
     }
     structured_method["method_manifest"] = copy.deepcopy(structured_value)
     structured_method["claims"][0]["method_m"] = copy.deepcopy(
         structured_value
     )
-    finalize_claim_contract(structured_method["claims"][0])
+    finalize_claim_contract(
+        structured_method["claims"][0], structured_method
+    )
     add_strict(
         "substantive_structured_and_string_method_fields_still_pass",
         structured_method,
@@ -2480,18 +3415,30 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     add("bad_test_status", bad_status, {"FAIL"})
 
     accepted_false = copy.deepcopy(base)
-    accepted_false["claims"][0]["false_world_tests"][0]["observed_behavior"] = "The verifier accepted false output and certified false claim."
+    accepted_false_test = accepted_false["claims"][0][
+        "false_world_tests"
+    ][0]
+    accepted_false_test["observed_behavior"] = (
+        "The verifier accepted false output and certified false claim."
+    )
+    accepted_false_test["observed_outcome"] = "retained_true_claim"
     add("observed_accepts_false", accepted_false, {"FAIL"})
 
     rejected_true = copy.deepcopy(base)
-    rejected_true["claims"][0]["true_world_tests"][0]["observed_behavior"] = "The verifier rejected equivalent true output and overfit to one path."
+    rejected_true_test = rejected_true["claims"][0][
+        "true_world_tests"
+    ][0]
+    rejected_true_test["observed_behavior"] = (
+        "The verifier rejected equivalent true output and overfit to one path."
+    )
+    rejected_true_test["observed_outcome"] = "rejected_false_claim"
     add("observed_rejects_true", rejected_true, {"FAIL"})
 
     minor = copy.deepcopy(base)
     minor["claims"][0]["importance"] = "minor"
     minor["claims"][0]["false_world_tests"] = []
     minor["claims"][0]["true_world_tests"] = []
-    finalize_claim_contract(minor["claims"][0])
+    finalize_claim_contract(minor["claims"][0], minor)
     add_strict("minor_claim_without_modal_tests", minor, {"PASS-TRACKED"})
 
     manifest_unknowns = copy.deepcopy(base)
@@ -2678,12 +3625,1317 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
     minor_claim_unknowns = copy.deepcopy(base)
     minor_claim_unknowns["claims"][0]["importance"] = "minor"
     minor_claim_unknowns["claims"][0]["method_m"]["method_unknowns"] = ["x"]
-    finalize_claim_contract(minor_claim_unknowns["claims"][0])
+    finalize_claim_contract(
+        minor_claim_unknowns["claims"][0], minor_claim_unknowns
+    )
     add_strict(
         "minor_claim_method_unknowns_scope_the_certificate",
         minor_claim_unknowns,
         {"PASS-SCOPED"},
     )
+
+    # Review-response regressions: certificate-level assurance must be carried
+    # by the same strict wrappers that authorize each claim. An attacker may
+    # recompute the self-declared digest, but cannot reuse the old wrappers.
+    assurance_original = copy.deepcopy(base)
+    assurance_original["scope_limitations"] = [
+        "One reviewed runtime limitation remains."
+    ]
+    assurance_original["method_manifest"]["unknowns"] = [
+        "One reviewed method uncertainty remains."
+    ]
+    finalize_certificate_contracts(assurance_original)
+    assurance_root, assurance_outside = write_structured_evidence_tree(
+        assurance_original
+    )
+    assurance_before = gate_mod.evaluate_certificate(
+        assurance_original,
+        evidence_root=assurance_root,
+        strict_evidence=True,
+    )
+    assurance_promoted = copy.deepcopy(assurance_original)
+    assurance_promoted["scope_limitations"] = []
+    assurance_promoted["method_manifest"]["unknowns"] = []
+    finalize_certificate_contracts(assurance_promoted)
+    assurance_after = gate_mod.evaluate_certificate(
+        assurance_promoted,
+        evidence_root=assurance_root,
+        strict_evidence=True,
+    )
+    assurance_after_reasons = summarize(assurance_after)
+    cases.append({
+        "name": "stripping_certificate_limitations_invalidates_strict_wrappers",
+        "status": assurance_after.get("status"),
+        "expected_any": ["FAIL"],
+        "passed": (
+            assurance_before.get("status") == "PASS-SCOPED"
+            and assurance_after.get("status") == "FAIL"
+            and any(
+                "claim_contract_sha256 does not match certificate claim contract"
+                in reason
+                for reason in assurance_after_reasons
+            )
+        ),
+        "reasons": assurance_after_reasons,
+    })
+
+    for field_name, mutate_claim in (
+        (
+            "truth_status",
+            lambda claim: claim.__setitem__("truth_status", "confirmed"),
+        ),
+        (
+            "residual_risks",
+            lambda claim: claim.__setitem__("residual_risks", []),
+        ),
+    ):
+        original = copy.deepcopy(base)
+        if field_name == "residual_risks":
+            original["claims"][0]["residual_risks"] = [
+                "A reviewed claim-level limitation remains."
+            ]
+        finalize_certificate_contracts(original)
+        original_root, _original_outside = write_structured_evidence_tree(
+            original
+        )
+        substituted = copy.deepcopy(original)
+        mutate_claim(substituted["claims"][0])
+        finalize_certificate_contracts(substituted)
+        substituted_result = gate_mod.evaluate_certificate(
+            substituted,
+            evidence_root=original_root,
+            strict_evidence=True,
+        )
+        substituted_reasons = summarize(substituted_result)
+        cases.append({
+            "name": f"claim_{field_name}_substitution_invalidates_strict_wrappers",
+            "status": substituted_result.get("status"),
+            "expected_any": ["FAIL"],
+            "passed": (
+                substituted_result.get("status") == "FAIL"
+                and any(
+                    "claim_contract_sha256 does not match certificate claim contract"
+                    in reason
+                    for reason in substituted_reasons
+                )
+            ),
+            "reasons": substituted_reasons,
+        })
+
+    contradiction_alias = copy.deepcopy(base)
+    contradiction_alias["claims"][0]["contradictions"] = (
+        contradiction_alias["claims"][0].pop("unresolved_contradictions")
+    )
+    add_strict(
+        "empty_contradiction_alias_canonicalizes_without_invalidating_certificate",
+        contradiction_alias,
+        {"PASS-TRACKED"},
+    )
+    open_contradiction_alias = copy.deepcopy(base)
+    open_contradiction_alias["claims"][0]["contradictions"] = [
+        "An unresolved contradiction supplied through the short alias."
+    ]
+    add(
+        "nonempty_contradiction_alias_fails_closed",
+        open_contradiction_alias,
+        {"FAIL"},
+        reason_contains=("unresolved contradictions present",),
+    )
+    scoped_residual_risk = copy.deepcopy(base)
+    scoped_residual_risk["claims"][0]["residual_risks"] = [
+        "One bounded claim-level residual risk remains."
+    ]
+    add_strict(
+        "claim_residual_risk_caps_certificate_at_pass_scoped",
+        scoped_residual_risk,
+        {"PASS-SCOPED"},
+    )
+
+    digest_fixture = copy.deepcopy(base)
+    finalize_certificate_contracts(digest_fixture)
+    production_assurance = gate_mod._certificate_assurance_payload(
+        digest_fixture,
+        gate_mod.DOWNSTREAM_POLICIES["generic"],
+    )
+    production_test_digests_match = all(
+        gate_mod._claim_contract_sha256(
+            claim,
+            production_assurance,
+        ) == claim_contract_sha256(claim, digest_fixture)
+        for claim in digest_fixture["claims"]
+    )
+    cases.append({
+        "name": "production_and_fixture_claim_contract_payloads_are_byte_identical",
+        "status": "PASS" if production_test_digests_match else "FAIL",
+        "expected_any": ["PASS"],
+        "passed": production_test_digests_match,
+        "reasons": [],
+    })
+
+    for placeholder_name, placeholder in (
+        ("one_character", "x"),
+        ("two_repeated_characters", "xx"),
+        ("three_repeated_characters", "xxx"),
+        ("tbd", "tbd"),
+        ("todo", "todo"),
+        ("placeholder_word", "placeholder"),
+        ("terse_label", "only producer"),
+    ):
+        placeholder_cert = copy.deepcopy(base)
+        placeholder_method = {
+            field: placeholder for field in gate_mod.REQ_METHOD
+        }
+        placeholder_cert["method_manifest"] = copy.deepcopy(
+            placeholder_method
+        )
+        placeholder_cert["claims"][0]["method_m"] = copy.deepcopy(
+            placeholder_method
+        )
+        add(
+            f"method_placeholder_{placeholder_name}_does_not_score_complete",
+            placeholder_cert,
+            {"FAIL"},
+            reason_contains=("method completeness",),
+        )
+
+    nested_narrative_placeholders = copy.deepcopy(base)
+    for field in gate_mod.METHOD_NARRATIVE_FIELDS:
+        nested_narrative_placeholders["method_manifest"][field] = {
+            "x": "abc"
+        }
+        nested_narrative_placeholders["claims"][0]["method_m"][field] = {
+            "x": "abc"
+        }
+    add(
+        "nested_identifier_fragments_do_not_satisfy_narrative_method_fields",
+        nested_narrative_placeholders,
+        {"FAIL"},
+        reason_contains=("method completeness",),
+    )
+    repeated_narrative = copy.deepcopy(base)
+    for field in gate_mod.METHOD_NARRATIVE_FIELDS:
+        repeated_narrative["method_manifest"][field] = (
+            "gate gate gate gate gate gate"
+        )
+        repeated_narrative["claims"][0]["method_m"][field] = (
+            "gate gate gate gate gate gate"
+        )
+    add(
+        "repeated_token_narratives_do_not_satisfy_method_m",
+        repeated_narrative,
+        {"FAIL"},
+        reason_contains=("method completeness",),
+    )
+    periodic_narrative = copy.deepcopy(base)
+    for field in gate_mod.METHOD_NARRATIVE_FIELDS:
+        periodic_narrative["method_manifest"][field] = (
+            "alpha beta gamma delta alpha beta gamma delta"
+        )
+        periodic_narrative["claims"][0]["method_m"][field] = (
+            "alpha beta gamma delta alpha beta gamma delta"
+        )
+    add(
+        "periodic_narratives_do_not_satisfy_method_m",
+        periodic_narrative,
+        {"FAIL"},
+        reason_contains=("method completeness",),
+    )
+    low_diversity_narrative = copy.deepcopy(base)
+    for field in gate_mod.METHOD_NARRATIVE_FIELDS:
+        low_diversity_narrative["method_manifest"][field] = (
+            "alpha beta gamma delta alpha alpha beta"
+        )
+        low_diversity_narrative["claims"][0]["method_m"][field] = (
+            "alpha beta gamma delta alpha alpha beta"
+        )
+    add(
+        "low_distinct_token_ratio_narratives_do_not_satisfy_method_m",
+        low_diversity_narrative,
+        {"FAIL"},
+        reason_contains=("method completeness",),
+    )
+    scalar_collection_markers = copy.deepcopy(base)
+    for field in gate_mod.METHOD_COLLECTION_FIELDS:
+        scalar_collection_markers["method_manifest"][field] = "marker"
+        scalar_collection_markers["claims"][0]["method_m"][field] = (
+            "marker"
+        )
+    add(
+        "bare_scalar_markers_do_not_satisfy_collection_method_fields",
+        scalar_collection_markers,
+        {"FAIL"},
+        reason_contains=("method completeness",),
+    )
+    unanchored_short_identifiers = copy.deepcopy(base)
+    for field in gate_mod.METHOD_COLLECTION_FIELDS:
+        unanchored_short_identifiers["method_manifest"][field] = [
+            "Git",
+            "Bash",
+            "CLI",
+        ]
+        unanchored_short_identifiers["claims"][0]["method_m"][field] = [
+            "Git",
+            "Bash",
+            "CLI",
+        ]
+    add(
+        "short_identifier_only_collections_do_not_satisfy_method_m",
+        unanchored_short_identifiers,
+        {"FAIL"},
+        reason_contains=("method completeness",),
+    )
+    flag_metadata_without_anchor = copy.deepcopy(base)
+    for field in gate_mod.METHOD_COLLECTION_FIELDS:
+        flag_metadata_without_anchor["method_manifest"][field] = [
+            "Git",
+            True,
+            3,
+        ]
+        flag_metadata_without_anchor["claims"][0]["method_m"][field] = [
+            "Git",
+            True,
+            3,
+        ]
+    add(
+        "boolean_numeric_metadata_is_not_a_collection_anchor",
+        flag_metadata_without_anchor,
+        {"FAIL"},
+        reason_contains=("method completeness",),
+    )
+    unanchored_supported_language_ids = copy.deepcopy(base)
+    for field in gate_mod.METHOD_COLLECTION_FIELDS:
+        unanchored_supported_language_ids["method_manifest"][field] = [
+            "C",
+            "R",
+        ]
+        unanchored_supported_language_ids["claims"][0]["method_m"][field] = [
+            "C",
+            "R",
+        ]
+    add(
+        "supported_c_r_short_ids_without_anchor_do_not_satisfy_method_m",
+        unanchored_supported_language_ids,
+        {"FAIL"},
+        reason_contains=("method completeness",),
+    )
+    repeated_collection_anchor = copy.deepcopy(base)
+    for field in gate_mod.METHOD_COLLECTION_FIELDS:
+        repeated_collection_anchor["method_manifest"][field] = [
+            "Git",
+            "Bash",
+            "shared/a.py",
+        ]
+        repeated_collection_anchor["claims"][0]["method_m"][field] = [
+            "Git",
+            "Bash",
+            "shared/a.py",
+        ]
+    add(
+        "one_repeated_anchor_cannot_satisfy_all_collection_fields",
+        repeated_collection_anchor,
+        {"FAIL"},
+        reason_contains=("method completeness",),
+    )
+    minor_repeated_collection_anchor = copy.deepcopy(
+        repeated_collection_anchor
+    )
+    minor_repeated_collection_anchor["claims"][0]["importance"] = "minor"
+    minor_repeated_collection_anchor["claims"][0]["truth_status"] = (
+        "supported"
+    )
+    add(
+        "one_repeated_anchor_cannot_reach_minor_method_threshold",
+        minor_repeated_collection_anchor,
+        {"LIMITED"},
+        reason_contains=("method completeness",),
+    )
+    short_structured_identifiers = copy.deepcopy(base)
+    distinct_collection_anchors = {
+        "artifacts": "src/a.py",
+        "environment": "Python 3.12.13",
+        "tools": "python3 -m pytest",
+        "graders_or_tests": "tests/test_gate.py",
+        "trace_or_logs": "logs/gate-result.json",
+    }
+    for field in gate_mod.METHOD_COLLECTION_FIELDS:
+        short_structured_identifiers["method_manifest"][field] = [
+            "Git",
+            "Bash",
+            distinct_collection_anchors[field],
+        ]
+        short_structured_identifiers["claims"][0]["method_m"][field] = [
+            "Git",
+            "Bash",
+            distinct_collection_anchors[field],
+        ]
+    add_strict(
+        "short_identifiers_inside_structured_collections_remain_valid",
+        short_structured_identifiers,
+        {"PASS-TRACKED"},
+    )
+    anchored_supported_language_ids = copy.deepcopy(base)
+    for field in gate_mod.METHOD_COLLECTION_FIELDS:
+        anchored_supported_language_ids["method_manifest"][field] = [
+            "C",
+            "R",
+            distinct_collection_anchors[field],
+        ]
+        anchored_supported_language_ids["claims"][0]["method_m"][field] = [
+            "C",
+            "R",
+            distinct_collection_anchors[field],
+        ]
+    add_strict(
+        "supported_c_r_short_ids_work_alongside_distinct_anchors",
+        anchored_supported_language_ids,
+        {"PASS-TRACKED"},
+    )
+
+    nonobject_false_test = copy.deepcopy(base)
+    nonobject_false_test["claims"][0]["false_world_tests"].append(
+        "not-a-modal-object"
+    )
+    add(
+        "nonobject_false_world_entry_fails_closed",
+        nonobject_false_test,
+        {"FAIL"},
+        reason_contains=("false_world_tests contains non-object entries",),
+    )
+    minor_nonobject_test = copy.deepcopy(base)
+    minor_nonobject_test["claims"][0]["importance"] = "minor"
+    minor_nonobject_test["claims"][0]["false_world_tests"] = [None]
+    minor_nonobject_test["claims"][0]["true_world_tests"] = []
+    add(
+        "nonobject_modal_entry_fails_even_when_minor_threshold_is_zero",
+        minor_nonobject_test,
+        {"LIMITED"},
+        reason_contains=("false_world_tests contains non-object entries",),
+    )
+
+    for variant_name, oracle_transform in (
+        ("punctuation", lambda value: value + "."),
+        (
+            "paraphrase",
+            lambda _value: (
+                "A strict evaluation must reject the critical claim when its "
+                "supporting evidence is absent."
+            ),
+        ),
+    ):
+        modal_clone = copy.deepcopy(base)
+        first_world = copy.deepcopy(
+            modal_clone["claims"][0]["false_world_tests"][0]
+        )
+        second_world = copy.deepcopy(first_world)
+        second_world["id"] = f"FW-CLONE-{variant_name.upper()}"
+        second_world["evidence_refs"] = [ev(second_world["id"])]
+        second_world["world_contract"]["semantic_equivalence_class"] = (
+            f"claim-evidence-absent-{variant_name}-relabel"
+        )
+        second_world["world_contract"]["oracle"] = oracle_transform(
+            first_world["world_contract"]["oracle"]
+        )
+        modal_clone["claims"][0]["false_world_tests"] = [
+            first_world,
+            second_world,
+        ]
+        add_strict(
+            f"modal_{variant_name}_plus_relabel_does_not_create_coverage",
+            modal_clone,
+            {"FAIL"},
+        )
+
+    invalid_operator = copy.deepcopy(base)
+    invalid_operator["claims"][0]["false_world_tests"][0][
+        "world_contract"
+    ]["operator"] = "delete"
+    add(
+        "world_operator_synonym_outside_closed_vocabulary_is_rejected",
+        invalid_operator,
+        {"FAIL"},
+    )
+    invalid_target = copy.deepcopy(base)
+    invalid_target["claims"][0]["false_world_tests"][0][
+        "world_contract"
+    ]["target"] = "invented.unique.slug"
+    add(
+        "world_target_relabel_outside_closed_vocabulary_is_rejected",
+        invalid_target,
+        {"FAIL"},
+    )
+    legacy_world_schema = copy.deepcopy(base)
+    legacy_world_schema["claims"][0]["false_world_tests"][0][
+        "world_contract"
+    ]["schema_version"] = "1.0"
+    add(
+        "legacy_free_prose_world_schema_1_0_is_rejected",
+        legacy_world_schema,
+        {"FAIL"},
+    )
+
+    for case_name, mutate_test in (
+        (
+            "polarity_laden_false_observation_does_not_override_typed_outcome",
+            lambda test: test.__setitem__(
+                "observed_behavior",
+                "The log quotes 'accepted' while explaining why that label was rejected.",
+            ),
+        ),
+        (
+            "polarity_laden_true_observation_does_not_override_typed_outcome",
+            lambda test: test.__setitem__(
+                "observed_behavior",
+                "The report discusses a rejected alternative while retaining this case.",
+            ),
+        ),
+        (
+            "polarity_laden_expected_behavior_is_explanation_only",
+            lambda test: test.__setitem__(
+                "expected_behavior",
+                "Do not infer authorization from the quoted phrase 'accept the claim'.",
+            ),
+        ),
+        (
+            "polarity_laden_oracle_prose_is_explanation_only",
+            lambda test: test["world_contract"].__setitem__(
+                "oracle",
+                "The oracle records why an apparent 'pass' is not authorization.",
+            ),
+        ),
+    ):
+        explanatory = copy.deepcopy(base)
+        selected_tests = (
+            explanatory["claims"][0]["true_world_tests"]
+            if "true_observation" in case_name
+            else explanatory["claims"][0]["false_world_tests"]
+        )
+        mutate_test(selected_tests[0])
+        add(
+            case_name,
+            explanatory,
+            {"PASS-TRACKED"},
+        )
+
+    world_outcome_mismatch = copy.deepcopy(base)
+    world_outcome_mismatch["claims"][0]["false_world_tests"][0][
+        "world_contract"
+    ]["expected_outcome"] = "retained_true_claim"
+    add(
+        "world_expected_outcome_disagrees_with_test_outcome",
+        world_outcome_mismatch,
+        {"FAIL"},
+        reason_contains=(
+            "outcome does not match world_contract expected_outcome",
+        ),
+    )
+    typed_outcome_mismatch = copy.deepcopy(base)
+    typed_outcome_mismatch["claims"][0]["false_world_tests"][0][
+        "observed_outcome"
+    ] = "retained_true_claim"
+    add(
+        "outcome_and_observed_outcome_mismatch_fails_closed",
+        typed_outcome_mismatch,
+        {"FAIL"},
+        reason_contains=("outcome and observed_outcome do not match",),
+    )
+    matching_typed_outcomes = copy.deepcopy(base)
+    matching_typed_outcomes["claims"][0]["false_world_tests"][0][
+        "observed_outcome"
+    ] = "rejected_false_claim"
+    add(
+        "matching_outcome_and_observed_outcome_remain_valid",
+        matching_typed_outcomes,
+        {"PASS-TRACKED"},
+    )
+    observed_outcome_only = copy.deepcopy(base)
+    observed_test = observed_outcome_only["claims"][0][
+        "false_world_tests"
+    ][0]
+    observed_test["observed_outcome"] = observed_test.pop("outcome")
+    add(
+        "observed_outcome_only_remains_a_valid_typed_channel",
+        observed_outcome_only,
+        {"PASS-TRACKED"},
+    )
+
+    package_root = Path(gate_mod.__file__).resolve().parents[3]
+    release_certificate_path = (
+        package_root / "self_validation" / "self_certificate.json"
+    )
+    release_certificate_source = release_certificate_path.read_text(
+        encoding="utf-8"
+    )
+    release_certificate = json.loads(release_certificate_source)
+    untouched_release_certificate = copy.deepcopy(release_certificate)
+    release_tests = [
+        test
+        for claim in release_certificate.get("claims", [])
+        for field in ("false_world_tests", "true_world_tests")
+        for test in claim.get(field, [])
+    ]
+    release_ids = {
+        test.get("id")
+        for test in release_tests
+        if type(test.get("id")) is str
+    }
+    # Exercise the one-time migration only on an isolated legacy fixture.  The
+    # checked-in schema-1.1 certificate below is never repaired by the test.
+    legacy_fixture_certificate = copy.deepcopy(release_certificate)
+    legacy_fixture_tests = [
+        test
+        for claim in legacy_fixture_certificate.get("claims", [])
+        for field in ("false_world_tests", "true_world_tests")
+        for test in claim.get(field, [])
+    ]
+    migrated_worlds: Dict[str, Dict[str, Any]] = {}
+    migration_error = ""
+    try:
+        for legacy_test in legacy_fixture_tests:
+            legacy_test["world_contract"]["schema_version"] = "1.0"
+            legacy_test["world_contract"]["operator"] = "legacy-untyped"
+            legacy_test["world_contract"]["target"] = "legacy-untyped"
+            test_id = legacy_test.get("id")
+            if type(test_id) is not str:
+                raise TypeError("legacy fixture modal id is not a string")
+            migrated_worlds[test_id] = (
+                gate_mod.migrate_legacy_world_contract(legacy_test)
+            )
+    except (KeyError, TypeError, ValueError) as exc:
+        migration_error = f"{type(exc).__name__}: {exc}"
+    current_release_method_scores = {
+        str(claim.get("id")): gate_mod.method_completeness(
+            claim.get("method_m")
+        )
+        for claim in release_certificate.get("claims", [])
+    }
+    mapping_exact = (
+        len(release_tests) == 80
+        and release_ids == set(gate_mod.LEGACY_WORLD_IDENTITY_BY_TEST_ID)
+    )
+    independent_mapping_exact = (
+        len(INDEPENDENT_LEGACY_WORLD_IDENTITY) == 80
+        and release_ids == set(INDEPENDENT_LEGACY_WORLD_IDENTITY)
+        and gate_mod.LEGACY_WORLD_IDENTITY_BY_TEST_ID
+        == INDEPENDENT_LEGACY_WORLD_IDENTITY
+    )
+    independent_declaration_digests: Dict[str, str] = {}
+    production_payload_digests: Dict[str, str] = {}
+    reviewed_pin_errors: List[str] = []
+    for claim in release_certificate.get("claims", []):
+        for field, kind in (
+            ("false_world_tests", "false_world"),
+            ("true_world_tests", "true_world"),
+        ):
+            for test in claim.get(field, []):
+                test_id = test.get("id")
+                if type(test_id) is not str:
+                    reviewed_pin_errors.append(
+                        "checked-in release modal id is not a string"
+                    )
+                    continue
+                independent_payload = (
+                    independent_package_world_transition_payload(
+                        test,
+                        str(claim.get("id")),
+                        kind,
+                    )
+                )
+                independent_declaration_digests[test_id] = hashlib.sha256(
+                    json.dumps(
+                        independent_payload,
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                        sort_keys=True,
+                    ).encode("utf-8")
+                ).hexdigest()
+                production_payload, production_reasons = (
+                    gate_mod._package_world_transition_payload(
+                        test,
+                        kind,
+                        str(claim.get("id")),
+                    )
+                )
+                if production_payload is None:
+                    reviewed_pin_errors.extend(production_reasons)
+                else:
+                    if production_payload != independent_payload:
+                        reviewed_pin_errors.append(
+                            f"{test_id}: production transition payload differs "
+                            "from independent construction"
+                        )
+                    production_payload_digests[test_id] = hashlib.sha256(
+                        json.dumps(
+                            production_payload,
+                            ensure_ascii=False,
+                            separators=(",", ":"),
+                            sort_keys=True,
+                        ).encode("utf-8")
+                    ).hexdigest()
+                pin_digest, pin_reason = (
+                    gate_mod._reviewed_package_world_transition_digest(
+                        test,
+                        kind,
+                        str(claim.get("id")),
+                    )
+                )
+                if pin_reason is not None:
+                    reviewed_pin_errors.append(pin_reason)
+                elif pin_digest != independent_declaration_digests[test_id]:
+                    reviewed_pin_errors.append(
+                        f"{test_id}: reviewed pin digest differs from oracle"
+                    )
+    declarations_match_oracle = independent_declaration_digests == (
+        INDEPENDENT_PACKAGE_WORLD_TRANSITION_SHA256
+    )
+    production_payloads_match_registry = production_payload_digests == (
+        gate_mod.REVIEWED_PACKAGE_WORLD_TRANSITION_SHA256
+    )
+    registry_exact = INDEPENDENT_PACKAGE_WORLD_TRANSITION_SHA256 == (
+        gate_mod.REVIEWED_PACKAGE_WORLD_TRANSITION_SHA256
+    )
+    registry_collision_free = (
+        len(set(INDEPENDENT_PACKAGE_WORLD_TRANSITION_SHA256.values())) == 80
+        and len(set(
+            gate_mod.REVIEWED_PACKAGE_WORLD_TRANSITION_SHA256.values()
+        )) == 80
+    )
+    current_worlds_by_id = {
+        test["id"]: test.get("world_contract")
+        for test in release_tests
+        if type(test.get("id")) is str
+    }
+    migration_matches_current = (
+        len(migrated_worlds) == 80
+        and migrated_worlds == current_worlds_by_id
+        and all(
+            not gate_mod._canonical_world_contract(world)[1]
+            for world in migrated_worlds.values()
+        )
+    )
+    cases.append({
+        "name": "legacy_world_migration_isolated_from_current_release",
+        "status": "PASS" if (
+            mapping_exact
+            and independent_mapping_exact
+            and declarations_match_oracle
+            and production_payloads_match_registry
+            and registry_exact
+            and registry_collision_free
+            and not reviewed_pin_errors
+            and migration_matches_current
+            and not migration_error
+            and release_certificate == untouched_release_certificate
+            and json.loads(release_certificate_source)
+            == untouched_release_certificate
+        ) else "FAIL",
+        "expected_any": ["PASS"],
+        "passed": (
+            mapping_exact
+            and independent_mapping_exact
+            and declarations_match_oracle
+            and production_payloads_match_registry
+            and registry_exact
+            and registry_collision_free
+            and not reviewed_pin_errors
+            and migration_matches_current
+            and not migration_error
+            and release_certificate == untouched_release_certificate
+            and json.loads(release_certificate_source)
+            == untouched_release_certificate
+        ),
+        "reasons": (
+            ([migration_error] if migration_error else [])
+            + reviewed_pin_errors[:4]
+        ),
+    })
+
+    def release_claim(
+        certificate: Mapping[str, Any],
+        claim_id: str,
+    ) -> Dict[str, Any]:
+        return next(
+            claim
+            for claim in certificate["claims"]
+            if claim.get("id") == claim_id
+        )
+
+    def release_modal_count(certificate: Mapping[str, Any]) -> int:
+        return sum(
+            len(claim.get(field, []))
+            for claim in certificate.get("claims", [])
+            for field in ("false_world_tests", "true_world_tests")
+        )
+
+    exact_inventory_reasons = (
+        gate_mod._package_world_registry_inventory_reasons(
+            release_certificate["claims"]
+        )
+    )
+    cases.append({
+        "name": "package_self_registry_exact_80_once_inventory_passes",
+        "status": "PASS" if not exact_inventory_reasons else "FAIL",
+        "expected_any": ["PASS"],
+        "passed": (
+            release_modal_count(release_certificate) == 80
+            and not exact_inventory_reasons
+        ),
+        "reasons": exact_inventory_reasons,
+    })
+    release_certificate_method = gate_mod.method_completeness(
+        release_certificate.get("method_manifest")
+    )
+    incomplete_current_methods = sorted(
+        claim_id
+        for claim_id, (score, missing) in current_release_method_scores.items()
+        if score < 1.0 or missing
+    )
+    methods_complete = (
+        release_certificate_method == (1.0, [])
+        and len(current_release_method_scores) == 7
+        and not incomplete_current_methods
+    )
+    cases.append({
+        "name": "current_release_certificate_and_all_claim_methods_complete",
+        "status": "PASS" if methods_complete else "FAIL",
+        "expected_any": ["PASS"],
+        "passed": methods_complete,
+        "reasons": [
+            "current release methods awaiting artifact-anchor migration: "
+            + ", ".join(incomplete_current_methods)
+        ] if incomplete_current_methods else [],
+    })
+
+    release_evidence_rows = list(all_evidence_refs(release_certificate))
+    release_evidence_refs = [row[0] for row in release_evidence_rows]
+    release_ledger = json.loads(
+        (
+            package_root / "self_validation" / "current_observations.json"
+        ).read_text(encoding="utf-8")
+    )
+    release_observations = release_ledger.get("observations")
+    release_strict_result = gate_mod.evaluate_certificate(
+        release_certificate,
+        evidence_root=package_root,
+        strict_evidence=True,
+        downstream_policy="package-self",
+    )
+    current_schema_complete = (
+        len(current_worlds_by_id) == 80
+        and all(
+            isinstance(world, Mapping)
+            and world.get("schema_version")
+            == gate_mod.WORLD_CONTRACT_SCHEMA_VERSION
+            and not gate_mod._canonical_world_contract(world)[1]
+            for world in current_worlds_by_id.values()
+        )
+    )
+    checked_in_release_passed = (
+        release_strict_result.get("status") == "PASS-SCOPED"
+        and release_certificate == untouched_release_certificate
+        and current_schema_complete
+        and methods_complete
+        and len(release_evidence_refs) == 94
+        and len(set(release_evidence_refs)) == 94
+        and release_ledger.get("observation_schema_version") == "1.2"
+        and isinstance(release_observations, Mapping)
+        and len(release_observations) == 80
+    )
+    cases.append({
+        "name": "checked_in_schema_1_1_release_strict_package_self_passes",
+        "status": release_strict_result.get("status"),
+        "expected_any": ["PASS-SCOPED"],
+        "passed": checked_in_release_passed,
+        "reasons": summarize(release_strict_result),
+    })
+
+    deleted_nonminimum = copy.deepcopy(release_certificate)
+    deleted_claim = release_claim(
+        deleted_nonminimum,
+        "C-formal-invocation",
+    )
+    deleted_test_id = str(
+        deleted_claim["false_world_tests"].pop(0).get("id")
+    )
+    deleted_inventory_reasons = (
+        gate_mod._package_world_registry_inventory_reasons(
+            deleted_nonminimum["claims"]
+        )
+    )
+    deleted_result = gate_mod.evaluate_certificate(
+        deleted_nonminimum,
+        downstream_policy="package-self",
+    )
+    cases.append({
+        "name": "package_self_delete_nonminimum_transition_fails_inventory",
+        "status": deleted_result.get("status"),
+        "expected_any": ["FAIL"],
+        "passed": (
+            release_modal_count(deleted_nonminimum) == 79
+            and deleted_result.get("status") == "FAIL"
+            and any(
+                "missing modal test IDs" in reason
+                and deleted_test_id in reason
+                for reason in deleted_inventory_reasons
+            )
+            and not any(
+                "unreviewed modal test IDs" in reason
+                or "duplicate modal test IDs" in reason
+                for reason in deleted_inventory_reasons
+            )
+        ),
+        "reasons": deleted_inventory_reasons,
+    })
+
+    replaced_with_duplicate = copy.deepcopy(release_certificate)
+    replacement_claim = release_claim(
+        replaced_with_duplicate,
+        "C-structure",
+    )
+    missing_id = str(
+        replacement_claim["false_world_tests"].pop(0).get("id")
+    )
+    duplicate_id = str(
+        replacement_claim["false_world_tests"][0].get("id")
+    )
+    replacement_claim["false_world_tests"].append(
+        copy.deepcopy(replacement_claim["false_world_tests"][0])
+    )
+    replacement_inventory_reasons = (
+        gate_mod._package_world_registry_inventory_reasons(
+            replaced_with_duplicate["claims"]
+        )
+    )
+    replacement_result = gate_mod.evaluate_certificate(
+        replaced_with_duplicate,
+        downstream_policy="package-self",
+    )
+    cases.append({
+        "name": "package_self_total_80_delete_one_duplicate_another_fails",
+        "status": replacement_result.get("status"),
+        "expected_any": ["FAIL"],
+        "passed": (
+            release_modal_count(replaced_with_duplicate) == 80
+            and replacement_result.get("status") == "FAIL"
+            and any(
+                "missing modal test IDs" in reason and missing_id in reason
+                for reason in replacement_inventory_reasons
+            )
+            and any(
+                "duplicate modal test IDs" in reason and duplicate_id in reason
+                for reason in replacement_inventory_reasons
+            )
+        ),
+        "reasons": replacement_inventory_reasons,
+    })
+
+    duplicate_cross_claim_lane = copy.deepcopy(
+        release_certificate
+    )
+    duplicate_source = copy.deepcopy(
+        release_claim(
+            duplicate_cross_claim_lane,
+            "C-structure",
+        )["false_world_tests"][0]
+    )
+    duplicate_cross_id = str(duplicate_source.get("id"))
+    release_claim(
+        duplicate_cross_claim_lane,
+        "C-gate-hardening",
+    )["true_world_tests"].append(duplicate_source)
+    duplicate_cross_reasons = (
+        gate_mod._package_world_registry_inventory_reasons(
+            duplicate_cross_claim_lane["claims"]
+        )
+    )
+    duplicate_cross_result = gate_mod.evaluate_certificate(
+        duplicate_cross_claim_lane,
+        downstream_policy="package-self",
+    )
+    cases.append({
+        "name": "package_self_duplicate_across_claim_and_lane_fails",
+        "status": duplicate_cross_result.get("status"),
+        "expected_any": ["FAIL"],
+        "passed": (
+            release_modal_count(duplicate_cross_claim_lane) == 81
+            and duplicate_cross_result.get("status") == "FAIL"
+            and any(
+                "duplicate modal test IDs" in reason
+                and duplicate_cross_id in reason
+                for reason in duplicate_cross_reasons
+            )
+        ),
+        "reasons": duplicate_cross_reasons,
+    })
+
+    moved_cross_claim_lane = copy.deepcopy(release_certificate)
+    moved_source_claim = release_claim(
+        moved_cross_claim_lane,
+        "C-formal-invocation",
+    )
+    moved_test = moved_source_claim["true_world_tests"].pop(0)
+    moved_id = str(moved_test.get("id"))
+    release_claim(
+        moved_cross_claim_lane,
+        "C-gate-hardening",
+    )["false_world_tests"].append(moved_test)
+    moved_inventory_reasons = (
+        gate_mod._package_world_registry_inventory_reasons(
+            moved_cross_claim_lane["claims"]
+        )
+    )
+    moved_result = gate_mod.evaluate_certificate(
+        moved_cross_claim_lane,
+        downstream_policy="package-self",
+    )
+    moved_result_text = json.dumps(moved_result, sort_keys=True)
+    cases.append({
+        "name": "package_self_cross_claim_lane_move_fails_full_pin",
+        "status": moved_result.get("status"),
+        "expected_any": ["FAIL"],
+        "passed": (
+            release_modal_count(moved_cross_claim_lane) == 80
+            and not moved_inventory_reasons
+            and moved_result.get("status") == "FAIL"
+            and moved_id in moved_result_text
+            and "is not canonical" in moved_result_text
+        ),
+        "reasons": summarize(moved_result),
+    })
+
+    unknown_eighty_first = copy.deepcopy(release_certificate)
+    unknown_test = copy.deepcopy(
+        release_claim(
+            unknown_eighty_first,
+            "C-structure",
+        )["false_world_tests"][0]
+    )
+    unknown_id = "FW-package-self-unreviewed-81"
+    unknown_test["id"] = unknown_id
+    unknown_test["world_contract"]["semantic_equivalence_class"] = (
+        "fw-package-self-unreviewed-81"
+    )
+    release_claim(
+        unknown_eighty_first,
+        "C-structure",
+    )["false_world_tests"].append(unknown_test)
+    unknown_inventory_reasons = (
+        gate_mod._package_world_registry_inventory_reasons(
+            unknown_eighty_first["claims"]
+        )
+    )
+    unknown_result = gate_mod.evaluate_certificate(
+        unknown_eighty_first,
+        downstream_policy="package-self",
+    )
+    cases.append({
+        "name": "package_self_80_plus_unknown_transition_fails",
+        "status": unknown_result.get("status"),
+        "expected_any": ["FAIL"],
+        "passed": (
+            release_modal_count(unknown_eighty_first) == 81
+            and unknown_result.get("status") == "FAIL"
+            and any(
+                "unreviewed modal test IDs" in reason
+                and unknown_id in reason
+                for reason in unknown_inventory_reasons
+            )
+        ),
+        "reasons": unknown_inventory_reasons,
+    })
+
+    for case_name, invalid_id, expected_reason in (
+        (
+            "package_self_non_string_modal_id_rejected_strictly",
+            7,
+            "package-self modal test id is not a string",
+        ),
+        (
+            "package_self_empty_modal_id_rejected_strictly",
+            "",
+            "package-self modal test id is empty",
+        ),
+        (
+            "package_self_noncanonical_modal_id_rejected_strictly",
+            " FW-structure-missing-manifest ",
+            "package-self modal test id is not canonical",
+        ),
+    ):
+        malformed_id_certificate = copy.deepcopy(release_certificate)
+        malformed_id_claim = release_claim(
+            malformed_id_certificate,
+            "C-structure",
+        )
+        malformed_id_test = malformed_id_claim["false_world_tests"][0]
+        malformed_id_test["id"] = invalid_id
+        malformed_payload, malformed_payload_reasons = (
+            gate_mod._package_world_transition_payload(
+                malformed_id_test,
+                "false_world",
+                "C-structure",
+            )
+        )
+        malformed_inventory_reasons = (
+            gate_mod._package_world_registry_inventory_reasons(
+                malformed_id_certificate["claims"]
+            )
+        )
+        malformed_id_result = gate_mod.evaluate_certificate(
+            malformed_id_certificate,
+            evidence_root=package_root,
+            strict_evidence=True,
+            downstream_policy="package-self",
+        )
+        malformed_id_reasons = (
+            malformed_payload_reasons
+            + malformed_inventory_reasons
+            + summarize(malformed_id_result)
+        )
+        cases.append({
+            "name": case_name,
+            "status": malformed_id_result.get("status"),
+            "expected_any": ["FAIL"],
+            "passed": (
+                malformed_id_result.get("status") == "FAIL"
+                and malformed_payload is None
+                and any(
+                    expected_reason in reason
+                    for reason in malformed_payload_reasons
+                )
+                and any(
+                    expected_reason in reason
+                    for reason in malformed_inventory_reasons
+                )
+            ),
+            "reasons": malformed_id_reasons[:12],
+        })
+
+    for case_name, invalid_targets, expected_reason in (
+        (
+            "package_self_non_string_target_member_rejected_strictly",
+            ["C-structure", 7],
+            "target_claim_ids member 1 is not a string",
+        ),
+        (
+            "package_self_noncanonical_target_member_rejected_strictly",
+            ["C-structure "],
+            "target_claim_ids contains a noncanonical id",
+        ),
+    ):
+        malformed_target_certificate = copy.deepcopy(release_certificate)
+        malformed_target_claim = release_claim(
+            malformed_target_certificate,
+            "C-structure",
+        )
+        malformed_target_test = malformed_target_claim[
+            "false_world_tests"
+        ][0]
+        malformed_target_test["target_claim_ids"] = invalid_targets
+        malformed_target_payload, malformed_target_payload_reasons = (
+            gate_mod._package_world_transition_payload(
+                malformed_target_test,
+                "false_world",
+                "C-structure",
+            )
+        )
+        malformed_target_result = gate_mod.evaluate_certificate(
+            malformed_target_certificate,
+            evidence_root=package_root,
+            strict_evidence=True,
+            downstream_policy="package-self",
+        )
+        malformed_target_reasons = (
+            malformed_target_payload_reasons
+            + summarize(malformed_target_result)
+        )
+        cases.append({
+            "name": case_name,
+            "status": malformed_target_result.get("status"),
+            "expected_any": ["FAIL"],
+            "passed": (
+                malformed_target_result.get("status") == "FAIL"
+                and malformed_target_payload is None
+                and any(
+                    expected_reason in reason
+                    for reason in malformed_target_payload_reasons
+                )
+            ),
+            "reasons": malformed_target_reasons[:12],
+        })
+
+    structure_claim = next(
+        claim
+        for claim in release_certificate["claims"]
+        if claim.get("id") == "C-structure"
+    )
+    reviewed_first = copy.deepcopy(structure_claim["false_world_tests"][0])
+    if (
+        reviewed_first.get("world_contract", {}).get("schema_version")
+        != gate_mod.WORLD_CONTRACT_SCHEMA_VERSION
+    ):
+        raise RuntimeError("checked-in release world contract is not current")
+    relabeled_clone = copy.deepcopy(reviewed_first)
+    relabeled_clone["id"] = "FW-structure-relabeled-clone"
+    relabeled_clone["world_contract"]["semantic_equivalence_class"] = (
+        "fw-structure-relabeled-clone"
+    )
+    relabeled_clone["world_contract"]["operator"] = "replace"
+    pinned_clone_reasons = gate_mod._modal_test_uniqueness_reasons(
+        [reviewed_first, relabeled_clone],
+        [],
+        "false_world",
+        2,
+        None,
+        "C-structure",
+        gate_mod.DOWNSTREAM_POLICIES["package-self"],
+    )
+    cases.append({
+        "name": "package_self_id_class_operator_relabel_clone_counts_once",
+        "status": "FAIL" if pinned_clone_reasons else "PASS",
+        "expected_any": ["FAIL"],
+        "passed": (
+            any(
+                "unreviewed package-self modal transition" in reason
+                for reason in pinned_clone_reasons
+            )
+            and any(
+                "reviewed-registry distinct false-world cases 1 < required 2"
+                in reason
+                for reason in pinned_clone_reasons
+            )
+        ),
+        "reasons": pinned_clone_reasons,
+    })
+    known_id_impostor = copy.deepcopy(reviewed_first)
+    known_id_impostor["perturbation"] = (
+        "Replace a README sentence while leaving the package manifest intact."
+    )
+    known_id_impostor["expected_behavior"] = (
+        "The documentation reviewer should accept the harmless sentence edit."
+    )
+    known_id_impostor["observed_behavior"] = (
+        "The documentation lane retained the package after the sentence edit."
+    )
+    known_id_impostor["world_contract"]["precondition"] = (
+        "The package documentation is internally consistent."
+    )
+    known_id_impostor["world_contract"]["state_delta"] = (
+        "Edit one harmless sentence without changing any package mechanic."
+    )
+    known_id_impostor["world_contract"]["oracle"] = (
+        "The documentation-only edit should remain accepted."
+    )
+    known_id_reasons = gate_mod._modal_test_uniqueness_reasons(
+        [known_id_impostor],
+        [],
+        "false_world",
+        1,
+        None,
+        "C-structure",
+        gate_mod.DOWNSTREAM_POLICIES["package-self"],
+    )
+    cases.append({
+        "name": "package_self_c_structure_known_id_impersonation_rejected",
+        "status": "FAIL" if known_id_reasons else "PASS",
+        "expected_any": ["FAIL"],
+        "passed": (
+            any(
+                "does not match the reviewed registry" in reason
+                for reason in known_id_reasons
+            )
+            and any(
+                "reviewed-registry distinct false-world cases 0 < required 1"
+                in reason
+                for reason in known_id_reasons
+            )
+        ),
+        "reasons": known_id_reasons,
+    })
+    fixture_alias = copy.deepcopy(reviewed_first)
+    fixture_alias["fixture_digest"] = "sha256:" + "a" * 64
+    fixture_alias_digest, fixture_alias_reason = (
+        gate_mod._reviewed_package_world_transition_digest(
+            fixture_alias,
+            "false_world",
+            "C-structure",
+        )
+    )
+    cases.append({
+        "name": "package_self_unrecognized_fixture_digest_alias_rejected",
+        "status": "FAIL" if fixture_alias_reason else "PASS",
+        "expected_any": ["FAIL"],
+        "passed": (
+            not fixture_alias_digest
+            and fixture_alias_reason is not None
+            and "fields are not closed" in fixture_alias_reason
+        ),
+        "reasons": [fixture_alias_reason] if fixture_alias_reason else [],
+    })
+    fixture_bound = copy.deepcopy(reviewed_first)
+    fixture_bound["fixture_sha256"] = "sha256:" + "b" * 64
+    fixture_bound_digest, fixture_bound_reason = (
+        gate_mod._reviewed_package_world_transition_digest(
+            fixture_bound,
+            "false_world",
+            "C-structure",
+        )
+    )
+    cases.append({
+        "name": "package_self_fixture_sha256_is_part_of_registry_pin",
+        "status": "FAIL" if fixture_bound_reason else "PASS",
+        "expected_any": ["FAIL"],
+        "passed": (
+            not fixture_bound_digest
+            and fixture_bound_reason is not None
+            and "does not match the reviewed registry" in fixture_bound_reason
+        ),
+        "reasons": [fixture_bound_reason] if fixture_bound_reason else [],
+    })
+    duplicate_reviewed_reasons = gate_mod._modal_test_uniqueness_reasons(
+        [reviewed_first, copy.deepcopy(reviewed_first)],
+        [],
+        "false_world",
+        2,
+        None,
+        "C-structure",
+        gate_mod.DOWNSTREAM_POLICIES["package-self"],
+    )
+    cases.append({
+        "name": "package_self_duplicate_reviewed_transition_counts_once",
+        "status": "FAIL" if duplicate_reviewed_reasons else "PASS",
+        "expected_any": ["FAIL"],
+        "passed": (
+            any(
+                "duplicate false-world test IDs present" in reason
+                for reason in duplicate_reviewed_reasons
+            )
+            and any(
+                "reviewed-registry distinct false-world cases 1 < required 2"
+                in reason
+                for reason in duplicate_reviewed_reasons
+            )
+        ),
+        "reasons": duplicate_reviewed_reasons,
+    })
+    generic_registry_reasons = gate_mod._modal_test_uniqueness_reasons(
+        [reviewed_first],
+        [],
+        "false_world",
+        1,
+        None,
+        "C-structure",
+        gate_mod.DOWNSTREAM_POLICIES["generic"],
+    )
+    cases.append({
+        "name": "package_registry_requires_explicit_package_self_policy",
+        "status": "FAIL" if generic_registry_reasons else "PASS",
+        "expected_any": ["FAIL"],
+        "passed": any(
+            "registered package-self modal transitions require the "
+            "package-self downstream policy" in reason
+            for reason in generic_registry_reasons
+        ),
+        "reasons": generic_registry_reasons,
+    })
 
     output_root = _private_tempdir("ntt_gate_output_contract_")
     output_path = output_root / "nested" / "result.json"
@@ -3098,7 +5350,48 @@ def main(argv=None) -> int:
     gate_path = args.package_root / "skills/nozickian-verify/scripts/ntt_gate.py"
     gate = load_gate(gate_path)
     cases = run_cases(gate)
-    out = {"total": len(cases), "passed": sum(1 for c in cases if c["passed"]), "cases": cases}
+    case_names = tuple(str(case.get("name")) for case in cases)
+    case_name_sha256 = hashlib.sha256(
+        json.dumps(
+            list(case_names),
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+
+    def inventory_matches(names: Tuple[str, ...]) -> bool:
+        digest = hashlib.sha256(
+            json.dumps(
+                list(names),
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+        return (
+            len(names) == EXPECTED_CASE_TOTAL
+            and len(set(names)) == len(names)
+            and digest == EXPECTED_CASE_NAME_SHA256
+        )
+
+    inventory_guard_self_tested = (
+        bool(case_names)
+        and not inventory_matches(case_names[:-1])
+        and not inventory_matches(case_names + (case_names[-1],))
+        and not inventory_matches(tuple(reversed(case_names)))
+    )
+    case_inventory_matches = (
+        inventory_matches(case_names) and inventory_guard_self_tested
+    )
+    out = {
+        "total": len(cases),
+        "passed": sum(1 for c in cases if c["passed"]),
+        "expected_total": EXPECTED_CASE_TOTAL,
+        "case_name_sha256": case_name_sha256,
+        "expected_case_name_sha256": EXPECTED_CASE_NAME_SHA256,
+        "case_inventory_matches": case_inventory_matches,
+        "inventory_guard_self_tested": inventory_guard_self_tested,
+        "cases": cases,
+    }
     text = json.dumps(out, indent=2, sort_keys=True)
     if output_path is not None and output_directory_fd is not None:
         try:
@@ -3119,7 +5412,9 @@ def main(argv=None) -> int:
             return 2
         os.close(output_directory_fd)
     print(text)
-    return 0 if out["passed"] == out["total"] else 2
+    return 0 if (
+        out["passed"] == out["total"] and case_inventory_matches
+    ) else 2
 
 
 if __name__ == "__main__":
@@ -3151,4 +5446,6 @@ if __name__ == "__main__":
 # v1.0.3 hardening: downstream_independent_pass_is_proposition_bound downstream_pass_without_proposition_binding_rejected unrelated_passing_claim_cannot_authorize_downstream_pass promotion_downstream_pass_is_proposition_bound promotion_unrelated_claim_cannot_authorize_downstream_pass downstream_proposition_digest_mismatch_rejected downstream_binding_canonicalizes_whitespace
 # v1.0.3 hardening: deep_method_unknowns_are_collected_exhaustively nested_critical_claim_method_unknowns_block minor_claim_method_unknowns_scope_the_certificate unknown_depth_cannot_be_relaxed_by_caller overdeep_certificate_is_invalid_input large_shared_observation_input_is_bounded_and_counts_once
 # post-review hardening: scalar_false_method_fields_do_not_count_as_method_m substantive_structured_and_string_method_fields_still_pass strict_claim_requires_explicit_scope coordinated_scope_widening_cannot_inherit_original_evidence critical_to_minor_downgrade_cannot_delete_modal_obligations claim_contract_canonicalizes_benign_whitespace legacy_evidence_wrapper_schema_1_0_is_rejected observation_schema_1_1_is_rejected legacy_observation_record_missing_claim_contract_is_rejected paraphrased_same_equivalence_class_does_not_inflate_coverage changing_only_equivalence_class_slug_does_not_inflate_coverage distinct_equivalence_classes_and_structural_worlds_still_pass same_display_prose_with_distinct_structured_worlds_still_passes world_contract_is_closed_and_requires_oracle
+# final registry closure: package_self_registry_exact_80_once_inventory_passes package_self_delete_nonminimum_transition_fails_inventory package_self_total_80_delete_one_duplicate_another_fails package_self_duplicate_across_claim_and_lane_fails package_self_cross_claim_lane_move_fails_full_pin package_self_80_plus_unknown_transition_fails package-self reviewed registry missing modal test IDs package-self unreviewed modal test IDs package-self duplicate modal test IDs
+# final method closure: supported_c_r_short_ids_without_anchor_do_not_satisfy_method_m supported_c_r_short_ids_work_alongside_distinct_anchors migrated_release_certificate_and_all_claim_methods_complete distinct collection anchors suite-path anchor migration
 # v1.0.3 vocabulary: downstream_claim_auto_pass_rejected downstream_unknown_record_retains_pass derived_or_downstream_claims no automatic epistemic closure downstream non-closure

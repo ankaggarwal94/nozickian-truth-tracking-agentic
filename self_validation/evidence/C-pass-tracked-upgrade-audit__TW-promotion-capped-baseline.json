@@ -1,16 +1,16 @@
 {
   "artifact_path": "self_validation/current_observations.json",
-  "claim_contract_schema_version": "1.0",
-  "claim_contract_sha256": "sha256:b02f5ce45c892178e97ceb9438a6d5ac975a2b079ef720c57ff0e9010af28dab",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:f7efee64b12379bfc6c7325f38b8ce488053499831ce390838afc41524d9b29b",
   "claim_id": "C-pass-tracked-upgrade-audit",
-  "claim_proposition_sha256": "sha256:20662ae4a2639cb88c3db1e41be7bbd44fbc784e538a6be1672195150f259c31",
+  "claim_proposition_sha256": "sha256:ff78184f24c425dab306f31d50e0ee25a69c96d6f785500b6ae2f367d18f0f51",
   "command_or_source": "Declared case context (not authenticated execution): run_promotion_certifier_contract_tests.py",
   "evidence_schema_version": "1.1",
-  "hash_or_version": "sha256:c85ac043e984b99023e65fdba70d5e95f818a6d64886bf2e7ca55434fd8ad62a",
-  "modal_case_sha256": "sha256:02e962f428b442f22ce36dfe3a6e4d7305c17607c6496070a4754c1a84eb3007",
+  "hash_or_version": "sha256:e85d7f8986be371565a38b442f10a15004bd3919a1d4403c6d89bd24f4049150",
+  "modal_case_sha256": "sha256:c92e8f006d4e8b9d16ab1fc0adfe4fae46a729261b08f5c7c3946b3ae017d23e",
   "observation_id": "obs:C-pass-tracked-upgrade-audit:TW-promotion-capped-baseline",
   "observed_result": "Declared release result (not authenticated execution): The complete synthetic baseline satisfied the modeled contract and retained PASS-SCOPED/CAPPED.",
   "support_summary": "This wrapper binds TW-promotion-capped-baseline to one exact case-bound release-declaration identity, the current claim proposition and full method-relative claim contract, and the canonical structured modal-case digest.",
   "test_id": "TW-promotion-capped-baseline",
-  "timestamp_utc": "2026-07-16T05:15:11Z"
+  "timestamp_utc": "2026-07-18T00:00:00Z"
 }

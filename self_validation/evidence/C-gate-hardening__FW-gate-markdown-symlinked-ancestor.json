@@ -1,16 +1,16 @@
 {
   "artifact_path": "self_validation/current_observations.json",
-  "claim_contract_schema_version": "1.0",
-  "claim_contract_sha256": "sha256:0fec90f15228730fe6dfeb706fbd8e807f4a5498f9a99f4ee41d8dfdd5eb1ff1",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:d05443ab15076b56513ffce8efbb0e3aebacba08d0f91fed9f6d6b287bc82d8a",
   "claim_id": "C-gate-hardening",
-  "claim_proposition_sha256": "sha256:2f0dfbad2ee2fc1a997e6af1f333fdf571ca9f1e2a4e9e775bd4702360ce8a46",
+  "claim_proposition_sha256": "sha256:876e000613ddee01551e89a760f761874a9eef3a81ffe29a31ab286a8654fa4e",
   "command_or_source": "Declared case context (not authenticated execution): run_gate_contract_tests.py",
   "evidence_schema_version": "1.1",
-  "hash_or_version": "sha256:c85ac043e984b99023e65fdba70d5e95f818a6d64886bf2e7ca55434fd8ad62a",
-  "modal_case_sha256": "sha256:f27d6fcbbd5bf8b92fa3697d32a5875516fb4d215ca56ccf5944bc58658ab47c",
+  "hash_or_version": "sha256:e85d7f8986be371565a38b442f10a15004bd3919a1d4403c6d89bd24f4049150",
+  "modal_case_sha256": "sha256:e6addb2cf06e6e9d78b560f7f07b578efdde2b3aff5d590ada7df5eacab2d2db",
   "observation_id": "obs:C-gate-hardening:FW-gate-markdown-symlinked-ancestor",
   "observed_result": "Declared release result (not authenticated execution): The gate contract rejected the symlinked Markdown ancestor and created no escaped report.",
   "support_summary": "This wrapper binds FW-gate-markdown-symlinked-ancestor to one exact case-bound release-declaration identity, the current claim proposition and full method-relative claim contract, and the canonical structured modal-case digest.",
   "test_id": "FW-gate-markdown-symlinked-ancestor",
-  "timestamp_utc": "2026-07-16T05:15:11Z"
+  "timestamp_utc": "2026-07-18T00:00:00Z"
 }
