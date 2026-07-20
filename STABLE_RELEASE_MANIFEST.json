@@ -26,11 +26,11 @@
       "sha256": "ad36bf2e524de5e768aa086d8091526564d95831afb4f6c513bc7a4d0a4948d9"
     },
     {
-      "bytes": 82627,
+      "bytes": 83113,
       "mode": "100644",
       "path": "AUDIT_REPORT.md",
       "role": "release-metadata",
-      "sha256": "0821b84a0be40a4c558a1975cd50e2392101dd6e0bc1ab963ca7c49d8500474b"
+      "sha256": "0b3dcd691ea6e7fbc9571d01b0b1f48f495dc54efb589af1ac565b48d7a2e277"
     },
     {
       "bytes": 1056,
@@ -1086,7 +1086,7 @@
   ],
   "self_exclusion": "file_inventory intentionally excludes STABLE_RELEASE_MANIFEST.json to avoid a self-referential hash cycle; self_hash_sha256 is computed over canonical JSON with self_hash_sha256 set to null, and self_mode separately requires the installed manifest to be non-executable.",
   "self_file": "STABLE_RELEASE_MANIFEST.json",
-  "self_hash_sha256": "17328181092a52c9ef00427360080311600eeec44eeacaf80e0d5c6b83eca60e",
+  "self_hash_sha256": "d799239889afdcb4cad91f653901545581d9a9e71abe2f849a6cc4543804850e",
   "self_mode": "100644",
   "validation_commands": [
     "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test",
