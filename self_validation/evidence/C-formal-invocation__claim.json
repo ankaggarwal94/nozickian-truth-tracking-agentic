@@ -1,14 +1,13 @@
 {
-  "applies_to_tests": [
-    "*"
-  ],
   "artifact_path": "skills/nozickian-verify/scripts/run_formal_artifact_verification.py",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:5ba6a134f65782f01d30390b637ccf2c4797e6cdd4e4671aee075730757615e0",
   "claim_id": "C-formal-invocation",
-  "command_or_source": "v1.0.1 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
-  "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:4b52c8477d2fb8def2ea0bf360eab56171df5bcc9c96c37018dd535583941c58",
-  "observed_result": "Observed v1.0.1 deterministic evidence for C-formal-invocation",
-  "support_summary": "This structured evidence binds C-formal-invocation to skills/nozickian-verify/scripts/run_formal_artifact_verification.py, a package-local artifact with exact SHA-256 provenance under strict local evidence mode. v1.0.1 additionally checks unique canonical evidence refs, unique artifact/hash identities for critical evidence sufficiency, and substantive trace-result payload content. v1.0.1 additionally checks context-aware trace payload isolation and unique modal-test thresholds.",
-  "timestamp": "1970-01-01T00:00:00Z",
-  "timestamp_utc": "2026-06-04T00:00:00Z"
+  "claim_proposition_sha256": "sha256:f5da52da553cc0d8ab52af1bc0078b19700224080934f8c50c4f7f0efafb8bf4",
+  "command_or_source": "current v1.0.3 reviewed package source",
+  "evidence_schema_version": "1.1",
+  "hash_or_version": "sha256:0d3b3ed617d94aac9b79099fd2507af70e3bd6b8784d9a1ebd33631dda222130",
+  "observed_result": "Current source bytes support the scoped proposition for C-formal-invocation.",
+  "support_summary": "This wrapper binds C-formal-invocation to current package artifact skills/nozickian-verify/scripts/run_formal_artifact_verification.py by exact SHA-256 and to the canonical claim proposition digest. It also binds the wrapper to the canonical full method-relative claim contract.",
+  "timestamp_utc": "2026-07-18T00:00:00Z"
 }

@@ -1,2 +1,0 @@
-Observed v1.0.1 deterministic evidence for C-formal-invocation / FW-formal-fake-tool-events-inside-tool-result-data
-This structured evidence binds FW-formal-fake-tool-events-inside-tool-result-data to self_validation/v101_targeted_probe_results.json, a package-local targeted probe artifact. v1.0.1 formal-runner contract evidence for hard event-boundary trace parsing, data/payload/delta event-smuggling rejection, and role-aware tool-use/tool-result direction.

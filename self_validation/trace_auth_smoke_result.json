@@ -1,8 +1,0 @@
-{
-  "covered_by": "self_validation/formal_runner_contract_results.json",
-  "github_readme_documentation_note": "README documentation completeness does not authenticate runtime traces or downstream outcomes.",
-  "package_version": "1.0.1",
-  "pass_tracked_upgrade_note": "Trace authentication is required but insufficient for PASS-TRACKED promotion; downstream claims remain claim-local.",
-  "status": "PASS-SCOPED",
-  "summary": "Synthetic formal-runner contract cases pass; live official Claude Code runtime remains UNVERIFIED_RUNTIME."
-}

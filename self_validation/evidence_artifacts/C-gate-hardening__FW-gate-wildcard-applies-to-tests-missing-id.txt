@@ -1,2 +1,0 @@
-Observed v1.0.1 deterministic evidence for C-gate-hardening / FW-gate-wildcard-applies-to-tests-missing-id
-This structured evidence binds FW-gate-wildcard-applies-to-tests-missing-id to self_validation/v101_targeted_probe_results.json, a package-local targeted probe artifact. v1.0.1 gate-contract evidence for modal-test claim binding, nonempty modal test IDs, and wildcard evidence applicability not replacing stable test IDs.

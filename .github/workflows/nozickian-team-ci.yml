@@ -5,21 +5,37 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 jobs:
   deterministic-validation:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.11'
       - name: Validate package surface and modal fixtures
         run: |
           mkdir -p /tmp/ntt_ci_outputs
           python3 skills/nozickian-verify/scripts/validate_package.py . --self-test --markdown /tmp/ntt_ci_outputs/SELF_VALIDATION_REPORT.md
+      - name: Run promotion certifier aggregate contracts
+        run: |
+          python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .
+      - name: Validate unpacked Git archive
+        run: |
+          # SECURITY-REVIEW: mktemp creates a private archive root; fixed repository
+          # archive content and quoted argv are used with no external interpolation.
+          archive_root="$(mktemp -d)"
+          trap 'rm -rf "$archive_root"' EXIT
+          git archive --format=tar HEAD | tar -xf - -C "$archive_root"
+          python3 "$archive_root/skills/nozickian-verify/scripts/validate_package.py" "$archive_root" --self-test --markdown /tmp/ntt_ci_outputs/ARCHIVE_SELF_VALIDATION_REPORT.md
+          cd "$archive_root"
+          python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .
       - name: Run Nozickian gate on self-certificate
         run: |
-          python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --markdown /tmp/ntt_ci_outputs/GATE_RESULT.md
+          python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --downstream-policy package-self --markdown /tmp/ntt_ci_outputs/GATE_RESULT.md
       - name: Run deterministic regression evals
         run: |
           python3 skills/nozickian-verify/scripts/run_regression_evals.py . --json /tmp/ntt_ci_outputs/regression_eval_result.json

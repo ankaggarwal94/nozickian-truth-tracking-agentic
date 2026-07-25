@@ -1,0 +1,13 @@
+{
+  "artifact_path": "skills/nozickian-verify/evals/evals.json",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:bafd358afd151804e30271480df4ddf4ff037940886c73588e40775ca9096042",
+  "claim_id": "C-validator-sensitivity",
+  "claim_proposition_sha256": "sha256:9d95decf899181e7148e830fa9ba3ed99c515a7e8ca0276b739aed9d6c5b92a5",
+  "command_or_source": "current v1.0.3 reviewed package source",
+  "evidence_schema_version": "1.1",
+  "hash_or_version": "sha256:24b1fd98cd7890e18d43b3d89a891d821c6d5343980b8fb029a808fe39fd1193",
+  "observed_result": "Current source bytes support the scoped proposition for C-validator-sensitivity.",
+  "support_summary": "This wrapper binds C-validator-sensitivity to current package artifact skills/nozickian-verify/evals/evals.json by exact SHA-256 and to the canonical claim proposition digest. It also binds the wrapper to the canonical full method-relative claim contract.",
+  "timestamp_utc": "2026-07-18T00:00:00Z"
+}

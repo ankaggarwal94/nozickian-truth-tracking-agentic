@@ -18,19 +18,110 @@ those events, a passing certificate is capped at PASS-SCOPED.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import ctypes
+import hashlib
+import importlib.util
+import io
 import json
+import math
 import os
 import re
+import signal
 import shutil
+import stat
 import subprocess
 import sys
+import threading
 import time
 import tempfile
-from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+import uuid
+from pathlib import Path, PurePosixPath
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
+
+
+class DuplicateJsonKeyError(ValueError):
+    """A JSON object repeats a key and is therefore semantically ambiguous."""
+
+
+def _strict_json_object(pairs: List[Tuple[str, Any]]) -> Dict[str, Any]:
+    value: Dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise DuplicateJsonKeyError(f"duplicate JSON object key: {key}")
+        value[key] = item
+    return value
+
+
+def strict_json_loads(text: str) -> Any:
+    def reject_nonfinite(value: str) -> Any:
+        raise ValueError(f"non-finite JSON number is not allowed: {value}")
+
+    def parse_finite_float(value: str) -> float:
+        parsed = float(value)
+        if not math.isfinite(parsed):
+            reject_nonfinite(value)
+        return parsed
+
+    return json.loads(
+        text,
+        object_pairs_hook=_strict_json_object,
+        parse_constant=reject_nonfinite,
+        parse_float=parse_finite_float,
+    )
 
 PASS_STATUSES = {"PASS-TRACKED", "PASS-SCOPED"}
 FINAL_STATUSES = PASS_STATUSES | {"LIMITED", "FAIL", "UNVERIFIED", "UNVERIFIED_RUNTIME"}
+NEGATIVE_NESTED_STATUS_VALUES = frozenset({
+    "error",
+    "errored",
+    "fail",
+    "failed",
+    "failure",
+    "aborted",
+    "killed",
+    "terminated",
+    "cancelled",
+    "canceled",
+    "timed-out",
+    "timeout",
+    "skipped",
+    "not-executed",
+    "incomplete",
+    "pending",
+    "deferred",
+    "blocked",
+    "denied",
+    "refused",
+    "error-during-execution",
+    "error-max-turns",
+    "error-max-budget-usd",
+    "error-max-structured-output-retries",
+    "blocking-limit",
+    "rapid-refill-breaker",
+    "prompt-too-long",
+    "image-error",
+    "model-error",
+    "api-error",
+    "malformed-tool-use-exhausted",
+    "aborted-streaming",
+    "aborted-tools",
+    "stop-hook-prevented",
+    "hook-stopped",
+    "tool-deferred",
+    "max-turns",
+    "background-requested",
+    "budget-exhausted",
+    "structured-output-retry-exhausted",
+    "tool-deferred-unavailable",
+    "turn-setup-failed",
+    "rejected",
+    "unsuccessful",
+    "permission-denied",
+    "unverified",
+    "limited",
+    "rate-limited",
+})
 REQUIRED_NATIVE_AGENTS = [
     "ntt-method-cartographer",
     "ntt-claim-extractor",
@@ -47,10 +138,386 @@ TOOL_USE_TYPES = {"tool_use", "tool-use", "tooluse", "tool_call", "tool-call", "
 TOOL_RESULT_TYPES = {"tool_result", "tool-result", "toolresult", "tool_call_result", "tool-call-result", "toolcallresult"}
 GENERAL_PURPOSE_NAMES = {"general-purpose", "general_purpose", "generalpurpose"}
 CONTENT_METADATA_KEYS = {"type", "id", "name", "role", "media_type", "mime_type", "tool_use_id", "toolUseId", "tool_call_id", "toolCallId", "status", "outcome", "is_error"}
+FORMAL_COMPANION_SPECS = {
+    "report": "_NOZICKIAN_REPORT.md",
+    "gate": "_NOZICKIAN_GATE.md",
+    "certificate": "_NOZICKIAN_certificate.json",
+    "ledger": "_NOZICKIAN_INVOCATION_LEDGER.md",
+    "transcript": "_NOZICKIAN_FORMAL_TRANSCRIPT.stream.jsonl",
+    "prompt": "_NOZICKIAN_FORMAL_PROMPT.md",
+    "target_snapshot": "_NOZICKIAN_TARGET_SNAPSHOT.bin",
+}
+FORMAL_AUXILIARY_OUTPUT_SPECS = {
+    "formal_result": "formal_result.json",
+    "precheck": "_NOZICKIAN_FORMAL_PRECHECKS.json",
+}
+FORMAL_VERIFICATION_CONTEXT = {
+    "mode": "standalone-endpoint-checked-copy",
+    "relative_sibling_context": "unavailable",
+    "execution_working_directory": "snapshot-parent",
+    "temporal_immutability_enforced": False,
+}
+PROCESS_CONTAINMENT_SCOPE = {
+    "mechanism": (
+        "initial-posix-process-group"
+        if os.name == "posix"
+        else "leader-process-only"
+    ),
+    "cleanup_after_leader_exit": os.name == "posix",
+    # A descendant can call setsid(2) before group cleanup.  Portable Python
+    # has no cross-platform child-process jail that can prevent or enumerate
+    # every such escape, so this limitation is explicit and status-affecting.
+    "detached_session_descendants_contained": False,
+}
+DETACHED_CLEANUP_TIMEOUT_SEC = 1.0
+DETACHED_CLEANUP_QUIET_SEC = 0.05
+MAX_PROC_SCAN_ENTRIES = 100_000
+PR_SET_CHILD_SUBREAPER = 36
+TRACE_AUTHENTICATION_FIELDS = (
+    "authenticated",
+    "events_seen",
+    "agent_calls_authenticated",
+    "agent_results_authenticated",
+    "missing_agents",
+    "missing_result_agents",
+    "saw_general_purpose",
+    "duplicate_tool_use_ids",
+    "duplicate_agent_calls",
+    "duplicate_tool_result_ids",
+    "invalid_result_bindings",
+    "malformed_stream_records",
+    "trace_bound_violations",
+    "result_before_call_ids",
+    "unexpected_native_tool_calls",
+    "role_violations",
+    "reasons",
+    "evidence_events",
+)
+MAX_CAPTURE_BYTES = 64 * 1024 * 1024
+PUBLIC_STREAM_BOUND_BYTES = 2048
+MAX_FORMAL_JSON_BYTES = 32 * 1024 * 1024
+MAX_FORMAL_TEXT_BYTES = 16 * 1024 * 1024
+MAX_FORMAL_LEDGER_BYTES = 8 * 1024 * 1024
+MAX_JSON_STRUCTURE_NODES = 200_000
+MAX_JSON_STRUCTURE_DEPTH = 64
+MAX_TARGET_SNAPSHOT_BYTES = MAX_CAPTURE_BYTES
+MAX_RELEASE_SNAPSHOT_FILE_BYTES = MAX_CAPTURE_BYTES
+MAX_RELEASE_SNAPSHOT_TOTAL_BYTES = 8 * MAX_CAPTURE_BYTES
+MAX_RELEASE_SNAPSHOT_ENTRIES = 20_000
+MAX_RELEASE_SNAPSHOT_TREE_ENTRIES = 4 * MAX_RELEASE_SNAPSHOT_ENTRIES
+MAX_RELEASE_SNAPSHOT_PATH_DEPTH = 64
+FORMAL_COMPANION_MAX_BYTES = {
+    "report": MAX_FORMAL_TEXT_BYTES,
+    "gate": MAX_FORMAL_TEXT_BYTES,
+    "certificate": MAX_FORMAL_JSON_BYTES,
+    "ledger": MAX_FORMAL_LEDGER_BYTES,
+    "transcript": MAX_CAPTURE_BYTES,
+    "prompt": MAX_FORMAL_TEXT_BYTES,
+}
+CLAUDE_VERSION_PATTERN = r"\b\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?(?:\s+\(Claude Code\))?\b"
+PIPE_CLOSE_GRACE_SEC = 0.5
+READER_JOIN_GRACE_SEC = 1.0
+MAX_TRACE_ITEMS_PER_RECORD = 10_000
+MAX_TRACE_DEPTH = 64
+CLAUDE_TERMINAL_RESULT_TYPE = "result"
+CLAUDE_SUCCESS_RESULT_SUBTYPE = "success"
 
 def _debug(msg: str) -> None:
     if os.environ.get("NTT_DEBUG_FORMAL_RUNNER"):
         print(f"[formal-runner] {msg}", file=sys.stderr, flush=True)
+
+
+def _linux_status_process_identity(
+    path: Path,
+    namespace_index: int,
+    expected_host_pid: Optional[int] = None,
+) -> Optional[Tuple[int, int]]:
+    """Return (host PPid, innermost namespace pid) from one proc status."""
+    try:
+        with path.open("r", encoding="utf-8", errors="replace") as stream:
+            payload = stream.read(64 * 1024)
+    except OSError:
+        return None
+    parent_host_pid: Optional[int] = None
+    namespace_pid: Optional[int] = None
+    host_pid_matches = expected_host_pid is None
+    for line in payload.splitlines():
+        if line.startswith("PPid:"):
+            fields = line.split()
+            if len(fields) == 2 and fields[1].isdigit():
+                parent_host_pid = int(fields[1])
+        elif line.startswith("NSpid:"):
+            fields = line.split()[1:]
+            if (
+                len(fields) > namespace_index
+                and all(field.isdigit() for field in fields)
+            ):
+                namespace_pid = int(fields[namespace_index])
+                host_pid_matches = (
+                    expected_host_pid is None
+                    or int(fields[0]) == expected_host_pid
+                )
+    if (
+        parent_host_pid is None
+        or namespace_pid is None
+        or not host_pid_matches
+    ):
+        return None
+    return parent_host_pid, namespace_pid
+
+
+def _linux_self_host_pid() -> Optional[int]:
+    fallback: Optional[int] = None
+    try:
+        with Path("/proc/self/status").open(
+            "r", encoding="utf-8", errors="replace"
+        ) as stream:
+            payload = stream.read(64 * 1024)
+    except OSError:
+        return None
+    for line in payload.splitlines():
+        if line.startswith("NSpid:"):
+            fields = line.split()[1:]
+            if fields and all(field.isdigit() for field in fields):
+                return int(fields[0])
+        elif line.startswith("Pid:"):
+            fields = line.split()
+            if len(fields) == 2 and fields[1].isdigit():
+                fallback = int(fields[1])
+    return fallback
+
+
+def _linux_self_namespace_index() -> Optional[int]:
+    try:
+        with Path("/proc/self/status").open(
+            "r", encoding="utf-8", errors="replace"
+        ) as stream:
+            payload = stream.read(64 * 1024)
+    except OSError:
+        return None
+    for line in payload.splitlines():
+        if line.startswith("NSpid:"):
+            fields = line.split()[1:]
+            if fields and all(field.isdigit() for field in fields):
+                return len(fields) - 1
+    return None
+
+
+def _linux_process_graph(
+    namespace_index: int,
+) -> Optional[Dict[int, Tuple[int, int]]]:
+    """Map host pid to (host PPid, signalable namespace pid)."""
+    graph: Dict[int, Tuple[int, int]] = {}
+    scanned = 0
+    try:
+        with os.scandir("/proc") as entries:
+            for entry in entries:
+                if not entry.name.isdigit():
+                    continue
+                scanned += 1
+                if scanned > MAX_PROC_SCAN_ENTRIES:
+                    return None
+                identity = _linux_status_process_identity(
+                    Path(entry.path) / "status",
+                    namespace_index,
+                    int(entry.name),
+                )
+                if identity is None:
+                    continue
+                graph[int(entry.name)] = identity
+    except OSError:
+        return None
+    return graph
+
+
+def _host_descendant_closure(
+    graph: Mapping[int, Tuple[int, int]],
+    roots: Set[int],
+) -> Set[int]:
+    children: Dict[int, List[int]] = {}
+    for host_pid, (parent_host_pid, _namespace_pid) in graph.items():
+        children.setdefault(parent_host_pid, []).append(host_pid)
+    closure: Set[int] = set()
+    pending = list(roots)
+    while pending:
+        host_pid = pending.pop()
+        if host_pid in closure:
+            continue
+        closure.add(host_pid)
+        pending.extend(children.get(host_pid, ()))
+    return closure
+
+
+def prepare_process_containment() -> Dict[str, Any]:
+    """Enable Linux subreaping and snapshot pre-existing direct children."""
+    unavailable = {
+        "enabled": False,
+        "parent_host_pid": None,
+        "baseline_host_pids": set(),
+        "scope": dict(PROCESS_CONTAINMENT_SCOPE),
+    }
+    if not sys.platform.startswith("linux") or not Path("/proc").is_dir():
+        return unavailable
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+        prctl = libc.prctl
+        prctl.argtypes = [
+            ctypes.c_int,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+        ]
+        prctl.restype = ctypes.c_int
+        if prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
+            return unavailable
+    except (AttributeError, OSError):
+        return unavailable
+    parent_host_pid = _linux_self_host_pid()
+    namespace_index = _linux_self_namespace_index()
+    if parent_host_pid is None or namespace_index is None:
+        return unavailable
+    baseline_graph = _linux_process_graph(namespace_index)
+    if baseline_graph is None:
+        return unavailable
+    baseline_direct = {
+        host_pid
+        for host_pid, (parent_pid, _namespace_pid) in baseline_graph.items()
+        if parent_pid == parent_host_pid
+    }
+    return {
+        "enabled": True,
+        "parent_host_pid": parent_host_pid,
+        "namespace_index": namespace_index,
+        "baseline_host_pids": baseline_direct,
+        "scope": {
+            "mechanism": "linux-child-subreaper-plus-process-group",
+            "cleanup_after_leader_exit": True,
+            "detached_session_descendants_contained": True,
+        },
+    }
+
+
+def cleanup_detached_descendants(
+    containment: Mapping[str, Any],
+) -> Tuple[bool, bool]:
+    """Kill/reap the complete new transitive closure to a quiet state."""
+    if containment.get("enabled") is not True:
+        # The capture caller fails before Popen when this capability is absent.
+        return False, True
+    parent_host_pid = containment.get("parent_host_pid")
+    namespace_index = containment.get("namespace_index")
+    baseline = containment.get("baseline_host_pids")
+    if (
+        type(parent_host_pid) is not int
+        or type(namespace_index) is not int
+        or not isinstance(baseline, set)
+    ):
+        return False, False
+    deadline = time.monotonic() + DETACHED_CLEANUP_TIMEOUT_SEC
+    quiet_since: Optional[float] = None
+    survivor_seen = False
+    while time.monotonic() < deadline:
+        graph = _linux_process_graph(namespace_index)
+        if graph is None:
+            return survivor_seen, False
+        runner_closure = _host_descendant_closure(
+            graph,
+            {parent_host_pid},
+        ) - {parent_host_pid}
+        excluded = _host_descendant_closure(graph, set(baseline))
+        candidate_host_pids = runner_closure - excluded
+        candidates = {
+            host_pid: graph[host_pid][1]
+            for host_pid in candidate_host_pids
+            if host_pid in graph
+        }
+        if candidates:
+            survivor_seen = True
+            quiet_since = None
+            for namespace_pid in candidates.values():
+                try:
+                    os.kill(namespace_pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                except OSError:
+                    return survivor_seen, False
+            for namespace_pid in candidates.values():
+                try:
+                    os.waitpid(namespace_pid, os.WNOHANG)
+                except (ChildProcessError, ProcessLookupError):
+                    pass
+                except OSError:
+                    return survivor_seen, False
+        else:
+            now = time.monotonic()
+            if quiet_since is None:
+                quiet_since = now
+            elif now - quiet_since >= DETACHED_CLEANUP_QUIET_SEC:
+                return survivor_seen, True
+        time.sleep(0.01)
+    # The bounded quiescence window expired.  Take one final complete closure
+    # snapshot and signal every remaining nonbaseline descendant before
+    # returning.  This does not turn a deadline expiry into success by itself:
+    # only a fresh post-kill scan that proves the closure empty may do so.
+    graph = _linux_process_graph(namespace_index)
+    if graph is None:
+        return survivor_seen, False
+    runner_closure = _host_descendant_closure(
+        graph,
+        {parent_host_pid},
+    ) - {parent_host_pid}
+    excluded = _host_descendant_closure(graph, set(baseline))
+    final_host_pids = runner_closure - excluded
+    if final_host_pids:
+        survivor_seen = True
+    for host_pid in final_host_pids:
+        namespace_pid = graph[host_pid][1]
+        try:
+            os.kill(namespace_pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        except OSError:
+            return survivor_seen, False
+    for host_pid in final_host_pids:
+        namespace_pid = graph[host_pid][1]
+        try:
+            os.waitpid(namespace_pid, os.WNOHANG)
+        except (ChildProcessError, ProcessLookupError):
+            pass
+        except OSError:
+            return survivor_seen, False
+    time.sleep(0.005)
+    fresh_graph = _linux_process_graph(namespace_index)
+    if fresh_graph is None:
+        return survivor_seen, False
+    fresh_closure = _host_descendant_closure(
+        fresh_graph,
+        {parent_host_pid},
+    ) - {parent_host_pid}
+    fresh_excluded = _host_descendant_closure(fresh_graph, set(baseline))
+    return survivor_seen, not (fresh_closure - fresh_excluded)
+
+
+def load_module_without_bytecode(name: str, path: Path) -> Any:
+    """Load a package helper without creating package-tree bytecode."""
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("package helper is unavailable")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    previous_dont_write = sys.dont_write_bytecode
+    import_stdout = io.StringIO()
+    try:
+        # Package verification must not mutate the tree being measured.
+        sys.dont_write_bytecode = True
+        # SECURITY-REVIEW: Fixed package-local helpers execute at import time.
+        # Contain stdout so this formal CLI emits one JSON document.
+        with contextlib.redirect_stdout(import_stdout):
+            spec.loader.exec_module(module)  # type: ignore[union-attr]
+    finally:
+        sys.dont_write_bytecode = previous_dont_write
+    return module
 
 
 def _path_within(child: Path, parent: Path) -> bool:
@@ -59,6 +526,1133 @@ def _path_within(child: Path, parent: Path) -> bool:
         return True
     except ValueError:
         return False
+
+
+def regular_file_error(path: Path) -> Optional[str]:
+    """Return a bounded no-follow error for a required regular file."""
+    try:
+        mode = path.lstat().st_mode
+    except OSError as exc:
+        return f"{type(exc).__name__} while inspecting file"
+    if stat.S_ISLNK(mode):
+        return "path is a symbolic link"
+    if not stat.S_ISREG(mode):
+        return "path is not a regular file"
+    return None
+
+
+def directory_error(path: Path) -> Optional[str]:
+    """Return a bounded no-follow error for a required directory."""
+    try:
+        mode = path.lstat().st_mode
+    except OSError as exc:
+        return f"{type(exc).__name__} while inspecting directory"
+    if stat.S_ISLNK(mode):
+        return "path is a symbolic link"
+    if not stat.S_ISDIR(mode):
+        return "path is not a directory"
+    return None
+
+
+def lexical_directory_ancestor_error(path: Path) -> Optional[str]:
+    """Reject existing non-directory or symlink ancestors without resolving."""
+    absolute = Path(os.path.abspath(path))
+    for ancestor in reversed(absolute.parents):
+        try:
+            mode = ancestor.lstat().st_mode
+        except FileNotFoundError:
+            break
+        except OSError as exc:
+            return f"{type(exc).__name__} while inspecting output ancestors"
+        if stat.S_ISLNK(mode):
+            return "output path has a symbolic link ancestor"
+        if not stat.S_ISDIR(mode):
+            return "output path has a non-directory ancestor"
+    return None
+
+
+def _directory_open_flags() -> int:
+    """Return flags for a held, no-follow directory capability."""
+    if not all(
+        hasattr(os, name)
+        for name in ("O_DIRECTORY", "O_NOFOLLOW")
+    ):
+        raise OSError("no-follow directory descriptors are unavailable")
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    return flags
+
+
+def _open_directory_no_follow(path: Path) -> int:
+    """Open every component beneath a held parent without following links."""
+    absolute = Path(os.path.abspath(path))
+    flags = _directory_open_flags()
+    descriptor = os.open(os.path.sep, flags)
+    try:
+        for component in absolute.parts[1:]:
+            if component in ("", ".", ".."):
+                raise ValueError("unsafe output directory component")
+            child = os.open(component, flags, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        return descriptor
+    except Exception:
+        os.close(descriptor)
+        raise
+
+
+def _safe_output_name(path: Path) -> str:
+    name = path.name
+    if name in ("", ".", "..") or os.path.sep in name:
+        raise ValueError("unsafe output file name")
+    if os.path.altsep and os.path.altsep in name:
+        raise ValueError("unsafe output file name")
+    return name
+
+
+def _directory_path_matches_fd(path: Path, descriptor: int) -> bool:
+    """Confirm the lexical directory still denotes the held directory."""
+    reopened: Optional[int] = None
+    try:
+        reopened = _open_directory_no_follow(path)
+        expected = os.fstat(descriptor)
+        observed = os.fstat(reopened)
+        return (expected.st_dev, expected.st_ino) == (
+            observed.st_dev,
+            observed.st_ino,
+        )
+    except (OSError, ValueError):
+        return False
+    finally:
+        if reopened is not None:
+            os.close(reopened)
+
+
+def _acquire_output_parent(
+    path: Path,
+    *,
+    directory_fd: Optional[int],
+    lexical_parent: Optional[Path],
+) -> Tuple[str, int, Path]:
+    name = _safe_output_name(path)
+    if directory_fd is None:
+        parent = path.parent
+        descriptor = _open_directory_no_follow(parent)
+    else:
+        parent = lexical_parent if lexical_parent is not None else path.parent
+        descriptor = os.dup(directory_fd)
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISDIR(metadata.st_mode):
+            os.close(descriptor)
+            raise ValueError("held output parent is not a directory")
+    return name, descriptor, parent
+
+
+def _stat_at_no_follow(
+    directory_fd: int,
+    name: str,
+) -> Optional[os.stat_result]:
+    try:
+        return os.stat(
+            name,
+            dir_fd=directory_fd,
+            follow_symlinks=False,
+        )
+    except FileNotFoundError:
+        return None
+
+
+def _replaceable_regular_at(directory_fd: int, name: str) -> None:
+    metadata = _stat_at_no_follow(directory_fd, name)
+    if metadata is None:
+        return
+    if stat.S_ISLNK(metadata.st_mode):
+        raise ValueError("output target is a symbolic link")
+    if not stat.S_ISREG(metadata.st_mode):
+        raise ValueError("output target is a special file")
+    if metadata.st_nlink != 1:
+        raise ValueError("output target is a hardlink alias")
+
+
+def _require_new_output_at(directory_fd: int, name: str) -> None:
+    if _stat_at_no_follow(directory_fd, name) is not None:
+        raise FileExistsError(name)
+
+
+def _write_all(descriptor: int, payload: bytes) -> None:
+    remaining = memoryview(payload)
+    while remaining:
+        written = os.write(descriptor, remaining)
+        if written <= 0:
+            raise OSError("short write while creating output")
+        remaining = remaining[written:]
+
+
+def path_lexists(path: Path) -> bool:
+    return os.path.lexists(path)
+
+
+def replaceable_regular_output_error(path: Path) -> Optional[str]:
+    """Validate an absent or private regular replaceable output target."""
+    if not path_lexists(path):
+        return None
+    try:
+        metadata = path.lstat()
+    except OSError as exc:
+        return f"{type(exc).__name__} while inspecting output target"
+    if stat.S_ISLNK(metadata.st_mode):
+        return "output target is a symbolic link"
+    if not stat.S_ISREG(metadata.st_mode):
+        return "output target is a special file"
+    if metadata.st_nlink != 1:
+        return "output target is a hardlink alias"
+    return None
+
+
+def atomic_write_new(
+    path: Path,
+    payload: bytes,
+    mode: int = 0o600,
+    *,
+    directory_fd: Optional[int] = None,
+    lexical_parent: Optional[Path] = None,
+) -> None:
+    """Atomically create one new regular file without following final links."""
+    # SECURITY-REVIEW: Hold the exact parent directory throughout validation,
+    # creation, and installation. All mutations are relative to that descriptor
+    # so an ancestor rename cannot redirect them through a replacement link.
+    name, parent_fd, parent = _acquire_output_parent(
+        path,
+        directory_fd=directory_fd,
+        lexical_parent=lexical_parent,
+    )
+    temporary = f".{name}.{uuid.uuid4().hex}.tmp"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    descriptor: Optional[int] = None
+    try:
+        _require_new_output_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before write")
+        descriptor = os.open(
+            temporary,
+            flags,
+            mode,
+            dir_fd=parent_fd,
+        )
+        _write_all(descriptor, payload)
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = None
+        _require_new_output_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before install")
+        os.link(
+            temporary,
+            name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        os.unlink(temporary, dir_fd=parent_fd)
+        created = os.stat(
+            name,
+            dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        if not stat.S_ISREG(created.st_mode) or created.st_nlink != 1:
+            raise OSError("created output is not a private regular file")
+        os.fsync(parent_fd)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed during install")
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        try:
+            os.unlink(temporary, dir_fd=parent_fd)
+        except FileNotFoundError:
+            pass
+        finally:
+            os.close(parent_fd)
+
+
+def atomic_replace_regular(
+    path: Path,
+    payload: bytes,
+    mode: int = 0o600,
+    *,
+    directory_fd: Optional[int] = None,
+    lexical_parent: Optional[Path] = None,
+) -> None:
+    """Atomically create or replace one private regular compatibility output."""
+    name, parent_fd, parent = _acquire_output_parent(
+        path,
+        directory_fd=directory_fd,
+        lexical_parent=lexical_parent,
+    )
+    temporary = f".{name}.{uuid.uuid4().hex}.tmp"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    descriptor: Optional[int] = None
+    try:
+        _replaceable_regular_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before write")
+        descriptor = os.open(
+            temporary,
+            flags,
+            mode,
+            dir_fd=parent_fd,
+        )
+        _write_all(descriptor, payload)
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = None
+        _replaceable_regular_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before install")
+        os.replace(
+            temporary,
+            name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+        )
+        created = os.stat(
+            name,
+            dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        if not stat.S_ISREG(created.st_mode) or created.st_nlink != 1:
+            raise OSError("installed output is not a private regular file")
+        os.fsync(parent_fd)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed during install")
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        try:
+            os.unlink(temporary, dir_fd=parent_fd)
+        except FileNotFoundError:
+            pass
+        finally:
+            os.close(parent_fd)
+
+
+def atomic_write_new_text(
+    path: Path,
+    text: str,
+    *,
+    directory_fd: Optional[int] = None,
+    lexical_parent: Optional[Path] = None,
+) -> None:
+    atomic_write_new(
+        path,
+        text.encode("utf-8"),
+        directory_fd=directory_fd,
+        lexical_parent=lexical_parent,
+    )
+
+
+def atomic_copy_regular_new(
+    source: Path,
+    destination: Path,
+    *,
+    max_bytes: int,
+    expected_bytes: Optional[int] = None,
+    expected_sha256: Optional[str] = None,
+    mode: int = 0o600,
+    directory_fd: Optional[int] = None,
+    lexical_parent: Optional[Path] = None,
+) -> Tuple[str, int]:
+    """Stream one no-follow regular file into a new bounded output."""
+    if type(max_bytes) is not int or max_bytes < 0:
+        raise ValueError("max_bytes must be a nonnegative integer")
+    if expected_bytes is not None and (
+        type(expected_bytes) is not int
+        or expected_bytes < 0
+        or expected_bytes > max_bytes
+    ):
+        raise ValueError("expected_bytes exceeds the declared copy bound")
+    if expected_sha256 is not None and not re.fullmatch(
+        r"[0-9a-f]{64}", expected_sha256
+    ):
+        raise ValueError("expected_sha256 is not a lowercase SHA-256 digest")
+
+    source_flags = os.O_RDONLY | os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        source_flags |= os.O_NONBLOCK
+    if hasattr(os, "O_CLOEXEC"):
+        source_flags |= os.O_CLOEXEC
+    source_fd = os.open(source, source_flags)
+    try:
+        name, parent_fd, parent = _acquire_output_parent(
+            destination,
+            directory_fd=directory_fd,
+            lexical_parent=lexical_parent,
+        )
+    except BaseException:
+        os.close(source_fd)
+        raise
+    temporary = f".{name}.{uuid.uuid4().hex}.tmp"
+    destination_flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        destination_flags |= os.O_CLOEXEC
+    destination_fd: Optional[int] = None
+    try:
+        source_pre = os.fstat(source_fd)
+        if not stat.S_ISREG(source_pre.st_mode):
+            raise ValueError("copy source is not a regular file")
+        if source_pre.st_size > max_bytes:
+            raise ValueError(f"copy source exceeds {max_bytes} bytes")
+        if expected_bytes is not None and source_pre.st_size != expected_bytes:
+            raise ValueError("copy source size differs from declared bytes")
+        _require_new_output_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before bounded copy")
+        destination_fd = os.open(
+            temporary,
+            destination_flags,
+            mode,
+            dir_fd=parent_fd,
+        )
+        digest = hashlib.sha256()
+        observed = 0
+        while True:
+            chunk = os.read(source_fd, min(1024 * 1024, max_bytes + 1))
+            if not chunk:
+                break
+            observed += len(chunk)
+            if observed > max_bytes:
+                raise ValueError(f"copy source exceeds {max_bytes} bytes")
+            digest.update(chunk)
+            _write_all(destination_fd, chunk)
+        source_post = os.fstat(source_fd)
+        stable_fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+        if any(
+            getattr(source_pre, field) != getattr(source_post, field)
+            for field in stable_fields
+        ):
+            raise ValueError("copy source changed while it was read")
+        observed_sha256 = digest.hexdigest()
+        if expected_bytes is not None and observed != expected_bytes:
+            raise ValueError("copied bytes differ from declared bytes")
+        if expected_sha256 is not None and observed_sha256 != expected_sha256:
+            raise ValueError("copied digest differs from declared SHA-256")
+        os.fsync(destination_fd)
+        os.close(destination_fd)
+        destination_fd = None
+        _require_new_output_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before bounded-copy install")
+        os.link(
+            temporary,
+            name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        os.unlink(temporary, dir_fd=parent_fd)
+        created = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+        if not stat.S_ISREG(created.st_mode) or created.st_nlink != 1:
+            raise OSError("bounded-copy output is not a private regular file")
+        os.fsync(parent_fd)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed during bounded-copy install")
+        return observed_sha256, observed
+    finally:
+        os.close(source_fd)
+        if destination_fd is not None:
+            os.close(destination_fd)
+        try:
+            os.unlink(temporary, dir_fd=parent_fd)
+        except FileNotFoundError:
+            pass
+        finally:
+            os.close(parent_fd)
+
+
+def reserve_regular_output(
+    path: Path,
+    *,
+    directory_fd: Optional[int] = None,
+    lexical_parent: Optional[Path] = None,
+) -> None:
+    """Reserve an externally populated output as a private regular file."""
+    # SECURITY-REVIEW: Reserve beneath the same held directory capability later
+    # inherited by the external coordinator.
+    name, parent_fd, parent = _acquire_output_parent(
+        path,
+        directory_fd=directory_fd,
+        lexical_parent=lexical_parent,
+    )
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    descriptor: Optional[int] = None
+    created_output = False
+    try:
+        _require_new_output_at(parent_fd, name)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed before reservation")
+        descriptor = os.open(
+            name,
+            flags,
+            0o600,
+            dir_fd=parent_fd,
+        )
+        created_output = True
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = None
+        created = os.stat(
+            name,
+            dir_fd=parent_fd,
+            follow_symlinks=False,
+        )
+        if not stat.S_ISREG(created.st_mode) or created.st_nlink != 1:
+            raise OSError("reserved output is not a private regular file")
+        os.fsync(parent_fd)
+        if not _directory_path_matches_fd(parent, parent_fd):
+            raise ValueError("output parent changed during reservation")
+    except Exception:
+        if created_output:
+            try:
+                os.unlink(name, dir_fd=parent_fd)
+            except FileNotFoundError:
+                pass
+        raise
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        os.close(parent_fd)
+
+
+def file_snapshot_identity(
+    path: Path,
+    *,
+    max_bytes: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Return exact bytes and no-follow metadata used for stability checks."""
+    error = regular_file_error(path)
+    if error is not None:
+        raise ValueError(error)
+    metadata = path.stat(follow_symlinks=False)
+    return {
+        "sha256": f"sha256:{_hash_regular_file(path, max_bytes=max_bytes)[0]}",
+        "device": metadata.st_dev,
+        "inode": metadata.st_ino,
+        "bytes": metadata.st_size,
+        "mtime_ns": metadata.st_mtime_ns,
+        "ctime_ns": metadata.st_ctime_ns,
+    }
+
+
+def target_snapshot_stability(
+    source_pre: Optional[Dict[str, Any]],
+    source_post: Optional[Dict[str, Any]],
+    snapshot_pre: Optional[Dict[str, Any]],
+    snapshot_post: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    metadata_fields = (
+        "device",
+        "inode",
+        "bytes",
+        "mtime_ns",
+        "ctime_ns",
+    )
+    source_metadata_stable = (
+        isinstance(source_pre, dict)
+        and isinstance(source_post, dict)
+        and all(
+            type(source_pre.get(field)) is int
+            and source_pre.get(field) == source_post.get(field)
+            for field in metadata_fields
+        )
+    )
+    snapshot_metadata_stable = (
+        isinstance(snapshot_pre, dict)
+        and isinstance(snapshot_post, dict)
+        and all(
+            type(snapshot_pre.get(field)) is int
+            and snapshot_pre.get(field) == snapshot_post.get(field)
+            for field in metadata_fields
+        )
+    )
+    digests = [
+        identity.get("sha256") if isinstance(identity, dict) else None
+        for identity in (
+            source_pre,
+            source_post,
+            snapshot_pre,
+            snapshot_post,
+        )
+    ]
+    digest_stable = (
+        all(
+            type(digest) is str
+            and bool(re.fullmatch(r"sha256:[0-9a-f]{64}", digest))
+            for digest in digests
+        )
+        and len(set(digests)) == 1
+    )
+    endpoint_stable = (
+            digest_stable
+            and source_metadata_stable
+            and snapshot_metadata_stable
+    )
+    return {
+        # ``stable`` is retained for schema compatibility, but its scope is
+        # now explicit: this is a pre/post endpoint check, not a claim that the
+        # same-UID coordinator could never alter bytes between observations.
+        "stable": endpoint_stable,
+        "endpoint_stable": endpoint_stable,
+        "stability_scope": "pre-post-endpoint",
+        "temporal_immutability_enforced": False,
+        "digest_stable": digest_stable,
+        "source_metadata_stable": source_metadata_stable,
+        "snapshot_metadata_stable": snapshot_metadata_stable,
+    }
+
+
+def cap_status_by_target_stability(
+    status: str,
+    stability: Dict[str, Any],
+) -> Tuple[str, Optional[str]]:
+    if status in PASS_STATUSES and stability.get("stable") is not True:
+        return (
+            "FAIL",
+            "target or endpoint-checked target copy changed during formal verification",
+        )
+    return status, None
+
+
+def package_tree_identity_is_valid(identity: Any) -> bool:
+    return (
+        type(identity) is dict
+        and set(identity) == {"algorithm", "sha256", "valid"}
+        and type(identity.get("algorithm")) is str
+        and bool(identity.get("algorithm"))
+        and type(identity.get("sha256")) is str
+        and bool(re.fullmatch(r"sha256:[0-9a-f]{64}", identity.get("sha256")))
+        and type(identity.get("valid")) is bool
+        and identity.get("valid") is True
+    )
+
+
+def cap_status_by_package_identity(
+    status: str,
+    identity: Any,
+) -> Tuple[str, Optional[str]]:
+    if status in PASS_STATUSES and not package_tree_identity_is_valid(identity):
+        return "FAIL", "package-tree identity is invalid for a formal pass"
+    return status, None
+
+
+def _hash_regular_file(
+    path: Path,
+    *,
+    max_bytes: Optional[int] = None,
+) -> Tuple[str, int]:
+    """Hash one no-follow regular fd, optionally enforcing a byte ceiling."""
+    if max_bytes is not None and (
+        type(max_bytes) is not int or max_bytes < 0
+    ):
+        raise ValueError("max_bytes must be a nonnegative integer")
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    if not nofollow:
+        raise OSError("platform lacks no-follow file opens")
+    flags = os.O_RDONLY | nofollow
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    descriptor = os.open(path, flags)
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+            raise ValueError(f"{path.name} is not a single-link regular file")
+        if max_bytes is not None and metadata.st_size > max_bytes:
+            raise ValueError(f"file exceeds {max_bytes} bytes")
+        digest = hashlib.sha256()
+        observed = 0
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            observed += len(chunk)
+            if max_bytes is not None and observed > max_bytes:
+                raise ValueError(f"file exceeds {max_bytes} bytes")
+            digest.update(chunk)
+        return digest.hexdigest(), observed
+    finally:
+        os.close(descriptor)
+
+
+def sha256_regular_file(path: Path) -> str:
+    return _hash_regular_file(path)[0]
+
+
+def resolve_regular_executable(which_value: str) -> Path:
+    candidate = Path(which_value)
+    if not candidate.is_absolute():
+        candidate = Path.cwd() / candidate
+    resolved = candidate.resolve(strict=True)
+    error = regular_file_error(resolved)
+    if error is not None:
+        raise ValueError(f"resolved executable: {error}")
+    return resolved
+
+
+def initial_runtime_identity() -> Dict[str, Any]:
+    return {
+        "resolved_executable_path": None,
+        "version_output": None,
+        "version_pattern": CLAUDE_VERSION_PATTERN,
+        "version_pattern_match": False,
+        "executable_sha256_pre": None,
+        "executable_sha256_post": None,
+        "executable_identity_pre": None,
+        "executable_identity_post": None,
+        "fingerprint_stable": False,
+        "error": None,
+    }
+
+
+def finalize_runtime_identity(
+    identity: Dict[str, Any],
+    executable: Optional[Path],
+) -> Dict[str, Any]:
+    finalized = dict(identity)
+    if executable is None:
+        return finalized
+    try:
+        post_identity = file_snapshot_identity(executable)
+        post = str(post_identity["sha256"])[len("sha256:") :]
+    except (OSError, ValueError) as exc:
+        finalized["error"] = f"{type(exc).__name__} while re-hashing executable"
+        return finalized
+    finalized["executable_sha256_post"] = post
+    finalized["executable_identity_post"] = post_identity
+    finalized["fingerprint_stable"] = (
+        isinstance(finalized.get("executable_sha256_pre"), str)
+        and finalized.get("executable_sha256_pre") == post
+        and finalized.get("executable_identity_pre") == post_identity
+    )
+    return finalized
+
+
+def runtime_identity_is_valid(identity: Any) -> bool:
+    return (
+        isinstance(identity, dict)
+        and isinstance(identity.get("resolved_executable_path"), str)
+        and Path(identity["resolved_executable_path"]).is_absolute()
+        and bool(
+            re.fullmatch(
+                r"[0-9a-f]{64}",
+                str(identity.get("executable_sha256_pre") or ""),
+            )
+        )
+        and identity.get("executable_sha256_pre")
+        == identity.get("executable_sha256_post")
+        and identity.get("executable_identity_pre")
+        == identity.get("executable_identity_post")
+        and identity.get("fingerprint_stable") is True
+        and identity.get("version_pattern_match") is True
+        and bool(
+            re.search(
+                CLAUDE_VERSION_PATTERN,
+                str(identity.get("version_output") or ""),
+            )
+        )
+        and identity.get("error") in (None, "")
+    )
+
+
+def cap_status_by_runtime_identity(
+    status: str,
+    identity: Any,
+) -> Tuple[str, Optional[str]]:
+    if status in PASS_STATUSES and not runtime_identity_is_valid(identity):
+        return "FAIL", "formal Claude executable identity was not stable"
+    return status, None
+
+
+def package_tree_identity(root: Path) -> Dict[str, Any]:
+    validator = root / SKILL_PATH / "scripts/validate_package.py"
+    if regular_file_error(validator):
+        return {"algorithm": None, "sha256": None, "valid": False}
+    try:
+        module = load_module_without_bytecode(
+            "ntt_validator_for_formal_tree",
+            validator,
+        )
+        tree = module.compute_stable_release_tree(root)
+        raw_sha = tree.get("sha256") if isinstance(tree, dict) else None
+        return {
+            "algorithm": (
+                tree.get("algorithm") if isinstance(tree, dict) else None
+            ),
+            "sha256": (
+                f"sha256:{raw_sha}"
+                if isinstance(raw_sha, str)
+                and re.fullmatch(r"[0-9a-f]{64}", raw_sha)
+                else None
+            ),
+            "valid": (
+                tree.get("valid") is True
+                if isinstance(tree, dict)
+                else False
+            ),
+        }
+    except Exception:
+        return {"algorithm": None, "sha256": None, "valid": False}
+
+
+def _canonical_release_path(value: Any) -> PurePosixPath:
+    if not isinstance(value, str) or not value or "\\" in value:
+        raise ValueError("release inventory path is not canonical")
+    posix = PurePosixPath(value)
+    if (
+        posix.is_absolute()
+        or any(part in {"", ".", ".."} for part in posix.parts)
+        or posix.as_posix() != value
+    ):
+        raise ValueError("release inventory path traverses or is non-canonical")
+    return posix
+
+
+def _release_file_path_no_follow(
+    root: Path,
+    relative: PurePosixPath,
+) -> Path:
+    """Resolve a manifest path lexically while rejecting link ancestors."""
+    current = root
+    for index, part in enumerate(relative.parts):
+        current = current / part
+        try:
+            mode = current.lstat().st_mode
+        except OSError as exc:
+            raise ValueError("release inventory entry is unavailable") from exc
+        final = index == len(relative.parts) - 1
+        if stat.S_ISLNK(mode):
+            raise ValueError("release inventory path contains a symbolic link")
+        if final and not stat.S_ISREG(mode):
+            raise ValueError("release inventory entry is not a regular file")
+        if not final and not stat.S_ISDIR(mode):
+            raise ValueError("release inventory ancestor is not a directory")
+    return current
+
+
+def execution_copy_endpoint_identity(root: Path) -> Dict[str, Any]:
+    """Hash no-follow metadata observed at one copy endpoint.
+
+    Comparing two such identities detects many persistent changes, but it
+    cannot exclude an A->B->A mutation between observations: timestamp
+    resolution and same-UID control make that a false portability claim.  The
+    separate temporal-immutability field and PASS-SCOPED cap are load-bearing.
+    """
+    records: List[Dict[str, Any]] = []
+    pending: List[Tuple[PurePosixPath, Path]] = [
+        (PurePosixPath("."), root)
+    ]
+    try:
+        while pending:
+            relative, path = pending.pop()
+            if len(records) >= MAX_RELEASE_SNAPSHOT_TREE_ENTRIES:
+                return {
+                    "algorithm": "no-follow-endpoint-metadata-v1",
+                    "sha256": None,
+                    "entries": len(records),
+                    "valid": False,
+                }
+            metadata = path.stat(follow_symlinks=False)
+            mode = metadata.st_mode
+            if stat.S_ISDIR(mode):
+                kind = "directory"
+            elif stat.S_ISREG(mode):
+                kind = "regular"
+            else:
+                return {
+                    "algorithm": "no-follow-endpoint-metadata-v1",
+                    "sha256": None,
+                    "entries": len(records),
+                    "valid": False,
+                }
+            records.append(
+                {
+                    "path": relative.as_posix(),
+                    "kind": kind,
+                    "device": metadata.st_dev,
+                    "inode": metadata.st_ino,
+                    "mode": stat.S_IMODE(mode),
+                    "nlink": metadata.st_nlink,
+                    "uid": metadata.st_uid,
+                    "gid": metadata.st_gid,
+                    "bytes": metadata.st_size,
+                    "mtime_ns": metadata.st_mtime_ns,
+                    "ctime_ns": metadata.st_ctime_ns,
+                }
+            )
+            if kind == "directory":
+                with os.scandir(path) as iterator:
+                    children: List[str] = []
+                    for entry in iterator:
+                        children.append(entry.name)
+                        if (
+                            len(records) + len(pending) + len(children)
+                            > MAX_RELEASE_SNAPSHOT_TREE_ENTRIES
+                        ):
+                            return {
+                                "algorithm": "no-follow-endpoint-metadata-v1",
+                                "sha256": None,
+                                "entries": len(records),
+                                "valid": False,
+                            }
+                    children.sort(reverse=True)
+                for name in children:
+                    child_relative = (
+                        PurePosixPath(name)
+                        if relative == PurePosixPath(".")
+                        else relative / name
+                    )
+                    pending.append((child_relative, path / name))
+    except OSError:
+        return {
+            "algorithm": "no-follow-endpoint-metadata-v1",
+            "sha256": None,
+            "entries": len(records),
+            "valid": False,
+        }
+    records.sort(key=lambda item: item["path"])
+    payload = json.dumps(
+        records,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return {
+        "algorithm": "no-follow-endpoint-metadata-v1",
+        "sha256": f"sha256:{hashlib.sha256(payload).hexdigest()}",
+        "entries": len(records),
+        "valid": True,
+    }
+
+
+def endpoint_identity_is_valid(identity: Any) -> bool:
+    return (
+        type(identity) is dict
+        and set(identity) == {"algorithm", "sha256", "entries", "valid"}
+        and identity.get("algorithm") == "no-follow-endpoint-metadata-v1"
+        and type(identity.get("sha256")) is str
+        and bool(re.fullmatch(r"sha256:[0-9a-f]{64}", identity["sha256"]))
+        and type(identity.get("entries")) is int
+        and identity.get("entries") > 0
+        and identity.get("valid") is True
+    )
+
+
+def materialize_execution_package_snapshot(
+    root: Path,
+) -> Tuple[tempfile.TemporaryDirectory[str], Path, Dict[str, Any]]:
+    """Copy the manifest-bound surface into a permission-hardened tree.
+
+    Mode 0400/0500 is defense in depth only: the owner can chmod it.  The
+    caller therefore gets explicit pre/post endpoint evidence and a scoped
+    status rather than a false claim of an immutable same-UID boundary.
+    """
+    source_pre = package_tree_identity(root)
+    if not package_tree_identity_is_valid(source_pre):
+        raise ValueError("source package tree is invalid")
+    manifest_path = root / "STABLE_RELEASE_MANIFEST.json"
+    if regular_file_error(manifest_path) is not None:
+        raise ValueError("stable release manifest is not a regular file")
+    manifest = load_json(manifest_path)
+    if "_error" in manifest:
+        raise ValueError("stable release manifest is unreadable")
+    inventory = manifest.get("file_inventory") if isinstance(manifest, dict) else None
+    if not isinstance(inventory, list) or not inventory:
+        raise ValueError("stable release inventory is unavailable")
+    if len(inventory) > MAX_RELEASE_SNAPSHOT_ENTRIES:
+        raise ValueError(
+            "stable release inventory exceeds the declared entry limit"
+        )
+    records: List[Tuple[PurePosixPath, str, int, str]] = []
+    seen: Set[str] = set()
+    tree_paths: Set[str] = set()
+    total_bytes = 0
+    for record in inventory:
+        if not isinstance(record, dict):
+            raise ValueError("release inventory record is not an object")
+        relative = _canonical_release_path(record.get("path"))
+        if len(relative.parts) > MAX_RELEASE_SNAPSHOT_PATH_DEPTH:
+            raise ValueError("release inventory path exceeds the depth limit")
+        if relative.as_posix() in seen:
+            raise ValueError("release inventory contains duplicate paths")
+        if relative == PurePosixPath("STABLE_RELEASE_MANIFEST.json"):
+            raise ValueError("release inventory contains the manifest itself")
+        seen.add(relative.as_posix())
+        expected_sha = record.get("sha256")
+        expected_bytes = record.get("bytes")
+        release_mode = record.get("mode")
+        if (
+            type(expected_sha) is not str
+            or not re.fullmatch(r"[0-9a-f]{64}", expected_sha)
+            or type(expected_bytes) is not int
+            or expected_bytes < 0
+            or expected_bytes > MAX_RELEASE_SNAPSHOT_FILE_BYTES
+            or release_mode not in {"100644", "100755"}
+        ):
+            raise ValueError("release inventory record exceeds declared bounds")
+        total_bytes += expected_bytes
+        if total_bytes > MAX_RELEASE_SNAPSHOT_TOTAL_BYTES:
+            raise ValueError("release inventory exceeds the aggregate byte limit")
+        source_path = _release_file_path_no_follow(root, relative)
+        source_metadata = source_path.lstat()
+        if source_metadata.st_size != expected_bytes:
+            raise ValueError("release inventory size differs from source metadata")
+        for parent in relative.parents:
+            if parent == PurePosixPath("."):
+                break
+            tree_paths.add(parent.as_posix())
+        tree_paths.add(relative.as_posix())
+        if len(tree_paths) + 1 > MAX_RELEASE_SNAPSHOT_TREE_ENTRIES:
+            raise ValueError("release snapshot tree exceeds the entry limit")
+        records.append(
+            (relative, expected_sha, expected_bytes, release_mode)
+        )
+    manifest_source = _release_file_path_no_follow(
+        root,
+        PurePosixPath("STABLE_RELEASE_MANIFEST.json"),
+    )
+    manifest_bytes = manifest_source.lstat().st_size
+    if manifest_bytes > MAX_FORMAL_JSON_BYTES:
+        raise ValueError("stable release manifest exceeds the JSON byte limit")
+    if total_bytes + manifest_bytes > MAX_RELEASE_SNAPSHOT_TOTAL_BYTES:
+        raise ValueError("release snapshot exceeds the aggregate byte limit")
+    holder: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory(
+        prefix="ntt_execution_package_"
+    )
+    snapshot = Path(holder.name) / "package"
+    snapshot.mkdir(mode=0o700)
+    try:
+        for relative, expected_sha, expected_bytes, release_mode in records:
+            destination = snapshot.joinpath(*relative.parts)
+            destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            atomic_copy_regular_new(
+                _release_file_path_no_follow(root, relative),
+                destination,
+                max_bytes=MAX_RELEASE_SNAPSHOT_FILE_BYTES,
+                expected_bytes=expected_bytes,
+                expected_sha256=expected_sha,
+                mode=0o500 if release_mode == "100755" else 0o400,
+            )
+        atomic_copy_regular_new(
+            manifest_source,
+            snapshot / "STABLE_RELEASE_MANIFEST.json",
+            max_bytes=MAX_FORMAL_JSON_BYTES,
+            expected_bytes=manifest_bytes,
+            mode=0o400,
+        )
+        snapshot_pre = package_tree_identity(snapshot)
+        if snapshot_pre != source_pre:
+            raise ValueError("execution snapshot identity differs from source")
+        for directory in sorted(
+            (path for path in snapshot.rglob("*") if path.is_dir()),
+            key=lambda path: len(path.parts),
+            reverse=True,
+        ):
+            directory.chmod(0o500)
+        snapshot.chmod(0o500)
+        snapshot_endpoint_pre = execution_copy_endpoint_identity(snapshot)
+        if not endpoint_identity_is_valid(snapshot_endpoint_pre):
+            raise ValueError("execution copy endpoint identity is invalid")
+        process_containment_scope = prepare_process_containment()["scope"]
+    except Exception:
+        holder.cleanup()
+        raise
+    return holder, snapshot, {
+        "mode": "private-permission-hardened-endpoint-checked-release-copy",
+        "source_pre": source_pre,
+        "snapshot_pre": snapshot_pre,
+        "source_post": None,
+        "snapshot_post": None,
+        "snapshot_endpoint_pre": snapshot_endpoint_pre,
+        "snapshot_endpoint_post": None,
+        "endpoint_stable": False,
+        "stability_scope": "pre-post-endpoint",
+        "temporal_immutability_enforced": False,
+        "process_containment": dict(process_containment_scope),
+        "stable": False,
+    }
+
+
+def finalize_execution_package_snapshot(
+    root: Path,
+    snapshot: Path,
+    identity: Dict[str, Any],
+) -> Dict[str, Any]:
+    finalized = dict(identity)
+    finalized["source_post"] = package_tree_identity(root)
+    finalized["snapshot_post"] = package_tree_identity(snapshot)
+    finalized["snapshot_endpoint_post"] = execution_copy_endpoint_identity(
+        snapshot
+    )
+    comparable = [
+        finalized.get("source_pre"),
+        finalized.get("source_post"),
+        finalized.get("snapshot_pre"),
+        finalized.get("snapshot_post"),
+    ]
+    finalized["endpoint_stable"] = (
+        endpoint_identity_is_valid(finalized.get("snapshot_endpoint_pre"))
+        and endpoint_identity_is_valid(finalized.get("snapshot_endpoint_post"))
+        and finalized.get("snapshot_endpoint_pre")
+        == finalized.get("snapshot_endpoint_post")
+    )
+    finalized["stable"] = (
+        all(package_tree_identity_is_valid(item) for item in comparable)
+        and all(item == comparable[0] for item in comparable[1:])
+        and finalized["endpoint_stable"] is True
+    )
+    return finalized
+
+
+def cap_status_by_execution_package_snapshot(
+    status: str,
+    identity: Any,
+) -> Tuple[str, Optional[str]]:
+    if status in PASS_STATUSES and (
+        not isinstance(identity, dict) or identity.get("stable") is not True
+    ):
+        return "FAIL", "execution package copy endpoint identity was not stable"
+    missing_assurances: List[str] = []
+    if identity.get("temporal_immutability_enforced") is not True:
+        missing_assurances.append("temporal immutability")
+    process_scope = identity.get("process_containment")
+    if (
+        not isinstance(process_scope, dict)
+        or process_scope.get("detached_session_descendants_contained")
+        is not True
+    ):
+        missing_assurances.append("detached-session descendant containment")
+    if status == "PASS-TRACKED" and missing_assurances:
+        return (
+            "PASS-SCOPED",
+            "execution copies were endpoint-stable, but "
+            + " and ".join(missing_assurances)
+            + (
+                " was not mechanically enforced"
+                if len(missing_assurances) == 1
+                else " were not mechanically enforced"
+            ),
+        )
+    return status, None
 
 
 def _blocked_package_output_result(root: Path, target: Path, output_dir: Path, json_path: Optional[Path]) -> Dict[str, Any]:
@@ -87,6 +1681,13 @@ def _blocked_package_output_result(root: Path, target: Path, output_dir: Path, j
 
 
 def output_location_error(root: Path, output_dir: Path, json_path: Optional[Path], allow_package_output: bool = False) -> Optional[str]:
+    output_ancestor_error = lexical_directory_ancestor_error(output_dir)
+    if output_ancestor_error is not None:
+        return f"unsafe --output-dir: {output_ancestor_error}"
+    if json_path is not None:
+        json_ancestor_error = lexical_directory_ancestor_error(json_path)
+        if json_ancestor_error is not None:
+            return f"unsafe --json: {json_ancestor_error}"
     root = root.resolve()
     output_dir = output_dir.resolve()
     json_resolved = json_path.resolve() if json_path is not None else None
@@ -100,51 +1701,742 @@ def output_location_error(root: Path, output_dir: Path, json_path: Optional[Path
         )
     return None
 
-def run_cmd(cmd: List[str], cwd: Optional[Path] = None, timeout: int = 300, env: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
-    started = time.time()
+
+def _prepare_output_directory_fd(path: Path) -> int:
+    """Create/traverse an output directory and return its held descriptor."""
+    # SECURITY-REVIEW: Each mkdirat/openat is rooted in the directory descriptor
+    # obtained from the preceding component. Replacing any lexical ancestor
+    # cannot redirect creation into a symlink target; a final identity check
+    # rejects a renamed-away directory even though the held traversal was safe.
+    absolute = Path(os.path.abspath(path))
+    descriptor: Optional[int] = None
     try:
-        proc = subprocess.run(
-            cmd,
-            cwd=str(cwd) if cwd else None,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=timeout,
-            env=env,
+        flags = _directory_open_flags()
+        descriptor = os.open(os.path.sep, flags)
+        for component in absolute.parts[1:]:
+            if component in ("", ".", ".."):
+                raise ValueError("unsafe output directory component")
+            try:
+                child = os.open(component, flags, dir_fd=descriptor)
+            except FileNotFoundError:
+                os.mkdir(component, mode=0o700, dir_fd=descriptor)
+                os.fsync(descriptor)
+                child = os.open(component, flags, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        if not _directory_path_matches_fd(absolute, descriptor):
+            raise ValueError("output directory changed during creation")
+        os.fsync(descriptor)
+        result = descriptor
+        descriptor = None
+        return result
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
+def prepare_output_directory(path: Path) -> Optional[str]:
+    """Create missing directories safely while retaining no open descriptor."""
+    descriptor: Optional[int] = None
+    try:
+        descriptor = _prepare_output_directory_fd(path)
+        return None
+    except (OSError, ValueError) as exc:
+        return f"{type(exc).__name__} while creating output directory"
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
+def _inherited_directory_alias(descriptor: int) -> Path:
+    """Return a child-visible alias to this runner's held directory fd."""
+    if os.name != "posix":
+        raise OSError("held output-directory inheritance requires POSIX")
+    # Name the runner PID, not ``self``. A child can close/rebind its inherited
+    # descriptor number; it cannot thereby alter the runner's fd table.
+    proc_visible_pid: Optional[int] = None
+    try:
+        with Path("/proc/self/status").open(
+            "r", encoding="utf-8", errors="replace"
+        ) as stream:
+            for line in stream.read(64 * 1024).splitlines():
+                if line.startswith("Pid:"):
+                    fields = line.split()
+                    if len(fields) == 2 and fields[1].isdigit():
+                        candidate = int(fields[1])
+                        if candidate > 0 and str(candidate) == fields[1]:
+                            proc_visible_pid = candidate
+                    break
+    except OSError:
+        proc_visible_pid = None
+    if proc_visible_pid is None:
+        raise OSError("runner proc-visible PID is unavailable")
+    proc_fd_root = Path("/proc") / str(proc_visible_pid) / "fd"
+    if not proc_fd_root.is_dir():
+        raise OSError("runner-owned /proc fd directory is unavailable")
+    alias = proc_fd_root / str(descriptor)
+    held = os.fstat(descriptor)
+    observed = alias.stat()
+    if not stat.S_ISDIR(observed.st_mode) or (
+        held.st_dev,
+        held.st_ino,
+    ) != (observed.st_dev, observed.st_ino):
+        raise OSError("held output-directory alias identity mismatch")
+    return alias
+
+
+def _preflight_held_output_capability() -> None:
+    """Prove dirfd/procfd support before any caller output is created."""
+    descriptor: Optional[int] = None
+    try:
+        descriptor = _open_directory_no_follow(Path(os.path.sep))
+        _inherited_directory_alias(descriptor)
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
+def _paths_alias(first: Path, second: Path) -> bool:
+    if first == second:
+        return True
+    try:
+        return os.path.samefile(first, second)
+    except OSError:
+        return False
+
+
+def formal_output_collision_error(
+    target: Path,
+    out: Dict[str, Path],
+    json_path: Optional[Path] = None,
+    *,
+    output_directory_fd: Optional[int] = None,
+) -> Optional[str]:
+    """Reject output aliases that could overwrite the target or companions."""
+    held_parent = (
+        _inherited_directory_alias(output_directory_fd)
+        if output_directory_fd is not None
+        else None
+    )
+    held_out = {
+        role: (
+            held_parent / path.name
+            if held_parent is not None
+            else path
+        )
+        for role, path in out.items()
+    }
+    output_paths = list(out.values())
+    # SECURITY-REVIEW: Caller-controlled output paths are compared by resolved
+    # path and, when they exist, held file identity before any target/output
+    # write. The lexical names preserve exact-path collision detection while
+    # the held aliases prevent a substituted real directory from influencing
+    # inode comparisons.
+    if any(
+        target == out[role]
+        or _paths_alias(target, held_out[role])
+        for role in out
+    ):
+        return "target_artifact aliases a reserved formal output path"
+    json_is_canonical = (
+        json_path is not None
+        and (
+            json_path == out["formal_result"]
+            or _paths_alias(json_path, held_out["formal_result"])
+        )
+    )
+    if json_path is not None and not json_is_canonical:
+        if _paths_alias(json_path, target):
+            return "json compatibility path aliases target_artifact"
+        if any(
+            json_path == out[role]
+            or _paths_alias(json_path, held_out[role])
+            for role in out
+        ):
+            return "json compatibility path aliases a formal companion"
+        output_paths.append(json_path)
+    for role, path in out.items():
+        try:
+            metadata = (
+                _stat_at_no_follow(output_directory_fd, path.name)
+                if output_directory_fd is not None
+                else path.lstat()
+                if path_lexists(path)
+                else None
+            )
+        except OSError as exc:
+            return f"pre-existing formal output is unreadable: {type(exc).__name__}"
+        if metadata is None:
+            continue
+        if stat.S_ISLNK(metadata.st_mode):
+            kind = "symbolic link"
+        elif not stat.S_ISREG(metadata.st_mode):
+            kind = "special file"
+        elif metadata.st_nlink != 1:
+            kind = "hardlink alias"
+        else:
+            kind = "regular file"
+        return f"pre-existing formal output for {role} is a {kind}"
+    if json_path is not None and not json_is_canonical:
+        ancestor_error = lexical_directory_ancestor_error(json_path)
+        if ancestor_error is not None:
+            return (
+                "unsafe formal output path for json compatibility: "
+                f"{ancestor_error}"
+            )
+        parent_error = directory_error(json_path.parent)
+        if parent_error is not None:
+            return (
+                "unsafe formal output parent for json compatibility: "
+                f"{parent_error}"
+            )
+        if path_lexists(json_path):
+            try:
+                metadata = json_path.lstat()
+            except OSError as exc:
+                return (
+                    "pre-existing formal output is unreadable: "
+                    f"{type(exc).__name__}"
+                )
+            if stat.S_ISLNK(metadata.st_mode):
+                kind = "symbolic link"
+            elif not stat.S_ISREG(metadata.st_mode):
+                kind = "special file"
+            elif metadata.st_nlink != 1:
+                kind = "hardlink alias"
+            else:
+                kind = "regular file"
+            if kind != "regular file":
+                return (
+                    "pre-existing formal output for json compatibility "
+                    f"is a {kind}"
+                )
+    return None
+
+
+def _captured_stream_fields(raw: bytes, name: str) -> Dict[str, Any]:
+    return {
+        name: raw.decode("utf-8", errors="replace"),
+        f"_{name}_bytes": raw,
+        f"{name}_bytes": len(raw),
+        f"{name}_sha256": f"sha256:{hashlib.sha256(raw).hexdigest()}",
+        f"{name}_truncated": len(raw) > PUBLIC_STREAM_BOUND_BYTES,
+    }
+
+
+class SpawnedProcessCaptureError(RuntimeError):
+    """Preserve post-spawn cleanup telemetry across the capture boundary."""
+
+    def __init__(
+        self,
+        cause: Exception,
+        cleanup: Mapping[str, Any],
+    ) -> None:
+        super().__init__(str(cause))
+        self.cause = cause
+        self.cleanup = dict(cleanup)
+
+
+def _cleanup_owned_spawned_process(
+    proc: subprocess.Popen[Any],
+    containment: Mapping[str, Any],
+    readers: Sequence[threading.Thread],
+) -> Dict[str, Any]:
+    """Best-effort fail-closed cleanup after ``Popen`` transfers ownership.
+
+    Every exceptional exit from the post-spawn lifetime uses this path, not
+    only reader setup failures.  That keeps the original process group, adopted
+    detached descendants, pipes, and reader threads owned until they are
+    killed/reaped/closed/joined as far as the platform permits.
+    """
+    process_group_terminated = False
+    process_reaped = False
+    detached_descendant_survivor = False
+    process_containment_cleanup_complete = False
+    try:
+        if os.name == "posix":
+            os.killpg(proc.pid, signal.SIGKILL)
+            process_group_terminated = True
+        else:
+            proc.kill()
+            process_group_terminated = True
+    except ProcessLookupError:
+        pass
+    except OSError:
+        try:
+            proc.kill()
+            process_group_terminated = True
+        except OSError:
+            pass
+    try:
+        proc.wait(timeout=READER_JOIN_GRACE_SEC)
+        process_reaped = proc.returncode is not None
+    except (OSError, subprocess.TimeoutExpired):
+        try:
+            proc.kill()
+            process_group_terminated = True
+            proc.wait(timeout=READER_JOIN_GRACE_SEC)
+            process_reaped = proc.returncode is not None
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    try:
+        (
+            detached_descendant_survivor,
+            process_containment_cleanup_complete,
+        ) = cleanup_detached_descendants(containment)
+    except Exception:
+        pass
+    for stream in (proc.stdout, proc.stderr):
+        if stream is None:
+            continue
+        try:
+            stream.close()
+        except (OSError, ValueError):
+            pass
+    for reader in readers:
+        if reader.ident is None:
+            continue
+        try:
+            reader.join(timeout=READER_JOIN_GRACE_SEC)
+        except RuntimeError:
+            pass
+    return {
+        "process_group_cleanup_attempted": True,
+        "process_group_terminated": process_group_terminated,
+        "process_reaped": process_reaped,
+        "detached_descendant_survivor": detached_descendant_survivor,
+        "process_containment_cleanup_complete": (
+            process_containment_cleanup_complete
+        ),
+        "reader_join_timed_out": any(
+            reader.ident is not None and reader.is_alive()
+            for reader in readers
+        ),
+        "process_containment": dict(
+            containment.get("scope") or PROCESS_CONTAINMENT_SCOPE
+        ),
+    }
+
+
+def _drain_bounded_stream(
+    stream: Any,
+    stop: threading.Event,
+) -> Dict[str, Any]:
+    """Drain one pipe completely or record a fail-closed reader error."""
+    retained = bytearray()
+    digest = hashlib.sha256()
+    observed = 0
+    exceeded = False
+    read_error: Optional[str] = None
+    try:
+        while True:
+            chunk = stream.read(64 * 1024)
+            if not chunk:
+                break
+            raw_chunk = bytes(chunk)
+            observed += len(raw_chunk)
+            digest.update(raw_chunk)
+            remaining = max(0, MAX_CAPTURE_BYTES - len(retained))
+            if remaining:
+                retained.extend(raw_chunk[:remaining])
+            if observed > MAX_CAPTURE_BYTES:
+                exceeded = True
+                stop.set()
+    except (OSError, ValueError) as exc:
+        read_error = f"{type(exc).__name__}: stream read failed"
+        stop.set()
+    finally:
+        try:
+            stream.close()
+        except Exception:
+            pass
+    return {
+        "raw": bytes(retained),
+        "observed": observed,
+        "sha256": f"sha256:{digest.hexdigest()}",
+        "exceeded": exceeded,
+        "read_error": read_error,
+    }
+
+
+def _bounded_process_capture(
+    cmd: List[str],
+    *,
+    cwd: Optional[Path],
+    timeout: int,
+    env: Dict[str, str],
+    pass_fds: Sequence[int] = (),
+) -> Dict[str, Any]:
+    """Run one process while bounding each captured stream during execution.
+
+    ``subprocess.run(..., PIPE)`` applies no size limit until after both streams
+    have already been accumulated.  Two reader threads instead drain the pipes
+    concurrently, retain at most ``MAX_CAPTURE_BYTES`` per stream, and ask the
+    parent loop to terminate the child as soon as either stream crosses that
+    boundary.  Hashes cover every byte actually drained; a limit crossing is
+    always fail-closed and therefore the retained prefix is never used for an
+    authentication decision.
+    """
+    containment = prepare_process_containment()
+    if containment.get("enabled") is not True:
+        raise OSError(
+            "detached-session process containment is unavailable"
+        )
+    if pass_fds and os.name != "posix":
+        raise OSError("inherited directory descriptors require POSIX")
+    popen_kwargs: Dict[str, Any] = {
+        "cwd": str(cwd) if cwd else None,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+        "env": env,
+        "start_new_session": (os.name == "posix"),
+    }
+    if pass_fds:
+        popen_kwargs["pass_fds"] = tuple(pass_fds)
+    stop = threading.Event()
+    states: Dict[str, Dict[str, Any]] = {}
+
+    def drain(name: str, stream: Any) -> None:
+        states[name] = _drain_bounded_stream(stream, stop)
+
+    proc = subprocess.Popen(cmd, **popen_kwargs)
+    readers: List[threading.Thread] = []
+    try:
+        assert proc.stdout is not None and proc.stderr is not None
+        readers.extend([
+            threading.Thread(target=drain, args=("stdout", proc.stdout), daemon=True),
+            threading.Thread(target=drain, args=("stderr", proc.stderr), daemon=True),
+        ])
+        for reader in readers:
+            reader.start()
+        deadline = time.monotonic() + timeout
+        timed_out = False
+        descendant_pipe_leak = False
+        normal_exit_group_survivor = False
+        process_group_terminated = False
+        process_group_cleanup_attempted = False
+
+        def terminate_group() -> bool:
+            nonlocal process_group_cleanup_attempted, process_group_terminated
+            process_group_cleanup_attempted = True
+            try:
+                if os.name == "posix":
+                    os.killpg(proc.pid, signal.SIGKILL)
+                    process_group_terminated = True
+                else:
+                    proc.kill()
+                    process_group_terminated = True
+            except ProcessLookupError:
+                pass
+            except OSError:
+                try:
+                    proc.kill()
+                    process_group_terminated = True
+                except OSError:
+                    pass
+            return process_group_terminated
+
+        while True:
+            if stop.is_set():
+                terminate_group()
+                break
+            if proc.poll() is not None:
+                # Pipe state is not a containment oracle. Kill/probe the original
+                # group immediately, then sweep the complete transitive /proc
+                # closure before waiting for reader threads.
+                if terminate_group():
+                    normal_exit_group_survivor = True
+                break
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                timed_out = True
+                terminate_group()
+                break
+            time.sleep(min(0.01, remaining))
+        try:
+            proc.wait(timeout=READER_JOIN_GRACE_SEC)
+        except subprocess.TimeoutExpired:
+            terminate_group()
+            try:
+                proc.wait(timeout=READER_JOIN_GRACE_SEC)
+            except subprocess.TimeoutExpired:
+                pass
+        (
+            detached_descendant_survivor,
+            process_containment_cleanup_complete,
+        ) = cleanup_detached_descendants(containment)
+        join_deadline = time.monotonic() + READER_JOIN_GRACE_SEC
+        for reader in readers:
+            reader.join(timeout=max(0.0, join_deadline - time.monotonic()))
+        if any(reader.is_alive() for reader in readers):
+            for stream in (proc.stdout, proc.stderr):
+                try:
+                    os.close(stream.fileno())
+                except OSError:
+                    pass
+            for reader in readers:
+                reader.join(timeout=max(0.0, join_deadline - time.monotonic()))
+        reader_join_timed_out = any(reader.is_alive() for reader in readers)
+        stdout = states.get("stdout", {"raw": b"", "observed": 0, "sha256": f"sha256:{hashlib.sha256(b'').hexdigest()}", "exceeded": False, "read_error": "reader state missing"})
+        stderr = states.get("stderr", {"raw": b"", "observed": 0, "sha256": f"sha256:{hashlib.sha256(b'').hexdigest()}", "exceeded": False, "read_error": "reader state missing"})
+        exceeded = bool(stdout["exceeded"] or stderr["exceeded"])
+        stream_read_error = bool(
+            stdout.get("read_error") or stderr.get("read_error")
         )
         return {
+            "returncode": (
+                124
+                if timed_out
+                else 126
+                if exceeded
+                else 125
+                if (
+                    descendant_pipe_leak
+                    or normal_exit_group_survivor
+                    or detached_descendant_survivor
+                    or not process_containment_cleanup_complete
+                    or reader_join_timed_out
+                    or stream_read_error
+                )
+                else proc.returncode
+            ),
+            "stdout_state": stdout,
+            "stderr_state": stderr,
+            "capture_limit_exceeded": exceeded,
+            "timed_out": timed_out,
+            "descendant_pipe_leak": descendant_pipe_leak,
+            "normal_exit_group_survivor": normal_exit_group_survivor,
+            "detached_descendant_survivor": detached_descendant_survivor,
+            "process_containment_cleanup_complete": (
+                process_containment_cleanup_complete
+            ),
+            "reader_join_timed_out": reader_join_timed_out,
+            "process_group_cleanup_attempted": process_group_cleanup_attempted,
+            "process_group_terminated": process_group_terminated,
+            "process_containment": dict(containment["scope"]),
+        }
+    except BaseException as exc:
+        cleanup = _cleanup_owned_spawned_process(
+            proc,
+            containment,
+            readers,
+        )
+        if isinstance(exc, Exception):
+            raise SpawnedProcessCaptureError(exc, cleanup) from exc
+        raise
+
+
+def _bounded_stream_fields(state: Mapping[str, Any], name: str) -> Dict[str, Any]:
+    raw = bytes(state.get("raw") or b"")
+    observed = int(state.get("observed") or 0)
+    return {
+        name: raw.decode("utf-8", errors="replace"),
+        f"_{name}_bytes": raw,
+        f"{name}_bytes": observed,
+        f"{name}_sha256": str(state.get("sha256")),
+        f"{name}_truncated": observed > PUBLIC_STREAM_BOUND_BYTES,
+    }
+
+
+def run_cmd(
+    cmd: List[str],
+    cwd: Optional[Path] = None,
+    timeout: int = 300,
+    env: Optional[Dict[str, str]] = None,
+    pass_fds: Sequence[int] = (),
+) -> Dict[str, Any]:
+    started = time.time()
+    try:
+        # SECURITY-REVIEW: Callers construct fixed argv and invoke executables
+        # directly with shell parsing disabled. Capture is bounded while the
+        # child runs, rather than checked only after unbounded PIPE buffering.
+        process_env = os.environ.copy() if env is None else dict(env)
+        process_env["PYTHONDONTWRITEBYTECODE"] = "1"
+        captured = _bounded_process_capture(
+            cmd,
+            cwd=cwd,
+            timeout=timeout,
+            env=process_env,
+            pass_fds=pass_fds,
+        )
+        result = {
             "cmd": cmd,
             "cwd": str(cwd) if cwd else None,
-            "returncode": proc.returncode,
-            "stdout": proc.stdout[-50000:],
-            "stderr": proc.stderr[-50000:],
+            "returncode": captured["returncode"],
+            **_bounded_stream_fields(captured["stdout_state"], "stdout"),
+            **_bounded_stream_fields(captured["stderr_state"], "stderr"),
+            "capture_limit_exceeded": captured["capture_limit_exceeded"],
+            "timed_out": captured["timed_out"],
+            "descendant_pipe_leak": captured["descendant_pipe_leak"],
+            "normal_exit_group_survivor": captured[
+                "normal_exit_group_survivor"
+            ],
+            "detached_descendant_survivor": captured[
+                "detached_descendant_survivor"
+            ],
+            "process_containment_cleanup_complete": captured[
+                "process_containment_cleanup_complete"
+            ],
+            "reader_join_timed_out": captured["reader_join_timed_out"],
+            "process_group_cleanup_attempted": captured[
+                "process_group_cleanup_attempted"
+            ],
+            "process_group_terminated": captured["process_group_terminated"],
+            "process_containment": captured["process_containment"],
             "duration_sec": round(time.time() - started, 3),
         }
-    except subprocess.TimeoutExpired as exc:
-        return {
-            "cmd": cmd,
-            "cwd": str(cwd) if cwd else None,
-            "returncode": 124,
-            "stdout": (exc.stdout or "")[-50000:] if isinstance(exc.stdout, str) else "",
-            "stderr": (exc.stderr or "")[-50000:] if isinstance(exc.stderr, str) else "timeout",
-            "duration_sec": round(time.time() - started, 3),
-        }
+        return result
     except Exception as exc:
+        cleanup = (
+            exc.cleanup
+            if isinstance(exc, SpawnedProcessCaptureError)
+            else {}
+        )
+        observed_exc = (
+            exc.cause
+            if isinstance(exc, SpawnedProcessCaptureError)
+            else exc
+        )
+        stderr_raw = repr(observed_exc).encode("utf-8", errors="replace")
         return {
             "cmd": cmd,
             "cwd": str(cwd) if cwd else None,
             "returncode": 125,
-            "stdout": "",
-            "stderr": repr(exc),
+            **_captured_stream_fields(b"", "stdout"),
+            **_captured_stream_fields(stderr_raw, "stderr"),
+            "capture_limit_exceeded": False,
+            "timed_out": False,
+            "descendant_pipe_leak": False,
+            "reader_join_timed_out": bool(
+                cleanup.get("reader_join_timed_out", False)
+            ),
+            "normal_exit_group_survivor": False,
+            "detached_descendant_survivor": bool(
+                cleanup.get("detached_descendant_survivor", False)
+            ),
+            "process_containment_cleanup_complete": bool(
+                cleanup.get(
+                    "process_containment_cleanup_complete",
+                    False,
+                )
+            ),
+            "process_group_cleanup_attempted": bool(
+                cleanup.get("process_group_cleanup_attempted", False)
+            ),
+            "process_group_terminated": bool(
+                cleanup.get("process_group_terminated", False)
+            ),
+            "process_containment": dict(
+                cleanup.get("process_containment")
+                or PROCESS_CONTAINMENT_SCOPE
+            ),
             "duration_sec": round(time.time() - started, 3),
         }
 
 
+def write_complete_stream_transcript(
+    path: Path,
+    invocation: Mapping[str, Any],
+    *,
+    directory_fd: Optional[int] = None,
+    lexical_parent: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Persist the complete Claude stdout stream or fail closed."""
+    # SECURITY-REVIEW: The full stream is retained only in the private formal
+    # companion. It is never copied into the final JSON result. Oversized
+    # captures are rejected rather than tail-truncated and authenticated.
+    if invocation.get("capture_limit_exceeded") is True:
+        raise ValueError("formal stream exceeds the capture safety limit")
+    raw = invocation.get("_stdout_bytes")
+    if isinstance(raw, bytearray):
+        payload = bytes(raw)
+    elif isinstance(raw, bytes):
+        payload = raw
+    else:
+        stdout = invocation.get("stdout")
+        if not isinstance(stdout, str):
+            raise ValueError("formal stdout is unavailable")
+        payload = stdout.encode("utf-8")
+    if len(payload) > MAX_CAPTURE_BYTES:
+        raise ValueError("formal stream exceeds the capture safety limit")
+    atomic_write_new(
+        path,
+        payload,
+        directory_fd=directory_fd,
+        lexical_parent=lexical_parent,
+    )
+    return {
+        "bytes": len(payload),
+        "sha256": f"sha256:{hashlib.sha256(payload).hexdigest()}",
+    }
+
+
 def load_json(path: Path) -> Dict[str, Any]:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        value = strict_json_loads(
+            read_regular_text_bounded(
+                path,
+                max_bytes=MAX_FORMAL_JSON_BYTES,
+            )
+        )
+        validate_json_structure_bounds(value)
+        return value
     except Exception as exc:
         return {"_error": str(exc), "_path": str(path)}
+
+
+def read_regular_text_bounded(
+    path: Path,
+    *,
+    max_bytes: int = MAX_FORMAL_TEXT_BYTES,
+    errors: str = "strict",
+) -> str:
+    """Read one single-link regular final entry with a hard byte bound."""
+    if type(max_bytes) is not int or max_bytes < 0:
+        raise ValueError("max_bytes must be a nonnegative integer")
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    descriptor = os.open(path, flags)
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+            raise ValueError(f"{path.name} is not a single-link regular file")
+        if metadata.st_size > max_bytes:
+            raise ValueError(f"file exceeds {max_bytes} bytes")
+        with os.fdopen(descriptor, "rb") as stream:
+            descriptor = -1
+            payload = stream.read(max_bytes + 1)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+    if len(payload) > max_bytes:
+        raise ValueError(f"file exceeds {max_bytes} bytes")
+    return payload.decode("utf-8", errors=errors)
+
+
+def validate_json_structure_bounds(value: Any) -> None:
+    stack: List[Tuple[Any, int]] = [(value, 1)]
+    nodes = 0
+    while stack:
+        current, depth = stack.pop()
+        nodes += 1
+        if nodes > MAX_JSON_STRUCTURE_NODES:
+            raise ValueError(
+                f"JSON exceeds {MAX_JSON_STRUCTURE_NODES} structure nodes"
+            )
+        if depth > MAX_JSON_STRUCTURE_DEPTH:
+            raise ValueError(f"JSON exceeds depth {MAX_JSON_STRUCTURE_DEPTH}")
+        if isinstance(current, Mapping):
+            stack.extend((child, depth + 1) for child in current.values())
+        elif isinstance(current, list):
+            stack.extend((child, depth + 1) for child in current)
+        elif type(current) is float and not math.isfinite(current):
+            raise ValueError("JSON contains a non-finite number")
 
 
 def plugin_name(root: Path) -> str:
@@ -166,12 +2458,10 @@ def refresh_stable_release_manifest_if_available(root: Path) -> None:
     if not manifest.exists() or not validator.exists():
         return
     try:
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("nozickian_validate_package", validator)
-        if spec is None or spec.loader is None:
-            return
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)  # type: ignore[union-attr]
+        module = load_module_without_bytecode(
+            "nozickian_validate_package",
+            validator,
+        )
         writer = getattr(module, "write_stable_release_manifest", None)
         if callable(writer):
             writer(root.resolve())
@@ -183,31 +2473,47 @@ def refresh_stable_release_manifest_if_available(root: Path) -> None:
 
 def output_paths(target: Path, output_dir: Path) -> Dict[str, Path]:
     stem = target.stem
-    return {
-        "report": output_dir / f"{stem}_NOZICKIAN_REPORT.md",
-        "certificate": output_dir / f"{stem}_NOZICKIAN_certificate.json",
-        "gate": output_dir / f"{stem}_NOZICKIAN_GATE.md",
-        "ledger": output_dir / f"{stem}_NOZICKIAN_INVOCATION_LEDGER.md",
-        "prompt": output_dir / f"{stem}_NOZICKIAN_FORMAL_PROMPT.md",
-        "transcript": output_dir / f"{stem}_NOZICKIAN_FORMAL_TRANSCRIPT.stream.jsonl",
-        "precheck": output_dir / f"{stem}_NOZICKIAN_FORMAL_PRECHECKS.json",
+    paths = {
+        role: output_dir / f"{stem}{suffix}"
+        for role, suffix in FORMAL_COMPANION_SPECS.items()
     }
+    paths["formal_result"] = output_dir / FORMAL_AUXILIARY_OUTPUT_SPECS[
+        "formal_result"
+    ]
+    paths["precheck"] = output_dir / (
+        f"{stem}{FORMAL_AUXILIARY_OUTPUT_SPECS['precheck']}"
+    )
+    return paths
 
 
-def build_formal_prompt(root: Path, target: Path, out: Dict[str, Path]) -> str:
+def build_formal_prompt(
+    root: Path,
+    target: Path,
+    out: Dict[str, Path],
+    evidence_root: Optional[Path] = None,
+) -> str:
     name = plugin_name(root)
+    effective_evidence_root = evidence_root or out["formal_result"].parent
     agent_list = "\n".join(f"   - {agent}" for agent in REQUIRED_NATIVE_AGENTS)
     return f"""/{name}:nozickian-verify {target}
 
 FORMAL_INVOCATION_REQUIRED.
 
-Target artifact:
+Endpoint-checked target copy to verify:
 {target}
+
+Verification context:
+- Mode: standalone-endpoint-checked-copy.
+- Relative sibling context from the mutable source location is intentionally unavailable.
+- Evaluate only the copied target bytes and explicitly supplied evidence.
+- The copy is permission-hardened and checked before/after, but same-UID
+  temporal immutability is not enforced; a would-be PASS-TRACKED result is
+  capped to PASS-SCOPED.
+- Do not infer claims from files adjacent to the original source target.
 
 Required output artifacts:
 - {out['report']}
 - {out['certificate']}
-- {out['gate']}
 - {out['ledger']}
 
 Formal invocation rules:
@@ -220,8 +2526,8 @@ Formal invocation rules:
 6. Extract claim IDs and rank them as critical, major, or minor.
 7. For every critical and major claim, produce structured certificate entries with: claim_id/id, text, importance, artifact_location, truth_status, method_m, method_completeness, evidence_refs, false_world_tests, true_world_tests, unresolved_contradictions, and residual_risks.
 8. For every local evidence reference intended to satisfy the gate, write a structured evidence artifact with fields: evidence_schema_version, claim_id, test_id or applies_to_tests, artifact_path, command_or_source, observed_result, support_summary, timestamp_utc, and hash_or_version.
-9. Run exactly this gate command after writing the certificate:
-   python3 {root / SKILL_PATH / 'scripts/ntt_gate.py'} {out['certificate']} --evidence-root {target.parent} --strict-evidence --markdown {out['gate']}
+9. Do not write the gate output. The formal runner will execute this exact gate after the coordinator returns:
+   python3 {root / SKILL_PATH / 'scripts/ntt_gate.py'} {out['certificate']} --evidence-root {effective_evidence_root} --strict-evidence --markdown {out['gate']}
 10. The final report must include scope, artifact identity, method M, claim table, false-world sensitivity, true-world adherence, contradictions, residual risks, commands run, subagents actually used, gate status, and explicit downgrade reasons.
 11. The invocation ledger must include:
     Skill invoked: /{name}:nozickian-verify
@@ -229,7 +2535,7 @@ Formal invocation rules:
     Native subagents requested: {', '.join(REQUIRED_NATIVE_AGENTS)}
     Native subagents completed: ...
     Substitution used: none OR FORMAL_SUBAGENT_FAILURE
-    Machine gate run: yes
+    Machine gate run: runner-managed
     Gate script: {root / SKILL_PATH / 'scripts/ntt_gate.py'}
     Gate output: {out['gate']}
     Runtime transcript: {out['transcript']}
@@ -241,14 +2547,21 @@ Formal invocation rules:
 def parse_gate_status(stdout: str, markdown_path: Optional[Path] = None) -> Optional[str]:
     text = stdout or ""
     try:
-        data = json.loads(text)
+        data = strict_json_loads(text)
         status = data.get("status")
         if isinstance(status, str) and status in FINAL_STATUSES:
             return status
     except Exception:
         pass
     if markdown_path and markdown_path.exists():
-        text += "\n" + markdown_path.read_text(encoding="utf-8", errors="replace")
+        try:
+            text += "\n" + read_regular_text_bounded(
+                markdown_path,
+                max_bytes=MAX_FORMAL_TEXT_BYTES,
+                errors="replace",
+            )
+        except (OSError, ValueError):
+            return None
     matches = re.findall(r"Status:\s*\*\*(PASS-TRACKED|PASS-SCOPED|LIMITED|FAIL|UNVERIFIED)\*\*", text)
     if matches:
         return matches[-1]
@@ -261,31 +2574,96 @@ def parse_gate_status(stdout: str, markdown_path: Optional[Path] = None) -> Opti
     return None
 
 
+class TraceFormatError(ValueError):
+    """A nonblank stream record is not one JSON object."""
+
+    def __init__(self, line: int, reason: str):
+        super().__init__(f"line {line}: {reason}")
+        self.line = line
+        self.reason = reason
+
+
+class TraceBoundError(ValueError):
+    """One JSONL record exceeds the parser's explicit structural budget."""
+
+
 def _iter_json_lines(text: str) -> Iterable[Tuple[int, Dict[str, Any]]]:
+    """Yield every nonblank JSONL object, rejecting the stream on first defect."""
     for idx, line in enumerate(text.splitlines(), start=1):
         line = line.strip()
         if not line:
             continue
         try:
-            obj = json.loads(line)
-        except Exception:
-            continue
-        if isinstance(obj, dict):
-            yield idx, obj
+            obj = strict_json_loads(line)
+        except (
+            ValueError,
+            RecursionError,
+            MemoryError,
+            OverflowError,
+        ) as exc:
+            raise TraceFormatError(idx, "malformed JSON") from exc
+        if not isinstance(obj, dict):
+            raise TraceFormatError(
+                idx,
+                f"top-level record is {type(obj).__name__}, not an object",
+            )
+        yield idx, obj
 
 
 def _candidate_trace_nodes(event: Dict[str, Any]) -> Iterable[Tuple[int, Dict[str, Any], str, Optional[str]]]:
-    """Yield recognized stream-json event positions with optional role context.
+    """Yield only the supported Claude stream-json message event positions.
 
-    Candidate positions are top-level stream events and known message/content
-    envelopes. Once a node is itself a tool_use or tool_result event, it becomes a
-    hard event boundary: all children under content, data, payload, delta, message,
-    input, arguments, args, or parameters are treated as payload data and are not
-    recursively parsed as new runtime events. This prevents fake tool events hidden
-    inside tool_result.data/payload from authenticating PASS-TRACKED.
+    Authentication currently supports the observed/documented Claude Code shape
+    ``assistant|user -> message -> content[]``.  Unknown outer event types and
+    generic ``data``/``payload``/``delta`` keys are deliberately opaque: key names
+    alone do not establish a runtime event boundary.  The outer assistant/user
+    role is authoritative for every nested content block and cannot be overridden
+    by an attacker-controlled child ``role`` field.
+
+    Once a node is itself a tool_use or tool_result event, it is a hard event
+    boundary.  Its children are tool input/output data, never fresh runtime events.
+    Additional official stream shapes must be added as explicit true-world schemas
+    after capture from the official runtime, not inferred recursively.
+
+    SECURITY-REVIEW: recognized stream-json event positions are allowlisted;
+    each tool event is a hard event boundary, and tool_result.data remains opaque.
     """
+    # Bound the complete untrusted record independently of semantic parsing.
+    # Unknown envelopes stay opaque, but they cannot hide an over-deep or
+    # over-wide JSON object that defeats the parser's resource contract.
+    bound_items = 0
+    stack: List[Tuple[Any, int]] = [(event, 0)]
+    while stack:
+        value, depth = stack.pop()
+        if depth > MAX_TRACE_DEPTH:
+            raise TraceBoundError(
+                f"record nesting depth exceeds {MAX_TRACE_DEPTH}"
+            )
+        bound_items += 1
+        if bound_items > MAX_TRACE_ITEMS_PER_RECORD:
+            raise TraceBoundError(
+                f"record item count exceeds {MAX_TRACE_ITEMS_PER_RECORD}"
+            )
+        if isinstance(value, dict):
+            stack.extend((child, depth + 1) for child in value.values())
+        elif isinstance(value, list):
+            stack.extend((child, depth + 1) for child in value)
+
     index = 0
+    visited = 0
     seen: Set[int] = set()
+
+    def account(depth: int) -> None:
+        nonlocal visited
+        if depth > MAX_TRACE_DEPTH:
+            raise TraceBoundError(
+                f"record nesting depth exceeds {MAX_TRACE_DEPTH}"
+            )
+        visited += 1
+        if visited > MAX_TRACE_ITEMS_PER_RECORD:
+            raise TraceBoundError(
+                f"record item count exceeds {MAX_TRACE_ITEMS_PER_RECORD}"
+            )
 
     def event_type(container: Any) -> str:
         if not isinstance(container, dict):
@@ -293,6 +2671,8 @@ def _candidate_trace_nodes(event: Dict[str, Any]) -> Iterable[Tuple[int, Dict[st
         return str(container.get("type") or container.get("event") or container.get("kind") or "").strip().lower()
 
     def role_from(container: Any, inherited: Optional[str]) -> Optional[str]:
+        if inherited is not None:
+            return inherited
         if not isinstance(container, dict):
             return inherited
         role = container.get("role") or container.get("speaker")
@@ -312,35 +2692,36 @@ def _candidate_trace_nodes(event: Dict[str, Any]) -> Iterable[Tuple[int, Dict[st
                 yield index, node, path, role
                 index += 1
 
-    def emit_child(child: Any, path: str, role: Optional[str]):
-        if isinstance(child, dict):
-            yield from emit_container(child, path, role)
-        elif isinstance(child, list):
-            for i, item in enumerate(child):
-                yield from emit_container(item, f"{path}[{i}]", role)
+    account(0)
+    outer_type = event.get("type")
+    if (
+        outer_type not in {"assistant", "user"}
+        or "event" in event
+        or "kind" in event
+    ):
+        return
+    role = outer_type
+    yield from emit(event, "$", role)
 
-    def emit_container(container: Any, path: str, inherited_role: Optional[str] = None):
-        if not isinstance(container, dict):
-            return
-        role = role_from(container, inherited_role)
-        yield from emit(container, path, role)
-        typ = event_type(container)
-        if typ in TOOL_USE_TYPES or typ in TOOL_RESULT_TYPES:
-            # Hard event boundary. Children of an actual tool event are input/output
-            # payloads, not stream event envelopes.
-            return
+    message = event.get("message")
+    account(1)
+    if not isinstance(message, dict):
+        return
 
-        # Known non-tool envelopes. The role of an enclosing assistant/user message
-        # is propagated to its content blocks so role-inverted traces can be rejected.
-        for key in ("message", "delta", "data", "payload"):
-            if key in container:
-                yield from emit_child(container.get(key), f"{path}.{key}", role)
-
-        for key in ("content", "blocks"):
-            if key in container:
-                yield from emit_child(container.get(key), f"{path}.{key}", role)
-
-    yield from emit_container(event, "$", None)
+    content = message.get("content")
+    account(2)
+    if not isinstance(content, list):
+        return
+    for item_index, item in enumerate(content):
+        account(3)
+        if not isinstance(item, dict):
+            continue
+        item_role = role_from(item, role)
+        yield from emit(
+            item,
+            f"$.message.content[{item_index}]",
+            item_role,
+        )
 
 def _stringify(obj: Any) -> str:
     try:
@@ -362,18 +2743,47 @@ def _tool_call_ids(node: Dict[str, Any]) -> List[str]:
 
 
 def _tool_result_ids(node: Dict[str, Any]) -> List[str]:
-    """Return IDs that explicitly bind a result/completion to a tool-use call.
+    """Return the single ID that binds a result to one tool-use call.
 
-    A result authenticates a native lane only through tool_use_id / tool_call_id
-    style fields. The result object's own id, and text mentioning an agent name,
-    are not evidence of a successful matching native subagent completion.
+    A result authenticates a native lane only through canonical ``tool_use_id``.
+    Alias fields may not be fanned out or substituted, even when their values
+    happen to agree. The result object's own id and textual agent mentions are
+    never matching evidence.
     """
-    vals: List[str] = []
-    for key in ("tool_use_id", "toolUseId", "tool_call_id", "toolCallId"):
-        v = node.get(key)
-        if isinstance(v, str) and v:
-            vals.append(v)
-    return vals
+    present = [
+        key
+        for key in ("tool_use_id", "toolUseId", "tool_call_id", "toolCallId")
+        if key in node
+    ]
+    if present != ["tool_use_id"]:
+        return []
+    value = node.get("tool_use_id")
+    return [value] if isinstance(value, str) and value.strip() else []
+
+
+def _tool_result_binding_error(node: Dict[str, Any]) -> Optional[str]:
+    present = [
+        key
+        for key in ("tool_use_id", "toolUseId", "tool_call_id", "toolCallId")
+        if key in node
+    ]
+    if present != ["tool_use_id"]:
+        return (
+            "tool-result must contain only canonical tool_use_id binding; "
+            f"observed {present!r}"
+        )
+    value = node.get("tool_use_id")
+    if not isinstance(value, str) or not value.strip():
+        return "tool-result binding tool_use_id is not a nonempty string"
+    payload_fields = [
+        key for key in ("content", "result", "output") if key in node
+    ]
+    if payload_fields != ["content"]:
+        return (
+            "tool-result must contain only canonical content payload; "
+            f"observed {payload_fields!r}"
+        )
+    return None
 
 
 def _normalized_event_type(node: Dict[str, Any]) -> str:
@@ -381,18 +2791,18 @@ def _normalized_event_type(node: Dict[str, Any]) -> str:
 
 
 def _is_tool_call_node(node: Dict[str, Any]) -> bool:
-    """Return True only for authentic tool-use event nodes.
+    """Return True only for typed tool-use event nodes.
 
     Recognized positions are necessary but not sufficient: a `message.content`
     block with type `text`, or a top-level assistant/message envelope that merely
     contains fields named `name` and `input`, must not masquerade as a native
     Agent/Task call. PASS-TRACKED depends on actual tool-use event types.
     """
-    typ = _normalized_event_type(node)
-    if typ not in TOOL_USE_TYPES:
-        return False
-    name = node.get("name") or node.get("tool_name") or node.get("toolName")
-    return name in TRACE_TOOL_NAMES
+    return (
+        node.get("type") == "tool_use"
+        and "event" not in node
+        and "kind" not in node
+    )
 
 
 def _is_tool_result_node(node: Dict[str, Any]) -> bool:
@@ -402,18 +2812,24 @@ def _is_tool_result_node(node: Dict[str, Any]) -> bool:
     are not runtime results. This closes the v0.7.7 false world where non-tool
     text or top-level assistant messages authenticated native lanes.
     """
-    typ = _normalized_event_type(node)
-    return typ in TOOL_RESULT_TYPES and bool(_tool_result_ids(node))
+    # Only the documented Claude stream content block is evidence. Accepting
+    # discriminator aliases (event/kind) or invented result spellings would
+    # authenticate a trace shape for which this package has no true-world
+    # fixture.
+    return (
+        node.get("type") == "tool_result"
+        and "event" not in node
+        and "kind" not in node
+    )
 
 
 def _result_content(node: Dict[str, Any]) -> Any:
-    if "content" in node:
-        return node.get("content")
-    if "result" in node:
-        return node.get("result")
-    if "output" in node:
-        return node.get("output")
-    return None
+    payload_fields = [
+        field for field in ("content", "result", "output") if field in node
+    ]
+    if len(payload_fields) != 1:
+        return None
+    return node.get(payload_fields[0])
 
 
 def _has_meaningful_content(value: Any) -> bool:
@@ -424,7 +2840,7 @@ def _has_meaningful_content(value: Any) -> bool:
     block types, inspect the payload-bearing fields; for generic dicts, ignore
     metadata-only keys before deciding whether the result is meaningful.
     """
-    if value is None or value is False:
+    if value is None or type(value) is bool:
         return False
     if isinstance(value, str):
         stripped = value.strip()
@@ -441,7 +2857,100 @@ def _has_meaningful_content(value: Any) -> bool:
             return _has_meaningful_content(_result_content(value))
         payload = {k: v for k, v in value.items() if k not in CONTENT_METADATA_KEYS}
         return any(_has_meaningful_content(v) for v in payload.values())
-    return True
+    # JSON scalars are not evidence that a native lane produced findings.
+    # In particular, bool is a subclass of int in Python and must not inherit
+    # a truthy success interpretation from generic scalar handling.
+    return False
+
+
+DIRECT_TERMINAL_FAILURE_RE = re.compile(
+    r"\s*(?:fail|failed|failure|error|errored|aborted|killed|terminated|"
+    r"cancelled|canceled|timed[-_ ]?out|timeout|skipped|not[-_ ]?executed|"
+    r"not[-_ ]?run|unsuccessful)\s*[.!]?\s*",
+    re.I,
+)
+
+
+def _direct_terminal_failure_text(value: Any) -> bool:
+    return (
+        type(value) is str
+        and DIRECT_TERMINAL_FAILURE_RE.fullmatch(value) is not None
+    )
+
+
+def _direct_result_content_has_failure(value: Any) -> bool:
+    """Reject unambiguous completion failures in direct result content.
+
+    This deliberately does not walk arbitrary nested audit findings: a native
+    lane may successfully report that its target claim failed. Direct
+    tool-result envelopes and content blocks, however, cannot launder common
+    execution error fields beneath a top-level success signal.
+    """
+    candidates = value if isinstance(value, (list, tuple)) else [value]
+    for candidate in candidates:
+        if _direct_terminal_failure_text(candidate):
+            return True
+        if not isinstance(candidate, Mapping):
+            continue
+        if (
+            str(candidate.get("type") or "").strip().lower() == "text"
+            and _direct_terminal_failure_text(candidate.get("text"))
+        ):
+            return True
+        if any(
+            alias in candidate
+            for alias in (
+                "isError",
+                "returnCode",
+                "exitCode",
+                "completionStatus",
+                "errorCode",
+            )
+        ):
+            return True
+        for field in ("error", "errors"):
+            if field not in candidate:
+                continue
+            field_value = candidate.get(field)
+            if field_value not in (None, False, 0, "") and not (
+                isinstance(field_value, (list, tuple, dict))
+                and not field_value
+            ):
+                return True
+        for field in (
+            "exit_code",
+            "returncode",
+            "return_code",
+            "error_code",
+        ):
+            if field in candidate and (
+                type(candidate.get(field)) is not int
+                or candidate.get(field) != 0
+            ):
+                return True
+        for field in ("executed", "completed", "success"):
+            if field in candidate and candidate.get(field) is not True:
+                return True
+        for field in (
+            "is_error",
+            "aborted",
+            "killed",
+            "cancelled",
+            "canceled",
+            "failed",
+            "failure",
+            "timed_out",
+            "timeout",
+            "terminated",
+            "skipped",
+            "not_executed",
+        ):
+            if field in candidate and candidate.get(field) is not False:
+                return True
+        direct_result = candidate.get("result")
+        if _direct_terminal_failure_text(direct_result):
+            return True
+    return False
 
 def _result_is_success(node: Dict[str, Any]) -> bool:
     """Return True only for explicit, non-empty successful tool results.
@@ -452,27 +2961,151 @@ def _result_is_success(node: Dict[str, Any]) -> bool:
     merely says an agent succeeded is not sufficient for PASS-TRACKED trace
     authentication.
     """
+    # Claude stream tool results have one canonical `content` channel.  Do not
+    # let first-field selection hide a contradictory `result`/`output` alias.
+    payload_fields = [
+        field for field in ("content", "result", "output") if field in node
+    ]
+    if payload_fields != ["content"]:
+        return False
+    if "is_error" in node and type(node.get("is_error")) is not bool:
+        return False
     if node.get("is_error") is True:
         return False
-    status = str(node.get("status") or node.get("outcome") or "").strip().lower()
-    if status in {"error", "failed", "failure", "timeout", "cancelled", "canceled"}:
+    if any(
+        alias in node
+        for alias in (
+            "isError",
+            "returnCode",
+            "exitCode",
+            "completionStatus",
+            "errorCode",
+        )
+    ):
         return False
+    for field in ("error", "errors"):
+        if field not in node:
+            continue
+        value = node.get(field)
+        if value not in (None, False, 0, "") and not (
+            isinstance(value, (list, tuple, dict)) and not value
+        ):
+            return False
+    positive_statuses = {
+        "ok",
+        "success",
+        "succeeded",
+        "completed",
+        "complete",
+        "done",
+    }
+    status_values: List[str] = []
+    for field in ("status", "outcome", "completion_status"):
+        if field not in node:
+            continue
+        value = node.get(field)
+        if type(value) is not str:
+            return False
+        normalized = re.sub(
+            r"[-_\s]+",
+            "-",
+            value.strip().lower(),
+        )
+        if normalized not in positive_statuses:
+            return False
+        status_values.append(normalized)
+    for field in ("executed", "completed", "success"):
+        if field in node and (
+            type(node.get(field)) is not bool
+            or node.get(field) is not True
+        ):
+            return False
+    for field in (
+        "aborted",
+        "killed",
+        "cancelled",
+        "canceled",
+        "failed",
+        "failure",
+        "timed_out",
+        "timeout",
+        "terminated",
+        "skipped",
+        "not_executed",
+    ):
+        if field in node and (
+            type(node.get(field)) is not bool
+            or node.get(field) is not False
+        ):
+            return False
+    for field in ("exit_code", "returncode", "return_code", "error_code"):
+        if field in node and (
+            type(node.get(field)) is not int
+            or node.get(field) != 0
+        ):
+            return False
     content = _result_content(node)
-    body = _stringify(content).lower()
-    if any(term in body for term in ("formal_subagent_failure", "failed", "failure", "timeout", "cancelled", "canceled", "exception", "traceback")):
+    if _direct_result_content_has_failure(content):
         return False
-    explicit_success = status in {"ok", "success", "succeeded", "completed", "done"} or node.get("is_error") is False
+    body = _stringify(content).lower()
+    # Explicit contradiction markers dominate every success signal. Ordinary
+    # negative-test prose needs narrower treatment: "0 failures", "no tests
+    # failed", and "mutation failed as expected" describe successful evidence,
+    # not failed execution.
+    if any(
+        marker in body
+        for marker in (
+            "formal_subagent_failure",
+            "traceback (most recent call last)",
+            "unhandled exception",
+        )
+    ):
+        return False
+    contradiction_candidate = body
+    benign_patterns = (
+        r"\b(?:0|zero)\s+(?:test\s+)?failures?\b",
+        r"\bno\s+(?:tests?\s+)?failed\b",
+        r"\bno\s+failures?\b",
+        r"\b(?:mutation|negative\s+test|probe|check|command)\s+failed\s+as\s+expected\b",
+        r"\bexpected\s+failures?\b",
+    )
+    for pattern in benign_patterns:
+        contradiction_candidate = re.sub(pattern, " ", contradiction_candidate)
+    explicit_noncompletion_patterns = (
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)\s+(?:did\s+not|was\s+not|never)\s+(?:execute|executed|run|ran|invoke|invoked|complete|completed)\b",
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)\s+not\s+(?:executed|run|invoked|completed|successful)\b",
+        r"\b(?:execution|run|invocation|task|agent|subagent|lane)\s+(?:was\s+)?(?:skipped|aborted|killed|terminated|cancelled|canceled|unsuccessful)\b",
+        r"\bcompletion\s+was\s+unsuccessful\b",
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)\s+(?:was\s+)?failed\b",
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)\s+(?:encountered|returned)\s+(?:an?\s+)?error\b",
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)\s+(?:error|errored)\b",
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)\s+(?:did\s+not\s+succeed|could\s+not\s+complete)\b",
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)\b.{0,40}\b(?:timed\s+out|failed\s+before|produced\s+no\s+output|without\s+producing\s+(?:findings|output|a\s+result))\b",
+        r"\b(?:the\s+)?(?:agent|subagent|lane|task|execution|run)(?:'s|\s+returned|\s+reported|\s+had)?\b.{0,40}\b(?:non[- ]?zero\s+(?:exit|return|error)[ _-]?code|(?:exit|return|error)[ _-]?code\s*(?:[:=]|was|is)?\s*(?:non[- ]?zero|-?[1-9][0-9]*))\b",
+    )
+    if any(
+        re.search(pattern, contradiction_candidate)
+        for pattern in explicit_noncompletion_patterns
+    ):
+        return False
+    explicit_success = (
+        bool(status_values)
+        or node.get("is_error") is False
+        or any(
+            node.get(field) is True
+            for field in ("executed", "completed", "success")
+        )
+    )
     return bool(explicit_success and _has_meaningful_content(content))
 
 
 def _tool_input_payload(node: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if any(
+        key in node
+        for key in ("arguments", "args", "parameters")
+    ):
+        return None
     payload = node.get("input")
-    if not isinstance(payload, dict):
-        payload = node.get("arguments")
-    if not isinstance(payload, dict):
-        payload = node.get("args")
-    if not isinstance(payload, dict):
-        payload = node.get("parameters")
     return payload if isinstance(payload, dict) else None
 
 
@@ -483,17 +3116,40 @@ def _structured_subagent_selector(node: Dict[str, Any]) -> Optional[str]:
     Only exact structured selectors such as input.subagent_type authenticate a
     lane; this blocks the single-call-mentions-all-lanes false world.
     """
+    if any(
+        key in node
+        for key in (
+            "event",
+            "kind",
+            "tool_name",
+            "toolName",
+            "tool_use_id",
+            "toolUseId",
+            "tool_call_id",
+            "toolCallId",
+        )
+    ):
+        return None
     payload = _tool_input_payload(node)
     if not isinstance(payload, dict):
         return None
-    for key in ("subagent_type", "subagentType", "agent_type", "agentType"):
-        value = payload.get(key)
-        if isinstance(value, str):
-            return value
-    return None
+    selector_fields = [
+        key
+        for key in (
+            "subagent_type",
+            "subagentType",
+            "agent_type",
+            "agentType",
+        )
+        if key in payload
+    ]
+    if selector_fields != ["subagent_type"]:
+        return None
+    value = payload.get("subagent_type")
+    return value if isinstance(value, str) and value.strip() else None
 
 
-def _extract_trace_events(event: Dict[str, Any]) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, List[Dict[str, Any]]], Set[str], List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
+def _extract_trace_events(event: Dict[str, Any]) -> Tuple[List[Tuple[str, Dict[str, Any]]], Dict[str, List[Dict[str, Any]]], Set[str], List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Extract authentic native Agent/Task calls and matching results.
 
     The parser is intentionally narrow: it reads only top-level stream-json
@@ -501,18 +3157,30 @@ def _extract_trace_events(event: Dict[str, Any]) -> Tuple[Dict[str, Dict[str, An
     tool-use/tool-result event types. It never treats arbitrary text/message
     objects or nested data in tool inputs as runtime events.
     """
-    calls: Dict[str, Dict[str, Any]] = {}
+    calls: List[Tuple[str, Dict[str, Any]]] = []
     result_success_by_id: Dict[str, List[Dict[str, Any]]] = {}
     saw_general_purpose: Set[str] = set()
     evidence: List[Dict[str, Any]] = []
     unexpected_native_tool_calls: List[Dict[str, Any]] = []
     role_violations: List[Dict[str, Any]] = []
+    invalid_result_bindings: List[Dict[str, Any]] = []
+    all_tool_calls: List[Dict[str, Any]] = []
     for node_index, node, path, role in _candidate_trace_nodes(event):
         if _is_tool_call_node(node):
             selector = _structured_subagent_selector(node)
             ids = _tool_call_ids(node)
-            tool_name = str(node.get("name") or node.get("tool_name") or node.get("toolName"))
+            tool_name = str(node.get("name") or "")
             event_type = str(node.get("type") or node.get("event") or node.get("kind") or "unknown")
+            for tool_id in ids:
+                all_tool_calls.append({
+                    "id": tool_id,
+                    "tool_name": tool_name,
+                    "event_type": event_type,
+                    "node_index": node_index,
+                    "path": path,
+                })
+            if tool_name not in TRACE_TOOL_NAMES:
+                continue
             if role not in (None, "assistant"):
                 role_violations.append({"phase": "tool-use", "role": role, "tool_ids": ids, "tool_name": tool_name, "selector": selector, "event_type": event_type, "node_index": node_index, "path": path})
                 evidence.append({"tool_ids": ids, "tool_name": tool_name, "selector": selector, "event_type": event_type, "phase": "role-violating-tool-use", "role": role, "node_index": node_index, "path": path})
@@ -523,16 +3191,16 @@ def _extract_trace_events(event: Dict[str, Any]) -> Tuple[Dict[str, Dict[str, An
                 agent = selector
                 if ids:
                     for tool_id in ids:
-                        calls[agent] = {
+                        calls.append((agent, {
                             "id": tool_id,
                             "tool_name": tool_name,
                             "event_type": event_type,
                             "node_index": node_index,
                             "path": path,
-                        }
+                        }))
                         evidence.append({"agent": agent, "tool_id": tool_id, "tool_name": tool_name, "event_type": event_type, "phase": "tool-use", "node_index": node_index, "path": path})
                 else:
-                    calls[agent] = {"id": "", "tool_name": tool_name, "event_type": event_type, "node_index": node_index, "path": path}
+                    calls.append((agent, {"id": "", "tool_name": tool_name, "event_type": event_type, "node_index": node_index, "path": path}))
                     evidence.append({"agent": agent, "tool_id": "", "tool_name": tool_name, "event_type": event_type, "phase": "tool-use", "warning": "tool-use event has no id and cannot authenticate a matching result", "node_index": node_index, "path": path})
             else:
                 # A native Agent/Task call with no recognized ntt-* structured
@@ -551,6 +3219,22 @@ def _extract_trace_events(event: Dict[str, Any]) -> Tuple[Dict[str, Dict[str, An
             success = _result_is_success(node)
             ids = _tool_result_ids(node)
             event_type = str(node.get("type") or node.get("event") or node.get("kind") or "tool-result")
+            binding_error = _tool_result_binding_error(node)
+            if binding_error is not None:
+                invalid_result_bindings.append({
+                    "error": binding_error,
+                    "event_type": event_type,
+                    "node_index": node_index,
+                    "path": path,
+                })
+                evidence.append({
+                    "event_type": event_type,
+                    "phase": "invalid-result-binding",
+                    "error": binding_error,
+                    "node_index": node_index,
+                    "path": path,
+                })
+                continue
             if role not in (None, "user"):
                 role_violations.append({"phase": "tool-result", "role": role, "tool_ids": ids, "event_type": event_type, "success": success, "node_index": node_index, "path": path})
                 evidence.append({"tool_ids": ids, "event_type": event_type, "phase": "role-violating-tool-result", "role": role, "success": success, "node_index": node_index, "path": path})
@@ -558,78 +3242,499 @@ def _extract_trace_events(event: Dict[str, Any]) -> Tuple[Dict[str, Dict[str, An
             for tool_id in ids:
                 result_success_by_id.setdefault(tool_id, []).append({"success": success, "node_index": node_index, "path": path})
                 evidence.append({"tool_id": tool_id, "event_type": event_type, "phase": "tool-result", "success": success, "node_index": node_index, "path": path})
-    return calls, result_success_by_id, saw_general_purpose, evidence, unexpected_native_tool_calls, role_violations
+    return calls, result_success_by_id, saw_general_purpose, evidence, unexpected_native_tool_calls, role_violations, invalid_result_bindings, all_tool_calls
 
-def authenticate_trace(transcript_path: Path) -> Dict[str, Any]:
-    if not transcript_path.exists() or transcript_path.stat().st_size == 0:
-        return {
-            "authenticated": False,
-            "events_seen": 0,
-            "agent_calls_authenticated": [],
-            "agent_results_authenticated": [],
-            "missing_agents": REQUIRED_NATIVE_AGENTS,
-            "missing_result_agents": REQUIRED_NATIVE_AGENTS,
-            "saw_general_purpose": False,
-            "duplicate_tool_use_ids": {},
-            "result_before_call_ids": {},
-            "unexpected_native_tool_calls": [],
-            "role_violations": [],
-            "reasons": ["transcript is missing or empty"],
-            "evidence_events": [],
+def _empty_trace_authentication(reason: str) -> Dict[str, Any]:
+    return {
+        "authenticated": False,
+        "events_seen": 0,
+        "agent_calls_authenticated": [],
+        "agent_results_authenticated": [],
+        "missing_agents": list(REQUIRED_NATIVE_AGENTS),
+        "missing_result_agents": list(REQUIRED_NATIVE_AGENTS),
+        "saw_general_purpose": False,
+        "duplicate_tool_use_ids": {},
+        "duplicate_agent_calls": {},
+        "duplicate_tool_result_ids": {},
+        "invalid_result_bindings": [],
+        "malformed_stream_records": [],
+        "trace_bound_violations": [],
+        "result_before_call_ids": {},
+        "unexpected_native_tool_calls": [],
+        "role_violations": [],
+        "reasons": [reason],
+        "evidence_events": [],
+    }
+
+
+def _terminal_result_diagnostics(event: Mapping[str, Any]) -> List[str]:
+    """Validate one top-level Claude stream terminal result record."""
+    diagnostics: List[str] = []
+    if type(event.get("type")) is not str:
+        diagnostics.append("terminal type is missing or is not a string")
+    elif event.get("type") != CLAUDE_TERMINAL_RESULT_TYPE:
+        diagnostics.append("terminal type is not canonical result")
+    if type(event.get("subtype")) is not str:
+        diagnostics.append("terminal subtype is missing or is not a string")
+    elif event.get("subtype") != CLAUDE_SUCCESS_RESULT_SUBTYPE:
+        diagnostics.append("terminal subtype is not canonical success")
+    if "is_error" not in event:
+        diagnostics.append("terminal is_error is missing")
+    elif type(event.get("is_error")) is not bool:
+        diagnostics.append("terminal is_error is not boolean")
+    elif event.get("is_error") is not False:
+        diagnostics.append("terminal is_error is true")
+    if "permission_denials" not in event:
+        diagnostics.append("terminal permission_denials is missing")
+    elif type(event.get("permission_denials")) is not list:
+        diagnostics.append("terminal permission_denials is not an array")
+    elif event.get("permission_denials"):
+        diagnostics.append("terminal permission_denials is nonempty")
+    payload_fields = [
+        field for field in ("result", "content", "output")
+        if field in event
+    ]
+    if payload_fields != ["result"]:
+        diagnostics.append(
+            "terminal requires exactly the canonical result payload; "
+            f"observed {payload_fields!r}"
+        )
+    elif type(event.get("result")) is not str or not event.get(
+        "result"
+    ).strip():
+        diagnostics.append("terminal result payload is not a nonempty string")
+    for alias in (
+        "isError",
+        "returnCode",
+        "exitCode",
+        "completionStatus",
+        "errorCode",
+        "apiErrorStatus",
+        "deferredToolUse",
+        "permissionDenials",
+        "terminalReason",
+        "stopReason",
+        "structuredOutput",
+        "api-error-status",
+        "deferred-tool-use",
+        "permission-denials",
+        "terminal-reason",
+        "stop-reason",
+        "structured-output",
+    ):
+        if alias in event:
+            diagnostics.append(f"unsupported terminal alias: {alias}")
+    if event.get("api_error_status") is not None:
+        diagnostics.append("terminal api_error_status is non-null")
+    if event.get("deferred_tool_use") is not None:
+        diagnostics.append("terminal deferred_tool_use is non-null")
+    if event.get("structured_output") is not None:
+        diagnostics.append(
+            "terminal structured_output is non-null for a non-structured run"
+        )
+    if (
+        "terminal_reason" in event
+        and event.get("terminal_reason") is not None
+        and event.get("terminal_reason") != "completed"
+    ):
+        diagnostics.append("terminal_reason is not exact completed")
+    # ``stop_reason`` is open-ended in the SDK.  This formal run requests no
+    # custom stop sequence or structured response, and tool/pause stops are not
+    # a completed coordinator result.  Therefore only an explicit ``end_turn``
+    # authenticates; absent/null is retained for older emitters.
+    if (
+        "stop_reason" in event
+        and event.get("stop_reason") is not None
+        and event.get("stop_reason") != "end_turn"
+    ):
+        diagnostics.append("terminal stop_reason is not exact end_turn")
+    for field in ("success", "completed", "executed"):
+        if field in event:
+            diagnostics.append(
+                f"unsupported terminal success/status alias: {field}"
+            )
+    for field in (
+        "failed",
+        "failure",
+        "timed_out",
+        "timeout",
+        "aborted",
+        "killed",
+        "terminated",
+        "cancelled",
+        "canceled",
+        "skipped",
+        "not_executed",
+    ):
+        if field in event:
+            diagnostics.append(
+                f"unsupported terminal failure/status alias: {field}"
+            )
+    for field in ("error", "errors"):
+        if field in event:
+            diagnostics.append(f"unsupported terminal error channel: {field}")
+    for field in (
+        "exit_code",
+        "returncode",
+        "return_code",
+        "error_code",
+    ):
+        if field in event:
+            diagnostics.append(
+                f"unsupported terminal exit/status alias: {field}"
+            )
+    for field in ("status", "outcome"):
+        if field in event:
+            diagnostics.append(f"unsupported terminal status alias: {field}")
+
+    def empty_control_value(value: Any) -> bool:
+        return value in (None, False, 0, "") or (
+            isinstance(value, (list, tuple, dict)) and not value
+        )
+
+    stack: List[Tuple[str, Any]] = [
+        (str(key), value)
+        for key, value in event.items()
+        if key != "result"
+    ]
+    while stack:
+        raw_key, value = stack.pop()
+        key = re.sub(r"[-_\s]+", "-", raw_key.strip().lower())
+        if key in {"terminal-reason", "terminalreason"}:
+            if value is not None and value != "completed":
+                diagnostics.append(
+                    f"terminal nested {raw_key} is not exact completed"
+                )
+        elif key in {"stop-reason", "stopreason"}:
+            if value is not None and value != "end_turn":
+                diagnostics.append(
+                    f"terminal nested {raw_key} is not exact end_turn"
+                )
+        elif key in {"structured-output", "structuredoutput"}:
+            if value is not None:
+                diagnostics.append(
+                    f"terminal nested {raw_key} is non-null for a "
+                    "non-structured run"
+                )
+        elif key in {
+            "error",
+            "errors",
+            "api-error",
+            "api-errors",
+            "apierror",
+            "api-error-status",
+            "apierrorstatus",
+            "error-code",
+            "error-message",
+            "deferred",
+            "deferred-error",
+            "deferred-tool-use",
+            "deferredtooluse",
+            "pending",
+            "incomplete",
+            "is-error",
+            "permission-denials",
+            "permissiondenials",
+            "exit-code",
+            "exitcode",
+            "return-code",
+            "returncode",
+            "errorcode",
+        } and not empty_control_value(value):
+            diagnostics.append(
+                f"terminal nested status/error channel is nonempty: {raw_key}"
+            )
+        elif key in {
+            "failed",
+            "failure",
+            "timed-out",
+            "timeout",
+            "aborted",
+            "killed",
+            "terminated",
+            "cancelled",
+            "canceled",
+            "skipped",
+            "not-executed",
+        } and not empty_control_value(value):
+            diagnostics.append(
+                f"terminal nested failure channel is nonempty: {raw_key}"
+            )
+        elif key in {"success", "completed", "executed"}:
+            if value is not True:
+                diagnostics.append(
+                    f"terminal nested {raw_key} is not exact boolean true"
+                )
+        elif key in {"status", "outcome"} and type(value) is str:
+            normalized = re.sub(r"[-_\s]+", "-", value.strip().lower())
+            if normalized in NEGATIVE_NESTED_STATUS_VALUES:
+                diagnostics.append(
+                    f"terminal nested {raw_key} is an explicit failure status"
+                )
+        elif key in {"type", "subtype"} and type(value) is str:
+            normalized = re.sub(r"[-_\s]+", "-", value.strip().lower())
+            if any(
+                marker in normalized
+                for marker in (
+                    "error",
+                    "fail",
+                    "defer",
+                    "pending",
+                    "incomplete",
+                    "max-turn",
+                    "max-budget",
+                )
+            ):
+                diagnostics.append(
+                    f"terminal nested {raw_key} is an error/deferred "
+                    "discriminator"
+                )
+        if isinstance(value, Mapping):
+            stack.extend(
+                (str(child_key), child)
+                for child_key, child in value.items()
+            )
+        elif isinstance(value, (list, tuple)):
+            stack.extend((raw_key, child) for child in value)
+
+    return diagnostics
+
+
+def _system_error_terminal(event: Mapping[str, Any]) -> bool:
+    """Recognize an explicit top-level system execution-failure record."""
+    if event.get("type") != "system":
+        return False
+    subtype = event.get("subtype")
+    normalized_subtype = (
+        re.sub(r"[-_\s]+", "-", subtype.strip().lower())
+        if type(subtype) is str
+        else ""
+    )
+    if normalized_subtype in {
+        "error",
+        "failed",
+        "failure",
+        "execution-error",
+        "runtime-error",
+    }:
+        return True
+    if event.get("is_error") is True:
+        return True
+    for field in ("error", "errors"):
+        value = event.get(field)
+        if value not in (None, False, 0, "") and not (
+            isinstance(value, (list, tuple, dict)) and not value
+        ):
+            return True
+    status = event.get("status")
+    return (
+        type(status) is str
+        and re.sub(r"[-_\s]+", "-", status.strip().lower())
+        in {
+            "error",
+            "failed",
+            "failure",
+            "aborted",
+            "cancelled",
+            "canceled",
+            "timed-out",
         }
-    text = transcript_path.read_text(encoding="utf-8", errors="replace")
-    calls_found: Dict[str, Dict[str, Any]] = {}
-    tool_id_to_agents: Dict[str, Set[str]] = {}
+    )
+
+
+def authenticate_trace(
+    transcript_path: Path,
+    *,
+    expected_bytes: Optional[int] = None,
+    expected_sha256: Optional[str] = None,
+) -> Dict[str, Any]:
+    try:
+        text = read_regular_text_bounded(
+            transcript_path,
+            max_bytes=MAX_CAPTURE_BYTES,
+            errors="strict",
+        )
+    except UnicodeDecodeError as exc:
+        empty = _empty_trace_authentication("transcript is not valid UTF-8")
+        empty["reasons"] = ["transcript is not valid UTF-8"]
+        empty["malformed_stream_records"] = [
+            {"line": 0, "error": "invalid UTF-8", "offset": exc.start}
+        ]
+        return empty
+    except (OSError, ValueError) as exc:
+        empty = _empty_trace_authentication(
+            "transcript is unavailable or violates the bounded regular-file contract"
+        )
+        if "exceeds" in str(exc):
+            empty["trace_bound_violations"] = [
+                {
+                    "line": 0,
+                    "error": f"transcript exceeds {MAX_CAPTURE_BYTES} bytes",
+                }
+            ]
+        return empty
+    if not text:
+        return _empty_trace_authentication("transcript is missing or empty")
+    payload = text.encode("utf-8")
+    expected_identity_typed = (
+        (expected_bytes is None or type(expected_bytes) is int)
+        and (
+            expected_sha256 is None
+            or (
+                type(expected_sha256) is str
+                and bool(
+                    re.fullmatch(
+                        r"sha256:[0-9a-f]{64}",
+                        expected_sha256,
+                    )
+                )
+            )
+        )
+    )
+    observed_sha256 = f"sha256:{hashlib.sha256(payload).hexdigest()}"
+    if (
+        not expected_identity_typed
+        or (expected_bytes is not None and len(payload) != expected_bytes)
+        or (
+            expected_sha256 is not None
+            and observed_sha256 != expected_sha256
+        )
+    ):
+        return _empty_trace_authentication(
+            "transcript bytes do not match the expected companion identity"
+        )
+    calls_by_agent: Dict[str, List[Dict[str, Any]]] = {}
+    tool_id_to_calls: Dict[str, List[str]] = {}
+    all_tool_id_to_calls: Dict[str, List[str]] = {}
     saw_general = False
     evidence_events: List[Dict[str, Any]] = []
     unexpected_native_tool_calls: List[Dict[str, Any]] = []
     role_violations: List[Dict[str, Any]] = []
+    invalid_result_bindings: List[Dict[str, Any]] = []
+    malformed_stream_records: List[Dict[str, Any]] = []
+    trace_bound_violations: List[Dict[str, Any]] = []
     events_seen = 0
     all_results: Dict[str, List[Dict[str, Any]]] = {}
-    for line_no, event in _iter_json_lines(text):
-        events_seen += 1
-        calls, results_by_id, general, evidence, unexpected_calls, role_calls = _extract_trace_events(event)
-        saw_general = saw_general or bool(general)
-        for u in unexpected_calls:
-            uu = dict(u)
-            uu["line"] = line_no
-            uu["position"] = line_no * 100000 + int(uu.get("node_index", 0))
-            unexpected_native_tool_calls.append(uu)
-        for rv in role_calls:
-            rr = dict(rv)
-            rr["line"] = line_no
-            rr["position"] = line_no * 100000 + int(rr.get("node_index", 0))
-            role_violations.append(rr)
-        for agent, meta in calls.items():
-            meta = dict(meta)
-            meta["line"] = line_no
-            meta["position"] = line_no * 100000 + int(meta.get("node_index", 0))
-            calls_found[agent] = meta
-            tool_id = str(meta.get("id") or "")
-            if tool_id:
-                tool_id_to_agents.setdefault(tool_id, set()).add(agent)
-        for k, result_list in results_by_id.items():
-            for r in result_list:
-                rr = dict(r)
+    terminal_results: List[Dict[str, Any]] = []
+    system_error_terminals: List[Dict[str, Any]] = []
+    try:
+        for line_no, event in _iter_json_lines(text):
+            events_seen += 1
+            event_type = event.get("type")
+            if event_type == CLAUDE_TERMINAL_RESULT_TYPE:
+                terminal_diagnostics = _terminal_result_diagnostics(event)
+                terminal_record = {
+                    "line": line_no,
+                    "record_index": events_seen,
+                    "canonical_success": not terminal_diagnostics,
+                    "diagnostics": terminal_diagnostics,
+                }
+                terminal_results.append(terminal_record)
+                evidence_events.append({
+                    **terminal_record,
+                    "phase": "terminal-result",
+                })
+            elif _system_error_terminal(event):
+                system_error_record = {
+                    "line": line_no,
+                    "record_index": events_seen,
+                    "subtype": event.get("subtype"),
+                }
+                system_error_terminals.append(system_error_record)
+                evidence_events.append({
+                    **system_error_record,
+                    "phase": "system-error-terminal",
+                })
+            try:
+                calls, results_by_id, general, evidence, unexpected_calls, role_calls, invalid_bindings, all_tool_calls = _extract_trace_events(event)
+            except TraceBoundError as exc:
+                trace_bound_violations.append(
+                    {"line": line_no, "error": str(exc)}
+                )
+                continue
+            saw_general = saw_general or bool(general)
+            for raw_call in all_tool_calls:
+                tool_id = str(raw_call.get("id") or "")
+                if tool_id:
+                    all_tool_id_to_calls.setdefault(tool_id, []).append(
+                        str(raw_call.get("tool_name") or "<unnamed-tool>")
+                    )
+            for u in unexpected_calls:
+                uu = dict(u)
+                uu["line"] = line_no
+                uu["position"] = [line_no, int(uu.get("node_index", 0))]
+                unexpected_native_tool_calls.append(uu)
+            for rv in role_calls:
+                rr = dict(rv)
                 rr["line"] = line_no
-                rr["position"] = line_no * 100000 + int(rr.get("node_index", 0))
-                all_results.setdefault(k, []).append(rr)
-        for e in evidence:
-            e["line"] = line_no
-            e["position"] = line_no * 100000 + int(e.get("node_index", 0))
-            evidence_events.append(e)
-    duplicate_ids = {tool_id: sorted(agents) for tool_id, agents in tool_id_to_agents.items() if len(agents) > 1}
+                rr["position"] = [line_no, int(rr.get("node_index", 0))]
+                role_violations.append(rr)
+            for binding in invalid_bindings:
+                record = dict(binding)
+                record["line"] = line_no
+                record["position"] = [line_no, int(record.get("node_index", 0))]
+                invalid_result_bindings.append(record)
+            for agent, raw_meta in calls:
+                meta = dict(raw_meta)
+                meta["line"] = line_no
+                meta["position"] = [line_no, int(meta.get("node_index", 0))]
+                calls_by_agent.setdefault(agent, []).append(meta)
+                tool_id = str(meta.get("id") or "")
+                if tool_id:
+                    tool_id_to_calls.setdefault(tool_id, []).append(agent)
+            for k, result_list in results_by_id.items():
+                for r in result_list:
+                    rr = dict(r)
+                    rr["line"] = line_no
+                    rr["position"] = [line_no, int(rr.get("node_index", 0))]
+                    all_results.setdefault(k, []).append(rr)
+            for e in evidence:
+                e["line"] = line_no
+                e["position"] = [line_no, int(e.get("node_index", 0))]
+                evidence_events.append(e)
+    except TraceFormatError as exc:
+        malformed_stream_records.append({"line": exc.line, "error": exc.reason})
+    duplicate_agent_calls = {
+        agent: len(records)
+        for agent, records in calls_by_agent.items()
+        if len(records) != 1
+    }
+    calls_found = {
+        agent: records[0]
+        for agent, records in calls_by_agent.items()
+        if len(records) == 1
+    }
+    duplicate_ids = {
+        tool_id: sorted(tool_names)
+        for tool_id, tool_names in all_tool_id_to_calls.items()
+        if len(tool_names) > 1
+    }
+    duplicate_tool_result_ids = {
+        tool_id: len(records)
+        for tool_id, records in all_results.items()
+        if tool_id in tool_id_to_calls and len(records) != 1
+    }
     result_agents: Set[str] = set()
     result_before_call_ids: Dict[str, Dict[str, Any]] = {}
+    def position_key(record: Mapping[str, Any]) -> Tuple[int, int]:
+        value = record.get("position")
+        if (
+            isinstance(value, list)
+            and len(value) == 2
+            and all(type(item) is int for item in value)
+        ):
+            return value[0], value[1]
+        return -1, -1
+
     for agent, meta in calls_found.items():
         tool_id = str(meta.get("id") or "")
         if not tool_id or tool_id in duplicate_ids:
             continue
-        call_pos = int(meta.get("position", 0))
+        call_pos = position_key(meta)
         result_events = all_results.get(tool_id, [])
-        before_or_same = [r for r in result_events if int(r.get("position", 0)) <= call_pos]
-        after_success = [r for r in result_events if int(r.get("position", 0)) > call_pos and bool(r.get("success"))]
-        if after_success:
+        before_or_same = [r for r in result_events if position_key(r) <= call_pos]
+        after_success = [r for r in result_events if position_key(r) > call_pos and bool(r.get("success"))]
+        if len(result_events) == 1 and after_success:
             result_agents.add(agent)
         elif before_or_same:
             result_before_call_ids[tool_id] = {"agent": agent, "call_line": meta.get("line"), "result_lines": sorted({r.get("line") for r in before_or_same})}
@@ -642,6 +3747,16 @@ def authenticate_trace(transcript_path: Path) -> Dict[str, Any]:
         reasons.append("missing native Agent/Task tool-use events for: " + ", ".join(missing))
     if duplicate_ids:
         reasons.append("duplicate tool-use id used for multiple native lanes: " + "; ".join(f"{tid} -> {', '.join(agents)}" for tid, agents in sorted(duplicate_ids.items())))
+    if duplicate_agent_calls:
+        reasons.append("required native lane was invoked other than exactly once: " + ", ".join(f"{agent}={count}" for agent, count in sorted(duplicate_agent_calls.items())))
+    if duplicate_tool_result_ids:
+        reasons.append("native tool-use id has other than exactly one result: " + ", ".join(f"{tool_id}={count}" for tool_id, count in sorted(duplicate_tool_result_ids.items())))
+    if invalid_result_bindings:
+        reasons.append("tool-result events have invalid or ambiguous binding fields: " + str(len(invalid_result_bindings)))
+    if malformed_stream_records:
+        reasons.append("malformed or non-object stream-json records observed: " + str(len(malformed_stream_records)))
+    if trace_bound_violations:
+        reasons.append("stream-json records exceeded parser bounds: " + str(len(trace_bound_violations)))
     if result_before_call_ids:
         reasons.append("tool-result/completion events appear before their matching tool-use events for: " + ", ".join(sorted(result_before_call_ids)))
     if missing_results:
@@ -652,8 +3767,51 @@ def authenticate_trace(transcript_path: Path) -> Dict[str, Any]:
         reasons.append("unexpected native Agent/Task tool-use events without required ntt-* structured selectors: " + str(len(unexpected_native_tool_calls)))
     if role_violations:
         reasons.append("role-inverted or role-invalid tool events observed: " + str(len(role_violations)))
+    canonical_terminal = (
+        terminal_results[0]
+        if len(terminal_results) == 1
+        and terminal_results[0].get("canonical_success") is True
+        else None
+    )
+    latest_result_position = max(
+        (
+            position_key(result)
+            for result_list in all_results.values()
+            for result in result_list
+        ),
+        default=(-1, -1),
+    )
+    terminal_after_lane_results = (
+        canonical_terminal is not None
+        and (int(canonical_terminal["line"]), 0) > latest_result_position
+    )
+    terminal_is_final_record = (
+        canonical_terminal is not None
+        and canonical_terminal.get("record_index") == events_seen
+    )
+    if not terminal_results:
+        reasons.append("missing canonical successful terminal result record")
+    elif len(terminal_results) != 1:
+        reasons.append(
+            "terminal result record occurs other than exactly once: "
+            f"{len(terminal_results)}"
+        )
+    elif canonical_terminal is None:
+        reasons.append(
+            "terminal result record is not canonical success: "
+            + "; ".join(terminal_results[0].get("diagnostics", []))
+        )
+    if canonical_terminal is not None and not terminal_after_lane_results:
+        reasons.append("terminal result record precedes a lane tool result")
+    if canonical_terminal is not None and not terminal_is_final_record:
+        reasons.append("terminal result record is not the final stream record")
+    if system_error_terminals:
+        reasons.append(
+            "system error terminal records observed: "
+            f"{len(system_error_terminals)}"
+        )
     return {
-        "authenticated": not missing and not missing_results and not duplicate_ids and not result_before_call_ids and not saw_general and not unexpected_native_tool_calls and not role_violations and events_seen > 0,
+        "authenticated": not missing and not missing_results and not duplicate_ids and not duplicate_agent_calls and not duplicate_tool_result_ids and not invalid_result_bindings and not malformed_stream_records and not trace_bound_violations and not result_before_call_ids and not saw_general and not unexpected_native_tool_calls and not role_violations and canonical_terminal is not None and terminal_after_lane_results and terminal_is_final_record and not system_error_terminals and events_seen > 0,
         "events_seen": events_seen,
         "agent_calls_authenticated": sorted(calls_found),
         "agent_results_authenticated": sorted(result_agents),
@@ -661,6 +3819,11 @@ def authenticate_trace(transcript_path: Path) -> Dict[str, Any]:
         "missing_result_agents": missing_results,
         "saw_general_purpose": saw_general,
         "duplicate_tool_use_ids": duplicate_ids,
+        "duplicate_agent_calls": duplicate_agent_calls,
+        "duplicate_tool_result_ids": duplicate_tool_result_ids,
+        "invalid_result_bindings": invalid_result_bindings[:50],
+        "malformed_stream_records": malformed_stream_records[:50],
+        "trace_bound_violations": trace_bound_violations[:50],
         "result_before_call_ids": result_before_call_ids,
         "unexpected_native_tool_calls": unexpected_native_tool_calls[:50],
         "role_violations": role_violations[:50],
@@ -668,32 +3831,79 @@ def authenticate_trace(transcript_path: Path) -> Dict[str, Any]:
         "evidence_events": evidence_events[:100],
     }
 
-def check_required_outputs(out: Dict[str, Path]) -> List[Dict[str, Any]]:
+def check_required_outputs(
+    out: Dict[str, Path],
+    *,
+    include_gate: bool = True,
+) -> List[Dict[str, Any]]:
     checks: List[Dict[str, Any]] = []
-    for key in ("report", "certificate", "gate", "ledger"):
+    required = ["report", "certificate", "ledger"]
+    if include_gate:
+        required.append("gate")
+    for key in required:
         path = out[key]
-        exists = path.exists() and path.stat().st_size > 0
-        checks.append({"name": f"output exists: {key}", "passed": exists, "path": str(path), "size": path.stat().st_size if path.exists() else 0})
+        file_error = regular_file_error(path)
+        try:
+            metadata = path.stat(follow_symlinks=False)
+        except OSError:
+            metadata = None
+        exists = (
+            file_error is None
+            and metadata is not None
+            and metadata.st_nlink == 1
+            and metadata.st_size > 0
+            and metadata.st_size
+            <= FORMAL_COMPANION_MAX_BYTES.get(key, metadata.st_size)
+        )
+        checks.append({"name": f"output exists: {key}", "passed": exists, "path": str(path), "size": metadata.st_size if metadata is not None else 0})
     cert = out["certificate"]
-    if cert.exists():
+    if (
+        regular_file_error(cert) is None
+        and cert.stat(follow_symlinks=False).st_nlink == 1
+    ):
         data = load_json(cert)
         checks.append({"name": "certificate parses JSON", "passed": "_error" not in data, "path": str(cert)})
         claims = data.get("claims") if isinstance(data, dict) else None
         checks.append({"name": "certificate has claims", "passed": isinstance(claims, list) and bool(claims), "count": len(claims) if isinstance(claims, list) else 0})
     ledger = out["ledger"]
-    if ledger.exists():
-        text = ledger.read_text(encoding="utf-8", errors="replace")
+    if (
+        regular_file_error(ledger) is None
+        and ledger.stat(follow_symlinks=False).st_nlink == 1
+    ):
+        try:
+            text = read_regular_text_bounded(
+                ledger,
+                max_bytes=MAX_FORMAL_LEDGER_BYTES,
+                errors="replace",
+            )
+            ledger_read_error = None
+        except (OSError, ValueError) as exc:
+            text = ""
+            ledger_read_error = f"{type(exc).__name__}: {exc}"
         low = text.lower()
-        checks.append({"name": "ledger names formal coordinator", "passed": FORMAL_COORDINATOR in text})
-        checks.append({"name": "ledger records no substitution", "passed": "substitution used: none" in low})
-        checks.append({"name": "ledger records machine gate", "passed": "machine gate run: yes" in low})
-        checks.append({"name": "ledger has no formal subagent failure", "passed": "formal_subagent_failure" not in low})
+        checks.append({
+            "name": "ledger names formal coordinator",
+            "passed": ledger_read_error is None and FORMAL_COORDINATOR in text,
+            "details": ledger_read_error,
+        })
+        checks.append({"name": "ledger records no substitution", "passed": ledger_read_error is None and "substitution used: none" in low})
+        checks.append({"name": "ledger delegates machine gate to runner", "passed": ledger_read_error is None and "machine gate run: runner-managed" in low})
+        checks.append({"name": "ledger has no formal subagent failure", "passed": ledger_read_error is None and "formal_subagent_failure" not in low})
         for agent in REQUIRED_NATIVE_AGENTS:
-            checks.append({"name": f"ledger mentions native agent {agent}", "passed": agent in text})
+            checks.append({"name": f"ledger mentions native agent {agent}", "passed": ledger_read_error is None and agent in text})
     return checks
 
 
-def run_package_prechecks(root: Path, out: Dict[str, Path], timeout: int, full_self_test: bool = False) -> List[Dict[str, Any]]:
+def run_package_prechecks(
+    root: Path,
+    out: Dict[str, Path],
+    timeout: int,
+    full_self_test: bool = False,
+    claude_executable: Optional[Path] = None,
+    *,
+    output_directory_fd: Optional[int] = None,
+    lexical_output_dir: Optional[Path] = None,
+) -> List[Dict[str, Any]]:
     py = sys.executable
     validator_cmd = [py, str(root / SKILL_PATH / "scripts/validate_package.py"), str(root)]
     if full_self_test:
@@ -701,18 +3911,57 @@ def run_package_prechecks(root: Path, out: Dict[str, Path], timeout: int, full_s
     commands = [
         validator_cmd,
         [py, str(root / SKILL_PATH / "scripts/run_regression_evals.py"), str(root)],
-        [py, str(root / SKILL_PATH / "scripts/ntt_gate.py"), str(root / "self_validation/self_certificate.json"), "--evidence-root", str(root), "--strict-evidence"],
+        [
+            py,
+            str(root / SKILL_PATH / "scripts/ntt_gate.py"),
+            str(root / "self_validation/self_certificate.json"),
+            "--evidence-root",
+            str(root),
+            "--strict-evidence",
+            "--downstream-policy",
+            "package-self",
+        ],
     ]
     results = [run_cmd(cmd, cwd=root, timeout=timeout) for cmd in commands]
-    claude = shutil.which("claude")
-    if claude:
-        results.append(run_cmd([claude, "plugin", "validate", str(root), "--strict"], cwd=root, timeout=timeout))
-    out["precheck"].write_text(json.dumps(results, indent=2, sort_keys=True), encoding="utf-8")
+    if claude_executable is not None:
+        results.append(
+            run_cmd(
+                [
+                    str(claude_executable),
+                    "plugin",
+                    "validate",
+                    str(root),
+                    "--strict",
+                ],
+                cwd=root,
+                timeout=timeout,
+            )
+        )
+    public_results = [
+        _normalized_command_record(
+            result,
+            root,
+            out["formal_result"].parent,
+            out["target_snapshot"],
+        )
+        for result in results
+    ]
+    atomic_write_new_text(
+        out["precheck"],
+        json.dumps(public_results, indent=2, sort_keys=True),
+        directory_fd=output_directory_fd,
+        lexical_parent=lexical_output_dir,
+    )
     return results
 
 
 def summarize_prechecks(prechecks: List[Dict[str, Any]]) -> Dict[str, Any]:
-    failed = [p for p in prechecks if p.get("returncode") not in (0,)]
+    failed = [
+        p
+        for p in prechecks
+        if p.get("returncode") not in (0,)
+        or p.get("capture_limit_exceeded") is True
+    ]
     return {"total": len(prechecks), "failed": len(failed), "passed": len(prechecks) - len(failed), "failed_commands": [p.get("cmd") for p in failed]}
 
 
@@ -726,6 +3975,411 @@ def cap_status_by_trace(gate_status: str, trace_auth: Dict[str, Any]) -> Tuple[s
     if gate_status == "PASS-TRACKED":
         return "PASS-TRACKED", "generated certificate passed ntt_gate.py and stream-json trace authenticated all native ntt-* tool-use and completion lanes"
     return "PASS-SCOPED", "generated certificate passed ntt_gate.py as scoped and trace authenticated native ntt-* tool-use and completion lanes"
+
+
+def _companion_records(
+    out: Dict[str, Path],
+    output_dir: Path,
+) -> Dict[str, Dict[str, Any]]:
+    records: Dict[str, Dict[str, Any]] = {}
+    for role in FORMAL_COMPANION_SPECS:
+        path = out[role]
+        file_error = regular_file_error(path)
+        digest = None
+        size = None
+        if file_error is None:
+            role_max_bytes = FORMAL_COMPANION_MAX_BYTES.get(role)
+            try:
+                actual_digest, size = _hash_regular_file(
+                    path,
+                    max_bytes=role_max_bytes,
+                )
+                digest = f"sha256:{actual_digest}"
+            except (OSError, ValueError):
+                try:
+                    size = path.lstat().st_size
+                except OSError:
+                    size = None
+        records[role] = {
+            # Companions are direct children of the held output directory. The
+            # The live path may be a runner-PID-qualified procfd alias, while
+            # the public result records the stable basename only.
+            "path": path.name,
+            "sha256": digest,
+            "bytes": size,
+            "present": file_error is None and digest is not None,
+        }
+    return records
+
+
+def _normalized_command_record(
+    record: Any,
+    root: Path,
+    output_dir: Path,
+    target: Path,
+    execution_root: Optional[Path] = None,
+) -> Dict[str, Any]:
+    if not isinstance(record, dict):
+        return {
+            "argv": [],
+            "returncode": None,
+            "stdout_sha256": None,
+            "stderr_sha256": None,
+            "stdout_bytes": None,
+            "stderr_bytes": None,
+            "stdout_truncated": False,
+            "stderr_truncated": False,
+            "capture_limit_exceeded": False,
+            "timed_out": False,
+            "descendant_pipe_leak": False,
+            "reader_join_timed_out": False,
+            "normal_exit_group_survivor": False,
+            "detached_descendant_survivor": False,
+            "process_containment_cleanup_complete": False,
+            "process_group_cleanup_attempted": False,
+            "process_group_terminated": False,
+            "process_containment": dict(PROCESS_CONTAINMENT_SCOPE),
+        }
+    replacements = (
+        *(
+            ((str(execution_root), "<execution-package-root>"),)
+            if execution_root is not None
+            else ()
+        ),
+        (str(root), "<package-root>"),
+        (str(output_dir), "<output-dir>"),
+        (str(target.parent), "<target-parent>"),
+    )
+    raw_cmd = record.get("cmd")
+    argv = (
+        normalize_display_paths(raw_cmd, replacements)
+        if isinstance(raw_cmd, list)
+        else []
+    )
+    if (
+        isinstance(raw_cmd, list)
+        and raw_cmd
+        and raw_cmd[0] == sys.executable
+        and argv
+    ):
+        # Bind package-local Python commands to the runner's interpreter role
+        # instead of accepting an arbitrary executable with a matching script
+        # basename in downstream certification.
+        argv[0] = "<python>"
+    if (
+        isinstance(raw_cmd, list)
+        and len(raw_cmd) >= 2
+        and "--agent" in raw_cmd
+        and FORMAL_COORDINATOR in raw_cmd
+        and isinstance(raw_cmd[-1], str)
+        and argv
+    ):
+        # The raw prompt contains ephemeral absolute execution paths, so the
+        # public argv binds its exact UTF-8 bytes by digest.  The certifier
+        # compares this digest with the declared prompt companion.
+        argv[-1] = (
+            "sha256:"
+            + hashlib.sha256(raw_cmd[-1].encode("utf-8")).hexdigest()
+        )
+    stdout = record.get("stdout")
+    stderr = record.get("stderr")
+    stdout_raw = record.get("_stdout_bytes")
+    stderr_raw = record.get("_stderr_bytes")
+    stdout_payload = (
+        bytes(stdout_raw)
+        if isinstance(stdout_raw, (bytes, bytearray))
+        else stdout.encode("utf-8")
+        if isinstance(stdout, str)
+        else None
+    )
+    stderr_payload = (
+        bytes(stderr_raw)
+        if isinstance(stderr_raw, (bytes, bytearray))
+        else stderr.encode("utf-8")
+        if isinstance(stderr, str)
+        else None
+    )
+    return {
+        "argv": argv,
+        "returncode": (
+            record.get("returncode")
+            if type(record.get("returncode")) is int
+            else None
+        ),
+        "stdout_sha256": (
+            f"sha256:{hashlib.sha256(stdout_payload).hexdigest()}"
+            if stdout_payload is not None
+            else None
+        ),
+        "stderr_sha256": (
+            f"sha256:{hashlib.sha256(stderr_payload).hexdigest()}"
+            if stderr_payload is not None
+            else None
+        ),
+        "stdout_bytes": (
+            len(stdout_payload) if stdout_payload is not None else None
+        ),
+        "stderr_bytes": (
+            len(stderr_payload) if stderr_payload is not None else None
+        ),
+        "stdout_truncated": (
+            len(stdout_payload) > PUBLIC_STREAM_BOUND_BYTES
+            if stdout_payload is not None
+            else False
+        ),
+        "stderr_truncated": (
+            len(stderr_payload) > PUBLIC_STREAM_BOUND_BYTES
+            if stderr_payload is not None
+            else False
+        ),
+        "capture_limit_exceeded": (
+            record.get("capture_limit_exceeded") is True
+        ),
+        "timed_out": record.get("timed_out") is True,
+        "descendant_pipe_leak": (
+            record.get("descendant_pipe_leak") is True
+        ),
+        "reader_join_timed_out": (
+            record.get("reader_join_timed_out") is True
+        ),
+        "normal_exit_group_survivor": (
+            record.get("normal_exit_group_survivor") is True
+        ),
+        "detached_descendant_survivor": (
+            record.get("detached_descendant_survivor") is True
+        ),
+        "process_containment_cleanup_complete": (
+            record.get("process_containment_cleanup_complete") is True
+        ),
+        "process_group_cleanup_attempted": (
+            record.get("process_group_cleanup_attempted") is True
+        ),
+        "process_group_terminated": (
+            record.get("process_group_terminated") is True
+        ),
+        "process_containment": (
+            dict(record["process_containment"])
+            if isinstance(record.get("process_containment"), dict)
+            else dict(PROCESS_CONTAINMENT_SCOPE)
+        ),
+    }
+
+
+def normalize_display_paths(
+    value: Any,
+    replacements: Tuple[Tuple[str, str], ...],
+) -> Any:
+    if isinstance(value, str):
+        normalized = value
+        for raw, display in sorted(
+            replacements,
+            key=lambda item: len(item[0]),
+            reverse=True,
+        ):
+            if raw:
+                normalized = re.sub(
+                    re.escape(raw) + r"(?=$|[\\/])",
+                    lambda _match, replacement=display: replacement,
+                    normalized,
+                )
+        return normalized
+    if isinstance(value, list):
+        return [normalize_display_paths(item, replacements) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: normalize_display_paths(item, replacements)
+            for key, item in value.items()
+        }
+    return value
+
+
+def build_formal_result_v2(
+    result: Dict[str, Any],
+    *,
+    root: Path,
+    target: Path,
+    output_dir: Path,
+    out: Dict[str, Path],
+    target_pre_sha256: Optional[str] = None,
+    source_pre_identity: Optional[Dict[str, Any]] = None,
+    source_post_identity: Optional[Dict[str, Any]] = None,
+    snapshot_pre_identity: Optional[Dict[str, Any]] = None,
+    snapshot_post_identity: Optional[Dict[str, Any]] = None,
+    evidence_root: Optional[Path] = None,
+    evidence_origin: str = "runtime-observed",
+) -> Dict[str, Any]:
+    if evidence_origin not in {"runtime-observed", "synthetic-contract"}:
+        raise ValueError("formal evidence origin is unsupported")
+    companions = _companion_records(out, output_dir)
+    snapshot_sha = companions["target_snapshot"].get("sha256")
+    pre_digest = (
+        source_pre_identity.get("sha256")
+        if isinstance(source_pre_identity, dict)
+        else (
+            f"sha256:{target_pre_sha256}"
+            if isinstance(target_pre_sha256, str)
+            else None
+        )
+    )
+    post_digest = (
+        source_post_identity.get("sha256")
+        if isinstance(source_post_identity, dict)
+        else None
+    )
+    stability = target_snapshot_stability(
+        source_pre_identity,
+        source_post_identity,
+        snapshot_pre_identity,
+        snapshot_post_identity,
+    )
+    commands = [
+        _normalized_command_record(
+            item,
+            root,
+            out["formal_result"].parent,
+            target,
+            Path(str(result["_execution_root"]))
+            if result.get("_execution_root")
+            else None,
+        )
+        for item in result.get("commands", [])
+    ]
+    prechecks = [
+        _normalized_command_record(
+            item,
+            root,
+            out["formal_result"].parent,
+            target,
+            Path(str(result["_execution_root"]))
+            if result.get("_execution_root")
+            else None,
+        )
+        for item in result.get("prechecks", [])
+    ]
+    return {
+        "formal_result_schema_version": "2.0",
+        "evidence_origin": evidence_origin,
+        "run_id": result.get("run_id"),
+        "status": result.get("status"),
+        "reason": result.get("reason"),
+        "formal_coordinator": FORMAL_COORDINATOR,
+        "required_native_agents": list(REQUIRED_NATIVE_AGENTS),
+        "package_tree_identity": result.get("package_tree_identity"),
+        "execution_package_snapshot_identity": result.get(
+            "execution_package_snapshot_identity"
+        ),
+        "runtime_identity": result.get("runtime_identity"),
+        "target_snapshot_identity": {
+            "source_name": target.name,
+            "companion_role": "target_snapshot",
+            "snapshot_sha256": snapshot_sha,
+            "pre_sha256": pre_digest,
+            "post_sha256": post_digest,
+            "stable": stability["stable"],
+            "endpoint_stable": stability["endpoint_stable"],
+            "stability_scope": stability["stability_scope"],
+            "temporal_immutability_enforced": stability[
+                "temporal_immutability_enforced"
+            ],
+            "digest_stable": stability["digest_stable"],
+            "source_metadata_stable": stability["source_metadata_stable"],
+            "snapshot_metadata_stable": stability[
+                "snapshot_metadata_stable"
+            ],
+        },
+        "verification_context": dict(FORMAL_VERIFICATION_CONTEXT),
+        "evidence_root": (
+            "."
+            if evidence_root is None
+            or _paths_alias(
+                evidence_root,
+                out["formal_result"].parent,
+            )
+            else str(evidence_root.resolve())
+        ),
+        "companions": companions,
+        "prechecks": prechecks,
+        "precheck_summary": result.get("precheck_summary", {}),
+        "commands": commands,
+        "output_checks": normalize_display_paths(
+            result.get("output_checks", []),
+            ((str(out["formal_result"].parent), "<output-dir>"),),
+        ),
+        "gate_status": result.get("gate_status"),
+        "trace_authentication": result.get("trace_authentication"),
+        "output_dir": str(output_dir),
+        "plugin_root": str(root),
+        "target_artifact": str(target),
+    }
+
+
+def write_formal_result_v2(
+    result: Dict[str, Any],
+    *,
+    root: Path,
+    target: Path,
+    output_dir: Path,
+    out: Dict[str, Path],
+    target_pre_sha256: Optional[str] = None,
+    source_pre_identity: Optional[Dict[str, Any]] = None,
+    source_post_identity: Optional[Dict[str, Any]] = None,
+    snapshot_pre_identity: Optional[Dict[str, Any]] = None,
+    snapshot_post_identity: Optional[Dict[str, Any]] = None,
+    evidence_root: Optional[Path] = None,
+    evidence_origin: str = "runtime-observed",
+    json_path: Optional[Path] = None,
+    output_directory_fd: Optional[int] = None,
+    lexical_output_dir: Optional[Path] = None,
+    json_directory_fd: Optional[int] = None,
+    lexical_json_parent: Optional[Path] = None,
+    json_is_canonical: bool = False,
+) -> Dict[str, Any]:
+    canonical = build_formal_result_v2(
+        result,
+        root=root,
+        target=target,
+        output_dir=output_dir,
+        out=out,
+        target_pre_sha256=target_pre_sha256,
+        source_pre_identity=source_pre_identity,
+        source_post_identity=source_post_identity,
+        snapshot_pre_identity=snapshot_pre_identity,
+        snapshot_post_identity=snapshot_post_identity,
+        evidence_root=evidence_root,
+        evidence_origin=evidence_origin,
+    )
+    payload = (
+        json.dumps(canonical, indent=2, sort_keys=True) + "\n"
+    ).encode("utf-8")
+    atomic_write_new(
+        out["formal_result"],
+        payload,
+        directory_fd=output_directory_fd,
+        lexical_parent=lexical_output_dir,
+    )
+    if output_directory_fd is None or lexical_output_dir is None:
+        raise ValueError("formal result requires a held output directory")
+    if not _directory_path_matches_fd(
+        lexical_output_dir,
+        output_directory_fd,
+    ):
+        raise ValueError("formal output directory changed after final write")
+    # `json_is_canonical` is frozen during pre-execution collision analysis.
+    # Re-resolving lexical aliases here would let an ancestor substitution turn
+    # the canonical destination into a late compatibility copy outside the held
+    # output directory.
+    if json_path is not None and not json_is_canonical:
+        if json_directory_fd is None or lexical_json_parent is None:
+            raise ValueError(
+                "compatibility JSON requires a pre-acquired held parent"
+            )
+        atomic_replace_regular(
+            json_path,
+            payload,
+            directory_fd=json_directory_fd,
+            lexical_parent=lexical_json_parent,
+        )
+    return canonical
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -747,32 +4401,263 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--effort", default="max")
     args = parser.parse_args(argv)
 
+    try:
+        # This probe precedes even the default temporary output-directory
+        # allocation, so unsupported platforms fail without output residue.
+        _preflight_held_output_capability()
+    except (OSError, ValueError) as exc:
+        invalid = {
+            "status": "INVALID_INPUT",
+            "reason": (
+                "held no-follow formal output capability is unavailable "
+                f"({type(exc).__name__})"
+            ),
+        }
+        print(json.dumps(invalid, indent=2, sort_keys=True))
+        return 2
+
     root = args.plugin_root.resolve()
-    target = args.target_artifact.resolve()
+    # SECURITY-REVIEW: Keep the caller-controlled final target entry lexical
+    # so regular_file_error rejects a symlink instead of following resolve().
+    target = Path(os.path.abspath(args.target_artifact))
     if args.output_dir:
-        output_dir = args.output_dir.resolve()
+        output_dir = Path(os.path.abspath(args.output_dir))
     else:
         # Default to an external temporary directory. This prevents a routine
         # dry-run from modifying self_validation/ and invalidating the stable
         # release manifest in a fresh extraction.
         output_dir = Path(tempfile.mkdtemp(prefix="ntt_formal_artifact_")).resolve()
-    json_path = args.json.resolve() if args.json else None
+    json_path = (
+        Path(os.path.abspath(args.json))
+        if args.json
+        else None
+    )
+    requested_evidence_root = (
+        args.evidence_root.resolve()
+        if args.evidence_root
+        else None
+    )
+    output_ancestor_error = lexical_directory_ancestor_error(output_dir)
+    if output_ancestor_error is not None:
+        invalid = {
+            "status": "INVALID_INPUT",
+            "reason": f"unsafe --output-dir: {output_ancestor_error}",
+        }
+        print(json.dumps(invalid, indent=2, sort_keys=True))
+        return 2
+    if json_path is not None:
+        json_ancestor_error = lexical_directory_ancestor_error(json_path)
+        if json_ancestor_error is not None:
+            invalid = {
+                "status": "INVALID_INPUT",
+                "reason": f"unsafe --json: {json_ancestor_error}",
+            }
+            print(json.dumps(invalid, indent=2, sort_keys=True))
+            return 2
+        json_target_error = replaceable_regular_output_error(json_path)
+        if json_target_error is not None:
+            invalid = {
+                "status": "INVALID_INPUT",
+                "reason": f"unsafe --json: {json_target_error}",
+            }
+            print(json.dumps(invalid, indent=2, sort_keys=True))
+            return 2
     location_error = output_location_error(root, output_dir, json_path, args.refresh_release_manifest)
     if location_error:
         blocked = _blocked_package_output_result(root, target, output_dir, json_path)
         blocked["reason"] = location_error
         print(json.dumps(blocked, indent=2, sort_keys=True))
         return 2
-    output_dir.mkdir(parents=True, exist_ok=True)
-    out = output_paths(target, output_dir)
-    prompt = build_formal_prompt(root, target, out)
-    out["prompt"].write_text(prompt, encoding="utf-8")
+    output_state_error = (
+        directory_error(output_dir) if path_lexists(output_dir) else None
+    )
+    if output_state_error is not None:
+        invalid = {
+            "status": "INVALID_INPUT",
+            "reason": f"unsafe --output-dir: {output_state_error}",
+        }
+        print(json.dumps(invalid, indent=2, sort_keys=True))
+        return 2
+    output_directory_fd: Optional[int] = None
+    try:
+        # Creation returns the same descriptor used for every later output
+        # operation; there is no lexical reopen gap in which a different real
+        # directory can become the trusted destination.
+        output_directory_fd = _prepare_output_directory_fd(output_dir)
+        held_output_dir = _inherited_directory_alias(output_directory_fd)
+    except (OSError, ValueError) as exc:
+        if output_directory_fd is not None:
+            os.close(output_directory_fd)
+        invalid = {
+            "status": "INVALID_INPUT",
+            "reason": (
+                "unsafe --output-dir: held no-follow output directory "
+                f"is unavailable ({type(exc).__name__})"
+            ),
+        }
+        print(json.dumps(invalid, indent=2, sort_keys=True))
+        return 2
+    display_out = output_paths(target, output_dir)
+    collision_error = formal_output_collision_error(
+        target,
+        display_out,
+        json_path,
+        output_directory_fd=output_directory_fd,
+    )
+    if collision_error:
+        invalid = {
+            "status": "INVALID_INPUT",
+            "reason": collision_error,
+        }
+        print(json.dumps(invalid, indent=2, sort_keys=True))
+        os.close(output_directory_fd)
+        return 2
+    out = output_paths(target, held_output_dir)
+    json_directory_fd: Optional[int] = None
+    json_is_canonical = (
+        json_path is not None
+        and (
+            json_path == display_out["formal_result"]
+            or _paths_alias(json_path, out["formal_result"])
+        )
+    )
+    if json_path is not None and not json_is_canonical:
+        try:
+            json_directory_fd = _open_directory_no_follow(json_path.parent)
+            if not _directory_path_matches_fd(
+                json_path.parent,
+                json_directory_fd,
+            ):
+                raise ValueError("json output parent identity is unstable")
+            _replaceable_regular_at(
+                json_directory_fd,
+                _safe_output_name(json_path),
+            )
+        except (OSError, ValueError) as exc:
+            if json_directory_fd is not None:
+                os.close(json_directory_fd)
+            os.close(output_directory_fd)
+            invalid = {
+                "status": "INVALID_INPUT",
+                "reason": (
+                    "unsafe --json: held no-follow output parent is "
+                    f"unavailable ({type(exc).__name__})"
+                ),
+            }
+            print(json.dumps(invalid, indent=2, sort_keys=True))
+            return 2
+    effective_evidence_root = (
+        requested_evidence_root
+        if requested_evidence_root is not None
+        else held_output_dir
+    )
+    target_error = regular_file_error(target)
+    source_pre_identity: Optional[Dict[str, Any]] = None
+    source_post_identity: Optional[Dict[str, Any]] = None
+    snapshot_pre_identity: Optional[Dict[str, Any]] = None
+    snapshot_post_identity: Optional[Dict[str, Any]] = None
+    execution_snapshot_holder: Optional[tempfile.TemporaryDirectory[str]] = None
+    execution_root = root
+    source_package_identity = package_tree_identity(root)
+    execution_package_identity: Dict[str, Any] = {
+        "mode": "not-prepared-dry-run" if args.dry_run else "snapshot-preparation-failed",
+        "source_pre": source_package_identity,
+        "snapshot_pre": None,
+        "source_post": None,
+        "snapshot_post": None,
+        "stable": False,
+    }
+    package_snapshot_error: Optional[str] = None
+    if target_error is None:
+        try:
+            source_pre_identity = file_snapshot_identity(
+                target,
+                max_bytes=MAX_TARGET_SNAPSHOT_BYTES,
+            )
+            # SECURITY-REVIEW: The caller-selected target is read only after a
+            # no-follow regular-file check. The fixed snapshot destination is
+            # streamed into an O_EXCL/O_NOFOLLOW destination under a hard
+            # byte ceiling; it is never materialized wholesale in memory.
+            atomic_copy_regular_new(
+                target,
+                out["target_snapshot"],
+                max_bytes=MAX_TARGET_SNAPSHOT_BYTES,
+                expected_bytes=source_pre_identity["bytes"],
+                expected_sha256=str(source_pre_identity["sha256"])[
+                    len("sha256:") :
+                ],
+                directory_fd=output_directory_fd,
+                lexical_parent=output_dir,
+            )
+            snapshot_pre_identity = file_snapshot_identity(
+                out["target_snapshot"],
+                max_bytes=MAX_TARGET_SNAPSHOT_BYTES,
+            )
+            source_after_copy = file_snapshot_identity(
+                target,
+                max_bytes=MAX_TARGET_SNAPSHOT_BYTES,
+            )
+            copied_stability = target_snapshot_stability(
+                source_pre_identity,
+                source_after_copy,
+                snapshot_pre_identity,
+                snapshot_pre_identity,
+            )
+            if not copied_stability["stable"]:
+                raise ValueError("target changed while snapshot was created")
+        except (OSError, ValueError) as exc:
+            target_error = (
+                "target artifact could not be snapshotted within the "
+                f"declared {MAX_TARGET_SNAPSHOT_BYTES}-byte limit "
+                f"({type(exc).__name__})"
+            )
+    if not args.dry_run:
+        try:
+            (
+                execution_snapshot_holder,
+                execution_root,
+                execution_package_identity,
+            ) = materialize_execution_package_snapshot(root)
+        except (OSError, ValueError) as exc:
+            package_snapshot_error = (
+                f"{type(exc).__name__} while preparing endpoint-checked execution package copy"
+            )
+    prompt = build_formal_prompt(
+        execution_root,
+        out["target_snapshot"],
+        out,
+        effective_evidence_root,
+    )
+    try:
+        atomic_write_new_text(
+            out["prompt"],
+            prompt,
+            directory_fd=output_directory_fd,
+            lexical_parent=output_dir,
+        )
+    except (OSError, ValueError):
+        invalid = {
+            "status": "INVALID_INPUT",
+            "reason": "formal prompt output could not be safely created",
+        }
+        print(json.dumps(invalid, indent=2, sort_keys=True))
+        if json_directory_fd is not None:
+            os.close(json_directory_fd)
+        os.close(output_directory_fd)
+        return 2
 
     result: Dict[str, Any] = {
+        "run_id": uuid.uuid4().hex,
         "status": "UNVERIFIED_RUNTIME",
         "plugin_root": str(root),
         "target_artifact": str(target),
+        "verification_target": str(out["target_snapshot"]),
         "output_dir": str(output_dir),
+        "evidence_root": str(effective_evidence_root),
+        "package_tree_identity": source_package_identity,
+        "execution_package_snapshot_identity": execution_package_identity,
+        "runtime_identity": initial_runtime_identity(),
+        "_execution_root": str(execution_root),
         "formal_coordinator": FORMAL_COORDINATOR,
         "required_native_agents": REQUIRED_NATIVE_AGENTS,
         "prompt_file": str(out["prompt"]),
@@ -787,30 +4672,121 @@ def main(argv: Optional[List[str]] = None) -> int:
     }
 
     if not root.exists():
-        result.update({"status": "FAIL", "reason": "plugin_root does not exist"})
-    elif not target.exists():
-        result.update({"status": "FAIL", "reason": "target_artifact does not exist"})
+        result.update({"status": "INVALID_INPUT", "reason": "plugin_root does not exist"})
+    elif target_error is not None:
+        result.update({"status": "INVALID_INPUT", "reason": target_error})
+    elif package_snapshot_error is not None:
+        result.update({"status": "FAIL", "reason": package_snapshot_error})
     else:
-        if args.skip_prechecks:
+        resolved_claude: Optional[Path] = None
+        claude_resolution_error: Optional[str] = None
+        claude_candidate = shutil.which("claude")
+        if claude_candidate:
+            try:
+                # Resolve and hash the exact regular-file endpoint before the
+                # plugin validator, version probe, or coordinator can execute.
+                # Every later Claude argv uses this same absolute path.
+                resolved_claude = resolve_regular_executable(claude_candidate)
+                runtime_identity = result["runtime_identity"]
+                runtime_identity["resolved_executable_path"] = str(
+                    resolved_claude
+                )
+                executable_identity_pre = file_snapshot_identity(
+                    resolved_claude
+                )
+                runtime_identity["executable_identity_pre"] = (
+                    executable_identity_pre
+                )
+                runtime_identity["executable_sha256_pre"] = str(
+                    executable_identity_pre["sha256"]
+                )[len("sha256:") :]
+            except (OSError, ValueError) as exc:
+                claude_resolution_error = (
+                    f"{type(exc).__name__} while resolving or fingerprinting "
+                    "the Claude executable before execution"
+                )
+                result["runtime_identity"]["error"] = (
+                    claude_resolution_error
+                )
+                resolved_claude = None
+
+        if claude_resolution_error is not None:
+            prechecks = []
+            result["prechecks"] = []
+            result["precheck_summary"] = {
+                "total": 0,
+                "failed": 0,
+                "passed": 0,
+                "failed_commands": [],
+            }
+            result.update({
+                "status": "FAIL",
+                "reason": claude_resolution_error,
+            })
+        elif args.skip_prechecks:
             prechecks = []
             result["prechecks"] = []
             result["precheck_summary"] = {"total": 0, "failed": 0, "passed": 0, "failed_commands": []}
         else:
-            prechecks = run_package_prechecks(root, out, timeout=min(args.timeout_sec, 900), full_self_test=args.full_package_self_test)
+            prechecks = run_package_prechecks(
+                execution_root,
+                out,
+                timeout=min(args.timeout_sec, 900),
+                full_self_test=args.full_package_self_test,
+                claude_executable=resolved_claude,
+                output_directory_fd=output_directory_fd,
+                lexical_output_dir=output_dir,
+            )
             result["prechecks"] = prechecks
             result["precheck_summary"] = summarize_prechecks(prechecks)
-        if result["precheck_summary"]["failed"]:
+        if claude_resolution_error is not None:
+            pass
+        elif result["precheck_summary"]["failed"]:
             result.update({"status": "FAIL", "reason": "deterministic package prechecks failed"})
         elif args.dry_run:
             result.update({"status": "UNVERIFIED_RUNTIME", "reason": "dry-run requested; formal prompt written but Claude Code was not invoked"})
+        elif resolved_claude is None:
+            result.update({"status": "UNVERIFIED_RUNTIME", "reason": "Claude Code CLI not found on PATH; formal coordinator was not invoked"})
         else:
-            claude = shutil.which("claude")
-            if not claude:
-                result.update({"status": "UNVERIFIED_RUNTIME", "reason": "Claude Code CLI not found on PATH; formal coordinator was not invoked"})
-            else:
+            coordinator_ready = False
+            try:
+                runtime_identity = result["runtime_identity"]
+                version_probe = run_cmd(
+                    [str(resolved_claude), "--version"],
+                    cwd=execution_root,
+                    timeout=min(args.timeout_sec, 60),
+                )
+                result["commands"].append(version_probe)
+                version_output = str(
+                    version_probe.get("stdout")
+                    or version_probe.get("stderr")
+                    or ""
+                ).strip()
+                runtime_identity["version_output"] = version_output
+                runtime_identity["version_pattern_match"] = bool(
+                    re.search(CLAUDE_VERSION_PATTERN, version_output)
+                )
+                if (
+                    version_probe.get("returncode") != 0
+                    or runtime_identity["version_pattern_match"] is not True
+                ):
+                    raise ValueError("Claude version identity preflight failed")
+                for role in ("report", "certificate", "ledger"):
+                    reserve_regular_output(
+                        out[role],
+                        directory_fd=output_directory_fd,
+                        lexical_parent=output_dir,
+                    )
+                coordinator_ready = True
+            except (OSError, ValueError):
+                result.update({
+                    "status": "FAIL",
+                    "reason": "formal coordinator identity preflight or output reservation failed",
+                })
+            if coordinator_ready:
                 cmd = [
-                    claude,
-                    "--plugin-dir", str(root),
+                    str(resolved_claude),
+                    "--plugin-dir", str(execution_root),
                     "--agent", FORMAL_COORDINATOR,
                     "-p",
                     "--output-format", "stream-json",
@@ -823,46 +4799,229 @@ def main(argv: Optional[List[str]] = None) -> int:
                     cmd.extend(["--effort", args.effort])
                 cmd.append(prompt)
                 _debug("before claude invocation")
-                invocation = run_cmd(cmd, cwd=target.parent, timeout=args.timeout_sec)
+                invocation = run_cmd(
+                    cmd,
+                    cwd=out["target_snapshot"].parent,
+                    timeout=args.timeout_sec,
+                    pass_fds=(output_directory_fd,),
+                )
                 _debug(f"after claude invocation rc={invocation.get('returncode')}")
                 result["commands"].append(invocation)
-                out["transcript"].write_text((invocation.get("stdout") or "") + "\n" + (invocation.get("stderr") or ""), encoding="utf-8")
+                transcript_error: Optional[str] = None
+                try:
+                    write_complete_stream_transcript(
+                        out["transcript"],
+                        invocation,
+                        directory_fd=output_directory_fd,
+                        lexical_parent=output_dir,
+                    )
+                except (OSError, ValueError):
+                    transcript_error = (
+                        "formal transcript could not be safely created "
+                        "from the complete bounded stream"
+                    )
+                    result.update({
+                        "status": "FAIL",
+                        "reason": transcript_error,
+                    })
                 _debug("before output checks")
-                output_checks = check_required_outputs(out)
+                if (
+                    transcript_error is None
+                    and invocation.get("returncode") == 0
+                ):
+                    output_checks = check_required_outputs(
+                        out,
+                        include_gate=False,
+                    )
+                else:
+                    output_checks = [{
+                        "name": (
+                            "formal output parsing requires a successful "
+                            "bounded invocation"
+                        ),
+                        "passed": False,
+                    }]
                 _debug("after output checks")
                 result["output_checks"] = output_checks
                 _debug("before trace auth")
-                trace_auth = authenticate_trace(out["transcript"])
+                trace_auth = (
+                    authenticate_trace(out["transcript"])
+                    if regular_file_error(out["transcript"]) is None
+                    else {"authenticated": False}
+                )
                 _debug("after trace auth")
                 result["trace_authentication"] = trace_auth
-                if invocation.get("returncode") != 0:
+                if transcript_error is not None:
+                    result.update({"status": "FAIL", "reason": transcript_error})
+                elif invocation.get("returncode") != 0:
                     result.update({"status": "FAIL", "reason": "Claude Code formal invocation returned nonzero"})
                 elif not all(c.get("passed") for c in output_checks):
                     result.update({"status": "FAIL", "reason": "required formal output artifacts or ledger checks failed"})
                 elif args.require_trace_auth and not trace_auth.get("authenticated"):
                     result.update({"status": "FAIL", "reason": "trace authentication was required but native subagent tool events were missing"})
                 else:
-                    evidence_root = (args.evidence_root or target.parent).resolve()
-                    gate_cmd = [sys.executable, str(root / SKILL_PATH / "scripts/ntt_gate.py"), str(out["certificate"]), "--evidence-root", str(evidence_root), "--strict-evidence", "--markdown", str(out["gate"])]
+                    gate_cmd = [sys.executable, str(execution_root / SKILL_PATH / "scripts/ntt_gate.py"), str(out["certificate"]), "--evidence-root", str(effective_evidence_root), "--strict-evidence", "--markdown", str(out["gate"])]
                     _debug("before gate " + repr(gate_cmd))
-                    gate = run_cmd(gate_cmd, cwd=target.parent, timeout=900)
+                    gate = run_cmd(
+                        gate_cmd,
+                        cwd=out["target_snapshot"].parent,
+                        timeout=900,
+                        pass_fds=(output_directory_fd,),
+                    )
                     _debug(f"after gate rc={gate.get('returncode')}")
                     result["commands"].append(gate)
-                    result["gate_status"] = parse_gate_status(gate.get("stdout", ""), out["gate"])
+                    result["gate_status"] = (
+                        parse_gate_status(
+                            gate.get("stdout", ""),
+                            out["gate"],
+                        )
+                        if gate.get("returncode") == 0
+                        else None
+                    )
+                    gate_checks = (
+                        check_required_outputs(
+                            out,
+                            include_gate=True,
+                        )
+                        if gate.get("returncode") == 0
+                        else [{
+                            "name": (
+                                "post-gate output parsing requires a "
+                                "successful bounded gate invocation"
+                            ),
+                            "passed": False,
+                        }]
+                    )
+                    result["output_checks"] = gate_checks
                     if gate.get("returncode") != 0:
                         result.update({"status": "FAIL", "reason": "ntt_gate.py returned nonzero for generated certificate"})
+                    elif not all(
+                        check.get("passed") for check in gate_checks
+                    ):
+                        result.update({"status": "FAIL", "reason": "required formal output artifacts failed post-gate checks"})
                     else:
                         capped_status, reason = cap_status_by_trace(str(result["gate_status"]), trace_auth)
                         result.update({"status": capped_status, "reason": reason})
 
+    result["runtime_identity"] = finalize_runtime_identity(
+        result.get("runtime_identity", initial_runtime_identity()),
+        locals().get("resolved_claude"),
+    )
+    if execution_snapshot_holder is not None:
+        execution_package_identity = finalize_execution_package_snapshot(
+            root,
+            execution_root,
+            execution_package_identity,
+        )
+    result["execution_package_snapshot_identity"] = execution_package_identity
+    try:
+        source_post_identity = file_snapshot_identity(
+            target,
+            max_bytes=MAX_TARGET_SNAPSHOT_BYTES,
+        )
+    except (OSError, ValueError):
+        source_post_identity = None
+    try:
+        snapshot_post_identity = file_snapshot_identity(
+            out["target_snapshot"],
+            max_bytes=MAX_TARGET_SNAPSHOT_BYTES,
+        )
+    except (OSError, ValueError):
+        snapshot_post_identity = None
+    stability = target_snapshot_stability(
+        source_pre_identity,
+        source_post_identity,
+        snapshot_pre_identity,
+        snapshot_post_identity,
+    )
+    result["target_stability"] = stability
+    stability_status, stability_reason = cap_status_by_target_stability(
+        str(result.get("status")),
+        stability,
+    )
+    if stability_reason is not None:
+        result.update({
+            "status": stability_status,
+            "reason": stability_reason,
+        })
+    package_status, package_reason = cap_status_by_package_identity(
+        str(result.get("status")),
+        result.get("package_tree_identity"),
+    )
+    if package_reason is not None:
+        result.update({
+            "status": package_status,
+            "reason": package_reason,
+        })
+    execution_status, execution_reason = cap_status_by_execution_package_snapshot(
+        str(result.get("status")),
+        result.get("execution_package_snapshot_identity"),
+    )
+    if execution_reason is not None:
+        result.update({
+            "status": execution_status,
+            "reason": execution_reason,
+        })
+    runtime_status, runtime_reason = cap_status_by_runtime_identity(
+        str(result.get("status")),
+        result.get("runtime_identity"),
+    )
+    if runtime_reason is not None:
+        result.update({
+            "status": runtime_status,
+            "reason": runtime_reason,
+        })
+
+    if not _directory_path_matches_fd(output_dir, output_directory_fd):
+        result.update({
+            "status": "FAIL",
+            "reason": "formal output directory changed during execution",
+        })
+
     _debug("before final write")
-    if args.json:
-        args.json.parent.mkdir(parents=True, exist_ok=True)
-        args.json.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
+    try:
+        canonical_result = write_formal_result_v2(
+            result,
+            root=root,
+            target=target,
+            output_dir=output_dir,
+            out=out,
+            source_pre_identity=source_pre_identity,
+            source_post_identity=source_post_identity,
+            snapshot_pre_identity=snapshot_pre_identity,
+            snapshot_post_identity=snapshot_post_identity,
+            evidence_root=effective_evidence_root,
+            json_path=json_path,
+            output_directory_fd=output_directory_fd,
+            lexical_output_dir=output_dir,
+            json_directory_fd=json_directory_fd,
+            lexical_json_parent=(
+                json_path.parent if json_path is not None else None
+            ),
+            json_is_canonical=json_is_canonical,
+        )
+    except (OSError, ValueError):
+        invalid = {
+            "status": "INVALID_INPUT",
+            "reason": (
+                "formal result or compatibility JSON destination "
+                "could not be safely created"
+            ),
+        }
+        print(json.dumps(invalid, indent=2, sort_keys=True))
+        if json_directory_fd is not None:
+            os.close(json_directory_fd)
+        os.close(output_directory_fd)
+        return 2
     if args.refresh_release_manifest:
         refresh_stable_release_manifest_if_available(root)
     _debug("before final print")
-    print(json.dumps(result, indent=2, sort_keys=True))
+    print(json.dumps(canonical_result, indent=2, sort_keys=True))
+    if json_directory_fd is not None:
+        os.close(json_directory_fd)
+    os.close(output_directory_fd)
+    if execution_snapshot_holder is not None:
+        execution_snapshot_holder.cleanup()
     _debug("after final print")
     if result["status"] in PASS_STATUSES:
         return 0

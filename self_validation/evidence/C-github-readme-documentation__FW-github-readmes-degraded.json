@@ -1,11 +1,16 @@
 {
-  "artifact_path": "skills/nozickian-verify/scripts/validate_package.py",
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:bbdb1003758e035fd6f9378f703a7da362811719443574478c732ee073108aa7",
   "claim_id": "C-github-readme-documentation",
-  "command_or_source": "v1.0.1 package-local GitHub README documentation and deterministic validator checks",
-  "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:cf92b011a0d150b3e72bc94c0d432afc0f59587bce032d764e4e70dc354ffdce",
-  "observed_result": "Observed the false-world mutation that degrades docs/README.md and requires validation failure.",
-  "support_summary": "The mutation evidence binds the false-world test to validator code that rejects missing or placeholder GitHub README documentation even when manifests are refreshed.",
+  "claim_proposition_sha256": "sha256:7aa3f6e8c7fafe0ac5e9ffe5a65d423e0a8695b381203fad4f74c6e174c64227",
+  "command_or_source": "Declared case context (not authenticated execution): validate_package.py --self-test",
+  "evidence_schema_version": "1.1",
+  "hash_or_version": "sha256:e85d7f8986be371565a38b442f10a15004bd3919a1d4403c6d89bd24f4049150",
+  "modal_case_sha256": "sha256:39d1045c8f675bbcbfd8c7d72da2ca8456df779ca2e49d584feaabc8cbfc1866",
+  "observation_id": "obs:C-github-readme-documentation:FW-github-readmes-degraded",
+  "observed_result": "Declared release result (not authenticated execution): The validator mutation lane rejected the degraded GitHub README documentation.",
+  "support_summary": "This wrapper binds FW-github-readmes-degraded to one exact case-bound release-declaration identity, the current claim proposition and full method-relative claim contract, and the canonical structured modal-case digest.",
   "test_id": "FW-github-readmes-degraded",
-  "timestamp_utc": "2026-06-07T00:00:00Z"
+  "timestamp_utc": "2026-07-18T00:00:00Z"
 }

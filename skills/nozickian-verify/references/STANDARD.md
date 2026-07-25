@@ -27,7 +27,7 @@ Each claim record must include:
 
 A `PASS` result for claim `p` does not automatically verify any entailed, summarized, downstream, deployment, safety, compliance, or action-authorizing claim `q`. Nozickian tracking is claim- and method-relative: a method may track `p` without tracking a later operational or deployment conclusion inferred from `p`.
 
-Any such downstream `q` must be represented as its own claim or as an explicit `derived_or_downstream_claims` record with method `M`, evidence, false-world tests, true-world tests, contradiction review, and residual-risk assessment. Entailed but untested downstream claims are `UNVERIFIED` and must not inherit `PASS-TRACKED` or `PASS-SCOPED` from their source claims.
+Any such downstream `q` must be represented as its own claim or as an explicit `derived_or_downstream_claims` record with method `M`, evidence, false-world tests, true-world tests, contradiction review, and residual-risk assessment. Entailed but untested downstream claims are `UNKNOWN` and must not inherit `PASS-TRACKED` or `PASS-SCOPED` from their source claims. `UNVERIFIED` is reserved for a whole-artifact gate result, not a claim label.
 
 ### 2. Real method M
 
@@ -76,6 +76,14 @@ A factual artifact is verified only when the method meets thresholds for both fa
 - `FAIL`: at least one critical claim fails or the gate itself is bypassable.
 - `UNVERIFIED`: artifact or method cannot be sufficiently identified.
 
+### Charter-level caps (parent-enforced; not checked by ntt_gate.py)
+
+These caps are part of the verification charter, applied by the parent and audited by the gate auditor; `ntt_gate.py` does not mechanically check them:
+
+- The consistency sweep (stale-echo lane) is mandatory whenever the artifact is a revision of previously corrected material, or any claim was corrected or refuted during this verification (the activation predicate in SKILL.md activation checklist step 9). An artifact for which the sweep was mandatory but has not run caps the gate at `PASS-SCOPED`.
+- Swept is not resolved: an unresolved `stale-echo` sweep record also caps the gate at `PASS-SCOPED`, and an unresolved `live-claim` sweep record returns the affected claim to adjudication - it cannot pass while unresolved.
+- A critical claim with an unresolved `REMOTE_GROUND_TRUTH_REQUIRED` escalation caps the gate at `LIMITED`.
+
 ## Anti-patterns
 
 - Treating a citation as verification when the citation might be stale, irrelevant, or hallucinated.
@@ -100,3 +108,21 @@ A `PASS-TRACKED` upgrade requires all of the following:
 - no downstream, deployment, safety, compliance, or action-authorizing conclusion inherits pass status from an upstream package or trace claim.
 
 If any of those conditions is unavailable, missing, dry-run only, or scope-limited, the correct result is `PASS-SCOPED`, `LIMITED`, `FAIL`, or `UNVERIFIED_RUNTIME`, not `PASS-TRACKED`. The package file `references/PASS_TRACKED_UPGRADE_AUDIT.md` is the detailed operational checklist for this upgrade from PASS-SCOPED.
+
+### v1.0.3 promotion contract
+
+Promotion certificate v2 requires exact-string `promotion_schema_version: "2.0"`, exact required top-level JSON types, at least one well-formed claim, and the fixed nine-role `promotion-evidence-v2` semantic-role DAG. Every role binds one distinct canonical bundle-local regular non-symlink file by exact bytes and SHA-256 and is checked with lane-specific semantics. Every claim is evaluated through the canonical strict gate and modeled completion requires a nonempty result set whose entries all pass. The certificate also supplies an explicit `downstream_review`; empty identified conclusions require a substantive performed-review reason.
+
+Deterministic suites and allowlisted official validators execute fresh. Claude uses exact strict argv; the real ANSI-normalized `✔ Validation passed` output is accepted only when no failure or contradiction occurs anywhere in either complete stream. Status, byte counts, and SHA-256 bind full captured bytes, while bounded excerpts and truncation flags are public presentation metadata. Captures cannot authorize alone, and text validator captures never authorize. An absent allowlisted executable can be scoped only through the explicit flag; that scope changes fresh execution evidence but does not remove either official-policy node or alter the fixed dependencies. An installed failure remains a failure.
+
+Formal result `2.0` verifies a standalone endpoint-checked target copy and binds the exact report, gate, certificate, ledger, complete transcript, prompt, and target-copy companion manifest, package-tree identity, run ID, target identity, and target pre/post endpoint stability. The certifier recomputes the exact nonempty all-passing formal output-check projection from the bound report, certificate, ledger, and gate; arbitrary self-attested checks and coherently rehashed empty report or gate companions fail closed. Permission hardening is not temporal immutability: the result records `temporal_immutability_enforced: false`, which caps an otherwise `PASS-TRACKED` formal result at `PASS-SCOPED`. Execution requires supported Linux `PR_SET_CHILD_SUBREAPER` and bounded `/proc` child adoption before `Popen`; successful same-group and detached-session cleanup records `linux-child-subreaper-plus-process-group`, while unavailable containment, a survivor, or incomplete cleanup fails closed. Authentication and transcript hashes cover the complete stream, never a tail-only view. Promotion follows only the typed formal-result locator; it does not substitute a basename or take the first glob match. Unrelated nonreserved files may remain.
+
+Caller-controlled output paths are capability-bound across gate Markdown, certifier JSON/Markdown, formal output plus compatibility JSON, live transcripts plus optional JSON, validator Markdown, deterministic contract/regression JSON wrappers, and the fixed behavior/stable-release manifests. Component-wise `O_DIRECTORY`/`O_NOFOLLOW` traversal acquires each parent before the corresponding long-running work, and exclusive temporary or new-file creation, link/rename installation as applicable, and directory fsync are descriptor-relative. Output-role and alias classifications are frozen from lexical names plus held identities; formal canonical-result classification is not recomputed after writes, certifier JSON/Markdown aliases fail, and live JSON cannot alias a selected transcript. Direct/ancestor links, special or hardlink sentinels, and lexical-parent substitution cannot redirect writes; validator Markdown also rechecks that its held parent remains outside the package tree. Identity/ancestry mismatch fails closed, but endpoint and capability checks are not temporal isolation and do not mechanically exclude every same-UID mutation between observations.
+
+Formal coordinator and gate children receive only the runner-owned `/proc/<runner-pid>/fd/N` alias through `pass_fds`. The runner reads its procfs-visible `Pid:` and the gate requires that PID to equal its procfs-visible direct-parent `PPid:`; child-FD close/rebind, self/unrelated PIDs, noncanonical or nonpositive PID/FD tokens, extra components, closed descriptors, and file descriptors fail. Live formal execution additionally requires POSIX procfd inheritance; unavailability yields `INVALID_INPUT` before requested output mutation.
+
+Malformed or empty claims and other malformed bundle data yield canonical `FAIL` plus `failure_kind`, not an unhandled traceback. Every output enforces its declared fresh-versus-replaceable final-name policy through held-parent descriptor-relative installation. Existing private regular `--json` files are intentionally replaced by same-directory atomic regeneration; gate Markdown requires a fresh name, validator Markdown requires an external parent, and an output directory must be a real or safely created directory.
+
+The v1.0.3 certifier cannot discharge the two still-parent-enforced Issue #5 charter obligations. A complete modeled result is therefore `PASS-SCOPED` / `CAPPED`, has `promotion_authorized: false` and `satisfied_profile: promotion-contract-v2-complete`, records both exact obligations, and exits nonzero. This mandatory promotion cap does not change generic `ntt_gate.py` `PASS-TRACKED` semantics. The formal runner independently applies the containment cap described above.
+
+The aggregate promotion suite is synthetic contract evidence. Its expected `46/46` invokes the production certifier CLI for the complete baseline and every negative case but does not authenticate a real runtime.

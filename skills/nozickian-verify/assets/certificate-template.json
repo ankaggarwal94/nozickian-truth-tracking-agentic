@@ -6,7 +6,171 @@
     "type": "prose|code|manual|rag|trace|package"
   },
   "certificate_version": "2.0",
+  "claim_evidence_binding": {
+    "claim_record": "Each strict claims[] entry carries scope as a nonempty string, proposition_sha256 over canonical text, claim_contract_schema_version 1.1, and claim_contract_sha256 over the complete claim plus certificate assurance, including the full downstream-policy object and local claim inventory.",
+    "claim_record_template": {
+      "id": "C-001",
+      "text": "CANONICAL_NONEMPTY_CLAIM_TEXT",
+      "scope": "EXACT_NONEMPTY_SCOPE_OF_THIS_CLAIM",
+      "proposition_sha256": "sha256:LOWERCASE_SHA256_OF_CANONICAL_TEXT",
+      "claim_contract_schema_version": "1.1",
+      "claim_contract_sha256": "sha256:LOWERCASE_SHA256_OF_FULL_ASSURANCE_BOUND_CONTRACT",
+      "artifact_location": "CANONICAL_ARTIFACT_OR_REFERENT_LOCATOR",
+      "importance": "critical",
+      "truth_status": "executed_confirmed",
+      "method_m": {
+        "producer": "SUBSTANTIVE_PRODUCER_DESCRIPTION",
+        "checker": "SUBSTANTIVE_CHECKER_DESCRIPTION",
+        "artifacts": [
+          "SUBSTANTIVE_ARTIFACT_IDENTITY_OR_PATH"
+        ],
+        "environment": [
+          "SUBSTANTIVE_EXECUTION_ENVIRONMENT_IDENTITY"
+        ],
+        "tools": [
+          "SUBSTANTIVE_TOOL_AND_VERSION_IDENTITY"
+        ],
+        "evidence_process": "SUBSTANTIVE_EVIDENCE_COLLECTION_DESCRIPTION",
+        "graders_or_tests": [
+          "SUBSTANTIVE_GRADER_TEST_OR_COMMAND_IDENTITY"
+        ],
+        "trace_or_logs": [
+          "SUBSTANTIVE_TRACE_OR_LOG_IDENTITY"
+        ]
+      },
+      "evidence_refs": [
+        "RELATIVE_JSON_WRAPPER_PATH_1",
+        "RELATIVE_JSON_WRAPPER_PATH_2_WITH_DISTINCT_ARTIFACT_BYTES"
+      ],
+      "false_world_tests": [
+        "EXPAND_FROM_modal_record_template_WITH_REVIEWER_CLASS_1",
+        "EXPAND_FROM_modal_record_template_WITH_DISTINCT_REVIEWER_CLASS_AND_TYPED_OPERATOR_TARGET_OUTCOME_IDENTITY_2"
+      ],
+      "true_world_tests": [
+        "EXPAND_WITH_A_SCHEMA_1_1_TRUE_WORLD_RECORD"
+      ],
+      "unresolved_contradictions": [],
+      "residual_risks": []
+    },
+    "claim_record_required_fields": [
+      "id",
+      "text",
+      "scope",
+      "proposition_sha256",
+      "claim_contract_schema_version=1.1",
+      "claim_contract_sha256",
+      "artifact_location",
+      "importance",
+      "method_m",
+      "truth_status",
+      "evidence_refs",
+      "false_world_tests",
+      "true_world_tests",
+      "unresolved_contradictions",
+      "residual_risks"
+    ],
+    "evidence_wrapper_required_fields": [
+      "evidence_schema_version=1.1",
+      "claim_id",
+      "claim_proposition_sha256",
+      "claim_contract_schema_version=1.1",
+      "claim_contract_sha256",
+      "artifact_path",
+      "command_or_source",
+      "observed_result",
+      "support_summary",
+      "timestamp_utc",
+      "hash_or_version"
+    ],
+    "evidence_wrapper_optional_fields": [
+      "applies_to_claims"
+    ],
+    "modal_wrapper_required_fields": [
+      "modal_case_sha256"
+    ],
+    "modal_wrapper_binding_requirement": "At least one of test_id or applies_to_tests must canonically bind the evaluated modal test; every present optional identity field is still independently type-checked.",
+    "modal_wrapper_optional_fields": [
+      "test_id",
+      "applies_to_tests",
+      "observation_id"
+    ],
+    "modal_record_template": {
+      "id": "FW-OR-TW-C-001-CASE",
+      "kind": "false_world",
+      "target_claim_ids": [
+        "C-001"
+      ],
+      "perturbation": "ONE_NONEMPTY_PERTURBATION_OR_USE_VARIANT_INSTEAD",
+      "world_contract": {
+        "schema_version": "1.1",
+        "semantic_equivalence_class": "reviewed-case-slug",
+        "operator": "replace",
+        "target": "artifact.identity",
+        "precondition": "NONEMPTY_EXPLANATION_ONLY_NOT_A_POLARITY_ORACLE",
+        "state_delta": "NONEMPTY_EXPLANATION_ONLY_NOT_A_POLARITY_ORACLE",
+        "oracle": "NONEMPTY_EXPLANATION_ONLY_NOT_A_POLARITY_ORACLE",
+        "expected_outcome": "rejected_false_claim"
+      },
+      "expected_behavior": "NONEMPTY_BOUND_EXPLANATION",
+      "observed_behavior": "NONEMPTY_BOUND_EXPLANATION",
+      "outcome": "rejected_false_claim",
+      "observed_outcome": "rejected_false_claim",
+      "result": "pass",
+      "evidence_refs": [
+        "RELATIVE_JSON_WRAPPER_PATH"
+      ]
+    },
+    "modal_world_contract": "Every modal test carries closed world_contract 1.1 fields semantic_equivalence_class, operator, target, precondition, state_delta, oracle, and expected_outcome. Authorization uses the closed typed operator/target/outcome fields; prose is digest-bound explanation, not a polarity oracle. Coverage independently uses reviewer class and typed operator/target/expected_outcome identity. outcome and observed_outcome are separately hashed and must agree when both are present.",
+    "package_self_registry": "The checked-in package certificate must contain the immutable reviewed 80-transition modal ID multiset exactly once certificate-wide, with no deletion, duplication, extra ID, or claim/kind reassignment; every complete canonical transition payload must match its pin.",
+    "observation_ledger": "observation_schema_version 1.2 closed release-declaration records with exact claim/test/kind, proposition digest, claim-contract digest, modal digest, pass result, accepted outcome, and wrapper-equal observed_result; deduplication identity only, not execution provenance"
+  },
   "claims": [],
+  "consistency_sweep": {
+    "activation_reason": "EXAMPLE_CORRECTED_CLAIMS_ARE_PRESENT_SO_THE_SWEEP_IS_MANDATORY",
+    "applies": true,
+    "corrected_claims": [
+      {
+        "affected_claim_ids": [
+          "C-001"
+        ],
+        "correction_locations": [
+          "PATH:LINE_OR_PATH:START-END"
+        ],
+        "correction_location_bindings": [
+          {
+            "locator": "PATH:LINE_OR_PATH:START-END",
+            "expected_excerpt_sha256": "LOWERCASE_64_HEX"
+          }
+        ],
+        "new_wording": "CORRECTED_WORDING_OR_VALUE",
+        "old_wording": "SUPERSEDED_WORDING_OR_VALUE"
+      }
+    ],
+    "correction_evidence_checked": "WHAT_CORRECTION_EVIDENCE_WAS_AFFIRMATIVELY_CHECKED_BEFORE_RULING_ON_APPLICABILITY",
+    "echo_findings": [
+      {
+        "affected_claim_ids": [
+          "C-001"
+        ],
+        "classification": "live-claim",
+        "edited_locations": [
+          "PATH:LINE_OR_PATH:START-END_REQUIRED_WHEN_RESOLVED_ELSE_EMPTY"
+        ],
+        "embedded_in_true_sentence": "yes|no",
+        "fragment": "VERBATIM_MATCHED_FRAGMENT",
+        "locations": [
+          "PATH:LINE_OR_PATH:START-END_OR_git:40_HEX_COMMIT:PATH"
+        ],
+        "recommended_edit": "SPECIFIC_EDIT_OR_RETAIN_AS_INTENTIONAL_HISTORY",
+        "replacement_evidence": "EVIDENCE_THAT_THE_EDIT_LANDED_REQUIRED_WHEN_RESOLUTION_IS_RESOLVED",
+        "resolution": "resolved"
+      }
+    ],
+    "none_found": false,
+    "not_applicable_reason": "",
+    "sweep_ran": true,
+    "swept_at": "YYYY-MM-DD_OR_RELEASE_LABEL"
+  },
   "derived_or_downstream_claims": [
     {
       "derived_claim": "A downstream deployment, safety, compliance, or action-authorizing conclusion inferred from C-001.",
@@ -15,41 +179,179 @@
       ],
       "id": "D-001",
       "reason": "No independent method M, evidence, false-world tests, true-world tests, contradiction review, and residual-risk assessment supplied for this downstream claim.",
-      "status": "UNVERIFIED"
+      "status": "UNKNOWN"
     }
   ],
-  "method": {
-    "components": {
-      "model": "...",
-      "prompt_or_instructions": "...",
-      "release_gate": "...",
-      "retrieval_or_sources": "...",
-      "tools_or_environment": "...",
-      "trace_or_artifacts": "...",
-      "verifier_or_grader": "..."
-    },
-    "description": "Describe the actual prompt/model/retriever/toolchain/grader/human-review method.",
-    "id": "M1"
+  "method_manifest": {
+    "producer": "SUBSTANTIVE_PRODUCER_DESCRIPTION",
+    "checker": "SUBSTANTIVE_CHECKER_DESCRIPTION",
+    "artifacts": [
+      "SUBSTANTIVE_ARTIFACT_IDENTITY_OR_PATH"
+    ],
+    "environment": [
+      "SUBSTANTIVE_EXECUTION_ENVIRONMENT_IDENTITY"
+    ],
+    "tools": [
+      "SUBSTANTIVE_TOOL_AND_VERSION_IDENTITY"
+    ],
+    "evidence_process": "SUBSTANTIVE_EVIDENCE_COLLECTION_DESCRIPTION",
+    "graders_or_tests": [
+      "SUBSTANTIVE_GRADER_TEST_OR_COMMAND_IDENTITY"
+    ],
+    "trace_or_logs": [
+      "SUBSTANTIVE_TRACE_OR_LOG_IDENTITY"
+    ]
   },
   "method_unknowns": [],
   "pass_tracked_upgrade_audit": {
+    "aggregate_contract": {
+      "command": "python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .",
+      "expected_cases": "46/46",
+      "evidence_kind": "synthetic-contract-not-runtime-authentication",
+      "production_certifier_cli": true
+    },
     "audit_bundle": "pass_tracked_audit_bundle/",
     "certifier_command": "python3 skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py . pass_tracked_audit_bundle --json pass_tracked_audit_bundle/pass_tracked_certification_result.json",
-    "downgrade_if_missing": [
-      "UNVERIFIED_RUNTIME",
-      "PASS-SCOPED",
-      "LIMITED",
-      "FAIL"
+    "deterministic_policy": "Every deterministic-capture-v2 suite is executed fresh with fixed argv and compared through its typed semantic projection; captures never authorize alone.",
+    "origin": "runtime-observed",
+    "origin_allowed_values": [
+      "runtime-observed",
+      "synthetic-contract"
     ],
+    "origin_binding": "The declared origin must match live provenance schema 2.0 evidence_origin and formal result 2.0 evidence_origin; promotion-method-m-v2 reconstructs the same value without treating provenance class as authorization.",
+    "evidence_contract": {
+      "canonical_file_policy": "bundle-local canonical relative regular non-symlink files with exact bytes and sha256",
+      "graph_policy": "fixed environment-independent nine-role graph with canonical bounded acyclic depends_on edges; both official-policy roles remain under explicit unavailable-tool scope exclusion",
+      "node_fields": [
+        "path",
+        "sha256",
+        "depends_on"
+      ],
+      "role_specific_validation": true,
+      "semantic_roles": [
+        "deterministic.package_validation",
+        "deterministic.gate_result",
+        "deterministic.regression",
+        "deterministic.gate_contract",
+        "deterministic.formal_contract",
+        "official.claude_plugin_validate",
+        "official.skills_ref_validate",
+        "live.runtime",
+        "formal.result"
+      ],
+      "schema_version": "promotion-evidence-v2"
+    },
+    "formal_result_contract": {
+      "companion_manifest": "exact report, gate, certificate, ledger, transcript, prompt, and target_snapshot path/sha256/bytes records",
+      "output_capability_policy": "formal output and compatibility JSON parents are acquired component-wise with O_DIRECTORY/O_NOFOLLOW before execution and held through descriptor-relative O_EXCL creation, link/rename installation, and directory fsync; canonical-result versus compatibility-JSON classification is frozen during pre-execution collision analysis against held identities and is not recomputed after writes; formal children receive only runner-owned /proc/<runner-pid>/fd/N via pass_fds, where procfs-visible Pid must equal the child's procfs-visible direct-parent PPid and child-FD close/rebind, self/unrelated PIDs, noncanonical or nonpositive PID/FD tokens, extra components, closed descriptors, and file descriptors are rejected; unavailable procfd inheritance is INVALID_INPUT before output mutation",
+      "output_check_policy": "exact nonempty all-passing projection recomputed from the bound report, certificate, ledger, and gate; arbitrary self-attested checks and coherently rehashed empty report or gate companions fail closed",
+      "result_message_policy": "exactly one final canonical successful SDK ResultMessage after all lane results; canonical nonempty result; empty permission_denials; api_error_status, deferred_tool_use, and non-structured structured_output null or absent; non-null terminal_reason/stop_reason exact completed/end_turn; aliases and nested contradictions fail closed",
+      "selection": "typed formal.result locator only; no basename or glob-first substitution; unrelated nonreserved files may remain",
+      "standalone_target_snapshot": "endpoint-checked permission-hardened copy; not temporally immutable",
+      "temporal_immutability_enforced": false,
+      "process_containment": {
+        "cleanup_after_leader_exit": true,
+        "detached_session_descendants_contained": true,
+        "mechanism": "linux-child-subreaper-plus-process-group"
+      },
+      "detached_descendant_survivor": false,
+      "process_containment_cleanup_complete": true,
+      "unavailable_process_containment_behavior": "fail-before-execution",
+      "version": "2.0",
+      "identities": [
+        "package_tree_identity",
+        "run_id",
+        "target_snapshot_identity",
+        "target_pre_post_identity"
+      ]
+    },
+    "malformed_input_result": {
+      "failure_kind": "INVALID_INPUT|CHECK_FAILED|INTERNAL_ERROR",
+      "status": "FAIL",
+      "traceback_exposed": false
+    },
+    "official_validator_policy": "Allowlisted validators run fresh. Claude uses exact ordered strict argv and accepts its real ANSI-normalized Validation passed form only when no failure or contradiction appears anywhere in either complete stream. Full captured bytes determine status/hash/byte counts; bounded excerpts and truncation flags never authorize. Text captures never authorize; absent tools scope only through the explicit flag while both official-policy nodes and canonical dependencies remain mandatory; installed failures fail.",
+    "promotion_claim_policy": "claims is a nonempty array of exact-typed objects with unique canonical ids, nonempty scope, claim-contract schema 1.1 fields, and complete modal world contracts; every claim is evaluated through the canonical strict gate at the bundle evidence root; modeled completion requires a nonempty all-PASS result set passed into promotion-v2 downstream non-closure evaluation; empty downstream conclusions remain valid only with a real passing promotion claim, performed review, and substantive reason",
+    "promotion_required_top_level_types": "promotion_schema_version/origin/upgrade_from_status/requested_status/package_version/package_tree_sha256 are exact strings; method_m_upgrade/live_result_bindings/evidence/downstream_review are objects; claims is a nonempty array and derived_or_downstream_claims is an array",
+    "promotion_schema_version": "2.0",
     "requested_status": "PASS-TRACKED",
     "required_evidence": [
-      "deterministic checks",
-      "official Claude Code validators",
+      "fresh deterministic checks with deterministic-capture-v2 projections",
+      "fresh allowlisted official validators",
       "live fixture runtime evals",
-      "formal artifact run with trace auth",
+      "formal result 2.0 with standalone endpoint-checked target copy, explicit temporal/containment limitations, PASS-SCOPED cap, and trace auth",
       "strict gate PASS-TRACKED on generated certificate",
-      "downstream non-closure review"
+      "explicit downstream_review"
     ],
-    "upgrade_from_status": "PASS-SCOPED"
-  }
+    "safe_output_policy": "gate Markdown, certifier JSON/Markdown, formal output and compatibility JSON, live transcripts and optional JSON, validator Markdown, and the gate/formal/regression/promotion contract JSON wrappers plus the fixed behavior and stable-release manifests acquire component-wise O_DIRECTORY/O_NOFOLLOW parent capabilities before their long-running work and retain them through descriptor-relative exclusive temporary or new-file creation, link/rename installation as applicable, and directory fsync; role and alias classifications are frozen from lexical names plus held identities, each output enforces its declared fresh-versus-replaceable final-name policy, and direct or ancestor links, special/hardlink sentinels, cross-output aliases, and lexical-parent substitution cannot redirect writes and fail closed; validator Markdown also rechecks that its held parent remains outside the package tree; endpoint and held-capability checks are not temporal isolation",
+    "package_snapshot_policy": "Package validation authorizes from one immutable initial bounded no-follow captured-byte snapshot. Authorization reads and self-test fixture trees consume or materialize only captured bytes; finalization independently revalidates the held source and private mirror. Package path/metadata and aggregate byte budgets are independent, and Git discovery/index capture has separate timeout, combined-output, and entry ceilings.",
+    "stream_binding_policy": "Official validator decisions and formal transcript authentication/hash/byte counts bind complete captured bytes. Public results may contain bounded sanitized excerpts and explicit truncation metadata; capture-limit excess fails closed and tail-only authentication is forbidden.",
+    "live_result_bindings": {
+      "artifact_sha256_by_fixture": {
+        "FIXTURE_ID": "LOWERCASE_SHA256_OVER_EXACT_ARTIFACT_BYTES"
+      },
+      "fixture_argv_shape": [
+        "<claude-cli>",
+        "--plugin-dir",
+        "<package-root>",
+        "-p",
+        "--output-format",
+        "json",
+        "--max-turns",
+        "<recorded positive integer>",
+        "<canonical normalized prompt>"
+      ],
+      "fixture_spec_sha256": "LOWERCASE_SHA256_OVER_EXACT_EVALS_JSON_BYTES",
+      "package_tree_algorithm": "ntt-stable-release-tree-v2",
+      "package_tree_sha256": "LOWERCASE_SHA256_FROM_SHARED_VALIDATOR_HELPER",
+      "preflight_argv": [
+        [
+          "<claude-cli>",
+          "--version"
+        ],
+        [
+          "<claude-cli>",
+          "plugin",
+          "validate",
+          "<package-root>"
+        ]
+      ],
+      "run_config": {
+        "max_turns": 20,
+        "output_format": "json",
+        "plugin_dir": "<package-root>",
+        "print_mode": true
+      }
+    },
+    "upgrade_from_status": "PASS-SCOPED",
+    "v1_0_3_mandatory_cap": {
+      "exit": "nonzero",
+      "outcome": "CAPPED",
+      "promotion_authorized": false,
+      "satisfied_profile": "promotion-contract-v2-complete",
+      "status": "PASS-SCOPED",
+      "unresolved_charter_obligations": [
+        "Issue #5 consistency-sweep activation and resolution mechanics remain parent-enforced.",
+        "Issue #5 REMOTE_GROUND_TRUTH_REQUIRED escalation mechanics remain parent-enforced."
+      ],
+      "scope": "certify_pass_tracked_upgrade.py applies the modeled-promotion cap; generic ntt_gate.py PASS-TRACKED semantics remain unchanged; the formal runner separately caps otherwise PASS-TRACKED results for unenforced temporal immutability, while unavailable process containment fails before execution"
+    }
+  },
+  "remote_escalations": [
+    {
+      "claim_id": "C-001",
+      "exact_fetch_spec": "UNTRUSTED_FETCH_TARGET_URL_OR_API_CALL_OR_CLI_COMMAND_PARENT_MUST_NOT_EXECUTE_VERBATIM",
+    "fetched_artifact_sha256": null,
+    "fetched_at_utc": null,
+      "fetched_evidence_refs": [],
+      "local_mirror": "PATH_OR_none",
+      "mirror_provenance": "PINNED_COMMIT_OR_DATE_OR_unproven",
+    "readjudicated_truth_status": null,
+      "readjudication_evidence_refs": [],
+    "resolution": "unresolved",
+      "staleness_risk": "WHAT_COULD_HAVE_CHANGED_SINCE_THE_PIN_OR_HOW_THE_MIRROR_COULD_BE_WRONG",
+    "validated_fetch_request": null,
+      "why_remote": "WHY_THE_AUTHORITATIVE_GROUND_TRUTH_IS_REMOTE_ONLY"
+    }
+  ]
 }

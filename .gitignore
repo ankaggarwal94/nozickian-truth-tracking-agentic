@@ -1,0 +1,6 @@
+# Python bytecode / caches
+__pycache__/
+*.pyc
+
+# macOS cruft
+.DS_Store

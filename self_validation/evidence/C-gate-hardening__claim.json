@@ -1,14 +1,13 @@
 {
-  "applies_to_tests": [
-    "*"
-  ],
   "artifact_path": "skills/nozickian-verify/scripts/ntt_gate.py",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:d05443ab15076b56513ffce8efbb0e3aebacba08d0f91fed9f6d6b287bc82d8a",
   "claim_id": "C-gate-hardening",
-  "command_or_source": "v1.0.1 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
-  "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:76821143e6e911c0bd47e7ac2ecd0539901a5f2f5f8d77c67c5cd7f0925afe05",
-  "observed_result": "Observed v1.0.1 deterministic evidence for C-gate-hardening",
-  "support_summary": "This structured evidence binds C-gate-hardening to skills/nozickian-verify/scripts/ntt_gate.py, a package-local artifact with exact SHA-256 provenance under strict local evidence mode. v1.0.1 additionally checks unique canonical evidence refs, unique artifact/hash identities for critical evidence sufficiency, and substantive trace-result payload content. v1.0.1 additionally checks context-aware trace payload isolation and unique modal-test thresholds.",
-  "timestamp": "1970-01-01T00:00:00Z",
-  "timestamp_utc": "2026-06-04T00:00:00Z"
+  "claim_proposition_sha256": "sha256:876e000613ddee01551e89a760f761874a9eef3a81ffe29a31ab286a8654fa4e",
+  "command_or_source": "current v1.0.3 reviewed package source",
+  "evidence_schema_version": "1.1",
+  "hash_or_version": "sha256:b48d5152c6cfcf074f40ce7f66acc4cc871e9d8d75faa8394c80282a97064c37",
+  "observed_result": "Current source bytes support the scoped proposition for C-gate-hardening.",
+  "support_summary": "This wrapper binds C-gate-hardening to current package artifact skills/nozickian-verify/scripts/ntt_gate.py by exact SHA-256 and to the canonical claim proposition digest. It also binds the wrapper to the canonical full method-relative claim contract.",
+  "timestamp_utc": "2026-07-18T00:00:00Z"
 }

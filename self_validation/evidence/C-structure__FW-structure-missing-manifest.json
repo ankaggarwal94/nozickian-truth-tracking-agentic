@@ -1,0 +1,16 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:d4328c652eef3e1e203fb1db064ea7f7ea8795df49d10133724bcee6e8eb30e6",
+  "claim_id": "C-structure",
+  "claim_proposition_sha256": "sha256:e39cd26592f8c552b3f3720ff85adf034ee97f2b2843fa7fe6c833e46c7baa51",
+  "command_or_source": "Declared case context (not authenticated execution): validate_package.py --self-test",
+  "evidence_schema_version": "1.1",
+  "hash_or_version": "sha256:e85d7f8986be371565a38b442f10a15004bd3919a1d4403c6d89bd24f4049150",
+  "modal_case_sha256": "sha256:79d3cb6f9c58d8e0841389ce46853fdaac919b60154af0c40dee9e853a54cee8",
+  "observation_id": "obs:C-structure:FW-structure-missing-manifest",
+  "observed_result": "Declared release result (not authenticated execution): The validator mutation lane rejected the package with its behavior manifest removed.",
+  "support_summary": "This wrapper binds FW-structure-missing-manifest to one exact case-bound release-declaration identity, the current claim proposition and full method-relative claim contract, and the canonical structured modal-case digest.",
+  "test_id": "FW-structure-missing-manifest",
+  "timestamp_utc": "2026-07-18T00:00:00Z"
+}

@@ -1,0 +1,16 @@
+{
+  "artifact_path": "self_validation/current_observations.json",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:f7efee64b12379bfc6c7325f38b8ce488053499831ce390838afc41524d9b29b",
+  "claim_id": "C-pass-tracked-upgrade-audit",
+  "claim_proposition_sha256": "sha256:ff78184f24c425dab306f31d50e0ee25a69c96d6f785500b6ae2f367d18f0f51",
+  "command_or_source": "Declared case context (not authenticated execution): run_promotion_certifier_contract_tests.py",
+  "evidence_schema_version": "1.1",
+  "hash_or_version": "sha256:e85d7f8986be371565a38b442f10a15004bd3919a1d4403c6d89bd24f4049150",
+  "modal_case_sha256": "sha256:d6440f947afd64b1b3c58c8fb131cb332385c4c9fb32e80d16bf8742e6ec908f",
+  "observation_id": "obs:C-pass-tracked-upgrade-audit:FW-promotion-empty-formal-output",
+  "observed_result": "Declared release result (not authenticated execution): The promotion contract used the production certifier CLI and rejected the recomputed empty report and gate companions.",
+  "support_summary": "This wrapper binds FW-promotion-empty-formal-output to one exact case-bound release-declaration identity, the current claim proposition and full method-relative claim contract, and the canonical structured modal-case digest.",
+  "test_id": "FW-promotion-empty-formal-output",
+  "timestamp_utc": "2026-07-18T00:00:00Z"
+}

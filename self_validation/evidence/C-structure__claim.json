@@ -1,14 +1,13 @@
 {
-  "applies_to_tests": [
-    "*"
-  ],
   "artifact_path": "PACKAGE_SURFACE.json",
+  "claim_contract_schema_version": "1.1",
+  "claim_contract_sha256": "sha256:d4328c652eef3e1e203fb1db064ea7f7ea8795df49d10133724bcee6e8eb30e6",
   "claim_id": "C-structure",
-  "command_or_source": "v1.0.1 packaged deterministic contract suites, source scripts, and targeted truth-tracking probe summary",
-  "evidence_schema_version": "1.0",
-  "hash_or_version": "sha256:7ca9440f4b702e4e11f083665839ef5a66010b0efb47c8c42517101260d0f0f7",
-  "observed_result": "Observed v1.0.1 deterministic evidence for C-structure",
-  "support_summary": "This structured evidence binds C-structure to PACKAGE_SURFACE.json, a package-local artifact with exact SHA-256 provenance under strict local evidence mode. v1.0.1 additionally checks unique canonical evidence refs, unique artifact/hash identities for critical evidence sufficiency, and substantive trace-result payload content. v1.0.1 additionally checks context-aware trace payload isolation and unique modal-test thresholds.",
-  "timestamp": "1970-01-01T00:00:00Z",
-  "timestamp_utc": "2026-06-04T00:00:00Z"
+  "claim_proposition_sha256": "sha256:e39cd26592f8c552b3f3720ff85adf034ee97f2b2843fa7fe6c833e46c7baa51",
+  "command_or_source": "current v1.0.3 reviewed package source",
+  "evidence_schema_version": "1.1",
+  "hash_or_version": "sha256:ea132056e77ac66f67152dc489979ef6a6c6df55b6526201fd47a7ad7bbf678b",
+  "observed_result": "Current source bytes support the scoped proposition for C-structure.",
+  "support_summary": "This wrapper binds C-structure to current package artifact PACKAGE_SURFACE.json by exact SHA-256 and to the canonical claim proposition digest. It also binds the wrapper to the canonical full method-relative claim contract.",
+  "timestamp_utc": "2026-07-18T00:00:00Z"
 }

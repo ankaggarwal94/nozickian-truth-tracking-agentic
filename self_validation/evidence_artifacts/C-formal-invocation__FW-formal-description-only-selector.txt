@@ -1,5 +1,0 @@
-v1.0.1 structured evidence artifact
-claim_id=C-formal-invocation
-test_id=FW-formal-description-only-selector
-evidence_ref=self_validation/evidence/C-formal-invocation__FW-formal-description-only-selector.json
-patches=result-content semantics; unique evidence refs; unique artifact identities
