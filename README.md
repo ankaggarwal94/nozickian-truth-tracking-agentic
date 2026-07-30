@@ -55,6 +55,8 @@ python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --
 python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py .
 ```
 
+On macOS, the `/tmp` output paths above are rejected by design: `/tmp` and `/var` are symlinks, and output-path hardening refuses symlinked ancestry. `validate_package.py` additionally needs a symlink-free `TMPDIR` and a `.git`-free copy of the tree, and `--self-test` plus fresh promotion certification require a Linux host. See the [macOS portability caveats](docs/quickstart/README.md#macos-portability-caveats) for the working recipe and exact boundaries.
+
 The checked-in gate command deliberately selects `package-self`. Claim-contract
 schema `1.1` binds each complete claim to a certificate-assurance payload whose
 `downstream_policy` is the full canonical policy object, not a string label.
