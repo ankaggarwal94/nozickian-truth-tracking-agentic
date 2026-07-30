@@ -16,6 +16,10 @@ The deterministic checks can run without Claude Code, but PASS-TRACKED requires 
 
 No. A trace can authenticate that the required method lanes executed. The correctness of an output, the safety of a deployment, and the authorization of an action are downstream claims requiring their own evidence.
 
+## Why do the validators fail on macOS?
+
+Because the fail-closed hardening is working as designed on symlinked ancestry and missing Linux containment, not because the package is broken. `/tmp` and `/var` are symlinks on macOS, so `/tmp/...` output paths are rejected; `validate_package.py` additionally needs a symlink-free `TMPDIR` and a `.git`-free copy of the tree. With those adjustments basic mode passes `1827/1827`. `--self-test` and fresh promotion certification require a Linux host. See the [macOS portability caveats](../quickstart/README.md#macos-portability-caveats).
+
 ## What should I do when a check fails?
 
 Read the failed check name and details, identify whether the failure is a stale manifest, stale evidence hash, missing artifact, closed-surface expansion, or semantic regression, then fix the source of the failure rather than weakening the validator.

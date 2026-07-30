@@ -44,7 +44,7 @@
       "mode": "100644",
       "path": "MANIFEST.sha256",
       "role": "release-metadata",
-      "sha256": "5b72454dd68d09c6f8b191b3d2965f0fb116b9290808aab323ecd2bec0c3b1c2"
+      "sha256": "edc726f5c8004638b79937dc38ebf6513b4c7c1d732cbef840447a35448752dd"
     },
     {
       "bytes": 23979,
@@ -54,11 +54,11 @@
       "sha256": "ea132056e77ac66f67152dc489979ef6a6c6df55b6526201fd47a7ad7bbf678b"
     },
     {
-      "bytes": 15740,
+      "bytes": 16201,
       "mode": "100644",
       "path": "README.md",
       "role": "release-metadata",
-      "sha256": "749e0d925ad63778eca5cb0cabad159fc8a8bf4e59c5f43f03265952466f5b94"
+      "sha256": "0211142ee253ecc0ce2cce0ae87bc04ecd189b22f785aa249c0e6f2adee62c9f"
     },
     {
       "bytes": 31867,
@@ -173,11 +173,11 @@
       "sha256": "bccf0a647704eacdcce1bb4187af62cc4554dfa8d5aefb1ff9c226711ae7c825"
     },
     {
-      "bytes": 1729,
+      "bytes": 2311,
       "mode": "100644",
       "path": "docs/faq/README.md",
       "role": "behavior",
-      "sha256": "6fff4c181bc5cdf871562540c470ea456267dec749d61356e09438d8548d0a46"
+      "sha256": "668aa157ad26a083bb87465cede8c0bbb3999ff1cf5d1ea7b55f38f5bce060f7"
     },
     {
       "bytes": 1241,
@@ -194,11 +194,11 @@
       "sha256": "b9e59534af1de5a3fd67166f67441c054d4eec33791d82bbb5e14c612b56a3c7"
     },
     {
-      "bytes": 2122,
+      "bytes": 4968,
       "mode": "100644",
       "path": "docs/quickstart/README.md",
       "role": "behavior",
-      "sha256": "e897e4ebba3cb084c13959e2b4d869a4efc6247e6035659d77dd8f0ee4add00e"
+      "sha256": "abc82b06981736ff20b534434ff223ad75572263c6c2f01807bb7f5aaaaa2a14"
     },
     {
       "bytes": 8701,
@@ -1086,7 +1086,7 @@
   ],
   "self_exclusion": "file_inventory intentionally excludes STABLE_RELEASE_MANIFEST.json to avoid a self-referential hash cycle; self_hash_sha256 is computed over canonical JSON with self_hash_sha256 set to null, and self_mode separately requires the installed manifest to be non-executable.",
   "self_file": "STABLE_RELEASE_MANIFEST.json",
-  "self_hash_sha256": "d799239889afdcb4cad91f653901545581d9a9e71abe2f849a6cc4543804850e",
+  "self_hash_sha256": "2aeea62889dcefcfcb400e549b96efd53b3811e9d5eddd02029190356d89c230",
   "self_mode": "100644",
   "validation_commands": [
     "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test",
