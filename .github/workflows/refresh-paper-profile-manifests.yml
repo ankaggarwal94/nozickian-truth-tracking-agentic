@@ -1,0 +1,50 @@
+name: refresh-paper-profile-manifests
+
+on:
+  push:
+    branches:
+      - agent/scientific-paper-claim-evaluation
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+          ref: agent/scientific-paper-claim-evaluation
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+      - name: Remove bootstrap workflow and regenerate release manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/refresh-paper-profile-manifests.yml
+          python3 - <<'PY'
+          import runpy
+          import sys
+          from pathlib import Path
+
+          sys.dont_write_bytecode = True
+          root = Path(".").resolve()
+          validator = runpy.run_path(
+              "skills/nozickian-verify/scripts/validate_package.py",
+              run_name="paper_profile_manifest_refresh",
+          )
+          validator["update_manifest"](root)
+          validator["write_stable_release_manifest"](root)
+          PY
+          validation_status=0
+          python3 skills/nozickian-verify/scripts/validate_package.py . \
+            > /tmp/paper-profile-validation.json || validation_status=$?
+          cat /tmp/paper-profile-validation.json
+          git add MANIFEST.sha256 STABLE_RELEASE_MANIFEST.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Refresh release manifests for paper evaluation profile"
+          git push origin HEAD:agent/scientific-paper-claim-evaluation
+          exit "$validation_status"
