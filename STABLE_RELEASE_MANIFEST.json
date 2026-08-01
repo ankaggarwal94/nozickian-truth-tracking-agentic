@@ -44,7 +44,7 @@
       "mode": "100644",
       "path": "MANIFEST.sha256",
       "role": "release-metadata",
-      "sha256": "5b72454dd68d09c6f8b191b3d2965f0fb116b9290808aab323ecd2bec0c3b1c2"
+      "sha256": "1b5fe69bf2706d119587c0ad951c78ac010c55aadbd1fe2ba06773f1941c6280"
     },
     {
       "bytes": 23979,
@@ -950,11 +950,11 @@
       "sha256": "510487a2eb7d9dbf658cacd5a1ea0341dd3fab66b499b887bc22f26c5d8c638a"
     },
     {
-      "bytes": 1917,
+      "bytes": 26339,
       "mode": "100644",
       "path": "skills/nozickian-verify/references/ARTIFACT_GUIDE.md",
       "role": "behavior",
-      "sha256": "81a3b5b1569d8fa5c5cd9460aa2fa382e9f65dfc4153a04e1d3391b73ef72562"
+      "sha256": "088dede7cb3324cb5e4e66b6ed39dcebfc63e95ec82122ddc3fe239a7ad47e21"
     },
     {
       "bytes": 848,
@@ -1086,7 +1086,7 @@
   ],
   "self_exclusion": "file_inventory intentionally excludes STABLE_RELEASE_MANIFEST.json to avoid a self-referential hash cycle; self_hash_sha256 is computed over canonical JSON with self_hash_sha256 set to null, and self_mode separately requires the installed manifest to be non-executable.",
   "self_file": "STABLE_RELEASE_MANIFEST.json",
-  "self_hash_sha256": "d799239889afdcb4cad91f653901545581d9a9e71abe2f849a6cc4543804850e",
+  "self_hash_sha256": "ff2c8b9f706f771d1448283c34d59cca819f16fc5fe3a4c8a22ea5bb6f267958",
   "self_mode": "100644",
   "validation_commands": [
     "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test",
