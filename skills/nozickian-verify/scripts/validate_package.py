@@ -579,7 +579,27 @@ GIT_SUBPROCESS_TIMEOUT_SECONDS = 30
 GIT_DESCENDANT_CLEANUP_TIMEOUT_SECONDS = 1.0
 GIT_DESCENDANT_CLEANUP_QUIET_SECONDS = 0.05
 MAX_GIT_PROC_SCAN_ENTRIES = 100_000
+MAX_RELEASE_CLI_CAPTURE_BYTES = 16 * 1024 * 1024
+RELEASE_CLI_DESCENDANT_CLEANUP_TIMEOUT_SECONDS = 2.0
+RELEASE_CLI_DESCENDANT_CLEANUP_QUIET_SECONDS = 0.10
+RELEASE_CLI_PIPE_DRAIN_TIMEOUT_SECONDS = 0.50
 PR_SET_CHILD_SUBREAPER = 36
+_RELEASE_CLI_PIDFD_SYSCALLS = {
+    machine: (434, 424)
+    for machine in (
+        "aarch64",
+        "armv7l",
+        "i386",
+        "i486",
+        "i586",
+        "i686",
+        "ppc64",
+        "ppc64le",
+        "riscv64",
+        "s390x",
+        "x86_64",
+    )
+}
 _STABLE_MANIFEST_BUILD_CONTEXT: contextvars.ContextVar[Any] = (
     contextvars.ContextVar("stable_manifest_build_context", default=None)
 )
@@ -937,6 +957,718 @@ def _kill_and_reap_bounded_process_group(
         finally:
             proc.wait(timeout=5)
     return group_signaled
+
+
+@dataclass(frozen=True)
+class _ReleaseCliProcessRecord:
+    """One procfs process record with a PID-reuse-resistant identity."""
+
+    host_pid: int
+    parent_host_pid: int
+    namespace_pid: int
+    process_group_id: int
+    start_ticks: int
+
+    @property
+    def identity(self) -> Tuple[int, int]:
+        return self.host_pid, self.start_ticks
+
+
+class _ReleaseCliContainmentError(OSError):
+    """A release CLI could not be run or returned to a proven quiet state."""
+
+    def __init__(self, message: str, *, quiescent: bool) -> None:
+        super().__init__(message)
+        self.quiescent = quiescent
+
+
+def _release_cli_linux_stat_fields(
+    path: Path,
+) -> Tuple[int, int, int, int] | None:
+    """Return (pid, ppid, pgrp, start_ticks) from one proc stat file."""
+
+    try:
+        payload = path.read_text(encoding="utf-8", errors="replace")[:65536]
+    except OSError:
+        return None
+    left = payload.find("(")
+    right = payload.rfind(")")
+    if left <= 0 or right <= left:
+        return None
+    pid_text = payload[:left].strip()
+    fields = payload[right + 1 :].split()
+    # The tail starts with field 3 (state); starttime is field 22.
+    if (
+        not pid_text.isdigit()
+        or len(fields) < 20
+        or not fields[1].isdigit()
+        or not fields[2].isdigit()
+        or not fields[19].isdigit()
+    ):
+        return None
+    return (
+        int(pid_text),
+        int(fields[1]),
+        int(fields[2]),
+        int(fields[19]),
+    )
+
+
+def _release_cli_linux_namespace_pid(
+    path: Path,
+    namespace_index: int,
+    expected_host_pid: int,
+) -> int | None:
+    try:
+        payload = path.read_text(encoding="utf-8", errors="replace")[:65536]
+    except OSError:
+        return None
+    for line in payload.splitlines():
+        if not line.startswith("NSpid:"):
+            continue
+        fields = line.split()[1:]
+        if (
+            len(fields) <= namespace_index
+            or not all(field.isdigit() for field in fields)
+            or int(fields[0]) != expected_host_pid
+        ):
+            return None
+        return int(fields[namespace_index])
+    return None
+
+
+def _release_cli_linux_process_record(
+    process_root: Path,
+    namespace_index: int,
+    expected_host_pid: int,
+) -> _ReleaseCliProcessRecord | None:
+    """Read one record bracketed by an unchanged procfs start identity."""
+
+    before = _release_cli_linux_stat_fields(process_root / "stat")
+    if before is None or before[0] != expected_host_pid:
+        return None
+    namespace_pid = _release_cli_linux_namespace_pid(
+        process_root / "status",
+        namespace_index,
+        expected_host_pid,
+    )
+    after = _release_cli_linux_stat_fields(process_root / "stat")
+    if (
+        namespace_pid is None
+        or after is None
+        or after[0] != expected_host_pid
+        or before[0] != after[0]
+        or before[3] != after[3]
+    ):
+        return None
+    return _ReleaseCliProcessRecord(
+        host_pid=expected_host_pid,
+        parent_host_pid=after[1],
+        namespace_pid=namespace_pid,
+        process_group_id=after[2],
+        start_ticks=after[3],
+    )
+
+
+def _release_cli_linux_process_graph(
+    namespace_index: int,
+) -> Dict[int, _ReleaseCliProcessRecord] | None:
+    graph: Dict[int, _ReleaseCliProcessRecord] = {}
+    scanned = 0
+    try:
+        with os.scandir("/proc") as entries:
+            for entry in entries:
+                if not entry.name.isdigit():
+                    continue
+                scanned += 1
+                if scanned > MAX_GIT_PROC_SCAN_ENTRIES:
+                    return None
+                host_pid = int(entry.name)
+                record = _release_cli_linux_process_record(
+                    Path(entry.path),
+                    namespace_index,
+                    host_pid,
+                )
+                if record is not None:
+                    graph[host_pid] = record
+    except OSError:
+        return None
+    return graph
+
+
+def _release_cli_descendant_closure(
+    graph: Mapping[int, _ReleaseCliProcessRecord],
+    roots: Set[int],
+) -> Set[int]:
+    children: Dict[int, List[int]] = {}
+    for host_pid, record in graph.items():
+        children.setdefault(record.parent_host_pid, []).append(host_pid)
+    closure: Set[int] = set()
+    pending = list(roots)
+    while pending:
+        host_pid = pending.pop()
+        if host_pid in closure:
+            continue
+        closure.add(host_pid)
+        pending.extend(children.get(host_pid, ()))
+    return closure
+
+
+def _release_cli_pidfd_open(pid: int) -> int:
+    native = getattr(os, "pidfd_open", None)
+    if callable(native):
+        return int(native(pid, 0))
+    syscalls = _RELEASE_CLI_PIDFD_SYSCALLS.get(os.uname().machine)
+    if syscalls is None:
+        raise OSError("pidfd_open syscall number is unavailable")
+    libc = ctypes.CDLL(None, use_errno=True)
+    syscall = libc.syscall
+    syscall.restype = ctypes.c_long
+    result = syscall(
+        ctypes.c_long(syscalls[0]),
+        ctypes.c_long(pid),
+        ctypes.c_uint(0),
+    )
+    if result < 0:
+        error = ctypes.get_errno()
+        raise OSError(error, os.strerror(error))
+    return int(result)
+
+
+def _release_cli_pidfd_send_signal(pidfd: int, sig: int) -> None:
+    native = getattr(signal, "pidfd_send_signal", None)
+    if callable(native):
+        native(pidfd, sig, None, 0)
+        return
+    syscalls = _RELEASE_CLI_PIDFD_SYSCALLS.get(os.uname().machine)
+    if syscalls is None:
+        raise OSError("pidfd_send_signal syscall number is unavailable")
+    libc = ctypes.CDLL(None, use_errno=True)
+    syscall = libc.syscall
+    syscall.restype = ctypes.c_long
+    result = syscall(
+        ctypes.c_long(syscalls[1]),
+        ctypes.c_long(pidfd),
+        ctypes.c_int(sig),
+        ctypes.c_void_p(),
+        ctypes.c_uint(0),
+    )
+    if result < 0:
+        error = ctypes.get_errno()
+        raise OSError(error, os.strerror(error))
+
+
+def _prepare_release_cli_process_containment() -> Dict[str, Any]:
+    """Enable subreaping and freeze stable identities before CLI spawn."""
+
+    unavailable: Dict[str, Any] = {"enabled": False}
+    native_pidfds = (
+        callable(getattr(os, "pidfd_open", None))
+        and callable(getattr(signal, "pidfd_send_signal", None))
+    )
+    if (
+        not sys.platform.startswith("linux")
+        or not Path("/proc").is_dir()
+        or (
+            not native_pidfds
+            and os.uname().machine not in _RELEASE_CLI_PIDFD_SYSCALLS
+        )
+    ):
+        return unavailable
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+        prctl = libc.prctl
+        prctl.argtypes = [
+            ctypes.c_int,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+            ctypes.c_ulong,
+        ]
+        prctl.restype = ctypes.c_int
+        if prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
+            return unavailable
+    except (AttributeError, OSError):
+        return unavailable
+    capability_pidfd: int | None = None
+    try:
+        capability_pidfd = _release_cli_pidfd_open(os.getpid())
+        _release_cli_pidfd_send_signal(capability_pidfd, 0)
+    except (AttributeError, OSError):
+        return unavailable
+    finally:
+        if capability_pidfd is not None:
+            try:
+                os.close(capability_pidfd)
+            except OSError:
+                pass
+    parent_host_pid = _git_linux_self_host_pid()
+    namespace_index = _git_linux_self_namespace_index()
+    if parent_host_pid is None or namespace_index is None:
+        return unavailable
+    graph = _release_cli_linux_process_graph(namespace_index)
+    if graph is None:
+        return unavailable
+    self_record = graph.get(parent_host_pid)
+    if (
+        self_record is None
+        or self_record.namespace_pid != os.getpid()
+    ):
+        return unavailable
+    baseline_hosts = _release_cli_descendant_closure(
+        graph,
+        {parent_host_pid},
+    ) - {parent_host_pid}
+    return {
+        "enabled": True,
+        "parent_host_pid": parent_host_pid,
+        "parent_identity": self_record.identity,
+        "namespace_index": namespace_index,
+        "baseline_identities": {
+            graph[host_pid].identity
+            for host_pid in baseline_hosts
+            if host_pid in graph
+        },
+        "mechanism": (
+            "linux-child-subreaper-plus-session-plus-starttime-pidfd"
+        ),
+    }
+
+
+def _release_cli_owned_processes(
+    containment: Mapping[str, Any],
+) -> Dict[int, _ReleaseCliProcessRecord] | None:
+    parent_host_pid = containment.get("parent_host_pid")
+    parent_identity = containment.get("parent_identity")
+    namespace_index = containment.get("namespace_index")
+    baseline_identities = containment.get("baseline_identities")
+    if (
+        containment.get("enabled") is not True
+        or type(parent_host_pid) is not int
+        or not (
+            isinstance(parent_identity, tuple)
+            and len(parent_identity) == 2
+            and all(type(value) is int for value in parent_identity)
+        )
+        or type(namespace_index) is not int
+        or not isinstance(baseline_identities, set)
+    ):
+        return None
+    graph = _release_cli_linux_process_graph(namespace_index)
+    if graph is None:
+        return None
+    self_record = graph.get(parent_host_pid)
+    if self_record is None or self_record.identity != parent_identity:
+        return None
+    descendants = _release_cli_descendant_closure(
+        graph,
+        {parent_host_pid},
+    ) - {parent_host_pid}
+    live_baseline_hosts = {
+        host_pid
+        for host_pid, record in graph.items()
+        if record.identity in baseline_identities
+    }
+    excluded = _release_cli_descendant_closure(
+        graph,
+        live_baseline_hosts,
+    )
+    return {
+        host_pid: graph[host_pid]
+        for host_pid in descendants - excluded
+        if host_pid in graph
+    }
+
+
+def _release_cli_open_stable_pidfd(
+    record: _ReleaseCliProcessRecord,
+    namespace_index: int,
+) -> int | None:
+    """Open a pidfd and reject a proc record that changed around the open."""
+
+    try:
+        pidfd = _release_cli_pidfd_open(record.namespace_pid)
+    except ProcessLookupError:
+        return None
+    try:
+        fresh = _release_cli_linux_process_record(
+            Path("/proc") / str(record.host_pid),
+            namespace_index,
+            record.host_pid,
+        )
+        if (
+            fresh is None
+            or fresh.identity != record.identity
+            or fresh.namespace_pid != record.namespace_pid
+        ):
+            os.close(pidfd)
+            return None
+    except BaseException:
+        os.close(pidfd)
+        raise
+    return pidfd
+
+
+def _release_cli_kill_and_reap_records(
+    records: Iterable[_ReleaseCliProcessRecord],
+    namespace_index: int,
+) -> bool:
+    """Signal pidfd-bound identities and reap their still-bound child PIDs."""
+
+    opened: List[Tuple[_ReleaseCliProcessRecord, int]] = []
+    try:
+        for record in records:
+            if record.namespace_pid in {0, 1, os.getpid()}:
+                return False
+            try:
+                pidfd = _release_cli_open_stable_pidfd(
+                    record,
+                    namespace_index,
+                )
+            except OSError:
+                return False
+            if pidfd is not None:
+                opened.append((record, pidfd))
+        for _record, pidfd in opened:
+            try:
+                _release_cli_pidfd_send_signal(pidfd, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            except OSError:
+                return False
+        for record, _pidfd in opened:
+            try:
+                os.waitpid(record.namespace_pid, os.WNOHANG)
+            except (ChildProcessError, ProcessLookupError):
+                pass
+            except OSError:
+                return False
+        return True
+    finally:
+        for _record, pidfd in opened:
+            try:
+                os.close(pidfd)
+            except OSError:
+                pass
+
+
+def _cleanup_release_cli_descendants(
+    containment: Mapping[str, Any],
+) -> Tuple[bool, bool]:
+    """Kill/reap adopted descendants until a bounded stable quiet period."""
+
+    namespace_index = containment.get("namespace_index")
+    if type(namespace_index) is not int:
+        return False, False
+    deadline = (
+        time.monotonic()
+        + RELEASE_CLI_DESCENDANT_CLEANUP_TIMEOUT_SECONDS
+    )
+    quiet_since: float | None = None
+    descendant_seen = False
+    while time.monotonic() < deadline:
+        candidates = _release_cli_owned_processes(containment)
+        if candidates is None:
+            return descendant_seen, False
+        if candidates:
+            descendant_seen = True
+            quiet_since = None
+            if not _release_cli_kill_and_reap_records(
+                candidates.values(),
+                namespace_index,
+            ):
+                return descendant_seen, False
+        else:
+            now = time.monotonic()
+            if quiet_since is None:
+                quiet_since = now
+            elif (
+                now - quiet_since
+                >= RELEASE_CLI_DESCENDANT_CLEANUP_QUIET_SECONDS
+            ):
+                return descendant_seen, True
+        time.sleep(0.01)
+    # Make one final best-effort stable-identity kill, but never call this a
+    # quiet proof because the required observation interval has expired.
+    candidates = _release_cli_owned_processes(containment)
+    if candidates:
+        descendant_seen = True
+        _release_cli_kill_and_reap_records(
+            candidates.values(),
+            namespace_index,
+        )
+    return descendant_seen, False
+
+
+def _terminate_release_cli_group_and_leader(
+    proc: subprocess.Popen[bytes],
+    leader_pidfd: int | None,
+) -> bool:
+    """Unconditionally kill the dedicated session and reap its held leader."""
+
+    cleanup_ok = True
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    except OSError:
+        cleanup_ok = False
+    if leader_pidfd is not None:
+        try:
+            _release_cli_pidfd_send_signal(
+                leader_pidfd,
+                signal.SIGKILL,
+            )
+        except ProcessLookupError:
+            pass
+        except OSError:
+            cleanup_ok = False
+    else:
+        try:
+            proc.kill()
+        except ProcessLookupError:
+            pass
+        except OSError:
+            cleanup_ok = False
+    deadline = (
+        time.monotonic()
+        + RELEASE_CLI_DESCENDANT_CLEANUP_TIMEOUT_SECONDS
+    )
+    try:
+        remaining = max(0.001, deadline - time.monotonic())
+        proc.wait(timeout=remaining)
+    except (subprocess.TimeoutExpired, OSError):
+        cleanup_ok = False
+    return cleanup_ok and proc.returncode is not None
+
+
+def _force_release_cli_quiescence(
+    proc: subprocess.Popen[bytes],
+    leader_pidfd: int | None,
+    containment: Mapping[str, Any],
+) -> Tuple[bool, bool]:
+    leader_clean = _terminate_release_cli_group_and_leader(
+        proc,
+        leader_pidfd,
+    )
+    descendant_seen, descendants_clean = (
+        _cleanup_release_cli_descendants(containment)
+    )
+    return descendant_seen, leader_clean and descendants_clean
+
+
+def _run_bounded_release_cli(
+    argv: Sequence[str],
+    *,
+    cwd: Path,
+    env: Mapping[str, str],
+    timeout_seconds: int,
+    max_capture_bytes: int = MAX_RELEASE_CLI_CAPTURE_BYTES,
+) -> subprocess.CompletedProcess[str]:
+    """Run one release CLI with bounded capture and descendant containment."""
+
+    if not argv or not all(isinstance(value, str) for value in argv):
+        raise ValueError("argv must be a non-empty string sequence")
+    if type(timeout_seconds) is not int or timeout_seconds < 1:
+        raise ValueError("timeout_seconds must be a positive integer")
+    if type(max_capture_bytes) is not int or max_capture_bytes < 1:
+        raise ValueError("max_capture_bytes must be a positive integer")
+    containment = _prepare_release_cli_process_containment()
+    if containment.get("enabled") is not True:
+        # This refusal occurs before Popen: a process group alone cannot
+        # contain a setsid/double-fork escape.
+        raise _ReleaseCliContainmentError(
+            "release CLI detached-session process containment is unavailable",
+            quiescent=True,
+        )
+    args = list(argv)
+    try:
+        proc = subprocess.Popen(
+            args,
+            cwd=cwd,
+            env=dict(env),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=False,
+            start_new_session=True,
+        )
+    except OSError as exc:
+        raise _ReleaseCliContainmentError(
+            f"release CLI Popen failed before ownership transfer: {exc}",
+            quiescent=True,
+        ) from exc
+
+    selector: selectors.BaseSelector | None = None
+    leader_pidfd: int | None = None
+    buffers: Dict[str, bytearray] = {
+        "stdout": bytearray(),
+        "stderr": bytearray(),
+    }
+    cleanup_done = False
+    cleanup_quiet = False
+    descendant_seen = False
+    failure: str | None = None
+
+    def read_ready(key: selectors.SelectorKey) -> None:
+        nonlocal failure
+        try:
+            chunk = os.read(key.fd, 64 * 1024)
+        except BlockingIOError:
+            return
+        if not chunk:
+            assert selector is not None
+            selector.unregister(key.fd)
+            return
+        captured = sum(len(value) for value in buffers.values())
+        keep = max_capture_bytes - captured
+        if len(chunk) > keep:
+            if keep > 0:
+                buffers[str(key.data)].extend(chunk[:keep])
+            failure = (
+                "release CLI combined output exceeded "
+                f"{max_capture_bytes} bytes"
+            )
+        else:
+            buffers[str(key.data)].extend(chunk)
+
+    try:
+        leader_pidfd = _release_cli_pidfd_open(proc.pid)
+        assert proc.stdout is not None and proc.stderr is not None
+        selector = selectors.DefaultSelector()
+        for label, stream in (
+            ("stdout", proc.stdout),
+            ("stderr", proc.stderr),
+        ):
+            os.set_blocking(stream.fileno(), False)
+            selector.register(
+                stream.fileno(),
+                selectors.EVENT_READ,
+                data=label,
+            )
+        selector.register(
+            leader_pidfd,
+            selectors.EVENT_READ,
+            data="leader",
+        )
+        deadline = time.monotonic() + timeout_seconds
+        leader_exited = False
+        while not leader_exited and failure is None:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                failure = (
+                    f"release CLI exceeded {timeout_seconds}s timeout"
+                )
+                break
+            for key, _mask in selector.select(min(remaining, 0.05)):
+                if key.data == "leader":
+                    leader_exited = True
+                else:
+                    read_ready(key)
+                    if failure is not None:
+                        break
+
+        descendant_seen, cleanup_quiet = _force_release_cli_quiescence(
+            proc,
+            leader_pidfd,
+            containment,
+        )
+        cleanup_done = True
+        if not cleanup_quiet:
+            raise _ReleaseCliContainmentError(
+                "release CLI cleanup did not reach a bounded quiet state",
+                quiescent=False,
+            )
+
+        try:
+            selector.unregister(leader_pidfd)
+        except (KeyError, ValueError):
+            pass
+        drain_deadline = (
+            time.monotonic() + RELEASE_CLI_PIPE_DRAIN_TIMEOUT_SECONDS
+        )
+        while selector.get_map() and time.monotonic() < drain_deadline:
+            events = selector.select(0.01)
+            if not events:
+                continue
+            for key, _mask in events:
+                read_ready(key)
+        if selector.get_map():
+            raise _ReleaseCliContainmentError(
+                "release CLI capture pipes remained open after quiet cleanup",
+                quiescent=False,
+            )
+
+        containment_failure: str | None = None
+        if failure is None and descendant_seen:
+            containment_failure = (
+                "release CLI left same-group or detached descendants after "
+                "leader exit; all were killed and reaped"
+            )
+        diagnostic = failure or containment_failure
+        returncode = (
+            124
+            if failure is not None
+            else 125
+            if containment_failure is not None
+            else int(proc.returncode or 0)
+        )
+        stdout = buffers["stdout"].decode(
+            "utf-8",
+            errors="replace" if diagnostic else "strict",
+        )
+        stderr = buffers["stderr"].decode(
+            "utf-8",
+            errors="replace" if diagnostic else "strict",
+        )
+        if diagnostic:
+            stderr += ("\n" if stderr else "") + diagnostic
+        return subprocess.CompletedProcess(
+            args,
+            returncode,
+            stdout,
+            stderr,
+        )
+    except _ReleaseCliContainmentError:
+        raise
+    except Exception as exc:
+        if not cleanup_done:
+            try:
+                descendant_seen, cleanup_quiet = (
+                    _force_release_cli_quiescence(
+                        proc,
+                        leader_pidfd,
+                        containment,
+                    )
+                )
+            except BaseException:
+                cleanup_quiet = False
+            cleanup_done = True
+        raise _ReleaseCliContainmentError(
+            f"release CLI containment setup or capture failed: {exc}",
+            quiescent=cleanup_quiet,
+        ) from exc
+    except BaseException:
+        if not cleanup_done:
+            try:
+                _force_release_cli_quiescence(
+                    proc,
+                    leader_pidfd,
+                    containment,
+                )
+            except BaseException:
+                pass
+        raise
+    finally:
+        if selector is not None:
+            selector.close()
+        for stream in (proc.stdout, proc.stderr):
+            if stream is not None:
+                stream.close()
+        if leader_pidfd is not None:
+            try:
+                os.close(leader_pidfd)
+            except OSError:
+                pass
 
 
 def _run_bounded_git(
@@ -12319,6 +13051,7 @@ class Validator:
                     proc: Optional[subprocess.CompletedProcess[str]] = None
                     parsed: Dict[str, Any] = {}
                     parse_error = ""
+                    containment_quiescent = True
                     with tempfile.TemporaryDirectory(
                         prefix="release-cli-temp-",
                         dir=tmp,
@@ -12328,16 +13061,16 @@ class Validator:
                         env["NTT_SELFTEST_PROGRESS"] = "0"
                         env["TMPDIR"] = command_temporary
                         try:
-                            proc = subprocess.run(
+                            proc = _run_bounded_release_cli(
                                 [python_executable, *argv],
                                 cwd=dest,
                                 env=env,
-                                capture_output=True,
-                                text=True,
-                                timeout=timeout_seconds,
-                                check=False,
+                                timeout_seconds=timeout_seconds,
                             )
-                        except (OSError, subprocess.TimeoutExpired) as exc:
+                        except _ReleaseCliContainmentError as exc:
+                            containment_quiescent = exc.quiescent
+                            parse_error = f"{type(exc).__name__}: {exc}"
+                        except OSError as exc:
                             parse_error = f"{type(exc).__name__}: {exc}"
                         if proc is not None:
                             try:
@@ -12354,14 +13087,106 @@ class Validator:
                                     parse_error = (
                                         "stdout JSON root is not an object"
                                     )
-                        with os.scandir(command_temporary) as entries:
-                            residue_count = sum(1 for _entry in entries)
+                        residue_count: int | None = None
+                        if containment_quiescent:
+                            with os.scandir(command_temporary) as entries:
+                                residue_count = sum(1 for _entry in entries)
                         command_temp_observations.append({
                             "command": Path(argv[0]).name,
-                            "empty_after_command": residue_count == 0,
+                            "containment_quiescent": containment_quiescent,
+                            "scan_performed": containment_quiescent,
+                            "empty_after_command": (
+                                containment_quiescent
+                                and residue_count == 0
+                            ),
                             "top_level_entries": residue_count,
                         })
                     return proc, parsed, parse_error
+
+                release_cli_survivor_marker = (
+                    tmp / "release-cli-detached-survivor"
+                )
+                release_cli_detached_probe = "\n".join(
+                    [
+                        "import json, os, pathlib, sys, time",
+                        "read_fd, ready_fd = os.pipe()",
+                        "child_pid = os.fork()",
+                        "if child_pid == 0:",
+                        "    os.close(read_fd)",
+                        "    os.setsid()",
+                        "    os.close(1)",
+                        "    os.close(2)",
+                        "    os.write(ready_fd, b'1')",
+                        "    os.close(ready_fd)",
+                        "    time.sleep(0.35)",
+                        (
+                            "    pathlib.Path(sys.argv[1]).write_text("
+                            "'survived', encoding='utf-8')"
+                        ),
+                        "    os._exit(0)",
+                        "os.close(ready_fd)",
+                        "ready = os.read(read_fd, 1)",
+                        "os.close(read_fd)",
+                        (
+                            "print(json.dumps({'status': 'leader-exited', "
+                            "'ready': ready == b'1'}), flush=True)"
+                        ),
+                    ]
+                )
+                (
+                    release_cli_probe_proc,
+                    release_cli_probe_result,
+                    release_cli_probe_error,
+                ) = run_json_cli(
+                    [
+                        "-c",
+                        release_cli_detached_probe,
+                        str(release_cli_survivor_marker),
+                    ],
+                    timeout_seconds=5,
+                )
+                release_cli_probe_observation = (
+                    command_temp_observations[-1]
+                )
+                time.sleep(0.45)
+                release_cli_containment_oracle = (
+                    release_cli_probe_proc is not None
+                    and release_cli_probe_proc.returncode == 125
+                    and "detached descendants after leader exit"
+                    in release_cli_probe_proc.stderr
+                    and release_cli_probe_result.get("status")
+                    == "leader-exited"
+                    and release_cli_probe_result.get("ready") is True
+                    and not release_cli_probe_error
+                    and release_cli_probe_observation.get(
+                        "containment_quiescent"
+                    )
+                    is True
+                    and release_cli_probe_observation.get(
+                        "empty_after_command"
+                    )
+                    is True
+                    and not release_cli_survivor_marker.exists()
+                )
+                record(
+                    (
+                        "release CLI containment kills a zero-exit leader's "
+                        "setsid closed-pipe delayed descendant"
+                    ),
+                    release_cli_containment_oracle,
+                    {
+                        "returncode": (
+                            release_cli_probe_proc.returncode
+                            if release_cli_probe_proc is not None
+                            else None
+                        ),
+                        "parse_error": release_cli_probe_error,
+                        "observation": release_cli_probe_observation,
+                        "survivor_marker": (
+                            release_cli_survivor_marker.exists()
+                        ),
+                    },
+                )
 
                 replay_false_case_envelope = {
                     "schema_version": "deterministic-false-cases-v1",

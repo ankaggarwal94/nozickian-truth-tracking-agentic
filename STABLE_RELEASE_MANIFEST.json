@@ -44,7 +44,7 @@
       "mode": "100644",
       "path": "MANIFEST.sha256",
       "role": "release-metadata",
-      "sha256": "fd01534ee537ab351968956701c64152fefdd5015b696e26a39ffc285b79c93f"
+      "sha256": "bedc0f709f6e0413c7e0e0d654634496c2bf76579c1c6888506bbe600a65e44a"
     },
     {
       "bytes": 23979,
@@ -604,7 +604,7 @@
       "mode": "100644",
       "path": "self_validation/evidence/C-github-readme-documentation__validator.json",
       "role": "self_validation",
-      "sha256": "9ad14ea2144b32ca48b6084e177af0e2c6e696573b69e673bf625399b02d9c5a"
+      "sha256": "69aa469c451d2ac624ed9fb57184ecc16f392ae00b089b3b9de2c98641d73b68"
     },
     {
       "bytes": 1333,
@@ -688,7 +688,7 @@
       "mode": "100644",
       "path": "self_validation/evidence/C-pass-tracked-upgrade-audit__aggregate-certifier.json",
       "role": "self_validation",
-      "sha256": "4c84adf214a6742800148ec38c404cc02b4b5c8655a6903fb45efa50ae90f01d"
+      "sha256": "8dcadaa7d7263fd7edf79a2cc0d5735a48ba3bfcd04d6e4e13c9e2a823b45806"
     },
     {
       "bytes": 1044,
@@ -884,7 +884,7 @@
       "mode": "100644",
       "path": "self_validation/evidence/C-validator-sensitivity__claim.json",
       "role": "self_validation",
-      "sha256": "58e9a30b21274c7811de331559d8ad0287cbe6f761d80db8e4d8f5add764c24f"
+      "sha256": "2e50102081d3836465db51b31651b35296c0215c9728844428d3f2b41239f518"
     },
     {
       "bytes": 981,
@@ -894,11 +894,11 @@
       "sha256": "db2cb27fb550ee5f7e5191f71ba5cf9be47f44060778f8f8af51ed23cadd9880"
     },
     {
-      "bytes": 177322,
+      "bytes": 177324,
       "mode": "100644",
       "path": "self_validation/self_certificate.json",
       "role": "self_validation",
-      "sha256": "b87b8cafae318db8a437e63e928f5b2be212aa38875367a72bfdfd38484f3eda"
+      "sha256": "a834ce16513eeced604351def199ed0a64569e787a031aecab82db7a2f0a904b"
     },
     {
       "bytes": 23910,
@@ -1006,11 +1006,11 @@
       "sha256": "c7160b1fc3e310aa18163f8e7f0b923f20e7841cf2f6475f6c1667f88e92071c"
     },
     {
-      "bytes": 243478,
+      "bytes": 243973,
       "mode": "100644",
       "path": "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py",
       "role": "behavior",
-      "sha256": "571374fe08ddbfb66472bfc6f44a3655012fff7ffb82155f76795b4e5cb3d107"
+      "sha256": "99c3967d21c6146fc511439785f1897d6ac8628b2b44d9aae8c9e43b63b579bd"
     },
     {
       "bytes": 174323,
@@ -1041,18 +1041,18 @@
       "sha256": "80f5c2a6cd765b786502dba15ad9dba1a5938115198d5d60e1e0cd2dabfa2f59"
     },
     {
-      "bytes": 97840,
+      "bytes": 103995,
       "mode": "100644",
       "path": "skills/nozickian-verify/scripts/run_live_skill_evals.py",
       "role": "behavior",
-      "sha256": "cc0dbadfe0c650a6efb8ea4c2bc9df0534fc7a2851fe725650635a46895492ef"
+      "sha256": "bf3572aecf3c5de5d1d3c27cea3f93fd2fb71ce12190d7ab99616907059ab7fd"
     },
     {
-      "bytes": 248132,
+      "bytes": 276997,
       "mode": "100644",
       "path": "skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py",
       "role": "behavior",
-      "sha256": "e785d0ef4090526594188d7dfb0227bc237d67dcbe60ed1a43104ed0fb4ee3d9"
+      "sha256": "6eb3225b06cd8b9c4f3be09eacf06f02902d36f1722a019df52de8a06ff2058e"
     },
     {
       "bytes": 13629,
@@ -1062,11 +1062,11 @@
       "sha256": "2c990635d2f1d8d5837c0d510562878f13b4d0c9e5cf2f42780931e3de3c33e3"
     },
     {
-      "bytes": 634320,
+      "bytes": 661434,
       "mode": "100644",
       "path": "skills/nozickian-verify/scripts/validate_package.py",
       "role": "behavior",
-      "sha256": "dcaab3d2b538b9c21c14466ad3c03c575ee33d3430581fb18c6b4dbca836b4ef"
+      "sha256": "3f6eb067bbcfb91aa05cdfdc3c9af252b1d282e8120248a6c94b77b66119fa29"
     }
   ],
   "generated_utc": "2026-05-26T00:00:00Z",
@@ -1086,7 +1086,7 @@
   ],
   "self_exclusion": "file_inventory intentionally excludes STABLE_RELEASE_MANIFEST.json to avoid a self-referential hash cycle; self_hash_sha256 is computed over canonical JSON with self_hash_sha256 set to null, and self_mode separately requires the installed manifest to be non-executable.",
   "self_file": "STABLE_RELEASE_MANIFEST.json",
-  "self_hash_sha256": "cd492ba9f3782304224d7136bfc96a7f96e0a25b2dec1223f207f047796051b3",
+  "self_hash_sha256": "b7f464369d6bf16f0cddb2d9fd530edfa9c826b242fedf7e905ce358518b317d",
   "self_mode": "100644",
   "validation_commands": [
     "python3 skills/nozickian-verify/scripts/validate_package.py . --self-test",

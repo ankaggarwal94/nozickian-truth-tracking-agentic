@@ -2549,15 +2549,15 @@
         "correction_location_bindings": [
           {
             "expected_excerpt_sha256": "c8dcb4633a683af51f8fd9365644ce2906d2a3acae4e9616285241b1956b382f",
-            "locator": "skills/nozickian-verify/scripts/run_live_skill_evals.py:799-867"
+            "locator": "skills/nozickian-verify/scripts/run_live_skill_evals.py:960-1028"
           },
           {
             "expected_excerpt_sha256": "0f8ecadcc442c4ecf5824d5c1bfd1e08c2cb83653b461bd463fe9690ca7f0a42",
-            "locator": "skills/nozickian-verify/scripts/run_live_skill_evals.py:1661-1967"
+            "locator": "skills/nozickian-verify/scripts/run_live_skill_evals.py:1822-2128"
           },
           {
             "expected_excerpt_sha256": "705617250b936a754e14ce04fe3e36dc9291a87ebd47b360b7f77aa5d8687bd5",
-            "locator": "skills/nozickian-verify/scripts/run_live_skill_evals.py:2105-2123"
+            "locator": "skills/nozickian-verify/scripts/run_live_skill_evals.py:2266-2284"
           },
           {
             "expected_excerpt_sha256": "73df95c64c25683b46a6a577c15fef021a18e7f4203c4041b8d1f0b39e7a21f5",
@@ -2577,18 +2577,18 @@
           },
           {
             "expected_excerpt_sha256": "74194226142e7d1f71dc5d72322ba8f062e2118478c74f56c1486ac0bc76e0e2",
-            "locator": "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:5735-5957"
+            "locator": "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:5756-5978"
           }
         ],
         "correction_locations": [
-          "skills/nozickian-verify/scripts/run_live_skill_evals.py:799-867",
-          "skills/nozickian-verify/scripts/run_live_skill_evals.py:1661-1967",
-          "skills/nozickian-verify/scripts/run_live_skill_evals.py:2105-2123",
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:960-1028",
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:1822-2128",
+          "skills/nozickian-verify/scripts/run_live_skill_evals.py:2266-2284",
           "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:2826-3101",
           "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:3270-3415",
           "skills/nozickian-verify/scripts/run_formal_artifact_verification.py:4196-4315",
           "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:974-1031",
-          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:5735-5957"
+          "skills/nozickian-verify/scripts/certify_pass_tracked_upgrade.py:5756-5978"
         ],
         "new_wording": "Live configuration accepts only strict duplicate-free finite JSON and exact relative POSIX fixture paths; live and formal parsing accepts only canonical SDK ResultMessage success with explicit API/deferred/structured/terminal/stop controls; provenance/evidence-origin 2.0 is cross-bound into one exact promotion-method-m-v2 record, and formal output checks remain recomputed rather than self-attested.",
         "old_wording": "Ambiguous live envelopes, incidental status text, scalar failure results, and caller-authored promotion method summaries could influence modeled pass decisions."
@@ -2600,24 +2600,24 @@
         ],
         "correction_location_bindings": [
           {
-            "expected_excerpt_sha256": "a6cf27a5ef4c94692ce870317def25d69dfe608cda03b9fdfc74c5d5324ad7d6",
-            "locator": "skills/nozickian-verify/scripts/validate_package.py:920-1156"
+            "expected_excerpt_sha256": "d153ea0281ff4cb24245cbcc929d7a18e7002e446d6a552cbfccb3f65e2dd407",
+            "locator": "skills/nozickian-verify/scripts/validate_package.py:940-1888"
           },
           {
             "expected_excerpt_sha256": "21884b04bb3a79cee50b9b3acf14cad249bb9e1577adcd90a8b9ed43a4f92e37",
-            "locator": "skills/nozickian-verify/scripts/validate_package.py:1461-1528"
+            "locator": "skills/nozickian-verify/scripts/validate_package.py:2193-2260"
           },
           {
             "expected_excerpt_sha256": "fc1b9f1beee9a63f5e58657d19aac8aa10fc0bf532cb982f91c7a828609e45d7",
-            "locator": "skills/nozickian-verify/scripts/validate_package.py:2180-2505"
+            "locator": "skills/nozickian-verify/scripts/validate_package.py:2912-3237"
           },
           {
             "expected_excerpt_sha256": "0bbfe9c061ea6062fb47d47a6ec3a470ebaf82f4936686cb3275eb5c0bd03716",
-            "locator": "skills/nozickian-verify/scripts/validate_package.py:2915-2990"
+            "locator": "skills/nozickian-verify/scripts/validate_package.py:3647-3722"
           },
           {
             "expected_excerpt_sha256": "7700cdcef9677ccfbe6f90f56e18971dc54b2f30fe9447faebcb0b0514ef6a50",
-            "locator": "skills/nozickian-verify/scripts/validate_package.py:8522-8581"
+            "locator": "skills/nozickian-verify/scripts/validate_package.py:9254-9313"
           },
           {
             "expected_excerpt_sha256": "58366e93cba31859ef7de9b748241490d90a9e3cfe7ae4c02c683da6c8cb07ea",
@@ -2633,11 +2633,11 @@
           }
         ],
         "correction_locations": [
-          "skills/nozickian-verify/scripts/validate_package.py:920-1156",
-          "skills/nozickian-verify/scripts/validate_package.py:1461-1528",
-          "skills/nozickian-verify/scripts/validate_package.py:2180-2505",
-          "skills/nozickian-verify/scripts/validate_package.py:2915-2990",
-          "skills/nozickian-verify/scripts/validate_package.py:8522-8581",
+          "skills/nozickian-verify/scripts/validate_package.py:940-1888",
+          "skills/nozickian-verify/scripts/validate_package.py:2193-2260",
+          "skills/nozickian-verify/scripts/validate_package.py:2912-3237",
+          "skills/nozickian-verify/scripts/validate_package.py:3647-3722",
+          "skills/nozickian-verify/scripts/validate_package.py:9254-9313",
           "skills/nozickian-verify/assets/certificate-template.json:9-204",
           "skills/nozickian-verify/references/SUBAGENT_PROTOCOLS.md:60",
           "skills/nozickian-verify/references/OUTPUT_TEMPLATES.md:49-50"

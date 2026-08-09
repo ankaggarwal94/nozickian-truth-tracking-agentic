@@ -2832,6 +2832,38 @@ def deterministic_false_case_envelope(
     return envelope
 
 
+def deterministic_projection_match_details(
+    suite: str,
+    capture_projection: Any,
+    fresh_projection: Any,
+    projection_error: Optional[str],
+) -> Dict[str, Any]:
+    """Bind mismatch diagnostics to the stored projection being compared."""
+
+    details: Dict[str, Any] = {
+        "projection_error": projection_error,
+        "captured_projection_sha256": (
+            f"sha256:{canonical_json_sha256(capture_projection)}"
+            if capture_projection is not None
+            else None
+        ),
+        "fresh_projection_sha256": (
+            f"sha256:{canonical_json_sha256(fresh_projection)}"
+            if fresh_projection is not None
+            else None
+        ),
+    }
+    if (
+        suite in {"gate_contract", "formal_contract"}
+        and capture_projection is not None
+    ):
+        details["false_case_envelope"] = deterministic_false_case_envelope(
+            suite,
+            capture_projection,
+        )
+    return details
+
+
 def text_validator_status(text: str) -> Tuple[bool, str]:
     lines = text.splitlines()
     if any(TEXT_NEGATIVE_STATUS_RE.match(line) for line in lines):
@@ -3105,23 +3137,12 @@ def deterministic_checks(
         except Exception as exc:
             capture_projection = None
             projection_error = f"{type(exc).__name__}: invalid capture result"
-        projection_match_details = {
-            "projection_error": projection_error,
-            "captured_projection_sha256": (
-                f"sha256:{canonical_json_sha256(capture_projection)}"
-                if capture_projection is not None
-                else None
-            ),
-            "fresh_projection_sha256": (
-                f"sha256:{canonical_json_sha256(fresh_projection)}"
-                if fresh_projection is not None
-                else None
-            ),
-        }
-        if fresh_false_case_envelope is not None:
-            projection_match_details["false_case_envelope"] = (
-                fresh_false_case_envelope
-            )
+        projection_match_details = deterministic_projection_match_details(
+            name,
+            capture_projection,
+            fresh_projection,
+            projection_error,
+        )
         checks.append(
             Check(
                 f"deterministic capture semantic projection matches fresh: {name}",
