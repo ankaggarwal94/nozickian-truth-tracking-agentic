@@ -6,7 +6,7 @@
   "claim_proposition_sha256": "sha256:9d95decf899181e7148e830fa9ba3ed99c515a7e8ca0276b739aed9d6c5b92a5",
   "command_or_source": "current v1.0.3 reviewed package source",
   "evidence_schema_version": "1.1",
-  "hash_or_version": "sha256:140a98ce7969556bfd531bdb401bb81d6cf7a6c73f88d92790ba549dc60b93e0",
+  "hash_or_version": "sha256:3f6eb067bbcfb91aa05cdfdc3c9af252b1d282e8120248a6c94b77b66119fa29",
   "observed_result": "Current source bytes support the scoped proposition for C-validator-sensitivity.",
   "support_summary": "This wrapper binds C-validator-sensitivity to current package artifact skills/nozickian-verify/scripts/validate_package.py by exact SHA-256 and to the canonical claim proposition digest. It also binds the wrapper to the canonical full method-relative claim contract.",
   "timestamp_utc": "2026-07-18T00:00:00Z"

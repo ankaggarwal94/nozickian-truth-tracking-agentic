@@ -7,13 +7,16 @@ fixture executables, bundle builders, or test-runner entry points.
 from __future__ import annotations
 
 import argparse
+import ast
 import contextlib
 import hashlib
 import importlib.util
 import io
 import json
 import os
+import re
 import shutil
+import signal
 import stat
 import subprocess
 import sys
@@ -29,6 +32,1249 @@ SKILL_SCRIPTS = Path("skills/nozickian-verify/scripts")
 # macOS may expose the temp root through /var -> /private/var. Resolve that
 # platform alias so positive controls do not themselves contain a link.
 CANONICAL_TEMP_ROOT = Path(tempfile.gettempdir()).resolve()
+EXPECTED_EPHEMERAL_CASE_BUNDLES = 55
+MAX_UNEXPECTED_FAILED_CHECK_RECORDS = 20
+MAX_UNEXPECTED_FAILED_CHECK_DIAGNOSTIC_BYTES = 8 * 1024
+UNEXPECTED_DIAGNOSTIC_FILE_URI_PATH_RE = re.compile(
+    r'''(?i)(?<![A-Za-z0-9+.-])file:/{1,3}[^\r\n"'<>|,;)\]}]+'''
+)
+UNEXPECTED_DIAGNOSTIC_UNC_PATH_RE = re.compile(
+    r'''(?<![\\A-Za-z0-9._-])\\\\'''
+    r'''(?:[^\\\r\n"'<>|,;)\]}]+\\)+'''
+    r'''[^\\\r\n"'<>|,;)\]}]+'''
+)
+UNEXPECTED_DIAGNOSTIC_POSIX_PATH_RE = re.compile(
+    r'''(?<![/A-Za-z0-9._-])/(?:[^/\r\n"'<>|,;)\]}]+/)*'''
+    r'''[^/\r\n"'<>|,;)\]}]+'''
+)
+UNEXPECTED_DIAGNOSTIC_WINDOWS_PATH_RE = re.compile(
+    r'''(?<![A-Za-z0-9])(?:[A-Za-z]:\\'''
+    r'''(?:[^\\\r\n"'<>|,;)\]}]+\\)*'''
+    r'''[^\\\r\n"'<>|,;)\]}]+)'''
+)
+
+
+class EphemeralBundleManager:
+    """Keep one identity-bound bundle copy under a held workspace directory."""
+
+    def __init__(
+        self,
+        source: Path,
+        workspace_root: Path,
+        *,
+        copytree: Callable[..., Any] = shutil.copytree,
+    ) -> None:
+        self.source = source
+        self.workspace_root = workspace_root
+        self._copytree = copytree
+        flags = os.O_RDONLY
+        flags |= getattr(os, "O_DIRECTORY", 0)
+        flags |= getattr(os, "O_NOFOLLOW", 0)
+        flags |= getattr(os, "O_CLOEXEC", 0)
+        workspace_fd = os.open(workspace_root, flags)
+        try:
+            held = os.fstat(workspace_fd)
+            lexical = os.lstat(workspace_root)
+            if (
+                not stat.S_ISDIR(held.st_mode)
+                or not stat.S_ISDIR(lexical.st_mode)
+                or stat.S_ISLNK(lexical.st_mode)
+                or (held.st_dev, held.st_ino)
+                != (lexical.st_dev, lexical.st_ino)
+            ):
+                raise OSError(
+                    "ephemeral bundle workspace is not one held real directory"
+                )
+        except BaseException:
+            os.close(workspace_fd)
+            raise
+        self._workspace_fd: Optional[int] = workspace_fd
+        self._workspace_identity = (held.st_dev, held.st_ino)
+        self._active_name: Optional[str] = None
+        self._active_identity: Optional[Tuple[int, int]] = None
+        try:
+            self._initial_workspace_inventory = self._workspace_inventory()
+        except BaseException:
+            os.close(workspace_fd)
+            self._workspace_fd = None
+            raise
+        self.created = 0
+        self.cleaned = 0
+        self.peak_live = 0
+
+    def _require_workspace_fd(self) -> int:
+        if self._workspace_fd is None:
+            raise OSError("ephemeral bundle workspace is closed")
+        return self._workspace_fd
+
+    @staticmethod
+    def _directory_capability_path(
+        descriptor: int,
+        expected_identity: Tuple[int, int],
+    ) -> Path:
+        """Return a verified pathname adapter for one held directory fd."""
+
+        held = os.fstat(descriptor)
+        if (
+            not stat.S_ISDIR(held.st_mode)
+            or (held.st_dev, held.st_ino) != expected_identity
+        ):
+            raise OSError("held ephemeral directory identity changed")
+        for adapter_root in (Path("/proc/self/fd"), Path("/dev/fd")):
+            candidate = adapter_root / str(descriptor)
+            try:
+                observed = os.stat(candidate)
+            except OSError:
+                continue
+            if (
+                stat.S_ISDIR(observed.st_mode)
+                and (observed.st_dev, observed.st_ino)
+                == expected_identity
+            ):
+                # Never resolve or readlink this capability pathname. It is
+                # valid only while the verified descriptor remains open.
+                return candidate
+        raise OSError("platform lacks a held-directory path adapter")
+
+    def _workspace_matches_lexical_path(self) -> bool:
+        try:
+            observed = os.lstat(self.workspace_root)
+        except OSError:
+            return False
+        return (
+            stat.S_ISDIR(observed.st_mode)
+            and not stat.S_ISLNK(observed.st_mode)
+            and (observed.st_dev, observed.st_ino)
+            == self._workspace_identity
+        )
+
+    def _entry_stat(self, name: str) -> Optional[os.stat_result]:
+        try:
+            return os.stat(
+                name,
+                dir_fd=self._require_workspace_fd(),
+                follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            return None
+
+    def _workspace_inventory(self) -> Tuple[Tuple[str, int, int, int], ...]:
+        inventory: List[Tuple[str, int, int, int]] = []
+        for name in sorted(os.listdir(self._require_workspace_fd())):
+            observed = self._entry_stat(name)
+            if observed is None:
+                raise OSError("ephemeral workspace entry changed during scan")
+            inventory.append((
+                name,
+                observed.st_dev,
+                observed.st_ino,
+                stat.S_IFMT(observed.st_mode),
+            ))
+        return tuple(inventory)
+
+    @staticmethod
+    def _entry_identity(observed: os.stat_result) -> Tuple[int, int, int]:
+        return (
+            observed.st_dev,
+            observed.st_ino,
+            stat.S_IFMT(observed.st_mode),
+        )
+
+    @classmethod
+    def _remove_directory_contents(cls, directory_fd: int) -> None:
+        """Remove descendants relative to one held directory capability."""
+
+        directory_flags = os.O_RDONLY
+        directory_flags |= getattr(os, "O_DIRECTORY", 0)
+        directory_flags |= getattr(os, "O_NOFOLLOW", 0)
+        directory_flags |= getattr(os, "O_CLOEXEC", 0)
+        for child_name in sorted(os.listdir(directory_fd)):
+            observed = os.stat(
+                child_name,
+                dir_fd=directory_fd,
+                follow_symlinks=False,
+            )
+            expected_identity = cls._entry_identity(observed)
+            if stat.S_ISDIR(observed.st_mode):
+                child_fd = os.open(
+                    child_name,
+                    directory_flags,
+                    dir_fd=directory_fd,
+                )
+                try:
+                    held = os.fstat(child_fd)
+                    if cls._entry_identity(held) != expected_identity:
+                        raise OSError(
+                            "ephemeral bundle descendant identity changed"
+                        )
+                    cls._remove_directory_contents(child_fd)
+                    current = os.stat(
+                        child_name,
+                        dir_fd=directory_fd,
+                        follow_symlinks=False,
+                    )
+                    if cls._entry_identity(current) != expected_identity:
+                        raise OSError(
+                            "ephemeral bundle descendant identity changed"
+                        )
+                    os.rmdir(child_name, dir_fd=directory_fd)
+                finally:
+                    os.close(child_fd)
+                continue
+            current = os.stat(
+                child_name,
+                dir_fd=directory_fd,
+                follow_symlinks=False,
+            )
+            if cls._entry_identity(current) != expected_identity:
+                raise OSError(
+                    "ephemeral bundle descendant identity changed"
+                )
+            os.unlink(child_name, dir_fd=directory_fd)
+
+    def _cleanup_interstitial_barrier(self, _name: str) -> None:
+        """Test seam immediately after acquiring the endpoint capability."""
+
+    def _cleanup_pre_quarantine_barrier(self, _name: str) -> None:
+        """Test seam after the last check and immediately before rename."""
+
+    def _unused_quarantine_name(self) -> str:
+        for _attempt in range(32):
+            candidate = f".ephemeral-cleanup-{uuid.uuid4().hex}"
+            if self._entry_stat(candidate) is None:
+                return candidate
+        raise OSError("cannot allocate ephemeral cleanup quarantine")
+
+    def _remove_tree(
+        self,
+        name: str,
+        expected_identity: Tuple[int, int],
+    ) -> None:
+        observed = self._entry_stat(name)
+        if observed is None:
+            raise OSError("ephemeral bundle disappeared before cleanup")
+        if (
+            not stat.S_ISDIR(observed.st_mode)
+            or (observed.st_dev, observed.st_ino) != expected_identity
+        ):
+            raise OSError("ephemeral bundle identity changed before cleanup")
+
+        directory_flags = os.O_RDONLY
+        directory_flags |= getattr(os, "O_DIRECTORY", 0)
+        directory_flags |= getattr(os, "O_NOFOLLOW", 0)
+        directory_flags |= getattr(os, "O_CLOEXEC", 0)
+        workspace_fd = self._require_workspace_fd()
+        endpoint_fd = os.open(name, directory_flags, dir_fd=workspace_fd)
+        try:
+            held = os.fstat(endpoint_fd)
+            if (
+                not stat.S_ISDIR(held.st_mode)
+                or (held.st_dev, held.st_ino) != expected_identity
+            ):
+                raise OSError(
+                    "ephemeral bundle identity changed before cleanup"
+                )
+            self._cleanup_interstitial_barrier(name)
+            current = self._entry_stat(name)
+            if (
+                current is None
+                or not stat.S_ISDIR(current.st_mode)
+                or (current.st_dev, current.st_ino) != expected_identity
+            ):
+                raise OSError(
+                    "ephemeral bundle identity changed before cleanup"
+                )
+
+            quarantine_name = self._unused_quarantine_name()
+            self._cleanup_pre_quarantine_barrier(name)
+            os.rename(
+                name,
+                quarantine_name,
+                src_dir_fd=workspace_fd,
+                dst_dir_fd=workspace_fd,
+            )
+            quarantined = self._entry_stat(quarantine_name)
+            if (
+                quarantined is None
+                or not stat.S_ISDIR(quarantined.st_mode)
+                or (quarantined.st_dev, quarantined.st_ino)
+                != expected_identity
+            ):
+                # Do not rename the mismatched entry back to the caller-known
+                # active name.  Portable Python 3.10 exposes no no-replace
+                # directory rename, so a check-then-rename recovery would be
+                # able to overwrite an unmanaged directory created in the
+                # gap.  Leave every observed entry intact and fail closed.
+                raise OSError(
+                    "ephemeral bundle identity changed during quarantine"
+                )
+            self._remove_directory_contents(endpoint_fd)
+            quarantined = self._entry_stat(quarantine_name)
+            if (
+                quarantined is None
+                or not stat.S_ISDIR(quarantined.st_mode)
+                or (quarantined.st_dev, quarantined.st_ino)
+                != expected_identity
+            ):
+                raise OSError(
+                    "ephemeral bundle identity changed during cleanup"
+                )
+            os.rmdir(quarantine_name, dir_fd=workspace_fd)
+        finally:
+            os.close(endpoint_fd)
+        if self._entry_stat(name) is not None:
+            raise OSError("ephemeral bundle cleanup left a live path")
+
+    def _remove_partial_tree(
+        self,
+        name: str,
+        expected_identity: Tuple[int, int],
+    ) -> None:
+        self._remove_tree(name, expected_identity)
+
+    def _remove_active(self) -> None:
+        active_name = self._active_name
+        active_identity = self._active_identity
+        if active_name is None or active_identity is None:
+            return
+        self._remove_tree(active_name, active_identity)
+        self._active_name = None
+        self._active_identity = None
+        self.cleaned += 1
+
+    def materialize(self, name: str) -> Path:
+        if (
+            type(name) is not str
+            or not name
+            or Path(name).name != name
+            or name in {".", ".."}
+        ):
+            raise ValueError("ephemeral bundle name is not one safe component")
+        if not self._workspace_matches_lexical_path():
+            raise OSError("ephemeral bundle workspace identity changed")
+        self._remove_active()
+        if not self._workspace_matches_lexical_path():
+            raise OSError("ephemeral bundle workspace identity changed")
+        if self._workspace_inventory() != self._initial_workspace_inventory:
+            raise OSError("ephemeral bundle workspace has unmanaged entries")
+        destination = self.workspace_root / name
+        if self._entry_stat(name) is not None:
+            raise FileExistsError(
+                "ephemeral bundle destination already exists"
+            )
+        os.mkdir(name, mode=0o700, dir_fd=self._require_workspace_fd())
+        partial = self._entry_stat(name)
+        if partial is None or not stat.S_ISDIR(partial.st_mode):
+            raise OSError("partial ephemeral bundle is not a directory")
+        partial_identity = (partial.st_dev, partial.st_ino)
+        partial_flags = os.O_RDONLY
+        partial_flags |= getattr(os, "O_DIRECTORY", 0)
+        partial_flags |= getattr(os, "O_NOFOLLOW", 0)
+        partial_flags |= getattr(os, "O_CLOEXEC", 0)
+        partial_fd: Optional[int] = None
+        try:
+            partial_fd = os.open(
+                name,
+                partial_flags,
+                dir_fd=self._require_workspace_fd(),
+            )
+            copy_destination = self._directory_capability_path(
+                partial_fd,
+                partial_identity,
+            )
+            self._copytree(
+                self.source,
+                copy_destination,
+                symlinks=True,
+                dirs_exist_ok=True,
+            )
+        except BaseException:
+            self._remove_partial_tree(name, partial_identity)
+            raise
+        finally:
+            if partial_fd is not None:
+                os.close(partial_fd)
+        if not self._workspace_matches_lexical_path():
+            self._remove_partial_tree(name, partial_identity)
+            raise OSError("ephemeral bundle workspace changed during copy")
+        copied = self._entry_stat(name)
+        if (
+            copied is None
+            or not stat.S_ISDIR(copied.st_mode)
+            or (copied.st_dev, copied.st_ino) != partial_identity
+        ):
+            raise OSError("ephemeral bundle copy is not a held directory")
+        self._active_name = name
+        self._active_identity = partial_identity
+        self.created += 1
+        self.peak_live = max(self.peak_live, 1)
+        return destination
+
+    def close(self) -> None:
+        if self._workspace_fd is None:
+            return
+        workspace_stable_before = self._workspace_matches_lexical_path()
+        cleanup_error: Optional[BaseException] = None
+        try:
+            self._remove_active()
+        except BaseException as exc:
+            cleanup_error = exc
+        inventory_error: Optional[BaseException] = None
+        try:
+            if (
+                self._workspace_inventory()
+                != self._initial_workspace_inventory
+            ):
+                raise OSError(
+                    "ephemeral bundle workspace has unmanaged entries"
+                )
+        except BaseException as exc:
+            inventory_error = exc
+        workspace_stable_after = self._workspace_matches_lexical_path()
+        os.close(self._workspace_fd)
+        self._workspace_fd = None
+        if cleanup_error is not None:
+            raise cleanup_error
+        if inventory_error is not None:
+            raise inventory_error
+        if not workspace_stable_before or not workspace_stable_after:
+            raise OSError("ephemeral bundle workspace identity changed")
+
+    def __enter__(self) -> "EphemeralBundleManager":
+        return self
+
+    def __exit__(self, *_exc: Any) -> None:
+        self.close()
+
+    def observation(self) -> Dict[str, Any]:
+        retained = [self._active_name] if self._active_name is not None else []
+        return {
+            "created": self.created,
+            "cleaned": self.cleaned,
+            "peak_live": self.peak_live,
+            "retained": retained,
+        }
+
+
+def cleanup_python310_compatibility_oracle() -> Dict[str, Any]:
+    """Pin cleanup syntax and OS calls to the Python 3.10 API surface."""
+
+    source = Path(__file__).read_text(encoding="utf-8")
+    try:
+        module = ast.parse(
+            source,
+            filename=str(Path(__file__)),
+            feature_version=10,
+        )
+    except SyntaxError as exc:
+        return {
+            "passed": False,
+            "python310_grammar": False,
+            "error": f"{type(exc).__name__}: Python 3.10 grammar rejected",
+            "observed_os_calls": [],
+        }
+    manager = next(
+        (
+            node
+            for node in module.body
+            if isinstance(node, ast.ClassDef)
+            and node.name == "EphemeralBundleManager"
+        ),
+        None,
+    )
+    if manager is None:
+        return {
+            "passed": False,
+            "python310_grammar": True,
+            "error": "EphemeralBundleManager class is missing",
+            "observed_os_calls": [],
+        }
+    cleanup_methods = {
+        node.name: node
+        for node in manager.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name in {"_remove_directory_contents", "_remove_tree"}
+    }
+    observed_os_calls: set[Tuple[str, Tuple[str, ...]]] = set()
+    unexpected_library_calls: List[str] = []
+    for method in cleanup_methods.values():
+        for node in ast.walk(method):
+            if not isinstance(node, ast.Call):
+                continue
+            function = node.func
+            if (
+                not isinstance(function, ast.Attribute)
+                or not isinstance(function.value, ast.Name)
+            ):
+                continue
+            owner = function.value.id
+            if owner == "os":
+                keywords = tuple(sorted(
+                    keyword.arg if keyword.arg is not None else "**"
+                    for keyword in node.keywords
+                ))
+                observed_os_calls.add((function.attr, keywords))
+            elif owner == "shutil":
+                unexpected_library_calls.append(
+                    f"shutil.{function.attr}"
+                )
+    expected_os_calls = {
+        ("close", ()),
+        ("fstat", ()),
+        ("listdir", ()),
+        ("open", ("dir_fd",)),
+        ("rename", ("dst_dir_fd", "src_dir_fd")),
+        ("rmdir", ("dir_fd",)),
+        ("stat", ("dir_fd", "follow_symlinks")),
+        ("unlink", ("dir_fd",)),
+    }
+    method_inventory_exact = set(cleanup_methods) == {
+        "_remove_directory_contents",
+        "_remove_tree",
+    }
+    passed = (
+        method_inventory_exact
+        and observed_os_calls == expected_os_calls
+        and not unexpected_library_calls
+    )
+    return {
+        "passed": passed,
+        "python310_grammar": True,
+        "method_inventory_exact": method_inventory_exact,
+        "observed_os_calls": [
+            {"name": name, "keywords": list(keywords)}
+            for name, keywords in sorted(observed_os_calls)
+        ],
+        "expected_os_calls_exact": observed_os_calls == expected_os_calls,
+        "unexpected_library_calls": sorted(unexpected_library_calls),
+    }
+
+
+def case_bundle_resource_oracle(root: Path) -> Dict[str, Any]:
+    """Exercise normal, false-world residue, and exception cleanup paths."""
+
+    oracle_root = root / "case-bundle-resource-oracle"
+    source = oracle_root / "baseline"
+    workspaces = oracle_root / "workspaces"
+    sibling = oracle_root / "unrelated-sibling.txt"
+    source.mkdir(parents=True)
+    workspaces.mkdir()
+    workspace_sentinel = workspaces / "unrelated-workspace-sentinel.txt"
+    workspace_sentinel_bytes = (
+        b"narrow cleanup must not replace the workspace parent\n"
+    )
+    workspace_sentinel.write_bytes(workspace_sentinel_bytes)
+    source_file = source / "payload.txt"
+    source_bytes = b"baseline bytes must remain independent\n"
+    sibling_bytes = b"unrelated sibling must survive narrow cleanup\n"
+    source_file.write_bytes(source_bytes)
+    sibling.write_bytes(sibling_bytes)
+    preexisting = workspaces / "preexisting-destination"
+    preexisting.mkdir()
+    preexisting_sentinel = preexisting / "sentinel.txt"
+    preexisting_bytes = b"preexisting destination must not be removed\n"
+    preexisting_sentinel.write_bytes(preexisting_bytes)
+    preexisting_rejected = False
+    preexisting_manager = EphemeralBundleManager(source, workspaces)
+    try:
+        preexisting_manager.materialize(
+            "preexisting-destination"
+        )
+    except FileExistsError:
+        preexisting_rejected = True
+    finally:
+        preexisting_manager.close()
+    preexisting_unchanged = (
+        preexisting_sentinel.read_bytes() == preexisting_bytes
+    )
+    shutil.rmtree(preexisting)
+    unmanaged_manager = EphemeralBundleManager(source, workspaces)
+    unmanaged_copy = workspaces / "unmanaged-copy"
+    shutil.copytree(source, unmanaged_copy, symlinks=True)
+    unmanaged_copy_rejected = False
+    try:
+        unmanaged_manager.close()
+    except OSError:
+        unmanaged_copy_rejected = True
+    unmanaged_copy_preserved_for_narrow_cleanup = unmanaged_copy.is_dir()
+    shutil.rmtree(unmanaged_copy)
+    normal_manager = EphemeralBundleManager(source, workspaces)
+    first = normal_manager.materialize("true-world")
+    first_file = first / "payload.txt"
+    usable_before_cleanup = first_file.read_bytes() == source_bytes
+    independent_inode = not os.path.samefile(source_file, first_file)
+    first_file.write_bytes(b"independent mutation\n")
+    baseline_unchanged_after_mutation = source_file.read_bytes() == source_bytes
+    second = normal_manager.materialize("false-world-residue")
+    prior_removed_before_next_case = not os.path.lexists(first)
+    one_live_during_case = sorted(
+        path.name for path in workspaces.iterdir()
+    ) == sorted([second.name, workspace_sentinel.name])
+    (second / "deliberate-residue").mkdir()
+    (second / "deliberate-residue" / "sentinel.txt").write_text(
+        "must be removed with the case workspace\n",
+        encoding="utf-8",
+    )
+    normal_manager.close()
+    normal_residue_removed = not os.path.lexists(second)
+    normal_stats = normal_manager.observation()
+
+    class DeliberateCaseFailure(RuntimeError):
+        pass
+
+    exceptional = workspaces / "exception-world"
+    exception_observed = False
+    try:
+        with EphemeralBundleManager(source, workspaces) as exception_manager:
+            exceptional = exception_manager.materialize("exception-world")
+            (exceptional / "exception-residue.txt").write_text(
+                "cleanup must run during exception unwinding\n",
+                encoding="utf-8",
+            )
+            raise DeliberateCaseFailure("injected case failure")
+    except DeliberateCaseFailure:
+        exception_observed = True
+    exception_residue_removed = not os.path.lexists(exceptional)
+
+    class DeliberateCopyFailure(RuntimeError):
+        pass
+
+    copy_failure_destination = workspaces / "partial-copy-failure"
+
+    def fail_after_partial_copy(
+        _source: Path,
+        destination: Path,
+        *,
+        symlinks: bool,
+        dirs_exist_ok: bool,
+    ) -> None:
+        if symlinks is not True or dirs_exist_ok is not True:
+            raise AssertionError("copy options changed")
+        (Path(destination) / "partial-residue.txt").write_text(
+            "ordinary copy failure residue must be removed\n",
+            encoding="utf-8",
+        )
+        raise DeliberateCopyFailure("injected ordinary copy failure")
+
+    copy_failure_manager = EphemeralBundleManager(
+        source,
+        workspaces,
+        copytree=fail_after_partial_copy,
+    )
+    copy_failure_observed = False
+    try:
+        copy_failure_manager.materialize(copy_failure_destination.name)
+    except DeliberateCopyFailure:
+        copy_failure_observed = True
+    finally:
+        copy_failure_manager.close()
+    copy_failure_residue_removed = not os.path.lexists(
+        copy_failure_destination
+    )
+    copy_failure_manager_closed = copy_failure_manager._workspace_fd is None
+
+    partial_substitution_root = oracle_root / "partial-endpoint-substitution"
+    partial_workspace = partial_substitution_root / "workspace"
+    partial_workspace.mkdir(parents=True)
+    partial_destination = partial_workspace / "case"
+    partial_parked = partial_workspace / "case-parked"
+    partial_owned_bytes = b"owned partial copy must remain identifiable\n"
+    partial_replacement_bytes = b"replacement partial endpoint must survive\n"
+
+    def substitute_partial_then_fail(
+        _source: Path,
+        destination: Path,
+        *,
+        symlinks: bool,
+        dirs_exist_ok: bool,
+    ) -> None:
+        if symlinks is not True or dirs_exist_ok is not True:
+            raise AssertionError("copy options changed")
+        destination_path = Path(destination)
+        (destination_path / "owned-partial.txt").write_bytes(
+            partial_owned_bytes
+        )
+        partial_destination.rename(partial_parked)
+        partial_destination.mkdir()
+        (partial_destination / "replacement-sentinel.txt").write_bytes(
+            partial_replacement_bytes
+        )
+        raise DeliberateCopyFailure("injected substituted partial failure")
+
+    partial_manager = EphemeralBundleManager(
+        source,
+        partial_workspace,
+        copytree=substitute_partial_then_fail,
+    )
+    partial_endpoint_substitution_rejected = False
+    try:
+        partial_manager.materialize(partial_destination.name)
+    except OSError as exc:
+        partial_endpoint_substitution_rejected = (
+            str(exc) == "ephemeral bundle identity changed before cleanup"
+        )
+    try:
+        partial_manager.close()
+    except OSError:
+        pass
+    partial_endpoint_manager_closed = partial_manager._workspace_fd is None
+    partial_endpoint_replacement_unchanged = (
+        (partial_destination / "replacement-sentinel.txt").is_file()
+        and (
+            partial_destination / "replacement-sentinel.txt"
+        ).read_bytes()
+        == partial_replacement_bytes
+    )
+    original_partial_bundle_preserved = (
+        (partial_parked / "owned-partial.txt").is_file()
+        and (partial_parked / "owned-partial.txt").read_bytes()
+        == partial_owned_bytes
+    )
+    shutil.rmtree(partial_substitution_root)
+
+    parent_substitution_root = oracle_root / "parent-substitution"
+    parent_workspace = parent_substitution_root / "workspace"
+    parent_parked = parent_substitution_root / "workspace-parked"
+    external_workspace = parent_substitution_root / "external"
+    parent_workspace.mkdir(parents=True)
+    external_workspace.mkdir()
+    external_case = external_workspace / "case"
+    external_sentinel = external_case / "outside-sentinel.txt"
+    external_bytes = b"substituted parent sentinel must survive\n"
+
+    def substitute_parent_then_copy(
+        copy_source: Path,
+        copy_destination: Path,
+        *,
+        symlinks: bool,
+        dirs_exist_ok: bool,
+    ) -> None:
+        parent_workspace.rename(parent_parked)
+        parent_workspace.symlink_to(
+            external_workspace,
+            target_is_directory=True,
+        )
+        external_case.mkdir()
+        external_sentinel.write_bytes(external_bytes)
+        shutil.copytree(
+            copy_source,
+            copy_destination,
+            symlinks=symlinks,
+            dirs_exist_ok=dirs_exist_ok,
+        )
+
+    parent_manager = EphemeralBundleManager(
+        source,
+        parent_workspace,
+        copytree=substitute_parent_then_copy,
+    )
+    parent_substitution_rejected = False
+    try:
+        parent_manager.materialize("case")
+    except OSError as exc:
+        parent_substitution_rejected = (
+            str(exc) == "ephemeral bundle workspace changed during copy"
+        )
+    try:
+        parent_manager.close()
+    except OSError:
+        pass
+    external_parent_unchanged = (
+        external_sentinel.is_file()
+        and external_sentinel.read_bytes() == external_bytes
+        and sorted(path.name for path in external_case.iterdir())
+        == [external_sentinel.name]
+    )
+    owned_parent_bundle_removed = not (parent_parked / "case").exists()
+    shutil.rmtree(parent_substitution_root)
+
+    endpoint_substitution_root = oracle_root / "endpoint-substitution"
+    endpoint_workspace = endpoint_substitution_root / "workspace"
+    endpoint_workspace.mkdir(parents=True)
+    endpoint_manager = EphemeralBundleManager(source, endpoint_workspace)
+    endpoint_active = endpoint_manager.materialize("case")
+    endpoint_parked = endpoint_workspace / "case-parked"
+    endpoint_active.rename(endpoint_parked)
+    endpoint_active.mkdir()
+    endpoint_sentinel = endpoint_active / "replacement-sentinel.txt"
+    endpoint_bytes = b"replacement endpoint sentinel must survive\n"
+    endpoint_sentinel.write_bytes(endpoint_bytes)
+    endpoint_substitution_rejected = False
+    try:
+        endpoint_manager.close()
+    except OSError:
+        endpoint_substitution_rejected = True
+    endpoint_replacement_unchanged = (
+        endpoint_sentinel.is_file()
+        and endpoint_sentinel.read_bytes() == endpoint_bytes
+    )
+    original_endpoint_bundle_preserved = endpoint_parked.is_dir()
+    shutil.rmtree(endpoint_substitution_root)
+
+    interstitial_substitution_root = (
+        oracle_root / "interstitial-endpoint-substitution"
+    )
+    interstitial_workspace = interstitial_substitution_root / "workspace"
+    interstitial_workspace.mkdir(parents=True)
+    interstitial_active = interstitial_workspace / "case"
+    interstitial_parked = interstitial_workspace / "case-parked"
+    interstitial_original_bytes = (
+        b"original endpoint must survive an interstitial substitution\n"
+    )
+    interstitial_replacement_bytes = (
+        b"replacement endpoint must survive an interstitial substitution\n"
+    )
+
+    class InterstitialSubstitutionManager(EphemeralBundleManager):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            self.barrier_fired = False
+
+        def _cleanup_interstitial_barrier(self, name: str) -> None:
+            if self.barrier_fired:
+                raise AssertionError("cleanup barrier fired more than once")
+            if name != interstitial_active.name:
+                raise AssertionError("cleanup barrier received another name")
+            self.barrier_fired = True
+            interstitial_active.rename(interstitial_parked)
+            interstitial_active.mkdir()
+            (
+                interstitial_active / "replacement-sentinel.txt"
+            ).write_bytes(interstitial_replacement_bytes)
+
+    interstitial_manager = InterstitialSubstitutionManager(
+        source,
+        interstitial_workspace,
+    )
+    interstitial_manager.materialize(interstitial_active.name)
+    (interstitial_active / "original-sentinel.txt").write_bytes(
+        interstitial_original_bytes
+    )
+    interstitial_substitution_rejected = False
+    try:
+        interstitial_manager.close()
+    except OSError as exc:
+        interstitial_substitution_rejected = (
+            str(exc) == "ephemeral bundle identity changed before cleanup"
+        )
+    interstitial_barrier_fired = interstitial_manager.barrier_fired
+    interstitial_manager_closed = interstitial_manager._workspace_fd is None
+    interstitial_original_unchanged = (
+        (interstitial_parked / "original-sentinel.txt").is_file()
+        and (
+            interstitial_parked / "original-sentinel.txt"
+        ).read_bytes()
+        == interstitial_original_bytes
+    )
+    interstitial_replacement_unchanged = (
+        (interstitial_active / "replacement-sentinel.txt").is_file()
+        and (
+            interstitial_active / "replacement-sentinel.txt"
+        ).read_bytes()
+        == interstitial_replacement_bytes
+    )
+    shutil.rmtree(interstitial_substitution_root)
+
+    pre_quarantine_root = oracle_root / "pre-quarantine-substitution"
+    pre_quarantine_workspace = pre_quarantine_root / "workspace"
+    pre_quarantine_workspace.mkdir(parents=True)
+    pre_quarantine_active = pre_quarantine_workspace / "case"
+    pre_quarantine_parked = pre_quarantine_workspace / "case-parked"
+    pre_quarantine_original_bytes = (
+        b"original endpoint must survive a pre-quarantine substitution\n"
+    )
+    pre_quarantine_replacement_bytes = (
+        b"replacement endpoint must be restored after quarantine\n"
+    )
+
+    class PreQuarantineSubstitutionManager(EphemeralBundleManager):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            self.barrier_fired = False
+
+        def _cleanup_pre_quarantine_barrier(self, name: str) -> None:
+            if self.barrier_fired:
+                raise AssertionError("pre-quarantine barrier fired twice")
+            if name != pre_quarantine_active.name:
+                raise AssertionError(
+                    "pre-quarantine barrier received another name"
+                )
+            self.barrier_fired = True
+            pre_quarantine_active.rename(pre_quarantine_parked)
+            pre_quarantine_active.mkdir()
+            (
+                pre_quarantine_active / "replacement-sentinel.txt"
+            ).write_bytes(pre_quarantine_replacement_bytes)
+
+    pre_quarantine_manager = PreQuarantineSubstitutionManager(
+        source,
+        pre_quarantine_workspace,
+    )
+    pre_quarantine_manager.materialize(pre_quarantine_active.name)
+    (pre_quarantine_active / "original-sentinel.txt").write_bytes(
+        pre_quarantine_original_bytes
+    )
+    pre_quarantine_substitution_rejected = False
+    try:
+        pre_quarantine_manager.close()
+    except OSError as exc:
+        pre_quarantine_substitution_rejected = (
+            str(exc)
+            == "ephemeral bundle identity changed during quarantine"
+        )
+    pre_quarantine_barrier_fired = pre_quarantine_manager.barrier_fired
+    pre_quarantine_manager_closed = (
+        pre_quarantine_manager._workspace_fd is None
+    )
+    pre_quarantine_original_unchanged = (
+        (pre_quarantine_parked / "original-sentinel.txt").is_file()
+        and (
+            pre_quarantine_parked / "original-sentinel.txt"
+        ).read_bytes()
+        == pre_quarantine_original_bytes
+    )
+    pre_quarantine_entries = sorted(
+        pre_quarantine_workspace.iterdir(),
+        key=lambda path: path.name,
+    )
+    pre_quarantine_replacement_locations = [
+        path
+        for path in pre_quarantine_entries
+        if (
+            path / "replacement-sentinel.txt"
+        ).is_file()
+        and (
+            path / "replacement-sentinel.txt"
+        ).read_bytes()
+        == pre_quarantine_replacement_bytes
+    ]
+    pre_quarantine_replacement_preserved = (
+        len(pre_quarantine_replacement_locations) == 1
+        and pre_quarantine_replacement_locations[0].name.startswith(
+            ".ephemeral-cleanup-"
+        )
+    )
+    pre_quarantine_active_absent_after_fail = (
+        not pre_quarantine_active.exists()
+    )
+    pre_quarantine_inventory_exact = (
+        len(pre_quarantine_entries) == 2
+        and pre_quarantine_parked in pre_quarantine_entries
+        and pre_quarantine_replacement_preserved
+        and pre_quarantine_active_absent_after_fail
+    )
+    shutil.rmtree(pre_quarantine_root)
+
+    python310_cleanup_compatibility = (
+        cleanup_python310_compatibility_oracle()
+    )
+    baseline_unchanged = source_file.read_bytes() == source_bytes
+    sibling_unchanged = sibling.read_bytes() == sibling_bytes
+    workspace_sentinel_unchanged = (
+        workspace_sentinel.is_file()
+        and workspace_sentinel.read_bytes() == workspace_sentinel_bytes
+    )
+    workspace_empty = sorted(
+        path.name for path in workspaces.iterdir()
+    ) == [workspace_sentinel.name]
+    oracle_root_inventory_exact = sorted(
+        path.name for path in oracle_root.iterdir()
+    ) == ["baseline", "unrelated-sibling.txt", "workspaces"]
+    passed = (
+        usable_before_cleanup
+        and preexisting_rejected
+        and preexisting_unchanged
+        and unmanaged_copy_rejected
+        and unmanaged_copy_preserved_for_narrow_cleanup
+        and independent_inode
+        and baseline_unchanged_after_mutation
+        and prior_removed_before_next_case
+        and one_live_during_case
+        and normal_residue_removed
+        and normal_stats
+        == {
+            "created": 2,
+            "cleaned": 2,
+            "peak_live": 1,
+            "retained": [],
+        }
+        and exception_observed
+        and exception_residue_removed
+        and copy_failure_observed
+        and copy_failure_residue_removed
+        and copy_failure_manager_closed
+        and partial_endpoint_substitution_rejected
+        and partial_endpoint_manager_closed
+        and partial_endpoint_replacement_unchanged
+        and original_partial_bundle_preserved
+        and parent_substitution_rejected
+        and external_parent_unchanged
+        and owned_parent_bundle_removed
+        and endpoint_substitution_rejected
+        and endpoint_replacement_unchanged
+        and original_endpoint_bundle_preserved
+        and interstitial_substitution_rejected
+        and interstitial_barrier_fired
+        and interstitial_manager_closed
+        and interstitial_original_unchanged
+        and interstitial_replacement_unchanged
+        and pre_quarantine_substitution_rejected
+        and pre_quarantine_barrier_fired
+        and pre_quarantine_manager_closed
+        and pre_quarantine_original_unchanged
+        and pre_quarantine_replacement_preserved
+        and pre_quarantine_active_absent_after_fail
+        and pre_quarantine_inventory_exact
+        and python310_cleanup_compatibility.get("passed") is True
+        and baseline_unchanged
+        and sibling_unchanged
+        and workspace_sentinel_unchanged
+        and workspace_empty
+        and oracle_root_inventory_exact
+    )
+    result = {
+        "passed": passed,
+        "preexisting_rejected": preexisting_rejected,
+        "preexisting_unchanged": preexisting_unchanged,
+        "unmanaged_copy_rejected": unmanaged_copy_rejected,
+        "unmanaged_copy_preserved_for_narrow_cleanup": (
+            unmanaged_copy_preserved_for_narrow_cleanup
+        ),
+        "usable_before_cleanup": usable_before_cleanup,
+        "independent_inode": independent_inode,
+        "baseline_unchanged_after_mutation": (
+            baseline_unchanged_after_mutation
+        ),
+        "prior_removed_before_next_case": prior_removed_before_next_case,
+        "one_live_during_case": one_live_during_case,
+        "normal_residue_removed": normal_residue_removed,
+        "normal_stats": normal_stats,
+        "exception_observed": exception_observed,
+        "exception_residue_removed": exception_residue_removed,
+        "copy_failure_observed": copy_failure_observed,
+        "copy_failure_residue_removed": copy_failure_residue_removed,
+        "copy_failure_manager_closed": copy_failure_manager_closed,
+        "partial_endpoint_substitution_rejected": (
+            partial_endpoint_substitution_rejected
+        ),
+        "partial_endpoint_manager_closed": partial_endpoint_manager_closed,
+        "partial_endpoint_replacement_unchanged": (
+            partial_endpoint_replacement_unchanged
+        ),
+        "original_partial_bundle_preserved": (
+            original_partial_bundle_preserved
+        ),
+        "parent_substitution_rejected": parent_substitution_rejected,
+        "external_parent_unchanged": external_parent_unchanged,
+        "owned_parent_bundle_removed": owned_parent_bundle_removed,
+        "endpoint_substitution_rejected": (
+            endpoint_substitution_rejected
+        ),
+        "endpoint_replacement_unchanged": (
+            endpoint_replacement_unchanged
+        ),
+        "original_endpoint_bundle_preserved": (
+            original_endpoint_bundle_preserved
+        ),
+        "interstitial_substitution_rejected": (
+            interstitial_substitution_rejected
+        ),
+        "interstitial_barrier_fired": interstitial_barrier_fired,
+        "interstitial_manager_closed": interstitial_manager_closed,
+        "interstitial_original_unchanged": (
+            interstitial_original_unchanged
+        ),
+        "interstitial_replacement_unchanged": (
+            interstitial_replacement_unchanged
+        ),
+        "pre_quarantine_substitution_rejected": (
+            pre_quarantine_substitution_rejected
+        ),
+        "pre_quarantine_barrier_fired": pre_quarantine_barrier_fired,
+        "pre_quarantine_manager_closed": pre_quarantine_manager_closed,
+        "pre_quarantine_original_unchanged": (
+            pre_quarantine_original_unchanged
+        ),
+        "pre_quarantine_replacement_preserved": (
+            pre_quarantine_replacement_preserved
+        ),
+        "pre_quarantine_active_absent_after_fail": (
+            pre_quarantine_active_absent_after_fail
+        ),
+        "pre_quarantine_inventory_exact": (
+            pre_quarantine_inventory_exact
+        ),
+        "python310_cleanup_compatibility": (
+            python310_cleanup_compatibility
+        ),
+        "baseline_unchanged": baseline_unchanged,
+        "sibling_unchanged": sibling_unchanged,
+        "workspace_sentinel_unchanged": (
+            workspace_sentinel_unchanged
+        ),
+        "workspace_empty": workspace_empty,
+        "oracle_root_inventory_exact": oracle_root_inventory_exact,
+    }
+    shutil.rmtree(oracle_root)
+    return result
+
+
+def deterministic_mismatch_callsite_oracle(
+    certifier: Any,
+    package_root: Path,
+    root: Path,
+) -> Dict[str, Any]:
+    """Exercise the emitted deterministic-check mismatch diagnostic."""
+
+    oracle_root = root / "deterministic-mismatch-callsite-oracle"
+    bundle = oracle_root / "bundle"
+    bundle.mkdir(parents=True)
+    commands = {
+        suite: [sys.executable, f"oracle-{suite}"]
+        for suite in certifier.DETERMINISTIC_FILES
+    }
+    captured_result = {
+        "total": 1,
+        "passed": 0,
+        "cases": [{
+            "name": "captured-false-case-sentinel",
+            "passed": False,
+        }],
+    }
+    fresh_result = {
+        "total": 1,
+        "passed": 1,
+        "cases": [{
+            "name": "fresh-passing-case-sentinel",
+            "passed": True,
+        }],
+    }
+    tree = {
+        "valid": True,
+        "algorithm": "ntt-stable-release-tree-v2",
+        "sha256": "a" * 64,
+    }
+    tree_identity = {
+        "algorithm": tree["algorithm"],
+        "sha256": f"sha256:{tree['sha256']}",
+    }
+    captured_stdout = json.dumps(
+        captured_result,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    formal_capture = (
+        bundle / certifier.DETERMINISTIC_FILES["formal_contract"]
+    )
+    write_json(
+        formal_capture,
+        {
+            "capture_schema_version": (
+                certifier.DETERMINISTIC_CAPTURE_SCHEMA
+            ),
+            "suite": "formal_contract",
+            "argv": certifier.normalized_argv(
+                commands["formal_contract"],
+                package_root,
+            ),
+            "returncode": 0,
+            "package_tree_identity": tree_identity,
+            "stdout_sha256": (
+                "sha256:"
+                + hashlib.sha256(
+                    captured_stdout.encode("utf-8")
+                ).hexdigest()
+            ),
+            "result_sha256": (
+                "sha256:"
+                + certifier.canonical_json_sha256(captured_result)
+            ),
+            "result": captured_result,
+        },
+    )
+    original_commands = certifier.deterministic_suite_commands
+    original_tree = certifier.package_tree_sha256
+    original_run_cmd = certifier.run_cmd
+
+    def bounded_fresh_run(
+        cmd: Sequence[str],
+        cwd: Optional[Path] = None,
+    ) -> Dict[str, Any]:
+        del cwd
+        suite = next(
+            (
+                name
+                for name, expected in commands.items()
+                if list(cmd) == expected
+            ),
+            None,
+        )
+        result: Dict[str, Any]
+        if suite == "formal_contract":
+            result = fresh_result
+        else:
+            # Other lanes need not be valid for this isolated call-site
+            # oracle; deterministic_checks records their failures and keeps
+            # evaluating the target formal-contract capture.
+            result = {}
+        stdout = json.dumps(result, sort_keys=True, separators=(",", ":"))
+        return {
+            "cmd": list(cmd),
+            "returncode": 0,
+            "stdout": stdout,
+            "stderr": "",
+            "stdout_raw": stdout.encode("utf-8"),
+            "stderr_raw": b"",
+            "capture_limit_exceeded": False,
+        }
+
+    try:
+        certifier.deterministic_suite_commands = lambda _root: commands
+        certifier.package_tree_sha256 = lambda _root: dict(tree)
+        certifier.run_cmd = bounded_fresh_run
+        checks = certifier.deterministic_checks(
+            package_root,
+            bundle,
+            False,
+        )
+    finally:
+        certifier.deterministic_suite_commands = original_commands
+        certifier.package_tree_sha256 = original_tree
+        certifier.run_cmd = original_run_cmd
+        shutil.rmtree(oracle_root)
+    target_name = (
+        "deterministic capture semantic projection matches fresh: "
+        "formal_contract"
+    )
+    target_checks = [
+        check for check in checks if check.name == target_name
+    ]
+    target = target_checks[0] if len(target_checks) == 1 else None
+    details = target.details if target is not None else None
+    envelope = (
+        details.get("false_case_envelope")
+        if isinstance(details, Mapping)
+        else None
+    )
+    passed = (
+        target is not None
+        and target.passed is False
+        and isinstance(envelope, Mapping)
+        and envelope.get("false_case_count") == 1
+        and envelope.get("false_cases")
+        == [{
+            "name": "captured-false-case-sentinel",
+            "passed": False,
+        }]
+    )
+    return {
+        "passed": passed,
+        "target_check_count": len(target_checks),
+        "target_check_failed": (
+            target is not None and target.passed is False
+        ),
+        "false_case_envelope": envelope,
+    }
 
 
 def _output_directory_flags() -> int:
@@ -385,6 +1631,8 @@ def write_fake_official_tools(bin_dir: Path) -> None:
         "print(f'Validating plugin manifest: {root / \".claude-plugin/plugin.json\"}')\n"
         "print()\n"
         "print('✔ Validation passed')\n"
+        "if mode == 'success-output-nonzero-exit':\n"
+        "    raise SystemExit(7)\n"
         "if mode == 'stderr-text-failure':\n"
         "    print('Status: failed', file=sys.stderr)\n"
         "elif mode == 'stderr-json-failure':\n"
@@ -2135,6 +3383,285 @@ def failed_check_records(
     return records
 
 
+def stable_unexpected_diagnostic_text(value: str) -> str:
+    """Remove machine-local paths from retained certifier diagnostics."""
+
+    normalized = UNEXPECTED_DIAGNOSTIC_FILE_URI_PATH_RE.sub(
+        "<absolute-path>", value
+    )
+    normalized = UNEXPECTED_DIAGNOSTIC_UNC_PATH_RE.sub(
+        "<absolute-path>", normalized
+    )
+    normalized = UNEXPECTED_DIAGNOSTIC_POSIX_PATH_RE.sub(
+        "<absolute-path>", normalized
+    )
+    return UNEXPECTED_DIAGNOSTIC_WINDOWS_PATH_RE.sub(
+        "<absolute-path>", normalized
+    )
+
+
+def unexpected_diagnostic_identity(value: Any) -> Dict[str, Any]:
+    """Retain only the canonical size and digest of unallowlisted details."""
+
+    raw = json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    return {
+        "value_bytes": len(raw),
+        "value_sha256": "sha256:" + hashlib.sha256(raw).hexdigest(),
+        "value_truncated": True,
+    }
+
+
+def projected_false_case_details(details: Any) -> Dict[str, Any]:
+    """Allowlist one typed, path-stable formal/gate failure envelope."""
+
+    if not isinstance(details, Mapping):
+        return unexpected_diagnostic_identity(details)
+    raw_envelope = details.get("false_case_envelope")
+    if not isinstance(raw_envelope, Mapping):
+        return unexpected_diagnostic_identity(details)
+    envelope_fields = {
+        "schema_version",
+        "suite",
+        "case_count",
+        "false_case_count",
+        "retained_false_case_count",
+        "false_cases",
+        "truncated",
+        "diagnostic_generation_failed",
+        "diagnostic_error",
+    }
+    if not set(raw_envelope).issubset(envelope_fields):
+        return unexpected_diagnostic_identity(details)
+    schema_version = raw_envelope.get("schema_version")
+    suite = raw_envelope.get("suite")
+    case_count = raw_envelope.get("case_count")
+    false_case_count = raw_envelope.get("false_case_count")
+    retained_count = raw_envelope.get("retained_false_case_count")
+    raw_cases = raw_envelope.get("false_cases")
+    truncated = raw_envelope.get("truncated")
+    generation_failed = raw_envelope.get("diagnostic_generation_failed")
+    if (
+        schema_version != "deterministic-false-cases-v1"
+        or suite not in {"gate_contract", "formal_contract"}
+        or type(case_count) is not int
+        or case_count < 0
+        or type(false_case_count) is not int
+        or not 0 <= false_case_count <= case_count
+        or type(retained_count) is not int
+        or retained_count < 0
+        or not isinstance(raw_cases, list)
+        or retained_count != len(raw_cases)
+        or retained_count > MAX_UNEXPECTED_FAILED_CHECK_RECORDS
+        or retained_count > false_case_count
+        or type(truncated) is not bool
+        or truncated
+        is not (
+            retained_count != false_case_count or generation_failed is True
+        )
+        or type(generation_failed) is not bool
+    ):
+        return unexpected_diagnostic_identity(details)
+    projected_cases: List[Dict[str, Any]] = []
+    allowed_case_fields = {
+        "name",
+        "passed",
+        "status",
+        "name_path_normalized",
+        "name_original_sha256",
+        "status_path_normalized",
+        "status_original_sha256",
+    }
+    sha_pattern = re.compile(r"sha256:[0-9a-f]{64}")
+    for raw_case in raw_cases:
+        if (
+            not isinstance(raw_case, Mapping)
+            or not set(raw_case).issubset(allowed_case_fields)
+            or type(raw_case.get("name")) is not str
+            or raw_case.get("passed") is not False
+            or (
+                "status" in raw_case
+                and type(raw_case.get("status")) is not str
+            )
+        ):
+            return unexpected_diagnostic_identity(details)
+        stable_name = stable_unexpected_diagnostic_text(raw_case["name"])
+        projected_case: Dict[str, Any] = {
+            "name": stable_name,
+            "passed": False,
+        }
+        if stable_name != raw_case["name"]:
+            projected_case["name_path_normalized"] = True
+            projected_case["name_original_sha256"] = (
+                "sha256:"
+                + hashlib.sha256(
+                    raw_case["name"].encode("utf-8")
+                ).hexdigest()
+            )
+        elif "name_path_normalized" in raw_case:
+            if (
+                raw_case.get("name_path_normalized") is not True
+                or type(raw_case.get("name_original_sha256")) is not str
+                or sha_pattern.fullmatch(
+                    raw_case["name_original_sha256"]
+                )
+                is None
+            ):
+                return unexpected_diagnostic_identity(details)
+            projected_case["name_path_normalized"] = True
+            projected_case["name_original_sha256"] = raw_case[
+                "name_original_sha256"
+            ]
+        if "status" in raw_case:
+            stable_status = stable_unexpected_diagnostic_text(
+                raw_case["status"]
+            )
+            projected_case["status"] = stable_status
+            if stable_status != raw_case["status"]:
+                projected_case["status_path_normalized"] = True
+                projected_case["status_original_sha256"] = (
+                    "sha256:"
+                    + hashlib.sha256(
+                        raw_case["status"].encode("utf-8")
+                    ).hexdigest()
+                )
+            elif "status_path_normalized" in raw_case:
+                if (
+                    raw_case.get("status_path_normalized") is not True
+                    or type(raw_case.get("status_original_sha256"))
+                    is not str
+                    or sha_pattern.fullmatch(
+                        raw_case["status_original_sha256"]
+                    )
+                    is None
+                ):
+                    return unexpected_diagnostic_identity(details)
+                projected_case["status_path_normalized"] = True
+                projected_case["status_original_sha256"] = raw_case[
+                    "status_original_sha256"
+                ]
+        projected_cases.append(projected_case)
+    projected_envelope: Dict[str, Any] = {
+        "schema_version": schema_version,
+        "suite": suite,
+        "case_count": case_count,
+        "false_case_count": false_case_count,
+        "retained_false_case_count": retained_count,
+        "false_cases": projected_cases,
+        "truncated": truncated,
+        "diagnostic_generation_failed": generation_failed,
+    }
+    if "diagnostic_error" in raw_envelope:
+        if type(raw_envelope.get("diagnostic_error")) is not str:
+            return unexpected_diagnostic_identity(details)
+        projected_envelope["diagnostic_error"] = (
+            stable_unexpected_diagnostic_text(
+                raw_envelope["diagnostic_error"]
+            )
+        )
+    return {"false_case_envelope": projected_envelope}
+
+
+def bounded_unexpected_failed_check_records(
+    result: Mapping[str, Any],
+    expected: Counter[Tuple[str, str]],
+) -> Dict[str, Any]:
+    """Retain only unexpected failed checks under the replay field cap."""
+
+    envelope: Dict[str, Any] = {
+        "schema_version": "bounded-failed-check-records-v1",
+        "unexpected_failed_check_count": 0,
+        "retained_failed_check_count": 0,
+        "failed_check_records": [],
+        "truncated": False,
+        "diagnostic_generation_failed": False,
+    }
+    try:
+        failed_check_inventory(result)
+        remaining_expected = Counter(expected)
+        unexpected: List[Dict[str, Any]] = []
+        for record in result["failed_checks"]:
+            key = (record["name"], record["failure_kind"])
+            if remaining_expected[key] > 0:
+                remaining_expected[key] -= 1
+                continue
+            stable_name = stable_unexpected_diagnostic_text(record["name"])
+            stable_kind = stable_unexpected_diagnostic_text(
+                record["failure_kind"]
+            )
+            severity = record.get("severity")
+            projected_record: Dict[str, Any] = {
+                "name": stable_name,
+                "passed": record["passed"],
+                "severity": (
+                    stable_unexpected_diagnostic_text(severity)
+                    if type(severity) is str
+                    else None
+                ),
+                "details": projected_false_case_details(
+                    record.get("details")
+                ),
+                "failure_kind": stable_kind,
+            }
+            if stable_name != record["name"]:
+                projected_record["name_original_sha256"] = (
+                    "sha256:"
+                    + hashlib.sha256(
+                        record["name"].encode("utf-8")
+                    ).hexdigest()
+                )
+            if stable_kind != record["failure_kind"]:
+                projected_record["failure_kind_original_sha256"] = (
+                    "sha256:"
+                    + hashlib.sha256(
+                        record["failure_kind"].encode("utf-8")
+                    ).hexdigest()
+                )
+            unexpected.append(projected_record)
+        envelope["unexpected_failed_check_count"] = len(unexpected)
+        retained: List[Dict[str, Any]] = []
+        for record in unexpected[:MAX_UNEXPECTED_FAILED_CHECK_RECORDS]:
+            candidate = {
+                **envelope,
+                "retained_failed_check_count": len(retained) + 1,
+                "failed_check_records": [*retained, record],
+                "truncated": (
+                    len(retained) + 1 != len(unexpected)
+                ),
+            }
+            encoded = json.dumps(
+                candidate,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            ).encode("utf-8")
+            if len(encoded) > MAX_UNEXPECTED_FAILED_CHECK_DIAGNOSTIC_BYTES:
+                break
+            retained.append(record)
+        envelope.update({
+            "retained_failed_check_count": len(retained),
+            "failed_check_records": retained,
+            "truncated": len(retained) != len(unexpected),
+        })
+    except Exception as exc:
+        envelope.update({
+            "failed_check_records": [],
+            "retained_failed_check_count": 0,
+            "truncated": True,
+            "diagnostic_generation_failed": True,
+            "diagnostic_error": (
+                f"{type(exc).__name__}: unexpected failure projection unavailable"
+            ),
+        })
+    return envelope
+
+
 def ordered_check_inventory(
     result: Mapping[str, Any],
 ) -> Tuple[int, str, Tuple[str, ...]]:
@@ -2189,12 +3716,211 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
             package_root / SKILL_SCRIPTS / "ntt_gate.py",
         )
         output_mode_variable = "NTT_CONTRACT_CLAUDE_OUTPUT_MODE"
-        previous_output_mode = os.environ.pop(output_mode_variable, None)
+        previous_output_mode = os.environ.get(output_mode_variable)
         bin_dir = root / "bin"
-        write_fake_official_tools(bin_dir)
-        previous_path = os.environ.get("PATH", "")
-        os.environ["PATH"] = str(bin_dir) + os.pathsep + previous_path
+        resource_oracle: Dict[str, Any] = {"passed": False}
+        case_bundles: Optional[EphemeralBundleManager] = None
+        case_bundle_resource_stats: Dict[str, Any] = {
+            "created": 0,
+            "cleaned": 0,
+            "peak_live": 0,
+            "retained": [],
+            "workspace_retained": [],
+            "owner_retained": [],
+            "owner_sentinel_unchanged": False,
+        }
+
+        def materialize_case_bundle(name: str) -> Path:
+            if case_bundles is None:
+                raise RuntimeError("case-bundle manager is not initialized")
+            return case_bundles.materialize(name)
+
+        previous_path = os.environ.get("PATH")
         try:
+            os.environ.pop(output_mode_variable, None)
+            write_fake_official_tools(bin_dir)
+            resource_oracle = case_bundle_resource_oracle(root)
+            captured_projection = {
+                "total": 1,
+                "passed": 0,
+                "cases": [{
+                    "name": "captured-false-case-sentinel",
+                    "passed": False,
+                }],
+            }
+            fresh_projection = {
+                "total": 1,
+                "passed": 1,
+                "cases": [{
+                    "name": "fresh-passing-case-sentinel",
+                    "passed": True,
+                }],
+            }
+            mismatch_details = (
+                certifier.deterministic_projection_match_details(
+                    "formal_contract",
+                    captured_projection,
+                    fresh_projection,
+                    None,
+                )
+            )
+            mismatch_envelope = mismatch_details.get(
+                "false_case_envelope"
+            )
+            capture_mismatch_envelope_uses_capture = (
+                isinstance(mismatch_envelope, Mapping)
+                and mismatch_envelope.get("false_case_count") == 1
+                and mismatch_envelope.get("false_cases")
+                == [{
+                    "name": "captured-false-case-sentinel",
+                    "passed": False,
+                }]
+            )
+            resource_oracle[
+                "capture_mismatch_envelope_uses_capture"
+            ] = capture_mismatch_envelope_uses_capture
+            mismatch_callsite = deterministic_mismatch_callsite_oracle(
+                certifier,
+                package_root,
+                root,
+            )
+            resource_oracle[
+                "capture_mismatch_emitted_check_uses_capture"
+            ] = mismatch_callsite.get("passed") is True
+            resource_oracle[
+                "capture_mismatch_callsite_oracle"
+            ] = mismatch_callsite
+            live_eval = load_module(
+                "ntt_live_eval_for_pid_identity_contract",
+                source_root / SKILL_SCRIPTS / "run_live_skill_evals.py",
+            )
+            parent_identity = (10, 100)
+            prior_identity = (42, 200)
+            reused_identity = (42, 300)
+            reused_graph = {
+                parent_identity: (1, 10),
+                reused_identity: (10, 42),
+            }
+            reused_lineage = live_eval._linux_descendant_closure(
+                reused_graph,
+                {prior_identity},
+            )
+            signal_calls: List[Tuple[str, int]] = []
+            original_identity_current = (
+                live_eval._linux_process_identity_is_current
+            )
+            original_pidfd_signal = live_eval._pidfd_signal_linux_process
+            original_os_kill = live_eval.os.kill
+            try:
+                identity_observations: List[bool] = [True, False]
+
+                def identity_current_twice(_identity: Any) -> bool:
+                    if not identity_observations:
+                        raise AssertionError(
+                            "unexpected extra process-identity observation"
+                        )
+                    return identity_observations.pop(0)
+
+                live_eval._linux_process_identity_is_current = (
+                    identity_current_twice
+                )
+                live_eval._pidfd_signal_linux_process = (
+                    lambda _identity, _pid, _sig: None
+                )
+                live_eval.os.kill = (
+                    lambda pid, _sig: signal_calls.append(("kill", pid))
+                )
+                stale_signal_result = live_eval._signal_linux_process(
+                    prior_identity,
+                    42,
+                    signal.SIGKILL,
+                )
+            finally:
+                live_eval._linux_process_identity_is_current = (
+                    original_identity_current
+                )
+                live_eval._pidfd_signal_linux_process = (
+                    original_pidfd_signal
+                )
+                live_eval.os.kill = original_os_kill
+            reparented_identity = (43, 400)
+            reparented_child = (44, 500)
+            original_process_graph = live_eval._linux_process_graph
+            original_signal_process = live_eval._signal_linux_process
+            original_reap = live_eval._reap_child_nonblocking
+            containment_signals: List[Tuple[int, int]] = []
+            graph_observations = 0
+
+            def reparenting_graph() -> Tuple[Any, Dict[Any, Any]]:
+                nonlocal graph_observations
+                graph_observations += 1
+                if graph_observations == 1:
+                    return parent_identity, {
+                        parent_identity: (1, 10),
+                        reparented_identity: (10, 43),
+                        reparented_child: (43, 44),
+                    }
+                if graph_observations == 2:
+                    return parent_identity, {
+                        parent_identity: (1, 10),
+                        reparented_child: (10, 44),
+                    }
+                return parent_identity, {
+                    parent_identity: (1, 10),
+                }
+
+            try:
+                live_eval._linux_process_graph = reparenting_graph
+                live_eval._signal_linux_process = (
+                    lambda identity, pid, _sig: (
+                        containment_signals.append((identity[0], pid))
+                        or True
+                    )
+                )
+                live_eval._reap_child_nonblocking = (
+                    lambda _identity, _pid: None
+                )
+                reparented_cleanup = live_eval._cleanup_detached_descendants({
+                    "parent_identity": parent_identity,
+                    "baseline_roots": set(),
+                })
+            finally:
+                live_eval._linux_process_graph = original_process_graph
+                live_eval._signal_linux_process = original_signal_process
+                live_eval._reap_child_nonblocking = original_reap
+            reparented_positive_contained = (
+                (reparented_child[0], 44) in containment_signals
+                and containment_signals.count((reparented_child[0], 44)) >= 2
+                and reparented_cleanup.get("cleanup_complete") is True
+            )
+            pid_reuse_identity_oracle = (
+                reused_identity not in reused_lineage
+                and prior_identity not in reused_graph
+                and stale_signal_result is False
+                and identity_observations == []
+                and signal_calls == []
+                and reparented_positive_contained
+            )
+            resource_oracle[
+                "pid_reuse_identity_oracle"
+            ] = pid_reuse_identity_oracle
+            resource_oracle[
+                "pid_reuse_second_check_observed"
+            ] = identity_observations == [] and signal_calls == []
+            resource_oracle[
+                "reparented_descendant_positive_contained"
+            ] = reparented_positive_contained
+            resource_oracle["passed"] = (
+                resource_oracle.get("passed") is True
+                and capture_mismatch_envelope_uses_capture
+                and mismatch_callsite.get("passed") is True
+                and pid_reuse_identity_oracle
+            )
+            os.environ["PATH"] = str(bin_dir) + (
+                os.pathsep + previous_path
+                if previous_path is not None
+                else ""
+            )
             write_deterministic_captures(
                 certifier,
                 package_root,
@@ -2220,6 +3946,19 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 package_root,
                 baseline_bundle,
                 formal_result,
+            )
+            case_bundle_owner = root / "case-bundle-owner"
+            case_bundle_owner.mkdir()
+            owner_sentinel = case_bundle_owner / "owner-sentinel.txt"
+            owner_sentinel_bytes = (
+                b"case bundle cleanup must remain inside its owner\n"
+            )
+            owner_sentinel.write_bytes(owner_sentinel_bytes)
+            case_workspace_root = case_bundle_owner / "workspaces"
+            case_workspace_root.mkdir()
+            case_bundles = EphemeralBundleManager(
+                baseline_bundle,
+                case_workspace_root,
             )
 
             baseline_rc, baseline, baseline_invocation = certifier_cli(
@@ -2581,11 +4320,8 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
             for mismatch_name, mismatch_path, mismatch_value in (
                 method_mismatch_specs
             ):
-                mismatch_bundle = root / f"method-mismatch-{mismatch_name}"
-                shutil.copytree(
-                    baseline_bundle,
-                    mismatch_bundle,
-                    symlinks=True,
+                mismatch_bundle = materialize_case_bundle(
+                    f"method-mismatch-{mismatch_name}"
                 )
                 mismatch_certificate_path = (
                     mismatch_bundle / "promotion_certificate.json"
@@ -2621,11 +4357,8 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                     ),
                 })
 
-            missing_origin_bundle = root / "method-mismatch-missing-origin"
-            shutil.copytree(
-                baseline_bundle,
-                missing_origin_bundle,
-                symlinks=True,
+            missing_origin_bundle = materialize_case_bundle(
+                "method-mismatch-missing-origin"
             )
             missing_origin_path = (
                 missing_origin_bundle / "promotion_certificate.json"
@@ -2661,11 +4394,8 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 ),
             })
 
-            origin_flip_bundle = root / "method-mismatch-origin-flip"
-            shutil.copytree(
-                baseline_bundle,
-                origin_flip_bundle,
-                symlinks=True,
+            origin_flip_bundle = materialize_case_bundle(
+                "method-mismatch-origin-flip"
             )
             origin_flip_path = (
                 origin_flip_bundle / "promotion_certificate.json"
@@ -2724,11 +4454,8 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
             }
             closed_schema_outcomes: List[Dict[str, Any]] = []
             for field, value in contradictory_top_level_fields.items():
-                extra_bundle = root / f"closed-schema-{field}"
-                shutil.copytree(
-                    baseline_bundle,
-                    extra_bundle,
-                    symlinks=True,
+                extra_bundle = materialize_case_bundle(
+                    f"closed-schema-{field}"
                 )
                 extra_path = extra_bundle / "promotion_certificate.json"
                 extra_certificate = json.loads(
@@ -2768,11 +4495,8 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 "outcomes": closed_schema_outcomes,
             })
 
-            malformed_live_bundle = root / "method-mismatch-live-shape"
-            shutil.copytree(
-                baseline_bundle,
-                malformed_live_bundle,
-                symlinks=True,
+            malformed_live_bundle = materialize_case_bundle(
+                "method-mismatch-live-shape"
             )
             malformed_live_path = (
                 malformed_live_bundle
@@ -3206,11 +4930,8 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 ),
             })
 
-            equal_content_bundle = root / "distinct_roles_equal_bytes"
-            shutil.copytree(
-                baseline_bundle,
-                equal_content_bundle,
-                symlinks=True,
+            equal_content_bundle = materialize_case_bundle(
+                "distinct_roles_equal_bytes"
             )
             equal_result_path = (
                 equal_content_bundle
@@ -3313,6 +5034,197 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
             unavailable_env = dict(os.environ)
             unavailable_env["PATH"] = str(unavailable_bin)
             (
+                default_unavailable_rc,
+                default_unavailable,
+                default_unavailable_invocation,
+            ) = certifier_cli(
+                package_root,
+                baseline_bundle,
+                env=unavailable_env,
+            )
+            default_unavailable_failed = failed_check_inventory(
+                default_unavailable
+            )
+            default_unavailable_failure_records = failed_check_records(
+                default_unavailable
+            )
+            expected_default_unavailable_failed = Counter({
+                (
+                    "official validator executable available: "
+                    "claude_plugin_validate",
+                    "CHECK_FAILED",
+                ): 1,
+                (
+                    "official validator executable available: "
+                    "skills_ref_validate",
+                    "CHECK_FAILED",
+                ): 1,
+            })
+            expected_default_unavailable_failure_records = {
+                (
+                    "official validator executable available: "
+                    f"{validator_id}",
+                    "CHECK_FAILED",
+                ): [{
+                    "name": (
+                        "official validator executable available: "
+                        f"{validator_id}"
+                    ),
+                    "passed": False,
+                    "severity": "critical",
+                    "details": "tool absent without scope exclusion",
+                    "failure_kind": "CHECK_FAILED",
+                }]
+                for validator_id in EXPECTED_OFFICIAL_VALIDATORS
+            }
+            default_unavailable_execution = (
+                default_unavailable.get("execution_evidence", {})
+                .get("official_validators")
+            )
+            default_unavailable_records_exact = (
+                type(default_unavailable_execution) is dict
+                and set(default_unavailable_execution)
+                == set(EXPECTED_OFFICIAL_VALIDATORS)
+                and all(
+                    type(record) is dict
+                    and record.get("available") is False
+                    and record.get("scope_excluded") is False
+                    and "returncode" not in record
+                    for record in default_unavailable_execution.values()
+                )
+            )
+            default_unavailable_contract_passed = (
+                default_unavailable_rc == 2
+                and default_unavailable.get("status") == "FAIL"
+                and default_unavailable.get("outcome") == "FAILED"
+                and default_unavailable.get("failure_kind")
+                == "CHECK_FAILED"
+                and default_unavailable.get("promotion_authorized") is False
+                and "satisfied_profile" not in default_unavailable
+                and default_unavailable.get(
+                    "modeled_promotion_checks_passed"
+                ) is False
+                and default_unavailable.get(
+                    "official_validator_scope_exclusion_requested"
+                ) is False
+                and default_unavailable_failed
+                == expected_default_unavailable_failed
+                and default_unavailable_failure_records
+                == expected_default_unavailable_failure_records
+                and default_unavailable_invocation.get("verified") is True
+                and default_unavailable_records_exact
+            )
+
+            correct_argv_nonzero_env = dict(os.environ)
+            correct_argv_nonzero_env[output_mode_variable] = (
+                "success-output-nonzero-exit"
+            )
+            (
+                correct_argv_nonzero_rc,
+                correct_argv_nonzero,
+                correct_argv_nonzero_invocation,
+            ) = certifier_cli(
+                package_root,
+                baseline_bundle,
+                env=correct_argv_nonzero_env,
+            )
+            correct_argv_nonzero_failed = failed_check_inventory(
+                correct_argv_nonzero
+            )
+            expected_correct_argv_nonzero_failed = Counter({
+                (
+                    "fresh official validator passes: "
+                    "claude_plugin_validate",
+                    "CHECK_FAILED",
+                ): 1,
+            })
+            correct_argv_nonzero_execution = (
+                correct_argv_nonzero.get("execution_evidence", {})
+                .get("official_validators")
+            )
+            correct_argv_nonzero_claude = (
+                correct_argv_nonzero_execution.get(
+                    "claude_plugin_validate"
+                )
+                if type(correct_argv_nonzero_execution) is dict
+                else None
+            )
+            nonzero_name = (
+                "fresh official validator passes: claude_plugin_validate"
+            )
+            nonzero_key = (nonzero_name, "CHECK_FAILED")
+            correct_argv_nonzero_failure_records = failed_check_records(
+                correct_argv_nonzero
+            )
+            canonical_stdout = expected_claude_stdout.encode("utf-8")
+            empty_sha256 = "sha256:" + hashlib.sha256(b"").hexdigest()
+            nonzero_failure_record_exact = (
+                correct_argv_nonzero_failure_records
+                == {nonzero_key: [{
+                    "name": nonzero_name,
+                    "passed": False,
+                    "severity": "critical",
+                    "details": correct_argv_nonzero_claude,
+                    "failure_kind": "CHECK_FAILED",
+                }]}
+            )
+            nonzero_output_exact = (
+                type(correct_argv_nonzero_claude) is dict
+                and correct_argv_nonzero_claude.get("stdout_bytes")
+                == len(canonical_stdout)
+                and correct_argv_nonzero_claude.get("stdout_sha256")
+                == "sha256:" + hashlib.sha256(canonical_stdout).hexdigest()
+                and correct_argv_nonzero_claude.get("stderr_bytes") == 0
+                and correct_argv_nonzero_claude.get("stderr_sha256")
+                == empty_sha256
+                and correct_argv_nonzero_claude.get("stdout_truncated")
+                is False
+                and correct_argv_nonzero_claude.get("stderr_truncated")
+                is False
+                and correct_argv_nonzero_claude.get(
+                    "capture_limit_exceeded"
+                ) is False
+                and correct_argv_nonzero_claude.get("status_reason")
+                == "stdout is positive and stderr has no contradiction"
+            )
+            correct_argv_nonzero_records_exact = (
+                type(correct_argv_nonzero_execution) is dict
+                and set(correct_argv_nonzero_execution)
+                == set(EXPECTED_OFFICIAL_VALIDATORS)
+                and type(correct_argv_nonzero_claude) is dict
+                and correct_argv_nonzero_claude.get("available") is True
+                and correct_argv_nonzero_claude.get("returncode") == 7
+                and correct_argv_nonzero_claude.get("argv")
+                == [
+                    "<claude-cli>",
+                    "plugin",
+                    "validate",
+                    "<package-root>",
+                    "--strict",
+                ]
+            )
+            correct_argv_nonzero_contract_passed = (
+                correct_argv_nonzero_rc == 2
+                and correct_argv_nonzero.get("status") == "FAIL"
+                and correct_argv_nonzero.get("outcome") == "FAILED"
+                and correct_argv_nonzero.get("failure_kind")
+                == "CHECK_FAILED"
+                and correct_argv_nonzero.get("promotion_authorized") is False
+                and "satisfied_profile" not in correct_argv_nonzero
+                and correct_argv_nonzero.get(
+                    "modeled_promotion_checks_passed"
+                ) is False
+                and correct_argv_nonzero.get(
+                    "official_validator_scope_exclusion_requested"
+                ) is False
+                and correct_argv_nonzero_failed
+                == expected_correct_argv_nonzero_failed
+                and nonzero_failure_record_exact
+                and nonzero_output_exact
+                and correct_argv_nonzero_invocation.get("verified") is True
+                and correct_argv_nonzero_records_exact
+            )
+            (
                 scope_excluded_rc,
                 scope_excluded,
                 scope_excluded_invocation,
@@ -3354,7 +5266,7 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 and scope_excluded_check_sha256
                 == expected_scope_excluded_check_sha256
             )
-            cases.append({
+            scope_excluded_case = {
                 "name": "official_scope_exclusion_retains_fixed_role_dag",
                 "passed": (
                     scope_excluded_rc == 2
@@ -3369,6 +5281,8 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                     and not failed_check_inventory(scope_excluded)
                     and scope_excluded_invocation.get("verified") is True
                     and scope_excluded_records_exact
+                    and default_unavailable_contract_passed
+                    and correct_argv_nonzero_contract_passed
                     and baseline_roles_and_dag_exact
                     and scope_excluded_inventory_matches
                 ),
@@ -3380,6 +5294,31 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 ),
                 "official_execution_records_exact": (
                     scope_excluded_records_exact
+                ),
+                "default_unavailable_contract_passed": (
+                    default_unavailable_contract_passed
+                ),
+                "default_unavailable_exit_code": default_unavailable_rc,
+                "default_unavailable_failed_checks": sorted(
+                    default_unavailable_failed.elements()
+                ),
+                "correct_argv_nonzero_contract_passed": (
+                    correct_argv_nonzero_contract_passed
+                ),
+                "correct_argv_nonzero_certifier_exit_code": (
+                    correct_argv_nonzero_rc
+                ),
+                "correct_argv_nonzero_validator_returncode": (
+                    correct_argv_nonzero_claude.get("returncode")
+                    if type(correct_argv_nonzero_claude) is dict
+                    else None
+                ),
+                "nonzero_failure_record_exact": (
+                    nonzero_failure_record_exact
+                ),
+                "nonzero_output_exact": nonzero_output_exact,
+                "correct_argv_nonzero_failed_checks": sorted(
+                    correct_argv_nonzero_failed.elements()
                 ),
                 "promotion_roles_and_dag_exact": (
                     baseline_roles_and_dag_exact
@@ -3395,13 +5334,22 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 "check_inventory_matched": (
                     scope_excluded_inventory_matches
                 ),
-            })
+            }
+            unexpected_correct_argv_nonzero_failed = (
+                correct_argv_nonzero_failed
+                - expected_correct_argv_nonzero_failed
+            )
+            if unexpected_correct_argv_nonzero_failed:
+                scope_excluded_case[
+                    "correct_argv_nonzero_unexpected_failure_records"
+                ] = bounded_unexpected_failed_check_records(
+                    correct_argv_nonzero,
+                    expected_correct_argv_nonzero_failed,
+                )
+            cases.append(scope_excluded_case)
 
-            downstream_bundle = root / "independent_downstream_claim"
-            shutil.copytree(
-                baseline_bundle,
-                downstream_bundle,
-                symlinks=True,
+            downstream_bundle = materialize_case_bundle(
+                "independent_downstream_claim"
             )
             downstream_certificate_path = (
                 downstream_bundle / "promotion_certificate.json"
@@ -3578,12 +5526,7 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 ] = None,
                 env_updates: Optional[Mapping[str, str]] = None,
             ) -> None:
-                mutation_bundle = root / name
-                shutil.copytree(
-                    baseline_bundle,
-                    mutation_bundle,
-                    symlinks=True,
-                )
+                mutation_bundle = materialize_case_bundle(name)
                 mutate(mutation_bundle)
                 case_started = time.monotonic()
                 invocation_env = None
@@ -4928,11 +6871,37 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
                 ),
             })
         finally:
-            os.environ["PATH"] = previous_path
-            if previous_output_mode is None:
-                os.environ.pop(output_mode_variable, None)
-            else:
-                os.environ[output_mode_variable] = previous_output_mode
+            try:
+                if case_bundles is not None:
+                    case_bundles.close()
+                    case_bundle_resource_stats = (
+                        case_bundles.observation()
+                    )
+                    case_bundle_resource_stats["workspace_retained"] = sorted(
+                        path.name for path in case_workspace_root.iterdir()
+                    )
+                    case_bundle_resource_stats["owner_retained"] = sorted(
+                        path.name
+                        for path in case_bundle_owner.iterdir()
+                        if path.name
+                        not in {case_workspace_root.name, owner_sentinel.name}
+                    )
+                    case_bundle_resource_stats[
+                        "owner_sentinel_unchanged"
+                    ] = (
+                        owner_sentinel.is_file()
+                        and owner_sentinel.read_bytes()
+                        == owner_sentinel_bytes
+                    )
+            finally:
+                if previous_path is None:
+                    os.environ.pop("PATH", None)
+                else:
+                    os.environ["PATH"] = previous_path
+                if previous_output_mode is None:
+                    os.environ.pop(output_mode_variable, None)
+                else:
+                    os.environ[output_mode_variable] = previous_output_mode
     actual_case_names = tuple(
         str(case.get("name")) for case in cases
     )
@@ -4951,11 +6920,37 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
         case.get("name") in EXPECTED_MUTATION_CHECK_INVENTORIES
         for case in cases
     ) == len(EXPECTED_MUTATION_CHECK_INVENTORIES)
+    case_bundle_resources_contained = (
+        resource_oracle.get("passed") is True
+        and all(
+            resource_oracle.get(field) is True
+            for field in (
+                "copy_failure_observed",
+                "copy_failure_residue_removed",
+                "copy_failure_manager_closed",
+                "partial_endpoint_substitution_rejected",
+                "partial_endpoint_manager_closed",
+                "partial_endpoint_replacement_unchanged",
+                "original_partial_bundle_preserved",
+            )
+        )
+        and case_bundle_resource_stats.get("created")
+        == EXPECTED_EPHEMERAL_CASE_BUNDLES
+        and case_bundle_resource_stats.get("cleaned")
+        == EXPECTED_EPHEMERAL_CASE_BUNDLES
+        and case_bundle_resource_stats.get("peak_live") == 1
+        and case_bundle_resource_stats.get("retained") == []
+        and case_bundle_resource_stats.get("workspace_retained") == []
+        and case_bundle_resource_stats.get("owner_retained") == []
+        and case_bundle_resource_stats.get("owner_sentinel_unchanged")
+        is True
+    )
     contract_passed = (
         passed == EXPECTED_CASE_TOTAL
         and case_inventory_matches
         and production_certifier_cli_baseline
         and all_negative_cases_use_production_cli
+        and case_bundle_resources_contained
     )
     return {
         "status": "PASS" if contract_passed else "FAIL",
@@ -4964,6 +6959,14 @@ def run_contract(source_root: Path) -> Dict[str, Any]:
         ),
         "all_negative_cases_use_production_cli": (
             all_negative_cases_use_production_cli
+        ),
+        "case_bundle_resources_contained": (
+            case_bundle_resources_contained
+        ),
+        "case_bundle_resource_oracle": resource_oracle,
+        "case_bundle_resource_stats": case_bundle_resource_stats,
+        "expected_ephemeral_case_bundles": (
+            EXPECTED_EPHEMERAL_CASE_BUNDLES
         ),
         "case_inventory_matches": case_inventory_matches,
         "actual_case_names": list(actual_case_names),
