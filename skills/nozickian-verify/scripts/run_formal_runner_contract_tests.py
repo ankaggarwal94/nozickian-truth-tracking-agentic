@@ -119,6 +119,31 @@ SKILL_PATH = "skills/nozickian-verify"
 CANONICAL_TEMP_ROOT = Path(tempfile.gettempdir()).resolve()
 
 
+@contextlib.contextmanager
+def isolated_contract_temp_root(prefix: str):
+    global CANONICAL_TEMP_ROOT
+    parent = CANONICAL_TEMP_ROOT
+    previous_tempdir = tempfile.tempdir
+    previous_tmpdir = os.environ.get("TMPDIR")
+    with tempfile.TemporaryDirectory(
+        prefix=prefix,
+        dir=str(parent),
+    ) as temporary:
+        private_root = Path(temporary)
+        CANONICAL_TEMP_ROOT = private_root
+        tempfile.tempdir = str(private_root)
+        os.environ["TMPDIR"] = str(private_root)
+        try:
+            yield private_root
+        finally:
+            CANONICAL_TEMP_ROOT = parent
+            tempfile.tempdir = previous_tempdir
+            if previous_tmpdir is None:
+                os.environ.pop("TMPDIR", None)
+            else:
+                os.environ["TMPDIR"] = previous_tmpdir
+
+
 def _output_directory_flags() -> int:
     nofollow = getattr(os, "O_NOFOLLOW", 0)
     directory = getattr(os, "O_DIRECTORY", 0)
@@ -1212,7 +1237,7 @@ def exercise_post_reader_start_failure(module: Any) -> Dict[str, Any]:
     }
 
 
-def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
+def _run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
     cases: List[Dict[str, Any]] = []
     live_runner = load_live_runner(package_root)
     certifier = load_certifier(package_root)
@@ -7265,6 +7290,11 @@ def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
         cases.append({"name": "refresh_release_manifest_explicitly_allows_package_tree_output", "passed": rc == 0 and inside.exists() and inside_json.exists()})
 
     return cases
+
+
+def run_cases(runner, package_root: Path) -> List[Dict[str, Any]]:
+    with isolated_contract_temp_root("ntt_formal_contract_run_"):
+        return _run_cases(runner, package_root)
 
 
 def main(argv=None) -> int:

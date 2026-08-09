@@ -81,6 +81,8 @@ PIPE_CLOSE_GRACE_SEC = 0.5
 READER_JOIN_GRACE_SEC = 1.0
 DETACHED_CHILD_CLEANUP_TIMEOUT_SEC = 0.5
 DETACHED_CHILD_QUIET_SEC = 0.05
+DETACHED_CHILD_SETTLE_TIMEOUT_SEC = 0.25
+DETACHED_CHILD_SETTLE_MAX_SCANS = 64
 MAX_PROC_SCAN_ENTRIES = 100_000
 _SUBREAPER_ENABLED: bool | None = None
 
@@ -301,7 +303,7 @@ def process_containment_scope() -> Dict[str, Any]:
 def _reap_child_nonblocking(pid: int) -> None:
     try:
         os.waitpid(pid, os.WNOHANG)
-    except (ChildProcessError, ProcessLookupError):
+    except OSError:
         pass
 
 
@@ -329,7 +331,14 @@ def _cleanup_detached_descendants(
     quiet_since: float | None = None
     seen_host_pids: set[int] = set()
     while time.monotonic() < deadline:
-        observed_self_host_pid, graph = _linux_process_graph()
+        try:
+            observed_self_host_pid, graph = _linux_process_graph()
+        except OSError:
+            # A transient /proc observation failure is not quiescence. Keep
+            # trying within the same bound without advancing the quiet timer.
+            quiet_since = None
+            time.sleep(0.005)
+            continue
         if observed_self_host_pid != parent_host_pid:
             return {
                 "supported": True,
@@ -355,6 +364,10 @@ def _cleanup_detached_descendants(
                     os.kill(namespace_pid, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
+                except OSError:
+                    # Retry this still-observed identity on the next scan and
+                    # continue attempting the rest of the complete snapshot.
+                    pass
             for host_pid in current_host_pids:
                 if graph[host_pid][0] == parent_host_pid:
                     _reap_child_nonblocking(graph[host_pid][1])
@@ -364,24 +377,78 @@ def _cleanup_detached_descendants(
             elif time.monotonic() - quiet_since >= DETACHED_CHILD_QUIET_SEC:
                 break
         time.sleep(0.005)
-    observed_self_host_pid, graph = _linux_process_graph()
-    all_descendants = _linux_descendant_closure(
-        graph, {observed_self_host_pid}
-    ) - {observed_self_host_pid}
-    excluded = _linux_descendant_closure(graph, baseline_roots)
-    remaining = all_descendants - excluded
-    for host_pid in remaining:
-        namespace_pid = graph[host_pid][1]
+    # A deadline snapshot is not atomic and killed grandchildren can reparent
+    # to this subreaper after the first scan.  Use a separately bounded settle
+    # phase, preserving any quiet interval already established above.  This is
+    # not retry-until-green: no new scan starts after the deadline and the scan
+    # count is capped. An in-flight /proc scan or signal/reap sweep cannot be
+    # preempted synchronously, so it may finish after the admission deadline.
+    settle_deadline = time.monotonic() + DETACHED_CHILD_SETTLE_TIMEOUT_SEC
+    settle_scans = 0
+    settle_signal_error = False
+    while (
+        settle_scans < DETACHED_CHILD_SETTLE_MAX_SCANS
+        and time.monotonic() < settle_deadline
+    ):
+        settle_scans += 1
         try:
-            os.kill(namespace_pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        if graph[host_pid][0] == observed_self_host_pid:
-            _reap_child_nonblocking(namespace_pid)
+            observed_self_host_pid, graph = _linux_process_graph()
+        except OSError:
+            quiet_since = None
+            remaining_settle_sec = settle_deadline - time.monotonic()
+            if remaining_settle_sec <= 0:
+                break
+            time.sleep(min(0.005, remaining_settle_sec))
+            continue
+        if observed_self_host_pid != parent_host_pid:
+            break
+        all_descendants = _linux_descendant_closure(
+            graph, {parent_host_pid}
+        ) - {parent_host_pid}
+        excluded = _linux_descendant_closure(graph, baseline_roots)
+        current_host_pids = all_descendants - excluded
+        # A torn /proc scan can retain a live task while omitting an
+        # intermediate parent. Include every graph-present identity reachable
+        # through the child relation from a task observed in an earlier scan.
+        seen_lineage = _linux_descendant_closure(graph, seen_host_pids)
+        current_host_pids.update(
+            set(graph).intersection(seen_lineage) - excluded
+        )
+        if current_host_pids:
+            seen_host_pids.update(current_host_pids)
+            quiet_since = None
+            for host_pid in current_host_pids:
+                namespace_pid = graph[host_pid][1]
+                try:
+                    os.kill(namespace_pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                except OSError:
+                    settle_signal_error = True
+            # Reap tasks after they become direct subreaper children, not only
+            # those that were direct children in the deadline snapshot.
+            for host_pid in current_host_pids:
+                if graph[host_pid][0] == parent_host_pid:
+                    _reap_child_nonblocking(graph[host_pid][1])
+        else:
+            now = time.monotonic()
+            if quiet_since is None:
+                quiet_since = now
+            elif now - quiet_since >= DETACHED_CHILD_QUIET_SEC:
+                return {
+                    "supported": True,
+                    "survivor_seen": bool(seen_host_pids),
+                    "cleanup_complete": not settle_signal_error,
+                    "pids_seen": len(seen_host_pids),
+                }
+        remaining_settle_sec = settle_deadline - time.monotonic()
+        if remaining_settle_sec <= 0:
+            break
+        time.sleep(min(0.005, remaining_settle_sec))
     return {
         "supported": True,
         "survivor_seen": bool(seen_host_pids),
-        "cleanup_complete": not remaining,
+        "cleanup_complete": False,
         "pids_seen": len(seen_host_pids),
     }
 

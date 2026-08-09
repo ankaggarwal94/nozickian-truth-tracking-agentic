@@ -12306,6 +12306,7 @@ class Validator:
                 )
                 baseline = snapshot_package_entries(dest)
                 pass_summaries: List[Dict[str, Any]] = []
+                command_temp_observations: List[Dict[str, Any]] = []
                 python_executable = shutil.which("python3") or sys.executable
 
                 def run_json_cli(
@@ -12315,28 +12316,755 @@ class Validator:
                 ) -> Tuple[Optional[subprocess.CompletedProcess[str]], Dict[str, Any], str]:
                     """Run one reviewed CLI literally and parse its sole stdout JSON."""
 
-                    env = os.environ.copy()
-                    env["PYTHONDONTWRITEBYTECODE"] = "1"
-                    env["NTT_SELFTEST_PROGRESS"] = "0"
-                    try:
-                        proc = subprocess.run(
-                            [python_executable, *argv],
-                            cwd=dest,
-                            env=env,
-                            capture_output=True,
-                            text=True,
-                            timeout=timeout_seconds,
-                            check=False,
+                    proc: Optional[subprocess.CompletedProcess[str]] = None
+                    parsed: Dict[str, Any] = {}
+                    parse_error = ""
+                    with tempfile.TemporaryDirectory(
+                        prefix="release-cli-temp-",
+                        dir=tmp,
+                    ) as command_temporary:
+                        env = os.environ.copy()
+                        env["PYTHONDONTWRITEBYTECODE"] = "1"
+                        env["NTT_SELFTEST_PROGRESS"] = "0"
+                        env["TMPDIR"] = command_temporary
+                        try:
+                            proc = subprocess.run(
+                                [python_executable, *argv],
+                                cwd=dest,
+                                env=env,
+                                capture_output=True,
+                                text=True,
+                                timeout=timeout_seconds,
+                                check=False,
+                            )
+                        except (OSError, subprocess.TimeoutExpired) as exc:
+                            parse_error = f"{type(exc).__name__}: {exc}"
+                        if proc is not None:
+                            try:
+                                parsed_value = strict_json_loads(proc.stdout)
+                            except (json.JSONDecodeError, TypeError) as exc:
+                                parse_error = (
+                                    "stdout is not one JSON document: "
+                                    f"{exc}"
+                                )
+                            else:
+                                if isinstance(parsed_value, dict):
+                                    parsed = parsed_value
+                                else:
+                                    parse_error = (
+                                        "stdout JSON root is not an object"
+                                    )
+                        with os.scandir(command_temporary) as entries:
+                            residue_count = sum(1 for _entry in entries)
+                        command_temp_observations.append({
+                            "command": Path(argv[0]).name,
+                            "empty_after_command": residue_count == 0,
+                            "top_level_entries": residue_count,
+                        })
+                    return proc, parsed, parse_error
+
+                replay_false_case_envelope = {
+                    "schema_version": "deterministic-false-cases-v1",
+                    "suite": "formal_contract",
+                    "case_count": 231,
+                    "false_case_count": 1,
+                    "retained_false_case_count": 1,
+                    "false_cases": [{
+                        "name": "formal-false-case-sentinel",
+                        "passed": False,
+                    }],
+                    "truncated": False,
+                    "diagnostic_generation_failed": False,
+                }
+                replay_unexpected_failure_records = {
+                    "schema_version": "bounded-failed-check-records-v1",
+                    "unexpected_failed_check_count": 2,
+                    "retained_failed_check_count": 2,
+                    "failed_check_records": [
+                        {
+                            "name": (
+                                "fresh deterministic suite passes: "
+                                "formal_contract"
+                            ),
+                            "passed": False,
+                            "severity": "critical",
+                            "details": {
+                                "false_case_envelope": (
+                                    replay_false_case_envelope
+                                ),
+                            },
+                            "failure_kind": "CHECK_FAILED",
+                        },
+                        {
+                            "name": (
+                                "deterministic capture semantic projection "
+                                "matches fresh: formal_contract"
+                            ),
+                            "passed": False,
+                            "severity": "critical",
+                            "details": {
+                                "false_case_envelope": (
+                                    replay_false_case_envelope
+                                ),
+                            },
+                            "failure_kind": "CHECK_FAILED",
+                        },
+                    ],
+                    "truncated": False,
+                    "diagnostic_generation_failed": False,
+                }
+                replay_false_case = {
+                    "name": "failure-detail-retention-sentinel",
+                    "passed": False,
+                    "status": "FAIL",
+                    "failure_kind": "CHECK_FAILED",
+                    "exit_code": 2,
+                    "execution_mode": (
+                        "synthetic diagnostic:/workspace/private-run/case"
+                    ),
+                    "failed_checks": [[
+                        "synthetic failed check",
+                        "CHECK_FAILED",
+                    ]],
+                    "expected_failed_checks": [[
+                        "synthetic expected check",
+                        "CHECK_FAILED",
+                    ]],
+                    "detail_matches": {
+                        "nested-detail-must-survive": False,
+                    },
+                    "recorded_detail_matches": {
+                        "windows-path": (
+                            r"C:\Program Files\Runner Name\private-case.json"
+                        ),
+                    },
+                    "file_uri_path": (
+                        "file:///home/Runner Name/private-case.json"
+                    ),
+                    "unc_path": (
+                        r"\\server\Private Share\Runner Name\private-case.json"
+                    ),
+                    "observed_check_sha256": "observed-sentinel",
+                    "expected_check_sha256": "expected-sentinel",
+                    "check_inventory_matched": False,
+                    "correct_argv_nonzero_unexpected_failure_records": (
+                        replay_unexpected_failure_records
+                    ),
+                    "outcomes": [{
+                        "field": "nested-outcome-sentinel",
+                        "passed": False,
+                        "failure_kind": "CHECK_FAILED",
+                    }],
+                    "diagnostic_path": (
+                        "diagnostic:/tmp/ntt promotion sentinel/case"
+                    ),
+                    "url_control": "https://example.invalid/public",
+                    "path_key_collision": {
+                        "diagnostic:/tmp/ntt_promotion_contract_sentinel/left": (
+                            "left-sentinel"
+                        ),
+                        "diagnostic:/private/tmp/ntt_promotion_contract_sentinel/right": (
+                            "right-sentinel"
+                        ),
+                    },
+                }
+                replay_false_payload = {
+                    "status": "FAIL",
+                    "passed": 45,
+                    "total": 46,
+                    "reason": "aggregate failed reason:/opt/private-run",
+                    "production_certifier_cli_baseline": True,
+                    "case_inventory_matches": True,
+                    "cases": [
+                        *[
+                            {
+                                "name": f"passing-{index:02d}",
+                                "passed": True,
+                            }
+                            for index in range(45)
+                        ],
+                        replay_false_case,
+                    ],
+                }
+                expected_false_case_record = dict(replay_false_case)
+                expected_false_case_record[
+                    "diagnostic_path"
+                ] = "diagnostic:<absolute-path>"
+                expected_false_case_record[
+                    "execution_mode"
+                ] = "synthetic diagnostic:<absolute-path>"
+                expected_false_case_record[
+                    "recorded_detail_matches"
+                ] = {"windows-path": "<absolute-path>"}
+                expected_false_case_record[
+                    "file_uri_path"
+                ] = "<absolute-path>"
+                expected_false_case_record[
+                    "unc_path"
+                ] = "<absolute-path>"
+                collision_keys = list(
+                    replay_false_case["path_key_collision"]
+                )
+                expected_false_case_record[
+                    "path_key_collision"
+                ] = {
+                    "mapping_key_collision": True,
+                    "mapping_entries": [
+                        {
+                            "index": index,
+                            "key": "diagnostic:<absolute-path>",
+                            "key_sha256": hashlib.sha256(
+                                _canonical_json_bytes(key)
+                            ).hexdigest(),
+                            "value": replay_false_case[
+                                "path_key_collision"
+                            ][key],
+                        }
+                        for index, key in enumerate(collision_keys)
+                    ],
+                }
+                false_accepted, false_details = (
+                    promotion_replay_observation(
+                        2,
+                        replay_false_payload,
+                        "timeout parse:/root/private-run",
+                    )
+                )
+                false_roundtrip = strict_json_loads(json.dumps(
+                    false_details,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    allow_nan=False,
+                ))
+                false_cases = false_roundtrip.get("failed_cases", [])
+                false_serialized = json.dumps(
+                    false_roundtrip,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    allow_nan=False,
+                )
+                replay_path_hygiene_oracle = (
+                    all(
+                        private_token not in false_serialized
+                        for private_token in (
+                            "/tmp/",
+                            "/private/tmp/",
+                            "/workspace/",
+                            "/root/",
+                            "/opt/",
+                            "Program Files",
+                            "file:///",
+                            "Private Share",
+                            "ntt promotion sentinel",
                         )
-                    except (OSError, subprocess.TimeoutExpired) as exc:
-                        return None, {}, f"{type(exc).__name__}: {exc}"
-                    try:
-                        parsed = strict_json_loads(proc.stdout)
-                    except (json.JSONDecodeError, TypeError) as exc:
-                        return proc, {}, f"stdout is not one JSON document: {exc}"
-                    if not isinstance(parsed, dict):
-                        return proc, {}, "stdout JSON root is not an object"
-                    return proc, parsed, ""
+                    )
+                    and len(false_cases) == 1
+                    and false_cases[0].get("execution_mode")
+                    == "synthetic diagnostic:<absolute-path>"
+                    and false_cases[0].get(
+                        "recorded_detail_matches"
+                    )
+                    == {"windows-path": "<absolute-path>"}
+                    and false_cases[0].get("case_record", {}).get(
+                        "file_uri_path"
+                    )
+                    == "<absolute-path>"
+                    and false_cases[0].get("case_record", {}).get(
+                        "unc_path"
+                    )
+                    == "<absolute-path>"
+                    and false_roundtrip.get("parse_error")
+                    == "timeout parse:<absolute-path>"
+                    and false_roundtrip.get(
+                        "aggregate_failure", {}
+                    ).get("reason")
+                    == "aggregate failed reason:<absolute-path>"
+                    and false_cases[0].get("case_record", {}).get(
+                        "url_control"
+                    )
+                    == "https://example.invalid/public"
+                )
+                retained_unexpected_failure_records = (
+                    (false_cases or [{}])[0].get(
+                        "correct_argv_nonzero_unexpected_failure_records"
+                    )
+                )
+                replay_nested_failure_record_oracle = (
+                    retained_unexpected_failure_records
+                    == replay_unexpected_failure_records
+                    and (false_cases or [{}])[0].get(
+                        "case_record", {}
+                    ).get(
+                        "correct_argv_nonzero_unexpected_failure_records"
+                    )
+                    == replay_unexpected_failure_records
+                    and all(
+                        record.get("details", {}).get(
+                            "false_case_envelope"
+                        )
+                        == replay_false_case_envelope
+                        for record in retained_unexpected_failure_records.get(
+                            "failed_check_records", []
+                        )
+                    )
+                )
+                replay_false_oracle = (
+                    false_accepted is False
+                    and replay_path_hygiene_oracle
+                    and replay_nested_failure_record_oracle
+                    and len(false_cases) == 1
+                    and false_cases[0].get("index") == 45
+                    and false_cases[0].get("name")
+                    == "failure-detail-retention-sentinel"
+                    and false_cases[0].get("detail_matches")
+                    == {"nested-detail-must-survive": False}
+                    and false_cases[0].get("observed_check_sha256")
+                    == "observed-sentinel"
+                    and false_cases[0].get("expected_check_sha256")
+                    == "expected-sentinel"
+                    and false_cases[0].get("case_record", {}).get(
+                        "outcomes"
+                    )
+                    == [{
+                        "field": "nested-outcome-sentinel",
+                        "passed": False,
+                        "failure_kind": "CHECK_FAILED",
+                    }]
+                    and false_cases[0].get("case_record", {}).get(
+                        "diagnostic_path"
+                    )
+                    == "diagnostic:<absolute-path>"
+                    and false_cases[0].get(
+                        "case_record_paths_normalized"
+                    )
+                    is True
+                    and false_cases[0].get("case_record")
+                    == expected_false_case_record
+                )
+                promotion_contract_tree = ast.parse(
+                    (
+                        dest
+                        / SKILL_DIR
+                        / "scripts/run_promotion_certifier_contract_tests.py"
+                    ).read_text(encoding="utf-8")
+                )
+                replay_true_names: Optional[List[str]] = None
+                for statement in promotion_contract_tree.body:
+                    target = None
+                    if isinstance(statement, ast.Assign):
+                        target = statement.targets[0]
+                    elif isinstance(statement, ast.AnnAssign):
+                        target = statement.target
+                    if (
+                        isinstance(target, ast.Name)
+                        and target.id == "EXPECTED_CASE_NAMES"
+                    ):
+                        literal_names = ast.literal_eval(statement.value)
+                        replay_true_names = list(literal_names)
+                        break
+                if (
+                    replay_true_names is None
+                    or len(replay_true_names) != 46
+                    or hashlib.sha256(_canonical_json_bytes(
+                        replay_true_names
+                    )).hexdigest()
+                    != EXPECTED_PROMOTION_CASE_NAMES_SHA256
+                ):
+                    raise RuntimeError(
+                        "promotion replay true-world inventory is not exact"
+                    )
+                replay_true_resource_oracle = {
+                    field: True
+                    for field in PROMOTION_REPLAY_RESOURCE_ORACLE_FIELDS
+                }
+                replay_true_resource_oracle["normal_stats"] = {
+                    "created": 2,
+                    "cleaned": 2,
+                    "peak_live": 1,
+                    "retained": [],
+                }
+                replay_true_payload = {
+                    "status": "PASS",
+                    "passed": 46,
+                    "total": 46,
+                    "production_certifier_cli_baseline": True,
+                    "all_negative_cases_use_production_cli": True,
+                    "case_bundle_resources_contained": True,
+                    "case_inventory_matches": True,
+                    "actual_case_names": replay_true_names,
+                    "expected_case_names": replay_true_names,
+                    "expected_total": 46,
+                    "actual_total": 46,
+                    "expected_ephemeral_case_bundles": 55,
+                    "case_bundle_resource_stats": {
+                        "created": 55,
+                        "cleaned": 55,
+                        "peak_live": 1,
+                        "retained": [],
+                        "workspace_retained": [],
+                        "owner_retained": [],
+                        "owner_sentinel_unchanged": True,
+                    },
+                    "case_bundle_resource_oracle": (
+                        replay_true_resource_oracle
+                    ),
+                    "cases": [
+                        {
+                            "name": name,
+                            "passed": True,
+                        }
+                        for name in replay_true_names
+                    ],
+                }
+                true_accepted, true_details = (
+                    promotion_replay_observation(
+                        0,
+                        replay_true_payload,
+                        "",
+                    )
+                )
+                replay_true_oracle = (
+                    true_accepted is True
+                    and tuple(true_details) == PROMOTION_REPLAY_SUMMARY_FIELDS
+                    and "aggregate_failure" not in true_details
+                    and "failed_cases" not in true_details
+                )
+                replay_missing_cases = dict(replay_true_payload)
+                replay_missing_cases.pop("cases")
+                replay_failed_case = dict(replay_true_payload)
+                replay_failed_case["cases"] = [
+                    *replay_true_payload["cases"][:-1],
+                    {
+                        "name": replay_true_names[-1],
+                        "passed": False,
+                    },
+                ]
+                replay_float_counts = dict(replay_true_payload)
+                replay_float_counts.update({
+                    "passed": 46.0,
+                    "total": 46.0,
+                })
+                replay_mismatched_case_names = dict(replay_true_payload)
+                replay_mismatched_case_names["cases"] = [
+                    *replay_true_payload["cases"][:-1],
+                    {"name": "mismatched-name", "passed": True},
+                ]
+                replay_duplicate_case_names = dict(replay_true_payload)
+                replay_duplicate_case_names["cases"] = [
+                    {"name": replay_true_names[0], "passed": True}
+                    for _index in range(46)
+                ]
+                replay_nameless_cases = dict(replay_true_payload)
+                replay_nameless_cases["cases"] = [
+                    {"passed": True} for _index in range(46)
+                ]
+                replay_summary_false_worlds = {
+                    name: promotion_replay_observation(
+                        0,
+                        payload,
+                        "",
+                    )[0]
+                    for name, payload in (
+                        ("missing_cases", replay_missing_cases),
+                        ("explicit_failed_case", replay_failed_case),
+                        ("float_counts", replay_float_counts),
+                        (
+                            "mismatched_case_names",
+                            replay_mismatched_case_names,
+                        ),
+                        (
+                            "duplicate_case_names",
+                            replay_duplicate_case_names,
+                        ),
+                        ("nameless_cases", replay_nameless_cases),
+                    )
+                }
+                replay_summary_false_oracle = all(
+                    accepted is False
+                    for accepted in replay_summary_false_worlds.values()
+                )
+                replay_resource_payload = dict(replay_true_payload)
+                replay_resource_payload.update({
+                    "case_bundle_resources_contained": False,
+                    "expected_ephemeral_case_bundles": 55,
+                    "case_bundle_resource_stats": {
+                        "created": 55,
+                        "cleaned": 54,
+                        "peak_live": 2,
+                        "retained": ["resource-residue-sentinel"],
+                        "workspace_retained": [
+                            "resource-residue-sentinel"
+                        ],
+                    },
+                    "case_bundle_resource_oracle": {
+                        "passed": False,
+                        "prior_removed_before_next_case": False,
+                        "normal_residue_removed": False,
+                        "workspace_empty": False,
+                    },
+                })
+                (
+                    resource_accepted,
+                    resource_details,
+                ) = promotion_replay_observation(
+                    0,
+                    replay_resource_payload,
+                    "",
+                )
+                resource_failure = resource_details.get(
+                    "aggregate_failure", {}
+                )
+                replay_resource_oracle = (
+                    resource_accepted is False
+                    and resource_failure.get(
+                        "case_bundle_resources_contained"
+                    )
+                    is False
+                    and resource_failure.get(
+                        "expected_ephemeral_case_bundles"
+                    )
+                    == 55
+                    and resource_failure.get(
+                        "case_bundle_resource_stats", {}
+                    ).get("retained")
+                    == ["resource-residue-sentinel"]
+                    and resource_failure.get(
+                        "case_bundle_resource_oracle", {}
+                    ).get("workspace_empty")
+                    is False
+                )
+                replay_normal_stats_payload = dict(replay_true_payload)
+                replay_normal_stats_oracle = dict(
+                    replay_true_resource_oracle
+                )
+                replay_normal_stats_oracle["normal_stats"] = {
+                    "created": 2,
+                    "cleaned": 1,
+                    "peak_live": 1,
+                    "retained": [],
+                }
+                replay_normal_stats_payload[
+                    "case_bundle_resource_oracle"
+                ] = replay_normal_stats_oracle
+                (
+                    normal_stats_accepted,
+                    normal_stats_details,
+                ) = promotion_replay_observation(
+                    0,
+                    replay_normal_stats_payload,
+                    "",
+                )
+                replay_normal_stats_oracle_passed = (
+                    normal_stats_accepted is False
+                    and normal_stats_details.get(
+                        "aggregate_failure", {}
+                    ).get("case_bundle_resource_oracle", {}).get(
+                        "normal_stats", {}
+                    ).get("cleaned")
+                    == 1
+                )
+                replay_normal_type_worlds: Dict[str, bool] = {}
+                for type_name, typed_stats in (
+                    (
+                        "float",
+                        {
+                            "created": 2.0,
+                            "cleaned": 2.0,
+                            "peak_live": 1.0,
+                            "retained": [],
+                        },
+                    ),
+                    (
+                        "bool",
+                        {
+                            "created": True,
+                            "cleaned": True,
+                            "peak_live": True,
+                            "retained": [],
+                        },
+                    ),
+                ):
+                    typed_payload = dict(replay_true_payload)
+                    typed_oracle = dict(replay_true_resource_oracle)
+                    typed_oracle["normal_stats"] = typed_stats
+                    typed_payload[
+                        "case_bundle_resource_oracle"
+                    ] = typed_oracle
+                    replay_normal_type_worlds[type_name] = (
+                        promotion_replay_observation(
+                            0,
+                            typed_payload,
+                            "",
+                        )[0]
+                    )
+                replay_normal_type_oracle = all(
+                    accepted is False
+                    for accepted in replay_normal_type_worlds.values()
+                )
+                replay_internal_payload = {
+                    "status": "FAIL",
+                    "failure_kind": "INTERNAL_ERROR",
+                    "reason": "internal-envelope-sentinel",
+                    "passed": 0,
+                    "total": 0,
+                    "cases": [],
+                }
+                internal_accepted, internal_details = (
+                    promotion_replay_observation(
+                        2,
+                        replay_internal_payload,
+                        "",
+                    )
+                )
+                internal_failure = internal_details.get(
+                    "aggregate_failure", {}
+                )
+                replay_internal_oracle = (
+                    internal_accepted is False
+                    and internal_failure.get("failure_kind")
+                    == "INTERNAL_ERROR"
+                    and internal_failure.get("reason")
+                    == "internal-envelope-sentinel"
+                    and internal_details.get("failed_cases") == []
+                )
+                replay_oversized_case_payload = dict(
+                    replay_false_payload
+                )
+                replay_oversized_case_payload["cases"] = [{
+                    "name": "oversized-case",
+                    "passed": "p" * (64 * 1024),
+                    "status": "s" * (64 * 1024),
+                    "failure_kind": "f" * (64 * 1024),
+                    "correct_argv_nonzero_unexpected_failure_records": {
+                        "failed_check_records": [
+                            "r" * (64 * 1024)
+                        ],
+                    },
+                }]
+                (
+                    _oversized_case_accepted,
+                    oversized_case_details,
+                ) = promotion_replay_observation(
+                    2,
+                    replay_oversized_case_payload,
+                    "",
+                )
+                oversized_case_projection = (
+                    oversized_case_details.get("failed_cases") or [{}]
+                )[0]
+                replay_oversized_case_oracle = (
+                    _oversized_case_accepted is False
+                    and all(
+                        oversized_case_projection.get(field, {}).get(
+                            "value_truncated"
+                        )
+                        is True
+                        for field in (
+                            "passed",
+                            "status",
+                            "failure_kind",
+                            (
+                                "correct_argv_nonzero_unexpected_"
+                                "failure_records"
+                            ),
+                        )
+                    )
+                    and len(_canonical_json_bytes(
+                        oversized_case_projection
+                    ))
+                    <= MAX_PROMOTION_REPLAY_CASE_PROJECTION_BYTES
+                )
+                replay_oversized_envelope_payload = {
+                    "status": "FAIL",
+                    "passed": 0,
+                    "total": 0,
+                    "failure_kind": "INTERNAL_ERROR",
+                    "reason": "r" * (300 * 1024),
+                    "actual_case_names": [
+                        "a" * (16 * 1024) for _index in range(46)
+                    ],
+                    "expected_case_names": [
+                        "e" * (16 * 1024) for _index in range(46)
+                    ],
+                    "case_bundle_resource_stats": {
+                        "retained": ["x" * (300 * 1024)],
+                        "workspace_retained": ["y" * (300 * 1024)],
+                    },
+                    "cases": [],
+                }
+                (
+                    _oversized_envelope_accepted,
+                    oversized_envelope_details,
+                ) = promotion_replay_observation(
+                    2,
+                    replay_oversized_envelope_payload,
+                    "",
+                )
+                replay_oversized_envelope_oracle = (
+                    _oversized_envelope_accepted is False
+                    and len(_canonical_json_bytes(
+                        oversized_envelope_details
+                    ))
+                    <= MAX_PROMOTION_REPLAY_FAILURE_DETAILS_BYTES
+                    and oversized_envelope_details.get(
+                        "aggregate_failure", {}
+                    ).get("reason", {}).get("value_truncated")
+                    is True
+                )
+                promotion_replay_oracles = {
+                    "passed": (
+                        replay_false_oracle
+                        and replay_true_oracle
+                        and replay_summary_false_oracle
+                        and replay_resource_oracle
+                        and replay_normal_stats_oracle_passed
+                        and replay_normal_type_oracle
+                        and replay_internal_oracle
+                        and replay_oversized_case_oracle
+                        and replay_oversized_envelope_oracle
+                        and replay_path_hygiene_oracle
+                        and replay_nested_failure_record_oracle
+                    ),
+                    "false_world_retains_failed_case": (
+                        replay_false_oracle
+                    ),
+                    "nested_formal_failure_records_are_retained": (
+                        replay_nested_failure_record_oracle
+                    ),
+                    "true_world_preserves_success_shape": (
+                        replay_true_oracle
+                    ),
+                    "lying_pass_worlds_rejected": (
+                        replay_summary_false_oracle
+                    ),
+                    "lying_pass_world_results": (
+                        replay_summary_false_worlds
+                    ),
+                    "resource_false_world_is_rejected_with_detail": (
+                        replay_resource_oracle
+                    ),
+                    "normal_stats_failure_is_retained": (
+                        replay_normal_stats_oracle_passed
+                    ),
+                    "normal_stats_wrong_types_rejected": (
+                        replay_normal_type_oracle
+                    ),
+                    "normal_stats_wrong_type_results": (
+                        replay_normal_type_worlds
+                    ),
+                    "internal_error_retains_envelope": (
+                        replay_internal_oracle
+                    ),
+                    "oversized_case_is_bounded": (
+                        replay_oversized_case_oracle
+                    ),
+                    "oversized_envelope_is_bounded": (
+                        replay_oversized_envelope_oracle
+                    ),
+                    "whole_failure_observation_normalizes_private_paths": (
+                        replay_path_hygiene_oracle
+                    ),
+                }
 
                 for pass_number in (1, 2):
                     pass_prefix = f"literal deterministic CLI pass {pass_number}"
@@ -12471,32 +13199,24 @@ class Validator:
                             timeout_seconds=1800,
                         )
                     )
+                    promotion_returncode = (
+                        promotion_proc.returncode
+                        if promotion_proc is not None
+                        else None
+                    )
+                    (
+                        promotion_accepted,
+                        promotion_details,
+                    ) = promotion_replay_observation(
+                        promotion_returncode,
+                        promotion_result,
+                        promotion_error,
+                    )
                     record(
                         f"{pass_prefix}: {PROMOTION_AGGREGATE_COMMAND}",
                         promotion_proc is not None
-                        and promotion_proc.returncode == 0
-                        and promotion_result.get("status") == "PASS"
-                        and promotion_result.get("passed") == 46
-                        and promotion_result.get("total") == 46
-                        and promotion_result.get(
-                            "production_certifier_cli_baseline"
-                        )
-                        is True
-                        and not promotion_error,
-                        {
-                            "status": promotion_result.get("status"),
-                            "passed": promotion_result.get("passed"),
-                            "total": promotion_result.get("total"),
-                            "returncode": (
-                                promotion_proc.returncode if promotion_proc else None
-                            ),
-                            "parse_error": promotion_error,
-                            "production_certifier_cli_baseline": (
-                                promotion_result.get(
-                                    "production_certifier_cli_baseline"
-                                )
-                            ),
-                        },
+                        and promotion_accepted,
+                        promotion_details,
                     )
 
                     final_proc, final, final_error = run_json_cli(
@@ -12571,6 +13291,11 @@ class Validator:
                 ]
                 ok = (
                     precondition_ok
+                    and promotion_replay_oracles["passed"]
+                    and all(
+                        observation["empty_after_command"]
+                        for observation in command_temp_observations
+                    )
                     and all(result.get("passed") for result in command_results)
                     and all(
                         not summary["changed_package_files"]
@@ -12592,6 +13317,12 @@ class Validator:
                             "commands_executed": len(command_results),
                             "commands": command_results,
                             "passes": pass_summaries,
+                            "promotion_replay_oracles": (
+                                promotion_replay_oracles
+                            ),
+                            "command_temp_observations": (
+                                command_temp_observations
+                            ),
                             "scope_exclusions": scope_exclusions,
                         },
                         sort_keys=True,
@@ -12621,6 +13352,477 @@ class Validator:
             private_paths=self._private_display_paths,
         )
 
+
+PROMOTION_REPLAY_SUMMARY_FIELDS = (
+    "status",
+    "passed",
+    "total",
+    "returncode",
+    "parse_error",
+    "production_certifier_cli_baseline",
+)
+PROMOTION_REPLAY_FAILURE_FIELDS = (
+    "failure_kind",
+    "reason",
+    "all_negative_cases_use_production_cli",
+    "case_bundle_resources_contained",
+    "case_inventory_matches",
+    "actual_case_names",
+    "expected_case_names",
+    "expected_total",
+    "actual_total",
+    "expected_ephemeral_case_bundles",
+)
+PROMOTION_REPLAY_RESOURCE_STAT_FIELDS = (
+    "created",
+    "cleaned",
+    "peak_live",
+    "retained",
+    "workspace_retained",
+    "owner_retained",
+    "owner_sentinel_unchanged",
+)
+PROMOTION_REPLAY_RESOURCE_ORACLE_FIELDS = (
+    "passed",
+    "preexisting_rejected",
+    "preexisting_unchanged",
+    "unmanaged_copy_rejected",
+    "unmanaged_copy_preserved_for_narrow_cleanup",
+    "usable_before_cleanup",
+    "independent_inode",
+    "baseline_unchanged_after_mutation",
+    "prior_removed_before_next_case",
+    "one_live_during_case",
+    "normal_residue_removed",
+    "exception_observed",
+    "exception_residue_removed",
+    "copy_failure_observed",
+    "copy_failure_residue_removed",
+    "copy_failure_manager_closed",
+    "partial_endpoint_substitution_rejected",
+    "partial_endpoint_manager_closed",
+    "partial_endpoint_replacement_unchanged",
+    "original_partial_bundle_preserved",
+    "parent_substitution_rejected",
+    "external_parent_unchanged",
+    "owned_parent_bundle_removed",
+    "endpoint_substitution_rejected",
+    "endpoint_replacement_unchanged",
+    "original_endpoint_bundle_preserved",
+    "baseline_unchanged",
+    "sibling_unchanged",
+    "workspace_sentinel_unchanged",
+    "workspace_empty",
+    "oracle_root_inventory_exact",
+)
+PROMOTION_REPLAY_CASE_DIAGNOSTIC_FIELDS = (
+    "name",
+    "passed",
+    "status",
+    "failure_kind",
+    "exit_code",
+    "execution_mode",
+    "failed_checks",
+    "expected_failed_checks",
+    "failed_checks_shape_valid",
+    "detail_matches",
+    "recorded_detail_matches",
+    "details_matched",
+    "observed_check_count",
+    "expected_check_count",
+    "observed_check_sha256",
+    "expected_check_sha256",
+    "check_inventory_matched",
+    "expected_omitted_lane",
+    "omitted_lane_present_checks",
+    "omitted_lane_matched",
+    "outcome_oracle_matched",
+    "cli_invocation_verified",
+    "correct_argv_nonzero_unexpected_failure_records",
+)
+MAX_PROMOTION_REPLAY_CASES = 46
+EXPECTED_PROMOTION_EPHEMERAL_CASE_BUNDLES = 55
+EXPECTED_PROMOTION_CASE_NAMES_SHA256 = (
+    "04904248e54befdbcf7203022a34584915af55f2f6e68a5272436f253aa5dc08"
+)
+MAX_PROMOTION_REPLAY_FIELD_BYTES = 8 * 1024
+MAX_PROMOTION_REPLAY_CASE_PROJECTION_BYTES = 32 * 1024
+MAX_PROMOTION_REPLAY_FAILURE_DETAILS_BYTES = 256 * 1024
+MAX_PROMOTION_REPLAY_VALUE_PREFIX_CHARS = 512
+PROMOTION_REPLAY_FILE_URI_PATH_RE = re.compile(
+    r'''(?i)(?<![A-Za-z0-9+.-])file:/{1,3}[^\r\n"'<>|,;)\]}]+'''
+)
+PROMOTION_REPLAY_UNC_PATH_RE = re.compile(
+    r'''(?<![\\A-Za-z0-9._-])\\\\'''
+    r'''(?:[^\\\r\n"'<>|,;)\]}]+\\)+'''
+    r'''[^\\\r\n"'<>|,;)\]}]+'''
+)
+PROMOTION_REPLAY_POSIX_PATH_RE = re.compile(
+    r'''(?<![/A-Za-z0-9._-])/(?:[^/\r\n"'<>|,;)\]}]+/)*'''
+    r'''[^/\r\n"'<>|,;)\]}]+'''
+)
+PROMOTION_REPLAY_WINDOWS_PATH_RE = re.compile(
+    r'''(?<![A-Za-z0-9])(?:[A-Za-z]:\\(?:[^\\\r\n"'<>|,;)\]}]+\\)*'''
+    r'''[^\\\r\n"'<>|,;)\]}]+)'''
+)
+
+
+def _canonical_json_bytes(value: Any) -> bytes:
+    return json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+
+
+def _bounded_promotion_replay_value(
+    value: Any,
+    *,
+    maximum_bytes: int = MAX_PROMOTION_REPLAY_FIELD_BYTES,
+) -> Any:
+    """Retain a path-stable value when small, otherwise its raw identity."""
+
+    raw = _canonical_json_bytes(value)
+    stable_value = _stable_promotion_replay_record(value)
+    stable_raw = _canonical_json_bytes(stable_value)
+    if len(stable_raw) <= maximum_bytes:
+        return stable_value
+    bounded: Dict[str, Any] = {
+        "value_bytes": len(raw),
+        "value_sha256": hashlib.sha256(raw).hexdigest(),
+        "value_truncated": True,
+        "value_type": type(value).__name__,
+    }
+    if isinstance(value, str):
+        assert isinstance(stable_value, str)
+        bounded["value_prefix"] = stable_value[
+            :MAX_PROMOTION_REPLAY_VALUE_PREFIX_CHARS
+        ]
+    elif isinstance(value, list):
+        bounded["item_count"] = len(value)
+    elif isinstance(value, Mapping):
+        bounded["field_count"] = len(value)
+    return bounded
+
+
+def _stable_promotion_replay_record(value: Any) -> Any:
+    """Normalize machine-local path tokens in retained child diagnostics."""
+
+    if isinstance(value, str):
+        normalized = PROMOTION_REPLAY_FILE_URI_PATH_RE.sub(
+            "<absolute-path>", value
+        )
+        normalized = PROMOTION_REPLAY_UNC_PATH_RE.sub(
+            "<absolute-path>", normalized
+        )
+        normalized = PROMOTION_REPLAY_POSIX_PATH_RE.sub(
+            "<absolute-path>", normalized
+        )
+        return PROMOTION_REPLAY_WINDOWS_PATH_RE.sub(
+            "<absolute-path>", normalized
+        )
+    if isinstance(value, list):
+        return [_stable_promotion_replay_record(item) for item in value]
+    if isinstance(value, Mapping):
+        normalized_items = [
+            (
+                _stable_promotion_replay_record(key),
+                _stable_promotion_replay_record(item),
+                key,
+            )
+            for key, item in value.items()
+        ]
+        normalized_keys = [item[0] for item in normalized_items]
+        if len(set(normalized_keys)) == len(normalized_keys):
+            return {
+                normalized_key: normalized_item
+                for normalized_key, normalized_item, _raw_key
+                in normalized_items
+            }
+        # Two distinct absolute path keys can both normalize to the same
+        # placeholder.  Preserve every entry, its order, and its raw identity
+        # without reintroducing either private spelling.
+        return {
+            "mapping_key_collision": True,
+            "mapping_entries": [
+                {
+                    "index": index,
+                    "key": normalized_key,
+                    "key_sha256": hashlib.sha256(
+                        _canonical_json_bytes(raw_key)
+                    ).hexdigest(),
+                    "value": normalized_item,
+                }
+                for index, (
+                    normalized_key,
+                    normalized_item,
+                    raw_key,
+                ) in enumerate(normalized_items)
+            ],
+        }
+    return value
+
+
+def _promotion_replay_case_projection(
+    index: int,
+    case: Any,
+) -> Dict[str, Any]:
+    raw = _canonical_json_bytes(case)
+    projection: Dict[str, Any] = {
+        "index": index,
+        "record_bytes": len(raw),
+        "record_sha256": hashlib.sha256(raw).hexdigest(),
+    }
+    if not isinstance(case, Mapping):
+        projection["malformed_case_type"] = type(case).__name__
+        return projection
+    stable_case = _stable_promotion_replay_record(case)
+    projection["case_record"] = _bounded_promotion_replay_value(
+        stable_case,
+        maximum_bytes=MAX_PROMOTION_REPLAY_CASE_PROJECTION_BYTES // 2,
+    )
+    projection["case_record_paths_normalized"] = stable_case != case
+    for field in PROMOTION_REPLAY_CASE_DIAGNOSTIC_FIELDS:
+        if field in case:
+            projection[field] = _bounded_promotion_replay_value(
+                case[field]
+            )
+    encoded_projection = _canonical_json_bytes(projection)
+    if len(encoded_projection) <= MAX_PROMOTION_REPLAY_CASE_PROJECTION_BYTES:
+        return projection
+    return {
+        "index": index,
+        "name": _bounded_promotion_replay_value(
+            case.get("name"),
+            maximum_bytes=1024,
+        ),
+        "passed": _bounded_promotion_replay_value(
+            case.get("passed"),
+            maximum_bytes=1024,
+        ),
+        "status": _bounded_promotion_replay_value(
+            case.get("status"),
+            maximum_bytes=1024,
+        ),
+        "failure_kind": _bounded_promotion_replay_value(
+            case.get("failure_kind"),
+            maximum_bytes=1024,
+        ),
+        "record_bytes": len(raw),
+        "record_sha256": hashlib.sha256(raw).hexdigest(),
+        "projection_truncated": True,
+    }
+
+
+def _promotion_replay_success_contract(
+    returncode: Optional[int],
+    result: Mapping[str, Any],
+    parse_error: str,
+) -> bool:
+    cases = result.get("cases")
+    case_names = (
+        [case.get("name") for case in cases]
+        if isinstance(cases, list)
+        and all(isinstance(case, Mapping) for case in cases)
+        else None
+    )
+    actual_names = result.get("actual_case_names")
+    expected_names = result.get("expected_case_names")
+    resource_stats = result.get("case_bundle_resource_stats")
+    resource_oracle = result.get("case_bundle_resource_oracle")
+    expected_bundles = result.get("expected_ephemeral_case_bundles")
+    normal_stats = (
+        resource_oracle.get("normal_stats")
+        if isinstance(resource_oracle, Mapping)
+        else None
+    )
+    return (
+        type(returncode) is int
+        and returncode == 0
+        and result.get("status") == "PASS"
+        and type(result.get("passed")) is int
+        and result.get("passed") == MAX_PROMOTION_REPLAY_CASES
+        and type(result.get("total")) is int
+        and result.get("total") == MAX_PROMOTION_REPLAY_CASES
+        and result.get("production_certifier_cli_baseline") is True
+        and result.get("all_negative_cases_use_production_cli") is True
+        and result.get("case_bundle_resources_contained") is True
+        and result.get("case_inventory_matches") is True
+        and type(result.get("expected_total")) is int
+        and result.get("expected_total") == MAX_PROMOTION_REPLAY_CASES
+        and type(result.get("actual_total")) is int
+        and result.get("actual_total") == MAX_PROMOTION_REPLAY_CASES
+        and isinstance(cases, list)
+        and len(cases) == MAX_PROMOTION_REPLAY_CASES
+        and all(
+            isinstance(case, Mapping) and case.get("passed") is True
+            for case in cases
+        )
+        and isinstance(case_names, list)
+        and len(case_names) == MAX_PROMOTION_REPLAY_CASES
+        and all(type(name) is str and name for name in case_names)
+        and len(set(case_names)) == MAX_PROMOTION_REPLAY_CASES
+        and isinstance(actual_names, list)
+        and isinstance(expected_names, list)
+        and len(actual_names) == MAX_PROMOTION_REPLAY_CASES
+        and all(type(name) is str for name in actual_names)
+        and case_names == actual_names == expected_names
+        and hashlib.sha256(
+            _canonical_json_bytes(actual_names)
+        ).hexdigest()
+        == EXPECTED_PROMOTION_CASE_NAMES_SHA256
+        and type(expected_bundles) is int
+        and expected_bundles == EXPECTED_PROMOTION_EPHEMERAL_CASE_BUNDLES
+        and isinstance(resource_stats, Mapping)
+        and type(resource_stats.get("created")) is int
+        and resource_stats.get("created") == expected_bundles
+        and type(resource_stats.get("cleaned")) is int
+        and resource_stats.get("cleaned") == expected_bundles
+        and type(resource_stats.get("peak_live")) is int
+        and resource_stats.get("peak_live") == 1
+        and resource_stats.get("retained") == []
+        and resource_stats.get("workspace_retained") == []
+        and resource_stats.get("owner_retained") == []
+        and resource_stats.get("owner_sentinel_unchanged") is True
+        and isinstance(resource_oracle, Mapping)
+        and all(
+            resource_oracle.get(field) is True
+            for field in PROMOTION_REPLAY_RESOURCE_ORACLE_FIELDS
+        )
+        and isinstance(normal_stats, Mapping)
+        and set(normal_stats)
+        == {"created", "cleaned", "peak_live", "retained"}
+        and type(normal_stats.get("created")) is int
+        and normal_stats.get("created") == 2
+        and type(normal_stats.get("cleaned")) is int
+        and normal_stats.get("cleaned") == 2
+        and type(normal_stats.get("peak_live")) is int
+        and normal_stats.get("peak_live") == 1
+        and normal_stats.get("retained") == []
+        and not parse_error
+    )
+
+
+def promotion_replay_observation(
+    returncode: Optional[int],
+    result: Mapping[str, Any],
+    parse_error: str,
+) -> Tuple[bool, Dict[str, Any]]:
+    """Judge one embedded aggregate and retain bounded failure diagnostics."""
+
+    accepted = _promotion_replay_success_contract(
+        returncode,
+        result,
+        parse_error,
+    )
+    summary: Dict[str, Any] = {
+        "status": result.get("status"),
+        "passed": result.get("passed"),
+        "total": result.get("total"),
+        "returncode": returncode,
+        "parse_error": parse_error,
+        "production_certifier_cli_baseline": result.get(
+            "production_certifier_cli_baseline"
+        ),
+    }
+    if accepted:
+        return True, summary
+
+    details: Dict[str, Any] = {
+        field: _bounded_promotion_replay_value(value)
+        for field, value in summary.items()
+    }
+
+    aggregate_failure: Dict[str, Any] = {
+        field: _bounded_promotion_replay_value(result.get(field))
+        for field in PROMOTION_REPLAY_FAILURE_FIELDS
+    }
+    resource_stats = result.get("case_bundle_resource_stats")
+    aggregate_failure["case_bundle_resource_stats"] = (
+        _bounded_promotion_replay_value({
+            field: _bounded_promotion_replay_value(
+                resource_stats.get(field)
+            )
+            for field in PROMOTION_REPLAY_RESOURCE_STAT_FIELDS
+        })
+        if isinstance(resource_stats, Mapping)
+        else None
+    )
+    resource_oracle = result.get("case_bundle_resource_oracle")
+    aggregate_failure["case_bundle_resource_oracle"] = (
+        _bounded_promotion_replay_value({
+            field: _bounded_promotion_replay_value(
+                resource_oracle.get(field)
+            )
+            for field in PROMOTION_REPLAY_RESOURCE_ORACLE_FIELDS
+        } | {
+            "normal_stats": _bounded_promotion_replay_value(
+                resource_oracle.get("normal_stats")
+            )
+        })
+        if isinstance(resource_oracle, Mapping)
+        else None
+    )
+    raw_cases = result.get("cases")
+    failed_cases: List[Dict[str, Any]] = []
+    if isinstance(raw_cases, list):
+        inspected_cases = raw_cases[:MAX_PROMOTION_REPLAY_CASES]
+        for index, case in enumerate(inspected_cases):
+            if isinstance(case, Mapping) and case.get("passed") is True:
+                continue
+            projected = _promotion_replay_case_projection(index, case)
+            failed_cases.append(projected)
+        aggregate_failure["case_count"] = len(raw_cases)
+        aggregate_failure["case_scan_truncated"] = (
+            len(raw_cases) > MAX_PROMOTION_REPLAY_CASES
+        )
+    else:
+        aggregate_failure["case_count"] = None
+        aggregate_failure["case_collection_type"] = type(raw_cases).__name__
+        aggregate_failure["case_scan_truncated"] = False
+    aggregate_failure["failed_cases_retained"] = len(failed_cases)
+    details["aggregate_failure"] = aggregate_failure
+    details["failed_cases"] = failed_cases
+    while (
+        len(_canonical_json_bytes(details))
+        > MAX_PROMOTION_REPLAY_FAILURE_DETAILS_BYTES
+        and failed_cases
+    ):
+        failed_cases.pop()
+        aggregate_failure["failure_details_truncated"] = True
+        aggregate_failure["failed_cases_retained"] = len(failed_cases)
+    encoded_details = _canonical_json_bytes(details)
+    if len(encoded_details) > MAX_PROMOTION_REPLAY_FAILURE_DETAILS_BYTES:
+        details = {
+            field: _bounded_promotion_replay_value(
+                value,
+                maximum_bytes=1024,
+            )
+            for field, value in summary.items()
+        }
+        details["aggregate_failure"] = {
+            "failure_details_truncated": True,
+            "failure_details_original_bytes": len(encoded_details),
+            "failure_details_original_sha256": hashlib.sha256(
+                encoded_details
+            ).hexdigest(),
+            "failure_kind": _bounded_promotion_replay_value(
+                result.get("failure_kind"),
+                maximum_bytes=1024,
+            ),
+            "reason": _bounded_promotion_replay_value(
+                result.get("reason"),
+                maximum_bytes=4096,
+            ),
+            "case_count": (
+                len(raw_cases) if isinstance(raw_cases, list) else None
+            ),
+            "failed_cases_retained": 0,
+        }
+        details["failed_cases"] = []
+    return False, details
 
 def to_markdown(result: Dict[str, Any]) -> str:
     lines = ["# Team/internal package validation report", "", f"**Status:** {result['status']}", f"**Checks:** {result['checks_passed']} / {result['checks_total']} passed", f"**Critical failures:** {result['critical_failed']}", ""]
