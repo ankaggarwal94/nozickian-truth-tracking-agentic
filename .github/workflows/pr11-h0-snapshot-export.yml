@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: pr11-bounded-repair-controller
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   repair-validate-stage:
@@ -20,6 +20,7 @@ jobs:
       H0: 5b0ea76c0f827d5b4ebf5344b28f9173869a137e
       TARGET_BRANCH: fix/selftest-temp-containment-717e080d-9c9d-403c-b68a-785bb2f9f867
       STAGING_BRANCH: automation/pr11-h1-validated-staging
+      PATCH_TEXT_SHA256: 55555146eae926b01c266d7609daabd8735fece19814b1833be624fd8c0cf2f3
       PATCH_SHA256: 42f26722fc26dc557be0ae5b1afab3602ef6fc8ab388acc9b2d4cad880705964
       EXPECTED_VALIDATOR_SHA256: cacf441a6f424040027b3d07d16dfc1978f29fb3e92aafeea121d811f7bc711d
       EXPECTED_MANIFEST_SHA256: 7a558622b4cd70730c42187806a043ae07fcf3c3bf11cbf843793a91ebb95b31
@@ -54,7 +55,15 @@ jobs:
           test "$(git rev-parse HEAD)" = "$H0"
           git fetch origin "refs/heads/$TARGET_BRANCH:refs/remotes/origin/pr11-target"
           test "$(git rev-parse refs/remotes/origin/pr11-target)" = "$H0"
-          base64 -d ../controller-source/controller/pr11-validator.patch.gz.b64 | gzip -d > /tmp/pr11-validator.patch
+          chunks=../controller-source/controller/pr11-patch-chunks
+          echo "1048c6bb26a2cd341bbb8a634a7b5da925d5ba6ec14830e1c3dd3c2e108709b0  $chunks/00" | sha256sum --check --strict
+          echo "a76441b0f6e75ecd295f5288cdddff4a7b02c542ffa8dd5d86185d3aaf65d17f  $chunks/01" | sha256sum --check --strict
+          echo "9c136904efce8aa79a9a040d2b290e517a321c83f37733b84ac7283da77338a7  $chunks/02" | sha256sum --check --strict
+          echo "8a8376ea210c0afd17cd5dec6aed6a46202f345300f5ca5142acbf6e367bd87f  $chunks/03" | sha256sum --check --strict
+          echo "e2d4768b3472b90ca749600da34e622122d16f61517c459a5d7915693ec4ccf3  $chunks/04" | sha256sum --check --strict
+          cat "$chunks"/00 "$chunks"/01 "$chunks"/02 "$chunks"/03 "$chunks"/04 > /tmp/pr11-validator.patch.gz.b64
+          echo "$PATCH_TEXT_SHA256  /tmp/pr11-validator.patch.gz.b64" | sha256sum --check --strict
+          base64 -d /tmp/pr11-validator.patch.gz.b64 | gzip -d > /tmp/pr11-validator.patch
           echo "$PATCH_SHA256  /tmp/pr11-validator.patch" | sha256sum --check --strict
           git apply --check /tmp/pr11-validator.patch
           git apply /tmp/pr11-validator.patch
