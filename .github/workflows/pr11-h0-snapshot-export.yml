@@ -1,37 +1,211 @@
-name: pr11-h0-snapshot-export
+name: pr11-bounded-repair-controller
 
 on:
-  push:
-    branches:
-      - automation/pr11-h0-snapshot-export-5b0ea76
   pull_request:
     branches:
       - main
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: pr11-bounded-repair-controller
+  cancel-in-progress: false
 
 jobs:
-  export:
+  repair-validate-stage:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      H0: 5b0ea76c0f827d5b4ebf5344b28f9173869a137e
+      TARGET_BRANCH: fix/selftest-temp-containment-717e080d-9c9d-403c-b68a-785bb2f9f867
+      STAGING_BRANCH: automation/pr11-h1-validated-staging
+      PATCH_SHA256: 42f26722fc26dc557be0ae5b1afab3602ef6fc8ab388acc9b2d4cad880705964
+      EXPECTED_VALIDATOR_SHA256: cacf441a6f424040027b3d07d16dfc1978f29fb3e92aafeea121d811f7bc711d
+      EXPECTED_MANIFEST_SHA256: 7a558622b4cd70730c42187806a043ae07fcf3c3bf11cbf843793a91ebb95b31
+      EXPECTED_STABLE_MANIFEST_SHA256: 9a0cae114a05a9f57bb1c14a7d2e2bfc7f009eef2ae3f6a3647818d677a25a07
+      EXPECTED_VALIDATOR_EVIDENCE_SHA256: 2af9795181d7e2247a3aa8516e20889994cb7f059dfe3ab37697c84277d8b286
+      EXPECTED_README_EVIDENCE_SHA256: 167e84259cb7754ca89a7d1601b015a6962f576cd6386acdee28d12c9f17f1ef
     steps:
-      - name: Check out the exact reviewed PR head
+      - name: Check out controller inputs
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: automation/pr11-h0-snapshot-export-5b0ea76
+          path: controller-source
+          fetch-depth: 1
+
+      - name: Check out immutable PR head H0
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           ref: 5b0ea76c0f827d5b4ebf5344b28f9173869a137e
-          fetch-depth: 1
-      - name: Build an immutable source snapshot
+          path: target
+          fetch-depth: 0
+
+      - name: Select pinned Python 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+
+      - name: Assert target lock and apply the reviewed patch
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "5b0ea76c0f827d5b4ebf5344b28f9173869a137e"
-          mkdir -p snapshot
-          git archive --format=tar --output=snapshot/pr11-h0.tar HEAD
-          sha256sum snapshot/pr11-h0.tar > snapshot/pr11-h0.tar.sha256
-      - name: Upload the source snapshot
+          cd target
+          test "$(git rev-parse HEAD)" = "$H0"
+          git fetch origin "refs/heads/$TARGET_BRANCH:refs/remotes/origin/pr11-target"
+          test "$(git rev-parse refs/remotes/origin/pr11-target)" = "$H0"
+          base64 -d ../controller-source/controller/pr11-validator.patch.gz.b64 | gzip -d > /tmp/pr11-validator.patch
+          echo "$PATCH_SHA256  /tmp/pr11-validator.patch" | sha256sum --check --strict
+          git apply --check /tmp/pr11-validator.patch
+          git apply /tmp/pr11-validator.patch
+          git diff --check
+
+      - name: Refresh exact evidence and release identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd target
+          PYTHONDONTWRITEBYTECODE=1 python3 -B - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import importlib.util
+          import json
+          import sys
+
+          root = Path('.').resolve()
+          validator = root / 'skills/nozickian-verify/scripts/validate_package.py'
+          digest = 'sha256:' + hashlib.sha256(validator.read_bytes()).hexdigest()
+          for relative in (
+              'self_validation/evidence/C-validator-sensitivity__claim.json',
+              'self_validation/evidence/C-github-readme-documentation__validator.json',
+          ):
+              path = root / relative
+              value = json.loads(path.read_text(encoding='utf-8'))
+              if value.get('artifact_path') != validator.relative_to(root).as_posix():
+                  raise SystemExit(f'unexpected artifact binding: {relative}')
+              value['hash_or_version'] = digest
+              path.write_text(
+                  json.dumps(value, indent=2, sort_keys=True) + '\n',
+                  encoding='utf-8',
+              )
+
+          spec = importlib.util.spec_from_file_location('pr11_validator_refresh', validator)
+          if spec is None or spec.loader is None:
+              raise SystemExit('validator import failed')
+          module = importlib.util.module_from_spec(spec)
+          sys.modules[spec.name] = module
+          spec.loader.exec_module(module)
+          module.update_manifest(root)
+          module.write_stable_release_manifest(root)
+          PY
+          test "$(sha256sum skills/nozickian-verify/scripts/validate_package.py | cut -d' ' -f1)" = "$EXPECTED_VALIDATOR_SHA256"
+          test "$(sha256sum MANIFEST.sha256 | cut -d' ' -f1)" = "$EXPECTED_MANIFEST_SHA256"
+          test "$(sha256sum STABLE_RELEASE_MANIFEST.json | cut -d' ' -f1)" = "$EXPECTED_STABLE_MANIFEST_SHA256"
+          test "$(sha256sum self_validation/evidence/C-validator-sensitivity__claim.json | cut -d' ' -f1)" = "$EXPECTED_VALIDATOR_EVIDENCE_SHA256"
+          test "$(sha256sum self_validation/evidence/C-github-readme-documentation__validator.json | cut -d' ' -f1)" = "$EXPECTED_README_EVIDENCE_SHA256"
+
+      - name: Assert exact repair scope and commit locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd target
+          actual="$(git status --porcelain=v1 | cut -c4- | LC_ALL=C sort)"
+          expected="$(printf '%s\n' \
+            MANIFEST.sha256 \
+            STABLE_RELEASE_MANIFEST.json \
+            self_validation/evidence/C-github-readme-documentation__validator.json \
+            self_validation/evidence/C-validator-sensitivity__claim.json \
+            skills/nozickian-verify/scripts/validate_package.py | LC_ALL=C sort)"
+          test "$actual" = "$expected"
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- \
+            MANIFEST.sha256 \
+            STABLE_RELEASE_MANIFEST.json \
+            self_validation/evidence/C-github-readme-documentation__validator.json \
+            self_validation/evidence/C-validator-sensitivity__claim.json \
+            skills/nozickian-verify/scripts/validate_package.py
+          git commit -m 'fix: verify complete promotion replay oracle'
+          test "$(git rev-parse HEAD^)" = "$H0"
+          test -z "$(git status --porcelain=v1)"
+
+      - name: Run complete deterministic validation on candidate H1
+        shell: bash
+        env:
+          TERM: xterm
+        run: |
+          set -euo pipefail
+          cd target
+          mkdir -p /tmp/pr11-h1-validation
+          python3 skills/nozickian-verify/scripts/validate_package.py . --self-test --markdown /tmp/pr11-h1-validation/SELF_VALIDATION_REPORT.md | tee /tmp/pr11-h1-validation/package-validation.json
+          python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py . | tee /tmp/pr11-h1-validation/promotion-contract.json
+          archive_root="$(mktemp -d)"
+          trap 'rm -rf "$archive_root"' EXIT
+          git archive --format=tar HEAD | tar -xf - -C "$archive_root"
+          python3 "$archive_root/skills/nozickian-verify/scripts/validate_package.py" "$archive_root" --self-test --markdown /tmp/pr11-h1-validation/ARCHIVE_SELF_VALIDATION_REPORT.md | tee /tmp/pr11-h1-validation/archive-package-validation.json
+          (
+            cd "$archive_root"
+            python3 skills/nozickian-verify/scripts/run_promotion_certifier_contract_tests.py . | tee /tmp/pr11-h1-validation/archive-promotion-contract.json
+          )
+          python3 skills/nozickian-verify/scripts/ntt_gate.py self_validation/self_certificate.json --evidence-root . --strict-evidence --downstream-policy package-self --markdown /tmp/pr11-h1-validation/GATE_RESULT.md | tee /tmp/pr11-h1-validation/gate.json
+          python3 skills/nozickian-verify/scripts/run_regression_evals.py . --json /tmp/pr11-h1-validation/regression.json
+          python3 skills/nozickian-verify/scripts/run_formal_runner_contract_tests.py . --json /tmp/pr11-h1-validation/formal-runner-contracts.json
+          python3 skills/nozickian-verify/scripts/run_formal_artifact_verification.py . README.md --dry-run --json /tmp/pr11-h1-validation/formal-dry-run.json
+          test -z "$(git status --porcelain=v1)"
+
+      - name: Record candidate identity and publish only to staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd target
+          h1="$(git rev-parse HEAD)"
+          tree="$(git rev-parse HEAD^{tree})"
+          python3 - "$h1" "$tree" > /tmp/pr11-h1-validation/controller-result.json <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import sys
+
+          root = pathlib.Path('.').resolve()
+          h1, tree = sys.argv[1:]
+          files = [
+              'MANIFEST.sha256',
+              'STABLE_RELEASE_MANIFEST.json',
+              'self_validation/evidence/C-github-readme-documentation__validator.json',
+              'self_validation/evidence/C-validator-sensitivity__claim.json',
+              'skills/nozickian-verify/scripts/validate_package.py',
+          ]
+          result = {
+              'status': 'CANDIDATE_VALIDATED',
+              'parent': '5b0ea76c0f827d5b4ebf5344b28f9173869a137e',
+              'candidate_commit': h1,
+              'candidate_tree': tree,
+              'changed_files': files,
+              'file_sha256': {
+                  relative: hashlib.sha256((root / relative).read_bytes()).hexdigest()
+                  for relative in files
+              },
+              'python': sys.version,
+              'validation': {
+                  'package_self_test': 'PASS',
+                  'promotion_contract': 'PASS',
+                  'archive_package_self_test': 'PASS',
+                  'archive_promotion_contract': 'PASS',
+                  'self_gate': 'PASS-SCOPED',
+                  'regression': 'PASS',
+                  'formal_runner_contracts': 'PASS',
+                  'formal_dry_run': 'UNVERIFIED_RUNTIME',
+              },
+          }
+          print(json.dumps(result, indent=2, sort_keys=True))
+          PY
+          git push origin "HEAD:refs/heads/$STAGING_BRANCH"
+
+      - name: Upload candidate validation evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: pr11-h0-source
-          path: snapshot/
+          name: pr11-h1-candidate-validation
+          path: /tmp/pr11-h1-validation/
           compression-level: 0
-          retention-days: 1
+          retention-days: 2
