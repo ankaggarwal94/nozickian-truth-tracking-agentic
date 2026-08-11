@@ -60,6 +60,34 @@ EXPECTED_CASE_TOTAL = 232
 EXPECTED_CASE_NAME_SHA256 = (
     "9ee785be4af6bfbff87d3a89d9701930381ea4957ca68614f19ea1e6237476d6"
 )
+# Resolve platform aliases once, then place every run_cases invocation in a
+# private child so helper-owned mkdtemp roots cannot accumulate in the caller.
+CANONICAL_TEMP_ROOT = Path(tempfile.gettempdir()).resolve()
+
+
+@contextlib.contextmanager
+def isolated_contract_temp_root(prefix: str):
+    global CANONICAL_TEMP_ROOT
+    parent = CANONICAL_TEMP_ROOT
+    previous_tempdir = tempfile.tempdir
+    previous_tmpdir = os.environ.get("TMPDIR")
+    with tempfile.TemporaryDirectory(
+        prefix=prefix,
+        dir=str(parent),
+    ) as temporary:
+        private_root = Path(temporary)
+        CANONICAL_TEMP_ROOT = private_root
+        tempfile.tempdir = str(private_root)
+        os.environ["TMPDIR"] = str(private_root)
+        try:
+            yield private_root
+        finally:
+            CANONICAL_TEMP_ROOT = parent
+            tempfile.tempdir = previous_tempdir
+            if previous_tmpdir is None:
+                os.environ.pop("TMPDIR", None)
+            else:
+                os.environ["TMPDIR"] = previous_tmpdir
 
 # Independently recorded golden migration oracle.  Keep this literal separate
 # from ntt_gate.py so a mistaken production tuple cannot validate itself.
@@ -965,7 +993,7 @@ def exercise_evidence_ancestor_swap(
     }
 
 
-def run_cases(gate_mod) -> List[Dict[str, Any]]:
+def _run_cases(gate_mod) -> List[Dict[str, Any]]:
     cases: List[Dict[str, Any]] = []
 
     def summarize(result: Mapping[str, Any]) -> List[str]:
@@ -5128,6 +5156,11 @@ def run_cases(gate_mod) -> List[Dict[str, Any]]:
         "reasons": [],
     })
     return cases
+
+
+def run_cases(gate_mod) -> List[Dict[str, Any]]:
+    with isolated_contract_temp_root("ntt_gate_contract_run_"):
+        return _run_cases(gate_mod)
 
 
 def _open_output_parent(path: Path) -> Tuple[int, str]:

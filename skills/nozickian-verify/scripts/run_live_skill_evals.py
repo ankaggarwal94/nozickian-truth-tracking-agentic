@@ -7,7 +7,7 @@ Claude Code CLI is installed. If the runtime cannot be exercised, it records
 UNVERIFIED_RUNTIME rather than treating a version check as a pass.
 """
 from __future__ import annotations
-import argparse, contextlib, ctypes, hashlib, importlib.util, io, json, math, os, re, shutil, signal, stat, subprocess, sys, tempfile, threading, time, unicodedata, uuid
+import argparse, contextlib, ctypes, errno, hashlib, importlib.util, io, json, math, os, re, shutil, signal, stat, subprocess, sys, tempfile, threading, time, unicodedata, uuid
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Dict, List, Mapping, Sequence, Tuple, cast
@@ -81,8 +81,13 @@ PIPE_CLOSE_GRACE_SEC = 0.5
 READER_JOIN_GRACE_SEC = 1.0
 DETACHED_CHILD_CLEANUP_TIMEOUT_SEC = 0.5
 DETACHED_CHILD_QUIET_SEC = 0.05
+DETACHED_CHILD_SETTLE_TIMEOUT_SEC = 0.25
+DETACHED_CHILD_SETTLE_MAX_SCANS = 64
 MAX_PROC_SCAN_ENTRIES = 100_000
 _SUBREAPER_ENABLED: bool | None = None
+
+LinuxProcessIdentity = Tuple[int, int]
+LinuxProcessGraph = Dict[LinuxProcessIdentity, Tuple[int, int]]
 
 
 class DuplicateJsonKeyError(ValueError):
@@ -166,13 +171,138 @@ def strict_json_loads(text: str) -> Any:
     )
 
 
-def _linux_process_graph() -> Tuple[int, Dict[int, Tuple[int, int]]]:
-    """Return self host PID and host-pid -> (parent, signalable pid) graph."""
+def _linux_process_identity(host_pid: int) -> LinuxProcessIdentity:
+    """Read the stable Linux identity ``(host PID, starttime)`` for a task."""
+    if type(host_pid) is not int or host_pid <= 0:
+        raise OSError("invalid Linux host PID")
+    try:
+        with open(
+            f"/proc/{host_pid}/stat",
+            "r",
+            encoding="utf-8",
+            errors="replace",
+        ) as stream:
+            proc_stat = stream.read(64 * 1024 + 1)
+    except ValueError as exc:
+        raise OSError("invalid /proc stat path") from exc
+    if len(proc_stat) > 64 * 1024:
+        raise OSError("/proc stat exceeds read bound")
+    open_paren = proc_stat.find("(")
+    close_paren = proc_stat.rfind(")")
+    if open_paren <= 0 or close_paren <= open_paren:
+        raise OSError("malformed /proc stat identity")
+    fields = proc_stat[close_paren + 1 :].split()
+    # The suffix starts at field 3 (state), so field 22 (starttime) is
+    # zero-based suffix index 19.  Parsing after the final ')' tolerates spaces
+    # and ')' characters in the kernel-provided comm field.
+    if len(fields) <= 19:
+        raise OSError("/proc stat lacks process starttime")
+    try:
+        observed_host_pid = int(proc_stat[:open_paren].strip())
+        starttime = int(fields[19])
+    except ValueError as exc:
+        raise OSError("invalid numeric identity in /proc stat") from exc
+    if observed_host_pid != host_pid or starttime < 0:
+        raise OSError("/proc stat host identity mismatch")
+    return host_pid, starttime
+
+
+def _linux_process_identity_is_current(
+    identity: LinuxProcessIdentity,
+) -> bool:
+    try:
+        return _linux_process_identity(identity[0]) == identity
+    except (FileNotFoundError, PermissionError, ProcessLookupError, OSError):
+        return False
+
+
+def _pidfd_signal_linux_process(
+    identity: LinuxProcessIdentity,
+    namespace_pid: int,
+    sig: int,
+) -> bool | None:
+    """Signal an identity via pidfd, or return ``None`` if unsupported."""
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+        pidfd_open = libc.pidfd_open
+        pidfd_send_signal = libc.pidfd_send_signal
+    except (AttributeError, OSError):
+        return None
+    pidfd_open.argtypes = [ctypes.c_int, ctypes.c_uint]
+    pidfd_open.restype = ctypes.c_int
+    pidfd_send_signal.argtypes = [
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_void_p,
+        ctypes.c_uint,
+    ]
+    pidfd_send_signal.restype = ctypes.c_int
+    descriptor = pidfd_open(namespace_pid, 0)
+    if descriptor < 0:
+        error_number = ctypes.get_errno()
+        if error_number == errno.ENOSYS:
+            return None
+        if error_number == errno.ESRCH:
+            return False
+        raise OSError(error_number, "pidfd_open failed")
+    try:
+        # Opening the pidfd is atomic with respect to namespace-PID reuse, but
+        # prove that it was opened while the host identity still matched the
+        # graph observation before authorizing the signal.
+        if not _linux_process_identity_is_current(identity):
+            return False
+        if pidfd_send_signal(descriptor, sig, None, 0) != 0:
+            error_number = ctypes.get_errno()
+            if error_number == errno.ENOSYS:
+                return None
+            if error_number == errno.ESRCH:
+                return False
+            raise OSError(error_number, "pidfd_send_signal failed")
+        return True
+    finally:
+        os.close(descriptor)
+
+
+def _signal_linux_process(
+    identity: LinuxProcessIdentity,
+    namespace_pid: int,
+    sig: int,
+) -> bool:
+    """Signal exactly one observed task, never a reused numeric PID."""
+    if (
+        type(identity) is not tuple
+        or len(identity) != 2
+        or type(identity[0]) is not int
+        or type(identity[1]) is not int
+        or type(namespace_pid) is not int
+        or namespace_pid <= 0
+    ):
+        raise OSError("invalid Linux process identity")
+    if not _linux_process_identity_is_current(identity):
+        return False
+    pidfd_result = _pidfd_signal_linux_process(identity, namespace_pid, sig)
+    if pidfd_result is not None:
+        return pidfd_result
+    # Old libc/kernel combinations may not expose pidfds.  Immediately
+    # revalidate field 22 before the unavoidable numeric-PID fallback.  The
+    # fallback narrows (but cannot eliminate) the final read-to-signal race.
+    if not _linux_process_identity_is_current(identity):
+        return False
+    os.kill(namespace_pid, sig)
+    return True
+
+
+def _linux_process_graph() -> Tuple[LinuxProcessIdentity, LinuxProcessGraph]:
+    """Return self identity and identity -> (parent, signalable PID) graph."""
     self_host_pid = int(Path("/proc/self").resolve(strict=True).name)
+    self_identity_before = _linux_process_identity(self_host_pid)
     with Path("/proc/self/status").open(
         "r", encoding="utf-8", errors="replace"
     ) as stream:
         self_status = stream.read(64 * 1024)
+    self_identity_after = _linux_process_identity(self_host_pid)
+    if self_identity_before != self_identity_after:
+        raise OSError("/proc self identity changed during observation")
     self_namespace_pids: List[int] | None = None
     for line in self_status.splitlines():
         if line.startswith("NSpid:"):
@@ -188,7 +318,7 @@ def _linux_process_graph() -> Tuple[int, Dict[int, Tuple[int, int]]]:
     if self_namespace_pids[0] != self_host_pid:
         raise OSError("/proc self host identity mismatch")
     namespace_depth = len(self_namespace_pids)
-    graph: Dict[int, Tuple[int, int]] = {}
+    graph: LinuxProcessGraph = {}
     scanned = 0
     with os.scandir("/proc") as entries:
         for entry in entries:
@@ -197,7 +327,9 @@ def _linux_process_graph() -> Tuple[int, Dict[int, Tuple[int, int]]]:
             scanned += 1
             if scanned > MAX_PROC_SCAN_ENTRIES:
                 raise OSError("/proc process scan bound exceeded")
+            host_pid = int(entry.name)
             try:
+                identity_before = _linux_process_identity(host_pid)
                 with open(
                     os.path.join(entry.path, "status"),
                     "r",
@@ -205,7 +337,12 @@ def _linux_process_graph() -> Tuple[int, Dict[int, Tuple[int, int]]]:
                     errors="replace",
                 ) as stream:
                     status = stream.read(64 * 1024)
+                identity_after = _linux_process_identity(host_pid)
             except (FileNotFoundError, PermissionError, ProcessLookupError):
+                continue
+            except OSError:
+                continue
+            if identity_before != identity_after:
                 continue
             parent_host_pid: int | None = None
             namespace_pids: List[int] | None = None
@@ -224,33 +361,39 @@ def _linux_process_graph() -> Tuple[int, Dict[int, Tuple[int, int]]]:
                 parent_host_pid is not None
                 and namespace_pids
                 and len(namespace_pids) >= namespace_depth
-                and namespace_pids[0] == int(entry.name)
+                and namespace_pids[0] == host_pid
                 and namespace_pids[namespace_depth - 1] > 0
             ):
-                graph[int(entry.name)] = (
+                graph[identity_after] = (
                     parent_host_pid,
                     namespace_pids[namespace_depth - 1],
                 )
-    if self_host_pid not in graph:
+    if self_identity_after not in graph:
         raise OSError("/proc process graph omits self")
-    return self_host_pid, graph
+    return self_identity_after, graph
 
 
 def _linux_descendant_closure(
-    graph: Mapping[int, Tuple[int, int]], roots: set[int]
-) -> set[int]:
-    """Return roots and their complete transitive host-PID descendants."""
-    children: Dict[int, set[int]] = {}
-    for host_pid, (parent_host_pid, _namespace_pid) in graph.items():
-        children.setdefault(parent_host_pid, set()).add(host_pid)
-    closure: set[int] = set()
+    graph: Mapping[LinuxProcessIdentity, Tuple[int, int]],
+    roots: set[LinuxProcessIdentity],
+) -> set[LinuxProcessIdentity]:
+    """Return roots and their complete stable-identity descendants."""
+    identity_by_host_pid = {
+        identity[0]: identity for identity in graph
+    }
+    children: Dict[LinuxProcessIdentity, set[LinuxProcessIdentity]] = {}
+    for identity, (parent_host_pid, _namespace_pid) in graph.items():
+        parent_identity = identity_by_host_pid.get(parent_host_pid)
+        if parent_identity is not None:
+            children.setdefault(parent_identity, set()).add(identity)
+    closure: set[LinuxProcessIdentity] = set()
     pending = list(roots)
     while pending:
-        host_pid = pending.pop()
-        if host_pid in closure:
+        identity = pending.pop()
+        if identity in closure:
             continue
-        closure.add(host_pid)
-        pending.extend(children.get(host_pid, ()))
+        closure.add(identity)
+        pending.extend(children.get(identity, ()))
     return closure
 
 
@@ -298,10 +441,15 @@ def process_containment_scope() -> Dict[str, Any]:
     }
 
 
-def _reap_child_nonblocking(pid: int) -> None:
+def _reap_child_nonblocking(
+    identity: LinuxProcessIdentity,
+    namespace_pid: int,
+) -> None:
+    if not _linux_process_identity_is_current(identity):
+        return
     try:
-        os.waitpid(pid, os.WNOHANG)
-    except (ChildProcessError, ProcessLookupError):
+        os.waitpid(namespace_pid, os.WNOHANG)
+    except OSError:
         pass
 
 
@@ -316,9 +464,20 @@ def _cleanup_detached_descendants(
             "cleanup_complete": False,
             "pids_seen": 0,
         }
-    parent_host_pid = baseline.get("parent_host_pid")
+    parent_identity = baseline.get("parent_identity")
     baseline_roots = baseline.get("baseline_roots")
-    if type(parent_host_pid) is not int or not isinstance(baseline_roots, set):
+    if (
+        type(parent_identity) is not tuple
+        or len(parent_identity) != 2
+        or any(type(value) is not int for value in parent_identity)
+        or not isinstance(baseline_roots, set)
+        or any(
+            type(identity) is not tuple
+            or len(identity) != 2
+            or any(type(value) is not int for value in identity)
+            for identity in baseline_roots
+        )
+    ):
         return {
             "supported": True,
             "survivor_seen": False,
@@ -327,62 +486,131 @@ def _cleanup_detached_descendants(
         }
     deadline = time.monotonic() + DETACHED_CHILD_CLEANUP_TIMEOUT_SEC
     quiet_since: float | None = None
-    seen_host_pids: set[int] = set()
+    seen_identities: set[LinuxProcessIdentity] = set()
     while time.monotonic() < deadline:
-        observed_self_host_pid, graph = _linux_process_graph()
-        if observed_self_host_pid != parent_host_pid:
+        try:
+            observed_self_identity, graph = _linux_process_graph()
+        except OSError:
+            # A transient /proc observation failure is not quiescence. Keep
+            # trying within the same bound without advancing the quiet timer.
+            quiet_since = None
+            time.sleep(0.005)
+            continue
+        if observed_self_identity != parent_identity:
             return {
                 "supported": True,
-                "survivor_seen": bool(seen_host_pids),
+                "survivor_seen": bool(seen_identities),
                 "cleanup_complete": False,
-                "pids_seen": len(seen_host_pids),
+                "pids_seen": len(seen_identities),
             }
         all_descendants = _linux_descendant_closure(
-            graph, {parent_host_pid}
-        ) - {parent_host_pid}
+            graph, {parent_identity}
+        ) - {parent_identity}
         excluded = _linux_descendant_closure(
             graph, baseline_roots
         )
-        current_host_pids = all_descendants - excluded
-        if current_host_pids:
-            seen_host_pids.update(current_host_pids)
+        current_identities = all_descendants - excluded
+        if current_identities:
+            seen_identities.update(current_identities)
             quiet_since = None
             # Compute one complete tree snapshot before signaling. This avoids
             # the depth-times-scan escape of direct-child-only subreaping.
-            for host_pid in current_host_pids:
-                namespace_pid = graph[host_pid][1]
+            for identity in current_identities:
+                namespace_pid = graph[identity][1]
                 try:
-                    os.kill(namespace_pid, signal.SIGKILL)
+                    _signal_linux_process(
+                        identity, namespace_pid, signal.SIGKILL
+                    )
                 except ProcessLookupError:
                     pass
-            for host_pid in current_host_pids:
-                if graph[host_pid][0] == parent_host_pid:
-                    _reap_child_nonblocking(graph[host_pid][1])
+                except OSError:
+                    # Retry this still-observed identity on the next scan and
+                    # continue attempting the rest of the complete snapshot.
+                    pass
+            for identity in current_identities:
+                if graph[identity][0] == parent_identity[0]:
+                    _reap_child_nonblocking(identity, graph[identity][1])
         else:
             if quiet_since is None:
                 quiet_since = time.monotonic()
             elif time.monotonic() - quiet_since >= DETACHED_CHILD_QUIET_SEC:
                 break
         time.sleep(0.005)
-    observed_self_host_pid, graph = _linux_process_graph()
-    all_descendants = _linux_descendant_closure(
-        graph, {observed_self_host_pid}
-    ) - {observed_self_host_pid}
-    excluded = _linux_descendant_closure(graph, baseline_roots)
-    remaining = all_descendants - excluded
-    for host_pid in remaining:
-        namespace_pid = graph[host_pid][1]
+    # A deadline snapshot is not atomic and killed grandchildren can reparent
+    # to this subreaper after the first scan.  Use a separately bounded settle
+    # phase, preserving any quiet interval already established above.  This is
+    # not retry-until-green: no new scan starts after the deadline and the scan
+    # count is capped. An in-flight /proc scan or signal/reap sweep cannot be
+    # preempted synchronously, so it may finish after the admission deadline.
+    settle_deadline = time.monotonic() + DETACHED_CHILD_SETTLE_TIMEOUT_SEC
+    settle_scans = 0
+    settle_signal_error = False
+    while (
+        settle_scans < DETACHED_CHILD_SETTLE_MAX_SCANS
+        and time.monotonic() < settle_deadline
+    ):
+        settle_scans += 1
         try:
-            os.kill(namespace_pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        if graph[host_pid][0] == observed_self_host_pid:
-            _reap_child_nonblocking(namespace_pid)
+            observed_self_identity, graph = _linux_process_graph()
+        except OSError:
+            quiet_since = None
+            remaining_settle_sec = settle_deadline - time.monotonic()
+            if remaining_settle_sec <= 0:
+                break
+            time.sleep(min(0.005, remaining_settle_sec))
+            continue
+        if observed_self_identity != parent_identity:
+            break
+        all_descendants = _linux_descendant_closure(
+            graph, {parent_identity}
+        ) - {parent_identity}
+        excluded = _linux_descendant_closure(graph, baseline_roots)
+        current_identities = all_descendants - excluded
+        # A torn /proc scan can retain a live task while omitting an
+        # intermediate parent. Include every graph-present identity reachable
+        # through the child relation from a task observed in an earlier scan.
+        seen_lineage = _linux_descendant_closure(graph, seen_identities)
+        current_identities.update(
+            set(graph).intersection(seen_lineage) - excluded
+        )
+        if current_identities:
+            seen_identities.update(current_identities)
+            quiet_since = None
+            for identity in current_identities:
+                namespace_pid = graph[identity][1]
+                try:
+                    _signal_linux_process(
+                        identity, namespace_pid, signal.SIGKILL
+                    )
+                except ProcessLookupError:
+                    pass
+                except OSError:
+                    settle_signal_error = True
+            # Reap tasks after they become direct subreaper children, not only
+            # those that were direct children in the deadline snapshot.
+            for identity in current_identities:
+                if graph[identity][0] == parent_identity[0]:
+                    _reap_child_nonblocking(identity, graph[identity][1])
+        else:
+            now = time.monotonic()
+            if quiet_since is None:
+                quiet_since = now
+            elif now - quiet_since >= DETACHED_CHILD_QUIET_SEC:
+                return {
+                    "supported": True,
+                    "survivor_seen": bool(seen_identities),
+                    "cleanup_complete": not settle_signal_error,
+                    "pids_seen": len(seen_identities),
+                }
+        remaining_settle_sec = settle_deadline - time.monotonic()
+        if remaining_settle_sec <= 0:
+            break
+        time.sleep(min(0.005, remaining_settle_sec))
     return {
         "supported": True,
-        "survivor_seen": bool(seen_host_pids),
-        "cleanup_complete": not remaining,
-        "pids_seen": len(seen_host_pids),
+        "survivor_seen": bool(seen_identities),
+        "cleanup_complete": False,
+        "pids_seen": len(seen_identities),
     }
 
 
@@ -525,14 +753,14 @@ def run_cmd(
             "detached_session_descendants_contained"
         ) is not True:
             raise OSError("detached-descendant containment is unavailable")
-        self_host_pid, initial_graph = _linux_process_graph()
+        self_identity, initial_graph = _linux_process_graph()
         baseline = {
-            "parent_host_pid": self_host_pid,
+            "parent_identity": self_identity,
             "baseline_roots": {
-                host_pid
-                for host_pid, (parent_host_pid, _namespace_pid)
+                identity
+                for identity, (parent_host_pid, _namespace_pid)
                 in initial_graph.items()
-                if parent_host_pid == self_host_pid
+                if parent_host_pid == self_identity[0]
             },
         }
         stop = threading.Event()

@@ -85,6 +85,25 @@ MAX_EVIDENCE_DEPENDENCIES = 8
 MAX_EVIDENCE_GRAPH_DEPTH = 8
 MAX_CAPTURE_BYTES = 64 * 1024 * 1024
 PUBLIC_STREAM_BOUND_BYTES = 2048
+MAX_DETERMINISTIC_FALSE_CASES = 20
+MAX_DETERMINISTIC_FALSE_CASE_ENVELOPE_BYTES = 6 * 1024
+DIAGNOSTIC_FILE_URI_PATH_RE = re.compile(
+    r'''(?i)(?<![A-Za-z0-9+.-])file:/{1,3}[^\r\n"'<>|,;)\]}]+'''
+)
+DIAGNOSTIC_UNC_PATH_RE = re.compile(
+    r'''(?<![\\A-Za-z0-9._-])\\\\'''
+    r'''(?:[^\\\r\n"'<>|,;)\]}]+\\)+'''
+    r'''[^\\\r\n"'<>|,;)\]}]+'''
+)
+DIAGNOSTIC_POSIX_PATH_RE = re.compile(
+    r'''(?<![/A-Za-z0-9._-])/(?:[^/\r\n"'<>|,;)\]}]+/)*'''
+    r'''[^/\r\n"'<>|,;)\]}]+'''
+)
+DIAGNOSTIC_WINDOWS_PATH_RE = re.compile(
+    r'''(?<![A-Za-z0-9])(?:[A-Za-z]:\\'''
+    r'''(?:[^\\\r\n"'<>|,;)\]}]+\\)*'''
+    r'''[^\\\r\n"'<>|,;)\]}]+)'''
+)
 MAX_AUDIT_JSON_BYTES = 32 * 1024 * 1024
 MAX_AUDIT_TEXT_BYTES = 16 * 1024 * 1024
 MAX_JSON_STRUCTURE_NODES = 200_000
@@ -2680,6 +2699,171 @@ def deterministic_semantic_projection(
     raise ValueError(f"unknown deterministic suite {suite}")
 
 
+def stable_deterministic_diagnostic_text(value: str) -> str:
+    """Remove machine-local path spellings from retained runner text."""
+
+    normalized = DIAGNOSTIC_FILE_URI_PATH_RE.sub(
+        "<absolute-path>", value
+    )
+    normalized = DIAGNOSTIC_UNC_PATH_RE.sub(
+        "<absolute-path>", normalized
+    )
+    normalized = DIAGNOSTIC_POSIX_PATH_RE.sub(
+        "<absolute-path>", normalized
+    )
+    return DIAGNOSTIC_WINDOWS_PATH_RE.sub(
+        "<absolute-path>", normalized
+    )
+
+
+def deterministic_false_case_envelope(
+    suite: str,
+    projection: Any,
+) -> Dict[str, Any]:
+    """Return bounded typed diagnostics without influencing suite judgment."""
+
+    envelope: Dict[str, Any] = {
+        "schema_version": "deterministic-false-cases-v1",
+        "suite": suite,
+        "case_count": 0,
+        "false_case_count": 0,
+        "retained_false_case_count": 0,
+        "false_cases": [],
+        "truncated": False,
+        "diagnostic_generation_failed": False,
+    }
+    try:
+        if suite not in {"gate_contract", "formal_contract"}:
+            raise ValueError("unsupported deterministic case suite")
+        if not isinstance(projection, Mapping):
+            raise ValueError("deterministic projection is not an object")
+        cases = projection.get("cases")
+        if not isinstance(cases, list):
+            raise ValueError("deterministic projection cases are not a list")
+        envelope["case_count"] = len(cases)
+        retained: List[Dict[str, Any]] = []
+        retained_saturated = False
+        false_case_count = 0
+        for case in cases:
+            if not isinstance(case, Mapping):
+                raise ValueError("projected deterministic case is not an object")
+            name = case.get("name")
+            passed = case.get("passed")
+            status = case.get("status")
+            if (
+                type(name) is not str
+                or type(passed) is not bool
+                or ("status" in case and type(status) is not str)
+            ):
+                raise ValueError("projected deterministic case is not typed")
+            if passed is True:
+                continue
+            false_case_count += 1
+            stable_name = stable_deterministic_diagnostic_text(name)
+            canonical_case: Dict[str, Any] = {
+                "name": stable_name,
+                "passed": passed,
+            }
+            if stable_name != name:
+                canonical_case["name_path_normalized"] = True
+                canonical_case["name_original_sha256"] = (
+                    "sha256:" + hashlib.sha256(name.encode("utf-8")).hexdigest()
+                )
+            if "status" in case:
+                stable_status = stable_deterministic_diagnostic_text(status)
+                canonical_case["status"] = stable_status
+                if stable_status != status:
+                    canonical_case["status_path_normalized"] = True
+                    canonical_case["status_original_sha256"] = (
+                        "sha256:"
+                        + hashlib.sha256(status.encode("utf-8")).hexdigest()
+                    )
+            if (
+                retained_saturated
+                or len(retained) >= MAX_DETERMINISTIC_FALSE_CASES
+            ):
+                retained_saturated = True
+                continue
+            candidate = [*retained, canonical_case]
+            encoded = json.dumps(
+                candidate,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            ).encode("utf-8")
+            if len(encoded) > MAX_DETERMINISTIC_FALSE_CASE_ENVELOPE_BYTES:
+                retained_saturated = True
+                continue
+            retained.append(canonical_case)
+        envelope.update({
+            "false_case_count": false_case_count,
+            "retained_false_case_count": len(retained),
+            "false_cases": retained,
+            "truncated": len(retained) != false_case_count,
+        })
+        while (
+            len(json.dumps(
+                envelope,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            ).encode("utf-8"))
+            > MAX_DETERMINISTIC_FALSE_CASE_ENVELOPE_BYTES
+            and retained
+        ):
+            retained.pop()
+            envelope.update({
+                "retained_false_case_count": len(retained),
+                "false_cases": retained,
+                "truncated": True,
+            })
+    except Exception as exc:
+        envelope.update({
+            "false_cases": [],
+            "retained_false_case_count": 0,
+            "truncated": True,
+            "diagnostic_generation_failed": True,
+            "diagnostic_error": (
+                f"{type(exc).__name__}: typed false-case projection unavailable"
+            ),
+        })
+    return envelope
+
+
+def deterministic_projection_match_details(
+    suite: str,
+    capture_projection: Any,
+    fresh_projection: Any,
+    projection_error: Optional[str],
+) -> Dict[str, Any]:
+    """Bind mismatch diagnostics to the stored projection being compared."""
+
+    details: Dict[str, Any] = {
+        "projection_error": projection_error,
+        "captured_projection_sha256": (
+            f"sha256:{canonical_json_sha256(capture_projection)}"
+            if capture_projection is not None
+            else None
+        ),
+        "fresh_projection_sha256": (
+            f"sha256:{canonical_json_sha256(fresh_projection)}"
+            if fresh_projection is not None
+            else None
+        ),
+    }
+    if (
+        suite in {"gate_contract", "formal_contract"}
+        and capture_projection is not None
+    ):
+        details["false_case_envelope"] = deterministic_false_case_envelope(
+            suite,
+            capture_projection,
+        )
+    return details
+
+
 def text_validator_status(text: str) -> Tuple[bool, str]:
     lines = text.splitlines()
     if any(TEXT_NEGATIVE_STATUS_RE.match(line) for line in lines):
@@ -2845,14 +3029,24 @@ def deterministic_checks(
                 and fresh_projection.get("total")
                 == fresh_projection.get("passed")
             )
+        fresh_false_case_envelope = (
+            deterministic_false_case_envelope(name, fresh_projection)
+            if name in {"gate_contract", "formal_contract"}
+            else None
+        )
+        fresh_suite_details = {
+            **public_run,
+            "projection_error": fresh_parse_error,
+        }
+        if fresh_false_case_envelope is not None:
+            fresh_suite_details["false_case_envelope"] = (
+                fresh_false_case_envelope
+            )
         checks.append(
             Check(
                 f"fresh deterministic suite passes: {name}",
                 bool(fresh_ok),
-                details={
-                    **public_run,
-                    "projection_error": fresh_parse_error,
-                },
+                details=fresh_suite_details,
             )
         )
         if name == "package_validation":
@@ -2943,25 +3137,19 @@ def deterministic_checks(
         except Exception as exc:
             capture_projection = None
             projection_error = f"{type(exc).__name__}: invalid capture result"
+        projection_match_details = deterministic_projection_match_details(
+            name,
+            capture_projection,
+            fresh_projection,
+            projection_error,
+        )
         checks.append(
             Check(
                 f"deterministic capture semantic projection matches fresh: {name}",
                 capture_shape_ok
                 and fresh_projection is not None
                 and capture_projection == fresh_projection,
-                details={
-                    "projection_error": projection_error,
-                    "captured_projection_sha256": (
-                        f"sha256:{canonical_json_sha256(capture_projection)}"
-                        if capture_projection is not None
-                        else None
-                    ),
-                    "fresh_projection_sha256": (
-                        f"sha256:{canonical_json_sha256(fresh_projection)}"
-                        if fresh_projection is not None
-                        else None
-                    ),
-                },
+                details=projection_match_details,
             )
         )
     checks.append(
