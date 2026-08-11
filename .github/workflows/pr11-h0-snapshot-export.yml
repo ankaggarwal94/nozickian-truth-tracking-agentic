@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - automation/pr11-h0-snapshot-export-5b0ea76
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
